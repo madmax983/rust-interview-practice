@@ -12,7 +12,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 pub fn frequency_map(nums: Vec<i32>) -> HashMap<i32, usize> {
     let mut freq = HashMap::new();
     for num in nums {
-        *freq.entry(num).or_insert(0) += 1;
+        // entry(key) gets Entry enum (occupied or vacant)
+        // or_insert(default) inserts if vacant, returns &mut to value
+        *freq.entry(num).or_insert(0) += 1; // Dereference to increment
     }
     freq
 }
@@ -30,7 +32,9 @@ pub fn insert_if_absent(map: &mut HashMap<i32, String>, key: i32, value: String)
 
 /// Pattern: HashMap - update or insert
 pub fn update_or_insert(map: &mut HashMap<i32, i32>, key: i32, value: i32) {
-    map.entry(key).and_modify(|v| *v += value).or_insert(value);
+    map.entry(key)
+        .and_modify(|v| *v += value) // If key exists, modify the value
+        .or_insert(value); // If key doesn't exist, insert it
 }
 
 /// Pattern: HashSet - check membership
@@ -38,11 +42,12 @@ pub fn update_or_insert(map: &mut HashMap<i32, i32>, key: i32, value: i32) {
 pub fn has_duplicates(nums: Vec<i32>) -> bool {
     let mut seen = HashSet::new();
     for num in nums {
+        // insert() returns false if value was already present
         if !seen.insert(num) {
-            return true;
+            return true; // Found a duplicate
         }
     }
-    false
+    false // No duplicates found
 }
 
 /// Pattern: HashSet - set operations (union, intersection, difference)
@@ -62,14 +67,15 @@ pub fn set_operations(nums1: Vec<i32>, nums2: Vec<i32>) -> (HashSet<i32>, HashSe
 pub fn queue_example(nums: Vec<i32>) -> Vec<i32> {
     let mut queue = VecDeque::new();
 
-    // Enqueue
+    // Enqueue: add to back
     for num in nums {
         queue.push_back(num);
     }
 
-    // Dequeue
+    // Dequeue: remove from front (FIFO order)
     let mut result = Vec::new();
     while let Some(num) = queue.pop_front() {
+        // pop_front() returns Option<T>
         result.push(num);
     }
 
@@ -81,14 +87,15 @@ pub fn queue_example(nums: Vec<i32>) -> Vec<i32> {
 pub fn stack_example(nums: Vec<i32>) -> Vec<i32> {
     let mut stack = VecDeque::new();
 
-    // Push
+    // Push: add to back
     for num in nums {
         stack.push_back(num);
     }
 
-    // Pop
+    // Pop: remove from back (LIFO order - reversed)
     let mut result = Vec::new();
     while let Some(num) = stack.pop_back() {
+        // pop_back() returns Option<T>
         result.push(num);
     }
 

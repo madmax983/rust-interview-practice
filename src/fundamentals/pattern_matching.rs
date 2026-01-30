@@ -31,9 +31,9 @@ pub fn match_ranges(value: i32) -> &'static str {
 #[must_use]
 pub fn match_with_guard(value: i32) -> &'static str {
     match value {
-        x if x < 0 => "negative",
-        x if x % 2 == 0 => "even",
-        _ => "odd",
+        x if x < 0 => "negative",  // Guard: 'if' adds extra condition
+        x if x % 2 == 0 => "even", // Guards checked in order
+        _ => "odd",                // Wildcard catches everything else
     }
 }
 
@@ -41,10 +41,10 @@ pub fn match_with_guard(value: i32) -> &'static str {
 #[must_use]
 pub fn match_tuple(pair: (i32, i32)) -> i32 {
     match pair {
-        (0, 0) => 0,
-        (x, 0) => x,
-        (0, y) => y,
-        (x, y) => x + y,
+        (0, 0) => 0,     // Match exact values
+        (x, 0) => x,     // Bind first element to x, match 0 for second
+        (0, y) => y,     // Match 0 for first, bind second to y
+        (x, y) => x + y, // Bind both elements
     }
 }
 
@@ -61,7 +61,12 @@ pub fn match_enum(value: Option<i32>) -> i32 {
 /// Pattern: if let for single variant
 #[must_use]
 pub fn if_let_single(value: Option<i32>) -> i32 {
-    if let Some(x) = value { x * 2 } else { 0 }
+    // if let: cleaner than match when you only care about one pattern
+    if let Some(x) = value {
+        x * 2 // Extract and use value
+    } else {
+        0 // Handle other cases
+    }
 }
 
 /// Pattern: if let with multiple patterns
@@ -103,10 +108,10 @@ pub fn destructure_let(pair: (i32, i32)) -> i32 {
 #[must_use]
 pub fn match_slice(slice: &[i32]) -> i32 {
     match slice {
-        [] => 0,
-        [x] => *x,
-        [x, y] => x + y,
-        [x, .., y] => x + y,
+        [] => 0,             // Empty slice
+        [x] => *x,           // Exactly one element (dereference needed)
+        [x, y] => x + y,     // Exactly two elements
+        [x, .., y] => x + y, // Two or more: first + last (.. ignores middle)
     }
 }
 
@@ -114,9 +119,9 @@ pub fn match_slice(slice: &[i32]) -> i32 {
 #[must_use]
 pub fn match_at_binding(value: i32) -> String {
     match value {
-        x @ 1..=5 => format!("small: {x}"),
-        x @ 6..=10 => format!("medium: {x}"),
-        x => format!("other: {x}"),
+        x @ 1..=5 => format!("small: {x}"), // @ binds matched value to x
+        x @ 6..=10 => format!("medium: {x}"), // Can use x in the arm
+        x => format!("other: {x}"),         // Simple binding (no range)
     }
 }
 

@@ -8,14 +8,15 @@
 /// Pattern: String vs &str - owned vs borrowed
 #[must_use]
 pub fn string_vs_str(s: String) -> String {
-    let borrowed: &str = &s; // String to &str
-    borrowed.to_string() // &str to String
+    let borrowed: &str = &s; // String to &str (borrow)
+    borrowed.to_string() // &str to String (allocate new string)
 }
 
 /// Pattern: Iterating over characters
 #[must_use]
 pub fn iterate_chars(s: &str) -> Vec<char> {
-    s.chars().collect()
+    s.chars() // Returns iterator over Unicode scalar values
+        .collect() // Collect into Vec<char>
 }
 
 /// Pattern: Iterating over bytes
@@ -33,16 +34,16 @@ pub fn char_at_index(s: &str, idx: usize) -> Option<char> {
 /// Pattern: Convert to Vec<char> for O(1) indexing
 #[must_use]
 pub fn string_to_vec_chars(s: &str) -> Vec<char> {
-    s.chars().collect()
+    s.chars().collect() // Important: &str indexing is O(n), Vec<char> is O(1)
 }
 
 /// Pattern: String building with push_str and push
 #[must_use]
 pub fn build_string(parts: Vec<&str>) -> String {
-    let mut result = String::new();
+    let mut result = String::new(); // Create empty owned string
     for part in parts {
-        result.push_str(part);
-        result.push(' ');
+        result.push_str(part); // Append &str
+        result.push(' '); // Append single char
     }
     result
 }
@@ -62,7 +63,8 @@ pub fn join_strings(parts: Vec<&str>) -> String {
 /// Pattern: Splitting strings
 #[must_use]
 pub fn split_string(s: &str) -> Vec<&str> {
-    s.split_whitespace().collect()
+    s.split_whitespace() // Iterator over substrings (borrows from s)
+        .collect() // Collect into Vec<&str>
 }
 
 /// Pattern: Split by delimiter
@@ -94,7 +96,9 @@ pub fn case_conversion(s: &str) -> (String, String) {
 /// Pattern: Reversing a string
 #[must_use]
 pub fn reverse_string(s: &str) -> String {
-    s.chars().rev().collect()
+    s.chars() // Iterate over chars
+        .rev() // Reverse the iterator
+        .collect() // Build String from reversed chars
 }
 
 /// Pattern: Checking if string contains substring
@@ -119,6 +123,7 @@ pub fn replace_substring(s: &str, from: &str, to: &str) -> String {
 #[must_use]
 pub fn classify_char(ch: char) -> &'static str {
     if ch.is_alphabetic() {
+        // Built-in char methods for classification
         "letter"
     } else if ch.is_numeric() {
         "digit"

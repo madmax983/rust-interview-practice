@@ -8,7 +8,7 @@
 /// Pattern: Option - unwrap_or for default values
 #[must_use]
 pub fn unwrap_or_example(opt: Option<i32>) -> i32 {
-    opt.unwrap_or(0)
+    opt.unwrap_or(0) // Returns value if Some, otherwise returns 0
 }
 
 /// Pattern: Option - unwrap_or_else for computed defaults
@@ -20,13 +20,21 @@ pub fn unwrap_or_else_example(opt: Option<i32>) -> i32 {
 /// Pattern: Option - map to transform inner value
 #[must_use]
 pub fn option_map_example(opt: Option<i32>) -> Option<i32> {
-    opt.map(|x| x * 2)
+    opt.map(|x| x * 2) // If Some(x), returns Some(x*2); if None, returns None
 }
 
 /// Pattern: Option - and_then for chaining
 #[must_use]
 pub fn option_and_then_example(opt: Option<i32>) -> Option<i32> {
-    opt.and_then(|x| if x > 0 { Some(x * 2) } else { None })
+    opt.and_then(|x| {
+        // and_then applies a function that returns Option
+        // Useful for chaining operations that might fail
+        if x > 0 {
+            Some(x * 2)
+        } else {
+            None // Can short-circuit here
+        }
+    })
 }
 
 /// Pattern: Option - ok_or to convert to Result
@@ -62,9 +70,9 @@ pub fn result_and_then_example(res: Result<i32, String>) -> Result<i32, String> 
 /// Pattern: ? operator for early return on error
 #[must_use]
 pub fn question_mark_example(value: i32) -> Result<i32, String> {
-    let checked = check_positive(value)?;
-    let doubled = double_value(checked)?;
-    Ok(doubled)
+    let checked = check_positive(value)?; // ? unwraps Ok or returns Err early
+    let doubled = double_value(checked)?; // Can chain multiple ? operations
+    Ok(doubled) // Wrap final result in Ok
 }
 
 fn check_positive(value: i32) -> Result<i32, String> {
@@ -83,8 +91,8 @@ fn double_value(value: i32) -> Result<i32, String> {
 #[must_use]
 pub fn match_option_example(opt: Option<i32>) -> i32 {
     match opt {
-        Some(x) => x * 2,
-        None => 0,
+        Some(x) => x * 2, // Pattern match: extract x from Some
+        None => 0,        // Handle the None case
     }
 }
 
@@ -120,8 +128,9 @@ pub fn while_let_example(mut values: Vec<Option<i32>>) -> Vec<i32> {
 pub fn collect_results(values: Vec<i32>) -> Result<Vec<i32>, String> {
     values
         .iter()
-        .map(|&x| check_positive(x))
-        .collect::<Result<Vec<_>, _>>()
+        .map(|&x| check_positive(x)) // Each returns Result<i32, String>
+        .collect::<Result<Vec<_>, _>>() // Collects into Result<Vec<...>, ...>
+    // If any Result is Err, entire collection fails
 }
 
 /// Pattern: transpose Option<Result> to Result<Option>

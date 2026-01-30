@@ -27,24 +27,29 @@
 pub fn length_of_longest_substring_brute_force(s: String) -> i32 {
     use std::collections::HashSet;
 
+    // Convert string to vec for O(1) indexing
     let chars: Vec<char> = s.chars().collect();
     let n = chars.len();
-    let mut max_len = 0;
+    let mut max_len = 0; // Track the longest unique substring found
 
-    // Check every possible substring
+    // Strategy: Check every possible substring
     for i in 0..n {
+        // Try all substrings starting at position i
         for j in (i + 1)..=n {
-            let substring = &chars[i..j];
-            let mut seen = HashSet::new();
+            let substring = &chars[i..j]; // Get substring from i to j
+            let mut seen = HashSet::new(); // Track characters in this substring
             let mut is_unique = true;
 
+            // Check if all characters in substring are unique
             for &ch in substring {
                 if !seen.insert(ch) {
+                    // insert() returns false if char was already present
                     is_unique = false;
                     break;
                 }
             }
 
+            // If substring has all unique chars, update max length
             if is_unique {
                 max_len = max_len.max(substring.len());
             }
@@ -64,22 +69,26 @@ pub fn length_of_longest_substring_brute_force(s: String) -> i32 {
 pub fn length_of_longest_substring_optimized(s: String) -> i32 {
     use std::collections::HashSet;
 
+    // Convert to vec for indexing
     let chars: Vec<char> = s.chars().collect();
-    let mut seen = HashSet::new();
-    let mut left = 0;
-    let mut max_len = 0;
+    let mut seen = HashSet::new(); // Track characters in current window
+    let mut left = 0; // Left boundary of sliding window
+    let mut max_len = 0; // Best result so far
 
+    // Strategy: Sliding window - expand right, shrink left when needed
     for right in 0..chars.len() {
-        // Shrink window from left while we have a duplicate
+        // Right pointer always moves forward
+
+        // If current char creates a duplicate, shrink window from left
         while seen.contains(&chars[right]) {
-            seen.remove(&chars[left]);
-            left += 1;
+            seen.remove(&chars[left]); // Remove leftmost character
+            left += 1; // Move left boundary right
         }
 
-        // Add current character to window
-        seen.insert(chars[right]);
+        // Now window [left..=right] has all unique characters
+        seen.insert(chars[right]); // Add current char to window
 
-        // Update max length
+        // Update max length seen (window size is right - left + 1)
         max_len = max_len.max(right - left + 1);
     }
 
@@ -98,24 +107,28 @@ pub fn length_of_longest_substring_optimized(s: String) -> i32 {
 pub fn length_of_longest_substring_optimal(s: String) -> i32 {
     use std::collections::HashMap;
 
+    // Convert to vec for indexing
     let chars: Vec<char> = s.chars().collect();
-    let mut char_index = HashMap::new();
-    let mut left = 0;
-    let mut max_len = 0;
+    let mut char_index = HashMap::new(); // Track: character -> last seen index
+    let mut left = 0; // Left boundary of sliding window
+    let mut max_len = 0; // Best result so far
 
+    // Strategy: Sliding window with smart jumping
+    // Instead of incrementing left by 1, we jump directly past duplicates
     #[allow(clippy::needless_range_loop)] // Index needed for multiple operations
     for right in 0..chars.len() {
         let ch = chars[right];
 
-        // If we've seen this character in current window, jump left pointer
+        // If we've seen this char before AND it's in our current window
         if let Some(&prev_index) = char_index.get(&ch) {
+            // Jump left boundary past the duplicate (but never move left backward)
             left = left.max(prev_index + 1);
         }
 
-        // Update the character's latest position
+        // Always update this character's latest position
         char_index.insert(ch, right);
 
-        // Update max length
+        // Calculate current window size and update max
         max_len = max_len.max(right - left + 1);
     }
 

@@ -8,27 +8,42 @@
 /// Pattern: map + collect to transform a Vec
 #[must_use]
 pub fn map_collect_example(nums: Vec<i32>) -> Vec<i32> {
-    nums.iter().map(|&x| x * 2).collect()
+    nums.iter() // Borrow each element as &i32
+        .map(|&x| x * 2) // Transform: dereference and double
+        .collect() // Build new Vec<i32>
 }
 
 /// Pattern: filter + collect to select elements
 #[must_use]
 pub fn filter_collect_example(nums: Vec<i32>) -> Vec<i32> {
-    nums.iter().filter(|&&x| x > 0).copied().collect()
+    nums.iter() // Borrow each element
+        .filter(|&&x| x > 0) // Keep only positive (note: &&x to dereference &i32)
+        .copied() // Convert &i32 to i32
+        .collect() // Build Vec<i32>
 }
 
 /// Pattern: filter_map to transform and filter in one pass
 #[must_use]
 pub fn filter_map_example(nums: Vec<i32>) -> Vec<i32> {
     nums.iter()
-        .filter_map(|&x| if x > 0 { Some(x * 2) } else { None })
+        .filter_map(|&x| {
+            // Return Some(value) to keep, None to skip
+            if x > 0 {
+                Some(x * 2) // Keep and transform
+            } else {
+                None // Skip negative/zero
+            }
+        })
         .collect()
 }
 
 /// Pattern: enumerate for index + value iteration
 #[must_use]
 pub fn enumerate_example(nums: Vec<i32>) -> Vec<(usize, i32)> {
-    nums.iter().enumerate().map(|(i, &x)| (i, x)).collect()
+    nums.iter() // Iterator of &i32
+        .enumerate() // Wrap each item as (index, &i32)
+        .map(|(i, &x)| (i, x)) // Destructure and dereference
+        .collect()
 }
 
 /// Pattern: zip to iterate two collections together
@@ -50,7 +65,10 @@ pub fn chain_example(nums1: Vec<i32>, nums2: Vec<i32>) -> Vec<i32> {
 /// Pattern: fold for custom accumulation
 #[must_use]
 pub fn fold_example(nums: Vec<i32>) -> i32 {
-    nums.iter().fold(0, |acc, &x| acc + x)
+    nums.iter().fold(0, |acc, &x| {
+        // fold(initial_value, |accumulator, element| { ... })
+        acc + x // Return new accumulator value
+    })
 }
 
 /// Pattern: sum/product for simple aggregation
@@ -82,7 +100,9 @@ pub fn take_skip_example(nums: Vec<i32>) -> Vec<i32> {
 /// Pattern: windows for sliding window
 #[must_use]
 pub fn windows_example(nums: Vec<i32>) -> Vec<i32> {
-    nums.windows(2).map(|w| w[0] + w[1]).collect()
+    nums.windows(2) // Iterate over overlapping slices of size 2
+        .map(|w| w[0] + w[1]) // w is a &[i32] slice
+        .collect()
 }
 
 /// Pattern: collect into different collection types (e.g., `HashSet`)
