@@ -54,6 +54,14 @@ When a problem fits multiple categories, use the **primary data structure** as t
 
 The `fundamentals/` directory contains **Rust idioms and patterns** that aren't LeetCode problems but are essential for fluent coding. These are patterns you'll type repeatedly in any interview:
 
+### `borrowing.rs` - Borrow Checker Patterns
+- **Borrowing rules:** Immutable vs mutable borrows, exclusive access
+- **Lifetimes:** Basic `'a`, multiple lifetimes, lifetime elision
+- **Common patterns:** Splitting borrows, reborrowing, NLL (Non-Lexical Lifetimes)
+- **Ownership:** Move vs copy, taking ownership vs borrowing
+- **Dereferencing:** `*` operator, `as_ref()`, entry API
+- **Avoiding issues:** Clone to sidestep borrows, return owned data
+
 ### `iterators.rs` - Iterator Patterns
 - `map`, `filter`, `filter_map`, `collect`
 - `enumerate`, `zip`, `chain`
@@ -334,6 +342,7 @@ Explain what n represents and any other variables (m, k, etc.).
 ## Components Completed
 
 ### Fundamentals
+- [x] Borrowing - Borrow checker patterns, lifetimes, ownership (19 patterns)
 - [x] Iterators - 14 common patterns (map, filter, fold, etc.)
 - [x] Collections - HashMap, HashSet, VecDeque, BinaryHeap
 - [x] Error Handling - Option/Result combinators, ? operator

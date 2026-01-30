@@ -5,6 +5,7 @@
 #![allow(clippy::missing_errors_doc)] // Examples don't need full docs
 #![allow(clippy::needless_pass_by_value)] // Examples use common signatures
 
+pub mod borrowing;
 pub mod collections;
 pub mod error_handling;
 pub mod iterators;
