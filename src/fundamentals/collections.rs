@@ -1,0 +1,213 @@
+//! Common collection patterns for Rust coding interviews
+//!
+//! This module contains frequently-used patterns for `HashMap`, `HashSet`,
+//! `VecDeque`, and other standard collections.
+
+#![allow(clippy::implicit_hasher)] // Using concrete HashMap for clarity in examples
+
+use std::collections::{HashMap, HashSet, VecDeque};
+
+/// Pattern: HashMap - counting frequency
+#[must_use]
+pub fn frequency_map(nums: Vec<i32>) -> HashMap<i32, usize> {
+    let mut freq = HashMap::new();
+    for num in nums {
+        *freq.entry(num).or_insert(0) += 1;
+    }
+    freq
+}
+
+/// Pattern: HashMap - get with default
+#[must_use]
+pub fn get_or_default(map: &HashMap<i32, i32>, key: i32) -> i32 {
+    *map.get(&key).unwrap_or(&0)
+}
+
+/// Pattern: HashMap - insert if absent
+pub fn insert_if_absent(map: &mut HashMap<i32, String>, key: i32, value: String) {
+    map.entry(key).or_insert(value);
+}
+
+/// Pattern: HashMap - update or insert
+pub fn update_or_insert(map: &mut HashMap<i32, i32>, key: i32, value: i32) {
+    map.entry(key).and_modify(|v| *v += value).or_insert(value);
+}
+
+/// Pattern: HashSet - check membership
+#[must_use]
+pub fn has_duplicates(nums: Vec<i32>) -> bool {
+    let mut seen = HashSet::new();
+    for num in nums {
+        if !seen.insert(num) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Pattern: HashSet - set operations (union, intersection, difference)
+#[must_use]
+pub fn set_operations(nums1: Vec<i32>, nums2: Vec<i32>) -> (HashSet<i32>, HashSet<i32>) {
+    let set1: HashSet<_> = nums1.iter().copied().collect();
+    let set2: HashSet<_> = nums2.iter().copied().collect();
+
+    let union: HashSet<_> = set1.union(&set2).copied().collect();
+    let intersection: HashSet<_> = set1.intersection(&set2).copied().collect();
+
+    (union, intersection)
+}
+
+/// Pattern: VecDeque - use as queue (FIFO)
+#[must_use]
+pub fn queue_example(nums: Vec<i32>) -> Vec<i32> {
+    let mut queue = VecDeque::new();
+
+    // Enqueue
+    for num in nums {
+        queue.push_back(num);
+    }
+
+    // Dequeue
+    let mut result = Vec::new();
+    while let Some(num) = queue.pop_front() {
+        result.push(num);
+    }
+
+    result
+}
+
+/// Pattern: VecDeque - use as stack (LIFO)
+#[must_use]
+pub fn stack_example(nums: Vec<i32>) -> Vec<i32> {
+    let mut stack = VecDeque::new();
+
+    // Push
+    for num in nums {
+        stack.push_back(num);
+    }
+
+    // Pop
+    let mut result = Vec::new();
+    while let Some(num) = stack.pop_back() {
+        result.push(num);
+    }
+
+    result
+}
+
+/// Pattern: VecDeque - sliding window
+#[must_use]
+pub fn sliding_window_max(nums: Vec<i32>, k: usize) -> Vec<i32> {
+    if nums.is_empty() || k == 0 {
+        return vec![];
+    }
+
+    let mut result = Vec::new();
+    let mut window = VecDeque::new();
+
+    for i in 0..nums.len() {
+        // Add to window
+        window.push_back(nums[i]);
+
+        // Remove from window if too large
+        if window.len() > k {
+            window.pop_front();
+        }
+
+        // Compute max if window is full
+        if window.len() == k {
+            result.push(*window.iter().max().unwrap_or(&0));
+        }
+    }
+
+    result
+}
+
+/// Pattern: Vec - binary heap (priority queue)
+#[must_use]
+pub fn heap_example(nums: Vec<i32>) -> Vec<i32> {
+    use std::collections::BinaryHeap;
+
+    let mut heap = BinaryHeap::from(nums);
+    let mut result = Vec::new();
+
+    // Extract in sorted order (max heap by default)
+    while let Some(num) = heap.pop() {
+        result.push(num);
+    }
+
+    result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_frequency_map() {
+        let freq = frequency_map(vec![1, 2, 2, 3, 3, 3]);
+        assert_eq!(freq.get(&1), Some(&1));
+        assert_eq!(freq.get(&2), Some(&2));
+        assert_eq!(freq.get(&3), Some(&3));
+    }
+
+    #[test]
+    fn test_get_or_default() {
+        let mut map = HashMap::new();
+        map.insert(1, 10);
+        assert_eq!(get_or_default(&map, 1), 10);
+        assert_eq!(get_or_default(&map, 2), 0);
+    }
+
+    #[test]
+    fn test_insert_if_absent() {
+        let mut map = HashMap::new();
+        insert_if_absent(&mut map, 1, "first".to_string());
+        insert_if_absent(&mut map, 1, "second".to_string());
+        assert_eq!(map.get(&1), Some(&"first".to_string()));
+    }
+
+    #[test]
+    fn test_update_or_insert() {
+        let mut map = HashMap::new();
+        update_or_insert(&mut map, 1, 5);
+        assert_eq!(map.get(&1), Some(&5));
+        update_or_insert(&mut map, 1, 3);
+        assert_eq!(map.get(&1), Some(&8));
+    }
+
+    #[test]
+    fn test_has_duplicates() {
+        assert!(has_duplicates(vec![1, 2, 2, 3]));
+        assert!(!has_duplicates(vec![1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn test_set_operations() {
+        let (union, intersection) = set_operations(vec![1, 2, 3], vec![2, 3, 4]);
+        assert_eq!(union.len(), 4);
+        assert_eq!(intersection.len(), 2);
+        assert!(intersection.contains(&2));
+        assert!(intersection.contains(&3));
+    }
+
+    #[test]
+    fn test_queue_example() {
+        assert_eq!(queue_example(vec![1, 2, 3]), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_stack_example() {
+        assert_eq!(stack_example(vec![1, 2, 3]), vec![3, 2, 1]);
+    }
+
+    #[test]
+    fn test_sliding_window_max() {
+        assert_eq!(sliding_window_max(vec![1, 3, 2, 5, 4], 3), vec![3, 5, 5]);
+    }
+
+    #[test]
+    fn test_heap_example() {
+        assert_eq!(heap_example(vec![3, 1, 4, 1, 5]), vec![5, 4, 3, 1, 1]);
+    }
+}

@@ -12,6 +12,13 @@ This repository contains LeetCode problem solutions in Rust, designed for use wi
 leetcode/
 ├── src/
 │   ├── lib.rs              # Module exports
+│   ├── fundamentals/       # Core Rust patterns (not LeetCode problems)
+│   │   ├── mod.rs
+│   │   ├── iterators.rs
+│   │   ├── collections.rs
+│   │   ├── error_handling.rs
+│   │   ├── pattern_matching.rs
+│   │   └── strings.rs
 │   ├── arrays/             # Array-based problems
 │   │   ├── mod.rs
 │   │   └── *.rs
@@ -43,7 +50,50 @@ Problems are organized by **primary data structure** or **algorithmic technique*
 
 When a problem fits multiple categories, use the **primary data structure** as the category.
 
-## Three-Implementation Pattern
+## Fundamentals Category
+
+The `fundamentals/` directory contains **Rust idioms and patterns** that aren't LeetCode problems but are essential for fluent coding. These are patterns you'll type repeatedly in any interview:
+
+### `iterators.rs` - Iterator Patterns
+- `map`, `filter`, `filter_map`, `collect`
+- `enumerate`, `zip`, `chain`
+- `fold`, `sum`, `max`, `min`
+- `any`, `all`, `take`, `skip`
+- `windows`, `partition`
+
+### `collections.rs` - Collection Operations
+- **HashMap:** frequency maps, `entry().or_insert()`, `get_or_default()`
+- **HashSet:** membership, duplicates, set operations
+- **VecDeque:** queue (FIFO), stack (LIFO), sliding window
+- **BinaryHeap:** priority queue operations
+
+### `error_handling.rs` - Option/Result Patterns
+- **Option:** `unwrap_or`, `unwrap_or_else`, `map`, `and_then`
+- **Result:** `map`, `map_err`, `and_then`, `?` operator
+- Pattern matching: `match`, `if let`, `while let`
+- `transpose`, collecting Results
+
+### `pattern_matching.rs` - Match Patterns
+- Basic match, ranges, guards
+- Tuple destructuring
+- Enum destructuring
+- `if let`, `while let`
+- Slice patterns
+- `@` bindings
+- Or patterns (`|`)
+
+### `strings.rs` - String Operations
+- String vs &str conversions
+- Char/byte iteration
+- String building (`push_str`, `format!`, `join`)
+- Splitting, trimming, case conversion
+- Substring operations
+- Char classification
+- Parsing
+
+**Purpose:** Use gittype to practice these fundamentals alongside LeetCode problems. When you can type `.iter().filter().map().collect()` without thinking, you'll write algorithms much faster.
+
+## Three-Implementation Pattern (LeetCode Problems)
 
 **Every problem includes three implementations** to demonstrate algorithmic progression:
 
@@ -281,24 +331,33 @@ Use Big-O notation in doc comments:
 
 Explain what n represents and any other variables (m, k, etc.).
 
-## Problems Completed
+## Components Completed
 
-### Strings
+### Fundamentals
+- [x] Iterators - 14 common patterns (map, filter, fold, etc.)
+- [x] Collections - HashMap, HashSet, VecDeque, BinaryHeap
+- [x] Error Handling - Option/Result combinators, ? operator
+- [x] Pattern Matching - match, if let, destructuring, guards
+- [x] Strings - String/&str operations, parsing, manipulation
+
+### LeetCode Problems
+
+#### Strings
 - [x] #3 - Longest Substring Without Repeating Characters (3 implementations)
 
-### Arrays
+#### Arrays
 - [ ] TBD
 
-### Linked Lists
+#### Linked Lists
 - [ ] TBD
 
-### Trees
+#### Trees
 - [ ] TBD
 
-### Graphs
+#### Graphs
 - [ ] TBD
 
-### Dynamic Programming
+#### Dynamic Programming
 - [ ] TBD
 
 ## Future Enhancements
