@@ -351,11 +351,13 @@ Explain what n represents and any other variables (m, k, etc.).
 
 ### LeetCode Problems
 
+#### Arrays
+- [x] #1 - Two Sum (Easy) - Hash map lookup, O(n²) → O(n) optimization
+- [x] #15 - Three Sum (Medium) - Two pointers, sorting, deduplication
+- [x] #42 - Trapping Rain Water (Hard) - Two pointers, DP alternatives
+
 #### Strings
 - [x] #3 - Longest Substring Without Repeating Characters (3 implementations)
-
-#### Arrays
-- [ ] TBD
 
 #### Linked Lists
 - [ ] TBD
