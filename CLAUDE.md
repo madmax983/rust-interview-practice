@@ -168,6 +168,45 @@ The `fundamentals/` directory contains **Rust idioms and patterns** that aren't 
 - **Derive macros:** Debug, Clone, PartialEq, Eq, Hash
 - **Advanced patterns:** Builder pattern, type state pattern, marker traits
 
+### `cli_patterns.rs` - CLI/TUI Patterns with Ratatui (Optional)
+- **Terminal setup:** Initialization, cleanup, panic hooks
+- **Event loop:** Basic app structure, event polling
+- **Component architecture:** Stateful widgets, trait-based composition
+- **State management:** Multiple views, navigation, popups
+- **Event handling:** Keyboard/mouse events, event dispatch
+- **Layouts:** Responsive layouts, nested layouts, constraints
+- **Widgets:** List, Paragraph, Gauge, styled text
+- **Styling:** Color schemes, themes, conditional styling
+- **Advanced:** Async TUI with tokio, scrollable content, search/filter
+- **Testing:** Component testing, backend abstraction
+- **Production:** Error handling, help screens, clap configuration
+- **Requires:** `--features cli-patterns` to enable ratatui dependencies
+
+### `design_patterns.rs` - Design Patterns
+- **Builder:** Classic builder, type-state builder, consuming builder
+- **Newtype:** Type safety, Deref for convenience, trait implementation
+- **Type State:** Compile-time state validation, state transitions
+- **RAII:** Drop trait cleanup, guards, scope-based resources
+- **Visitor:** Trait-based visitor, AST traversal, double dispatch
+- **Strategy:** Trait objects vs generics, runtime vs compile-time
+- **Command:** Undo/redo, command history, deferred execution
+- **Iterator:** Custom iterators, IntoIterator, infinite iterators
+- **Observer:** Callbacks, channel-based observers, pub/sub
+- **Adapter:** Wrapper pattern, transparent wrappers, trait impl for foreign types
+- **Plugin System:** Dynamic loading, trait-based plugins
+
+### `unsafe_rust.rs` - Unsafe Patterns
+- **Unsafe superpowers:** Raw pointers, unsafe functions, traits, statics, unions
+- **Raw pointers:** Creating, dereferencing, arithmetic, null pointers
+- **Unsafe functions:** Safety contracts, documentation, safe wrappers
+- **FFI:** extern "C", calling C from Rust, repr(C), string handling
+- **Unsafe traits:** Send, Sync, UnsafeCell for interior mutability
+- **Common patterns:** Transmute, MaybeUninit, mutable aliasing
+- **Safety invariants:** Documentation, defensive programming, testing
+- **Miri:** Undefined behavior detection, testing unsafe code
+- **When to use:** Valid reasons, minimizing unsafe surface area
+- **Common mistakes:** Dangling pointers, aliasing violations, uninitialized memory
+
 ### `async_and_parallel.rs` - Async/Await and Data Parallelism (Optional)
 - **Tokio async patterns:** spawn, join!, select!, timeout, channels, Mutex/RwLock
 - **Stream processing:** Async iteration, combinators
@@ -422,9 +461,11 @@ Explain what n represents and any other variables (m, k, etc.).
 
 ### Fundamentals
 - [x] Borrowing - Borrow checker patterns, lifetimes, ownership (19 patterns)
+- [x] CLI Patterns - Ratatui TUI development, components, layouts (optional feature)
 - [x] Closures - Fn/FnMut/FnOnce traits, capturing, returning closures
 - [x] Collections - HashMap, HashSet, VecDeque, BinaryHeap
 - [x] Concurrency - Arc, Mutex, RwLock, channels, atomics, thread patterns
+- [x] Design Patterns - Builder, newtype, type-state, RAII, visitor, strategy
 - [x] Error Handling - Option/Result combinators, ? operator
 - [x] Error Types - thiserror, anyhow, custom errors, recovery strategies
 - [x] Iterators - 14 common patterns (map, filter, fold, etc.)
@@ -437,6 +478,7 @@ Explain what n represents and any other variables (m, k, etc.).
 - [x] Strings - String/&str operations, parsing, manipulation
 - [x] Testing - Unit tests, fixtures, property-based testing, TDD workflow
 - [x] Types and Traits - Generics, trait bounds, From/Into, impl Trait, trait objects, type state
+- [x] Unsafe Rust - Raw pointers, FFI, unsafe traits, safety invariants
 - [x] Async and Parallel - Tokio async/await, rayon data parallelism (optional feature)
 
 ### LeetCode Problems

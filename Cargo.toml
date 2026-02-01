@@ -20,6 +20,11 @@ serde_yaml = { version = "0.9", optional = true }
 toml = { version = "0.8", optional = true }
 bincode = { version = "1.3", optional = true }
 
+# Optional: Enable with --features cli-patterns
+ratatui = { version = "0.26", optional = true }
+crossterm = { version = "0.27", optional = true }
+clap = { version = "4.5", features = ["derive"], optional = true }
+
 [features]
 # Feature flag for async/parallel fundamentals
 async-parallel = ["tokio", "tokio-stream", "futures", "rayon"]
@@ -29,3 +34,6 @@ testing-extras = ["proptest"]
 
 # Feature flag for serde serialization patterns
 serde-patterns = ["serde", "serde_json", "serde_yaml", "toml", "bincode"]
+
+# Feature flag for CLI/TUI patterns with ratatui
+cli-patterns = ["ratatui", "crossterm", "clap"]
