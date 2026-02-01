@@ -5,6 +5,7 @@
 #![allow(clippy::missing_errors_doc)] // Examples don't need full docs
 #![allow(clippy::needless_pass_by_value)] // Examples use common signatures
 
+pub mod asm;
 pub mod borrowing;
 pub mod closures;
 pub mod collections;
@@ -17,6 +18,7 @@ pub mod macros;
 pub mod numeric_ops;
 pub mod pattern_matching;
 pub mod performance;
+pub mod simd;
 pub mod smart_pointers;
 pub mod strings;
 pub mod testing;

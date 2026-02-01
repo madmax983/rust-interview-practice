@@ -54,6 +54,19 @@ When a problem fits multiple categories, use the **primary data structure** as t
 
 The `fundamentals/` directory contains **Rust idioms and patterns** that aren't LeetCode problems but are essential for fluent coding. These are patterns you'll type repeatedly in any interview:
 
+### `asm.rs` - Inline Assembly
+- **Basic syntax:** `asm!` macro, register operands, templates
+- **Register constraints:** in, out, inout, lateout, clobbers
+- **Options:** pure, nomem, readonly, nostack, preserves_flags
+- **X86_64 instructions:** POPCNT, BSWAP, LZCNT, TZCNT for bit manipulation
+- **Atomic operations:** CMPXCHG (compare-and-swap), XADD (fetch-add), LOCK prefix
+- **CPUID:** CPU feature detection, vendor identification
+- **Memory barriers:** MFENCE, LFENCE, SFENCE for ordering
+- **System calls:** Direct syscalls via SYSCALL instruction (Linux)
+- **Naked functions:** Manual stack management, custom prologues/epilogues
+- **Performance:** RDTSC (timestamp counter), PAUSE (spin loop hint)
+- **Cross-platform:** X86_64 vs AArch64 patterns, platform-specific intrinsics
+
 ### `borrowing.rs` - Borrow Checker Patterns
 - **Borrowing rules:** Immutable vs mutable borrows, exclusive access
 - **Lifetimes:** Basic `'a`, multiple lifetimes, lifetime elision
@@ -145,6 +158,20 @@ The `fundamentals/` directory contains **Rust idioms and patterns** that aren't 
 - **Validation:** Deserialization-time validation
 - **Performance:** Zero-copy, borrowed types, streaming
 - **Requires:** `--features serde-patterns` to enable dependencies
+
+### `simd.rs` - SIMD (Single Instruction, Multiple Data)
+- **Platform detection:** `is_x86_feature_detected!` for SSE, AVX, AVX2, FMA
+- **SSE/SSE2:** 128-bit vectors (4 floats, 4 i32s), basic operations
+- **Vector operations:** Load/store (aligned/unaligned), add, mul, sub, div
+- **Horizontal operations:** Reduce (sum, max, min), shuffle, permute
+- **AVX/AVX2:** 256-bit vectors (8 floats, 8 i32s), wider parallelism
+- **FMA:** Fused multiply-add for accuracy and performance
+- **Comparisons:** Vector comparisons, masks, conditional operations
+- **Integer SIMD:** i32/i64 operations, horizontal add
+- **Alignment:** #[repr(align)] for optimal memory access
+- **Portable SIMD:** std::simd for cross-platform (nightly feature)
+- **Target features:** #[target_feature(enable = "avx2")] attributes
+- **Performance:** Scalar vs SIMD benchmarks, when to vectorize
 
 ### `testing.rs` - Testing Patterns
 - **Unit tests:** Assertions, #[should_panic], #[ignore], Result return
@@ -460,6 +487,7 @@ Explain what n represents and any other variables (m, k, etc.).
 ## Components Completed
 
 ### Fundamentals
+- [x] Asm - Inline assembly with asm! macro, register constraints, x86_64/aarch64 intrinsics
 - [x] Borrowing - Borrow checker patterns, lifetimes, ownership (19 patterns)
 - [x] CLI Patterns - Ratatui TUI development, components, layouts (optional feature)
 - [x] Closures - Fn/FnMut/FnOnce traits, capturing, returning closures
@@ -474,6 +502,7 @@ Explain what n represents and any other variables (m, k, etc.).
 - [x] Pattern Matching - match, if let, destructuring, guards
 - [x] Performance - Inlining, allocation, cache-friendly patterns, hot path optimization
 - [x] Serde Patterns - Serialization/deserialization patterns (optional feature)
+- [x] SIMD - SSE/AVX vector operations, platform detection, portable SIMD
 - [x] Smart Pointers - Box, Rc, RefCell, Cow, ownership patterns
 - [x] Strings - String/&str operations, parsing, manipulation
 - [x] Testing - Unit tests, fixtures, property-based testing, TDD workflow

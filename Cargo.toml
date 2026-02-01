@@ -37,3 +37,6 @@ serde-patterns = ["serde", "serde_json", "serde_yaml", "toml", "bincode"]
 
 # Feature flag for CLI/TUI patterns with ratatui
 cli-patterns = ["ratatui", "crossterm", "clap"]
+
+# Feature flag for portable SIMD (requires nightly Rust)
+simd-patterns = []
