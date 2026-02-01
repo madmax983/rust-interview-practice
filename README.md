@@ -7,7 +7,7 @@ A collection of LeetCode solutions and Rust fundamentals designed for **gittype 
 
 ## Why This Repository?
 
-Traditional LeetCode practice focuses on *understanding* algorithms. This repository adds a second dimension: **typing fluency**. By using [gittype](https://github.com/wincent/gittype) to repeatedly type out solutions, you build muscle memory for:
+Traditional LeetCode practice focuses on *understanding* algorithms. This repository adds a second dimension: **typing fluency**. By using [gittype](https://github.com/unhappychoice/gittype) to repeatedly type out solutions, you build muscle memory for:
 
 - Iterator chains (`.iter().filter().map().collect()`)
 - Pattern matching (`match`, `if let`, destructuring)
@@ -82,7 +82,7 @@ pub fn two_sum_optimal(nums: Vec<i32>, target: i32) -> Vec<i32> { /* ... */ }
 ### Prerequisites
 
 - Rust 2024 edition (install via [rustup](https://rustup.rs/))
-- [gittype](https://github.com/wincent/gittype) (for muscle memory training)
+- [gittype](https://github.com/unhappychoice/gittype) (for muscle memory training)
 
 ### Installation
 
@@ -186,7 +186,7 @@ MIT License - See LICENSE file for details
 ## Acknowledgments
 
 - [LeetCode](https://leetcode.com/) for problem sets
-- [gittype](https://github.com/wincent/gittype) for muscle memory training methodology
+- [gittype](https://github.com/unhappychoice/gittype) for muscle memory training methodology
 - Rust community for excellent tooling and documentation
 
 ---
