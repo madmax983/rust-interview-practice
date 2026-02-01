@@ -109,6 +109,43 @@ The `fundamentals/` directory contains **Rust idioms and patterns** that aren't 
 - **Debugging:** cargo expand, trace_macros!, common errors
 - **When to use:** Macros vs functions vs generics trade-offs
 
+### `error_types.rs` - Error Design
+- **Custom error types:** Manual Error trait implementation
+- **thiserror patterns:** #[error("...")], #[from], transparent errors
+- **anyhow patterns:** .context(), .with_context(), error chains
+- **Error composition:** Multiple variants, error metadata, error codes
+- **Propagation:** ? operator, map_err, error wrapping
+- **Boxing errors:** Box<dyn Error>, type erasure
+- **Library vs application:** Design principles for each
+- **Recovery strategies:** Retry, fallback, graceful degradation
+- **When to panic:** Error vs panic decision making
+
+### `performance.rs` - Performance Optimization
+- **Inlining:** #[inline], #[inline(always)], #[inline(never)]
+- **Allocation:** with_capacity, reuse buffers, avoid clones
+- **Cache-friendly:** SoA vs AoS, memory layout, repr attributes
+- **Iterator optimization:** Avoiding collect(), extend vs push
+- **Cow:** Clone-on-write for conditional allocation
+- **Benchmarking:** black_box, micro-benchmark patterns
+- **Hot path:** Fast/slow path, reducing bounds checks
+- **String interning:** Deduplication for memory savings
+- **Object pools:** Reusing allocations
+- **Lazy initialization:** OnceLock, lazy patterns
+- **SSO:** Small string optimization
+- **Arena allocation:** Bump allocators
+
+### `serde_patterns.rs` - Serialization (Optional)
+- **Basics:** #[derive(Serialize, Deserialize)], JSON/YAML/TOML/Bincode
+- **Field attributes:** rename, skip, default, flatten, alias
+- **Container attributes:** rename_all, deny_unknown_fields
+- **Enum serialization:** Tagged, untagged, internally tagged
+- **Custom serialization:** serialize_with, deserialize_with
+- **Multiple formats:** JSON, YAML, TOML, Bincode comparison
+- **Versioning:** Schema evolution, backwards compatibility
+- **Validation:** Deserialization-time validation
+- **Performance:** Zero-copy, borrowed types, streaming
+- **Requires:** `--features serde-patterns` to enable dependencies
+
 ### `testing.rs` - Testing Patterns
 - **Unit tests:** Assertions, #[should_panic], #[ignore], Result return
 - **Test organization:** Inline vs separate modules, testing private functions
@@ -389,10 +426,13 @@ Explain what n represents and any other variables (m, k, etc.).
 - [x] Collections - HashMap, HashSet, VecDeque, BinaryHeap
 - [x] Concurrency - Arc, Mutex, RwLock, channels, atomics, thread patterns
 - [x] Error Handling - Option/Result combinators, ? operator
+- [x] Error Types - thiserror, anyhow, custom errors, recovery strategies
 - [x] Iterators - 14 common patterns (map, filter, fold, etc.)
 - [x] Macros - Declarative macros, repetition, DSLs, debugging
 - [x] Numeric Operations - Bit manipulation, safe arithmetic, number algorithms
 - [x] Pattern Matching - match, if let, destructuring, guards
+- [x] Performance - Inlining, allocation, cache-friendly patterns, hot path optimization
+- [x] Serde Patterns - Serialization/deserialization patterns (optional feature)
 - [x] Smart Pointers - Box, Rc, RefCell, Cow, ownership patterns
 - [x] Strings - String/&str operations, parsing, manipulation
 - [x] Testing - Unit tests, fixtures, property-based testing, TDD workflow
