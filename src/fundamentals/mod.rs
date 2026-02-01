@@ -11,10 +11,12 @@ pub mod collections;
 pub mod concurrency;
 pub mod error_handling;
 pub mod iterators;
+pub mod macros;
 pub mod numeric_ops;
 pub mod pattern_matching;
 pub mod smart_pointers;
 pub mod strings;
+pub mod testing;
 pub mod types_and_traits;
 
 // Optional: requires 'async-parallel' feature

@@ -10,6 +10,12 @@ tokio-stream = { version = "0.1", optional = true }
 futures = { version = "0.3", optional = true }
 rayon = { version = "1.10", optional = true }
 
+# Optional: Enable with --features testing-extras
+proptest = { version = "1.5", optional = true }
+
 [features]
 # Feature flag for async/parallel fundamentals
 async-parallel = ["tokio", "tokio-stream", "futures", "rayon"]
+
+# Feature flag for advanced testing patterns
+testing-extras = ["proptest"]

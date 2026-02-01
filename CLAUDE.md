@@ -99,6 +99,28 @@ The `fundamentals/` directory contains **Rust idioms and patterns** that aren't 
 - Char classification
 - Parsing
 
+### `macros.rs` - Macro Patterns
+- **Declarative macros:** macro_rules!, fragment specifiers (expr, ident, ty, pat, stmt)
+- **Repetition patterns:** $(...)\*, $(...)+, comma-separated lists
+- **Multiple branches:** Pattern matching, recursive macros
+- **Practical patterns:** HashMap literals, custom assertions, time measurement
+- **DSL creation:** Builder-style, SQL-like, HTML-like syntax
+- **Macro hygiene:** Variable scoping, $crate usage
+- **Debugging:** cargo expand, trace_macros!, common errors
+- **When to use:** Macros vs functions vs generics trade-offs
+
+### `testing.rs` - Testing Patterns
+- **Unit tests:** Assertions, #[should_panic], #[ignore], Result return
+- **Test organization:** Inline vs separate modules, testing private functions
+- **Fixtures:** Setup/teardown, test helpers, context structs with Drop
+- **Parameterized tests:** Table-driven tests, test case structs
+- **Property-based testing:** proptest integration (optional feature), custom strategies
+- **Mocking:** Trait-based mocks without external crates
+- **Async testing:** tokio::test patterns
+- **TDD workflow:** RED-GREEN-REFACTOR cycle, test-first development
+- **Doc tests:** Examples in documentation, hidden setup lines
+- **Best practices:** AAA pattern, edge cases, clear naming
+
 ### `types_and_traits.rs` - Types and Traits
 - **Type aliases:** Convenience names, newtype pattern for type safety
 - **Generics:** Type parameters, constraints, associated types
@@ -368,10 +390,12 @@ Explain what n represents and any other variables (m, k, etc.).
 - [x] Concurrency - Arc, Mutex, RwLock, channels, atomics, thread patterns
 - [x] Error Handling - Option/Result combinators, ? operator
 - [x] Iterators - 14 common patterns (map, filter, fold, etc.)
+- [x] Macros - Declarative macros, repetition, DSLs, debugging
 - [x] Numeric Operations - Bit manipulation, safe arithmetic, number algorithms
 - [x] Pattern Matching - match, if let, destructuring, guards
 - [x] Smart Pointers - Box, Rc, RefCell, Cow, ownership patterns
 - [x] Strings - String/&str operations, parsing, manipulation
+- [x] Testing - Unit tests, fixtures, property-based testing, TDD workflow
 - [x] Types and Traits - Generics, trait bounds, From/Into, impl Trait, trait objects, type state
 - [x] Async and Parallel - Tokio async/await, rayon data parallelism (optional feature)
 
