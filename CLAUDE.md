@@ -99,6 +99,16 @@ The `fundamentals/` directory contains **Rust idioms and patterns** that aren't 
 - Char classification
 - Parsing
 
+### `types_and_traits.rs` - Types and Traits
+- **Type aliases:** Convenience names, newtype pattern for type safety
+- **Generics:** Type parameters, constraints, associated types
+- **Trait definitions:** Simple traits, default implementations, supertraits
+- **Trait bounds:** where clauses, multiple bounds, impl Trait syntax
+- **Trait objects:** Dynamic dispatch with `Box<dyn Trait>`
+- **From/Into:** Conversion traits, automatic implementations
+- **Derive macros:** Debug, Clone, PartialEq, Eq, Hash
+- **Advanced patterns:** Builder pattern, type state pattern, marker traits
+
 **Purpose:** Use gittype to practice these fundamentals alongside LeetCode problems. When you can type `.iter().filter().map().collect()` without thinking, you'll write algorithms much faster.
 
 ## Three-Implementation Pattern (LeetCode Problems)
@@ -348,6 +358,7 @@ Explain what n represents and any other variables (m, k, etc.).
 - [x] Error Handling - Option/Result combinators, ? operator
 - [x] Pattern Matching - match, if let, destructuring, guards
 - [x] Strings - String/&str operations, parsing, manipulation
+- [x] Types and Traits - Generics, trait bounds, From/Into, impl Trait, trait objects, type state
 
 ### LeetCode Problems
 

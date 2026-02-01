@@ -11,3 +11,4 @@ pub mod error_handling;
 pub mod iterators;
 pub mod pattern_matching;
 pub mod strings;
+pub mod types_and_traits;

@@ -28,7 +28,8 @@ rust-interview-practice/
 │   │   ├── collections.rs      # HashMap, HashSet, VecDeque, BinaryHeap
 │   │   ├── error_handling.rs   # Option/Result combinators, ? operator
 │   │   ├── pattern_matching.rs # match, if let, destructuring, guards
-│   │   └── strings.rs          # String/&str operations, parsing
+│   │   ├── strings.rs          # String/&str operations, parsing
+│   │   └── types_and_traits.rs # Generics, trait bounds, From/Into, type state
 │   ├── arrays/             # Array-based problems
 │   │   ├── two_sum.rs          # #1 - Hash map lookup optimization
 │   │   ├── three_sum.rs        # #15 - Two pointers, deduplication
@@ -132,6 +133,7 @@ The `fundamentals/` directory contains **Rust idioms** essential for fluent codi
 | **error_handling.rs** | Option/Result | unwrap_or, map, and_then, ?, pattern matching |
 | **pattern_matching.rs** | Match expressions | Destructuring, guards, @ bindings, or patterns |
 | **strings.rs** | String operations | String vs &str, char iteration, parsing, splitting |
+| **types_and_traits.rs** | Generics & traits | Type parameters, trait bounds, From/Into, impl Trait, type state |
 
 **Practice these alongside LeetCode problems** to build comprehensive fluency.
 

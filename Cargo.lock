@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "leetcode"
+name = "rust-interview-practice"
 version = "0.1.0"
