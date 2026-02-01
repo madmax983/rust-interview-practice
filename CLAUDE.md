@@ -353,10 +353,14 @@ Explain what n represents and any other variables (m, k, etc.).
 
 ### Fundamentals
 - [x] Borrowing - Borrow checker patterns, lifetimes, ownership (19 patterns)
-- [x] Iterators - 14 common patterns (map, filter, fold, etc.)
+- [x] Closures - Fn/FnMut/FnOnce traits, capturing, returning closures
 - [x] Collections - HashMap, HashSet, VecDeque, BinaryHeap
+- [x] Concurrency - Arc, Mutex, RwLock, channels, atomics, thread patterns
 - [x] Error Handling - Option/Result combinators, ? operator
+- [x] Iterators - 14 common patterns (map, filter, fold, etc.)
+- [x] Numeric Operations - Bit manipulation, safe arithmetic, number algorithms
 - [x] Pattern Matching - match, if let, destructuring, guards
+- [x] Smart Pointers - Box, Rc, RefCell, Cow, ownership patterns
 - [x] Strings - String/&str operations, parsing, manipulation
 - [x] Types and Traits - Generics, trait bounds, From/Into, impl Trait, trait objects, type state
 
