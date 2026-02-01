@@ -109,6 +109,16 @@ The `fundamentals/` directory contains **Rust idioms and patterns** that aren't 
 - **Derive macros:** Debug, Clone, PartialEq, Eq, Hash
 - **Advanced patterns:** Builder pattern, type state pattern, marker traits
 
+### `async_and_parallel.rs` - Async/Await and Data Parallelism (Optional)
+- **Tokio async patterns:** spawn, join!, select!, timeout, channels, Mutex/RwLock
+- **Stream processing:** Async iteration, combinators
+- **Rayon parallel iterators:** par_iter, par_map, par_fold, par_sort
+- **Parallel operations:** Partition, find, chunks processing
+- **Thread pool configuration:** Custom pools, work distribution
+- **Hybrid patterns:** Combining tokio and rayon for I/O + CPU work
+- **When to use:** I/O-bound (tokio) vs CPU-bound (rayon) workloads
+- **Requires:** `--features async-parallel` to enable dependencies
+
 **Purpose:** Use gittype to practice these fundamentals alongside LeetCode problems. When you can type `.iter().filter().map().collect()` without thinking, you'll write algorithms much faster.
 
 ## Three-Implementation Pattern (LeetCode Problems)
@@ -363,6 +373,7 @@ Explain what n represents and any other variables (m, k, etc.).
 - [x] Smart Pointers - Box, Rc, RefCell, Cow, ownership patterns
 - [x] Strings - String/&str operations, parsing, manipulation
 - [x] Types and Traits - Generics, trait bounds, From/Into, impl Trait, trait objects, type state
+- [x] Async and Parallel - Tokio async/await, rayon data parallelism (optional feature)
 
 ### LeetCode Problems
 

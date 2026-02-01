@@ -16,3 +16,7 @@ pub mod pattern_matching;
 pub mod smart_pointers;
 pub mod strings;
 pub mod types_and_traits;
+
+// Optional: requires 'async-parallel' feature
+#[cfg(feature = "async-parallel")]
+pub mod async_and_parallel;
