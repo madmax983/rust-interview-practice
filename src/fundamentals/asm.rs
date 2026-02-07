@@ -277,7 +277,7 @@ pub fn cpuid(leaf: u32, subleaf: u32) -> (u32, u32, u32, u32) {
 #[must_use]
 pub fn has_sse42() -> bool {
     let (_, _, ecx, _) = cpuid(1, 0);
-    (ecx & (1 << 20)) != 0  // SSE4.2 bit
+    (ecx & (1 << 20)) != 0 // SSE4.2 bit
 }
 
 // ============================================================================
@@ -288,10 +288,7 @@ pub fn has_sse42() -> bool {
 #[cfg(target_arch = "x86_64")]
 pub fn memory_fence() {
     unsafe {
-        asm!(
-            "mfence",
-            options(nostack, preserves_flags),
-        );
+        asm!("mfence", options(nostack, preserves_flags),);
     }
 }
 
@@ -299,10 +296,7 @@ pub fn memory_fence() {
 #[cfg(target_arch = "x86_64")]
 pub fn load_fence() {
     unsafe {
-        asm!(
-            "lfence",
-            options(nostack, preserves_flags),
-        );
+        asm!("lfence", options(nostack, preserves_flags),);
     }
 }
 
@@ -310,10 +304,7 @@ pub fn load_fence() {
 #[cfg(target_arch = "x86_64")]
 pub fn store_fence() {
     unsafe {
-        asm!(
-            "sfence",
-            options(nostack, preserves_flags),
-        );
+        asm!("sfence", options(nostack, preserves_flags),);
     }
 }
 
@@ -372,8 +363,8 @@ pub unsafe extern "C" fn naked_identity(x: u64) -> u64 {
     // Must use naked_asm! in naked functions (Rust 2024)
     // First argument is in rdi (System V ABI), return in rax
     core::arch::naked_asm!(
-        "mov rax, rdi",  // Copy first arg to return register
-        "ret",            // Return
+        "mov rax, rdi", // Copy first arg to return register
+        "ret",          // Return
     )
 }
 
@@ -383,8 +374,8 @@ pub unsafe extern "C" fn naked_identity(x: u64) -> u64 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn naked_add(a: u64, b: u64) -> u64 {
     core::arch::naked_asm!(
-        "mov rax, rdi",  // First arg (a) to rax
-        "add rax, rsi",  // Add second arg (b)
+        "mov rax, rdi", // First arg (a) to rax
+        "add rax, rsi", // Add second arg (b)
         "ret",
     )
 }

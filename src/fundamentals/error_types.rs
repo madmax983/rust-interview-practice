@@ -283,7 +283,10 @@ impl fmt::Display for AppError {
             AppError::MissingField(field) => {
                 write!(f, "Missing required field: {field}")
             }
-            AppError::InsufficientBalance { required, available } => {
+            AppError::InsufficientBalance {
+                required,
+                available,
+            } => {
                 write!(f, "Insufficient balance: need {required}, have {available}")
             }
             AppError::Unauthorized { user_id } => {
@@ -373,9 +376,11 @@ impl Error for DetailedError {}
 
 #[allow(dead_code)]
 fn use_detailed_error() -> Result<(), DetailedError> {
-    Err(DetailedError::new(ErrorCode::ValidationError, "Invalid email")
-        .with_context("field", "email")
-        .with_context("value", "not-an-email"))
+    Err(
+        DetailedError::new(ErrorCode::ValidationError, "Invalid email")
+            .with_context("field", "email")
+            .with_context("value", "not-an-email"),
+    )
 }
 
 // ============================================================================
@@ -388,12 +393,10 @@ fn demonstrate_error_propagation() -> Result<i32, AppError> {
     let _result = some_fallible_operation()?;
 
     // Pattern 2: map_err - transform error type
-    let _result2 = other_operation()
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let _result2 = other_operation().map_err(|e| AppError::Internal(e.to_string()))?;
 
     // Pattern 3: Wrapping with context
-    let _result3 = another_operation()
-        .map_err(|_| AppError::MissingField("config".to_string()))?;
+    let _result3 = another_operation().map_err(|_| AppError::MissingField("config".to_string()))?;
 
     Ok(42)
 }
@@ -574,8 +577,7 @@ fn demonstrate_panic_vs_error() {
     }
 
     // expect() for documenting why panic is acceptable
-    let config = std::env::var("CONFIG_PATH")
-        .expect("CONFIG_PATH must be set");
+    let config = std::env::var("CONFIG_PATH").expect("CONFIG_PATH must be set");
 
     let _ = divide(10, 2);
     let _ = get_element(&[1, 2, 3], 0);
@@ -591,9 +593,7 @@ fn demonstrate_panic_vs_error() {
 fn read_user_file(user_id: u64) -> Result<String, AppError> {
     let path = format!("/users/{user_id}/profile.txt");
     std::fs::read_to_string(&path)
-        .map_err(|e| {
-            AppError::Internal(format!("Failed to read profile for user {user_id}: {e}"))
-        })
+        .map_err(|e| AppError::Internal(format!("Failed to read profile for user {user_id}: {e}")))
 }
 
 /// Pattern 2: Multiple error sources with match.
@@ -680,7 +680,9 @@ fn interview_patterns() {
 
     // Pattern 3: Option to Result conversion
     fn get_config(key: &str) -> Result<String, String> {
-        std::env::var(key).ok().ok_or_else(|| format!("Missing config: {key}"))
+        std::env::var(key)
+            .ok()
+            .ok_or_else(|| format!("Missing config: {key}"))
     }
 
     let _ = process();

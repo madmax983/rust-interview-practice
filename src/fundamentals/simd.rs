@@ -137,11 +137,11 @@ pub fn dot_product_sse(a: &[f32], b: &[f32]) -> f32 {
     // Horizontal sum: reduce 4 lanes to 1
     let mut result = unsafe {
         // Shuffle and add to reduce
-        let shuf = _mm_movehdup_ps(sum_vec);    // Duplicate high halves
+        let shuf = _mm_movehdup_ps(sum_vec); // Duplicate high halves
         let sums = _mm_add_ps(sum_vec, shuf);
         let shuf = _mm_movehl_ps(shuf, sums);
         let sums = _mm_add_ss(sums, shuf);
-        _mm_cvtss_f32(sums)  // Extract lowest float
+        _mm_cvtss_f32(sums) // Extract lowest float
     };
 
     // Add remainder with scalar code
@@ -488,7 +488,7 @@ pub fn count_greater_sse(data: &[f32], threshold: f32) -> usize {
 #[cfg(feature = "simd-patterns")]
 #[allow(dead_code)]
 mod portable_simd {
-    use std::simd::{f32x4, f32x8, i32x4, SimdFloat, SimdInt};
+    use std::simd::{SimdFloat, SimdInt, f32x4, f32x8, i32x4};
 
     /// Add arrays using portable SIMD (4-wide).
     pub fn add_floats_portable(a: &[f32], b: &[f32], result: &mut [f32]) {

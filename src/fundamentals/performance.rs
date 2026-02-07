@@ -210,10 +210,7 @@ fn demonstrate_iterator_optimization() {
         .sum();
 
     // Good: chain operations
-    let _good: i32 = numbers
-        .iter()
-        .filter(|&&x| x % 2 == 0)
-        .sum(); // No intermediate collection
+    let _good: i32 = numbers.iter().filter(|&&x| x % 2 == 0).sum(); // No intermediate collection
 
     // Pattern 2: Use extend instead of repeated push
     let mut result = Vec::with_capacity(numbers.len());
@@ -304,10 +301,7 @@ fn micro_benchmark() {
     }
     let duration = start.elapsed();
 
-    println!(
-        "Average: {:?}",
-        duration / iterations
-    );
+    println!("Average: {:?}", duration / iterations);
 }
 
 // ============================================================================
@@ -521,9 +515,7 @@ impl SmallString {
 
     fn as_str(&self) -> &str {
         match self {
-            SmallString::Inline(buf, len) => {
-                std::str::from_utf8(&buf[..*len as usize]).unwrap()
-            }
+            SmallString::Inline(buf, len) => std::str::from_utf8(&buf[..*len as usize]).unwrap(),
             SmallString::Heap(s) => s,
         }
     }

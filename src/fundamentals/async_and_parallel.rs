@@ -15,7 +15,7 @@
 
 #[cfg(feature = "async-parallel")]
 mod tokio_patterns {
-    use tokio::time::{sleep, timeout, Duration};
+    use tokio::time::{Duration, sleep, timeout};
 
     /// Basic async function that awaits another async operation.
     #[allow(dead_code)]
@@ -64,11 +64,7 @@ mod tokio_patterns {
     #[allow(dead_code)]
     async fn demonstrate_join() {
         // Run multiple futures concurrently and wait for all
-        let (data1, data2, data3) = tokio::join!(
-            fetch_data(1),
-            fetch_data(2),
-            fetch_data(3),
-        );
+        let (data1, data2, data3) = tokio::join!(fetch_data(1), fetch_data(2), fetch_data(3),);
 
         println!("{data1}, {data2}, {data3}");
     }
@@ -394,9 +390,7 @@ mod rayon_patterns {
         let numbers = vec![1, 2, 3, 4, 5, 6, 7, 8];
 
         // Partition into evens and odds in parallel
-        let (evens, odds): (Vec<&i32>, Vec<&i32>) = numbers
-            .par_iter()
-            .partition(|&&x| x % 2 == 0);
+        let (evens, odds): (Vec<&i32>, Vec<&i32>) = numbers.par_iter().partition(|&&x| x % 2 == 0);
 
         println!("Evens: {evens:?}");
         println!("Odds: {odds:?}");
@@ -438,18 +432,10 @@ mod rayon_patterns {
         use rayon::ThreadPoolBuilder;
 
         // Create custom thread pool with 4 threads
-        let pool = ThreadPoolBuilder::new()
-            .num_threads(4)
-            .build()
-            .unwrap();
+        let pool = ThreadPoolBuilder::new().num_threads(4).build().unwrap();
 
         // Execute work in the pool
-        let sum = pool.install(|| {
-            (0..100)
-                .into_par_iter()
-                .map(|x| x * x)
-                .sum::<i32>()
-        });
+        let sum = pool.install(|| (0..100).into_par_iter().map(|x| x * x).sum::<i32>());
 
         println!("Sum in custom pool: {sum}");
     }
@@ -461,11 +447,7 @@ mod rayon_patterns {
         let b = vec![10, 20, 30, 40, 50];
 
         // Parallel zip and map
-        let result: Vec<i32> = a
-            .par_iter()
-            .zip(&b)
-            .map(|(&x, &y)| x + y)
-            .collect();
+        let result: Vec<i32> = a.par_iter().zip(&b).map(|(&x, &y)| x + y).collect();
 
         println!("Zipped sum: {result:?}");
     }
@@ -578,14 +560,9 @@ async fn hybrid_example() {
     use tokio::task::spawn_blocking;
 
     // CPU-intensive work in rayon (blocking)
-    let result: i32 = spawn_blocking(|| {
-        (0..1_000_000)
-            .into_par_iter()
-            .map(|x| x * x)
-            .sum::<i32>()
-    })
-    .await
-    .unwrap();
+    let result: i32 = spawn_blocking(|| (0..1_000_000).into_par_iter().map(|x| x * x).sum::<i32>())
+        .await
+        .unwrap();
 
     println!("Computed result: {result}");
 }

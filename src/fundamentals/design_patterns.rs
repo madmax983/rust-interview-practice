@@ -295,9 +295,7 @@ impl FileHandle<Reading> {
 
 #[allow(dead_code)]
 fn demonstrate_typestate() {
-    let file = FileHandle::new("data.txt")
-        .open()
-        .read();
+    let file = FileHandle::new("data.txt").open().read();
 
     let _data = file.get_data();
     let _closed = file.close();
@@ -531,8 +529,14 @@ impl CommandHistory {
 fn demonstrate_command() {
     let mut history = CommandHistory::new();
 
-    history.execute(Box::new(AddCommand { value: 5, target: 0 }));
-    history.execute(Box::new(AddCommand { value: 3, target: 5 }));
+    history.execute(Box::new(AddCommand {
+        value: 5,
+        target: 0,
+    }));
+    history.execute(Box::new(AddCommand {
+        value: 3,
+        target: 5,
+    }));
 
     history.undo();
     history.undo();

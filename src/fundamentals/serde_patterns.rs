@@ -285,8 +285,8 @@ fn demonstrate_flatten() {
 // Custom Serialization
 // ============================================================================
 
-use serde::ser::Serializer;
 use serde::de::Deserializer;
+use serde::ser::Serializer;
 
 /// Custom serialization for a field.
 #[derive(Debug, Serialize, Deserialize)]
@@ -294,10 +294,7 @@ struct Person {
     name: String,
 
     // Serialize age as string, deserialize from string
-    #[serde(
-        serialize_with = "serialize_age",
-        deserialize_with = "deserialize_age"
-    )]
+    #[serde(serialize_with = "serialize_age", deserialize_with = "deserialize_age")]
     age: u32,
 }
 

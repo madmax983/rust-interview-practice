@@ -236,10 +236,26 @@ mod parameterized_tests {
         }
 
         let tests = vec![
-            TestCase { a: 1, b: 2, expected: 3 },
-            TestCase { a: 0, b: 0, expected: 0 },
-            TestCase { a: -1, b: 1, expected: 0 },
-            TestCase { a: -5, b: -3, expected: -8 },
+            TestCase {
+                a: 1,
+                b: 2,
+                expected: 3,
+            },
+            TestCase {
+                a: 0,
+                b: 0,
+                expected: 0,
+            },
+            TestCase {
+                a: -1,
+                b: 1,
+                expected: 0,
+            },
+            TestCase {
+                a: -5,
+                b: -3,
+                expected: -8,
+            },
         ];
 
         for test in tests {
@@ -415,7 +431,7 @@ mod async_tests {
     #[tokio::test]
     #[cfg(feature = "async-parallel")]
     async fn test_with_timeout() {
-        use tokio::time::{timeout, Duration};
+        use tokio::time::{Duration, timeout};
 
         let result = timeout(Duration::from_secs(1), fetch_data(42)).await;
         assert!(result.is_ok());
@@ -464,7 +480,11 @@ mod golden_file_tests {
     use std::fs;
 
     fn render_output(data: &[i32]) -> String {
-        format!("Numbers: {data:?}\nCount: {}\nSum: {}", data.len(), data.iter().sum::<i32>())
+        format!(
+            "Numbers: {data:?}\nCount: {}\nSum: {}",
+            data.len(),
+            data.iter().sum::<i32>()
+        )
     }
 
     #[test]
@@ -474,8 +494,8 @@ mod golden_file_tests {
         let output = render_output(&data);
 
         // Read expected output from file
-        let expected = fs::read_to_string("tests/golden/output.txt")
-            .expect("Golden file not found");
+        let expected =
+            fs::read_to_string("tests/golden/output.txt").expect("Golden file not found");
 
         assert_eq!(output, expected);
 
