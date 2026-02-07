@@ -270,9 +270,7 @@ fn demonstrate_maybe_uninit() {
     use std::mem::MaybeUninit;
 
     // Create uninitialized buffer
-    let mut buffer: [MaybeUninit<i32>; 10] = unsafe {
-        MaybeUninit::uninit().assume_init()
-    };
+    let mut buffer: [MaybeUninit<i32>; 10] = unsafe { MaybeUninit::uninit().assume_init() };
 
     // Initialize each element
     for i in 0..10 {
@@ -280,9 +278,7 @@ fn demonstrate_maybe_uninit() {
     }
 
     // SAFETY: All elements are now initialized
-    let initialized: [i32; 10] = unsafe {
-        std::mem::transmute(buffer)
-    };
+    let initialized: [i32; 10] = unsafe { std::mem::transmute(buffer) };
 
     println!("Initialized: {initialized:?}");
 
@@ -373,7 +369,11 @@ impl<T> MyVec<T> {
 
     fn grow(&mut self) {
         // Simplified growth logic
-        let new_capacity = if self.capacity == 0 { 1 } else { self.capacity * 2 };
+        let new_capacity = if self.capacity == 0 {
+            1
+        } else {
+            self.capacity * 2
+        };
 
         let new_layout = std::alloc::Layout::array::<T>(new_capacity).unwrap();
 

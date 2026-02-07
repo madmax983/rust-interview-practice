@@ -8,18 +8,18 @@
 #![cfg(feature = "cli-patterns")]
 
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Gauge},
-    Frame, Terminal,
+    widgets::{Block, Borders, Gauge, List, ListItem, ListState, Paragraph},
 };
 
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 
 use std::io;
@@ -321,9 +321,9 @@ fn render_layout(f: &mut Frame) {
         .direction(Direction::Vertical)
         .margin(1)
         .constraints([
-            Constraint::Length(3),      // Header
-            Constraint::Min(0),          // Body
-            Constraint::Length(3),       // Footer
+            Constraint::Length(3), // Header
+            Constraint::Min(0),    // Body
+            Constraint::Length(3), // Footer
         ])
         .split(f.size());
 
@@ -346,8 +346,7 @@ fn render_layout(f: &mut Frame) {
     f.render_widget(main, body[1]);
 
     // Footer
-    let footer = Paragraph::new("Press 'q' to quit")
-        .block(Block::default().borders(Borders::ALL));
+    let footer = Paragraph::new("Press 'q' to quit").block(Block::default().borders(Borders::ALL));
     f.render_widget(footer, chunks[2]);
 }
 
@@ -395,16 +394,11 @@ fn render_styled_text(f: &mut Frame, area: ratatui::layout::Rect) {
         Span::raw("Normal text, "),
         Span::styled("bold", Style::default().add_modifier(Modifier::BOLD)),
         Span::raw(", "),
-        Span::styled(
-            "colored",
-            Style::default().fg(Color::Green),
-        ),
+        Span::styled("colored", Style::default().fg(Color::Green)),
         Span::raw(", "),
         Span::styled(
             "bold+colored",
-            Style::default()
-                .fg(Color::Red)
-                .add_modifier(Modifier::BOLD),
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         ),
     ];
 
@@ -488,7 +482,9 @@ async fn run_async_tui() -> io::Result<()> {
     loop {
         terminal.draw(|f| {
             let area = f.area();
-            let block = Block::default().title("Async Updates").borders(Borders::ALL);
+            let block = Block::default()
+                .title("Async Updates")
+                .borders(Borders::ALL);
             f.render_widget(block, area);
         })?;
 
@@ -543,8 +539,8 @@ impl ScrollableText {
             .map(|line| Line::from(line.clone()))
             .collect();
 
-        let paragraph = Paragraph::new(text)
-            .block(Block::default().borders(Borders::ALL).title("Scrollable"));
+        let paragraph =
+            Paragraph::new(text).block(Block::default().borders(Borders::ALL).title("Scrollable"));
 
         f.render_widget(paragraph, area);
     }
@@ -623,7 +619,11 @@ mod tui_tests {
 
     #[test]
     fn test_searchable_list() {
-        let items = vec!["apple".to_string(), "banana".to_string(), "cherry".to_string()];
+        let items = vec![
+            "apple".to_string(),
+            "banana".to_string(),
+            "cherry".to_string(),
+        ];
         let mut list = SearchableList::new(items);
 
         list.handle_input('a');

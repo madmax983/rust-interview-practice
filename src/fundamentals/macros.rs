@@ -283,9 +283,7 @@ fn demonstrate_practical_macros() {
     assert_custom!(x > 0, "x must be positive");
 
     // Time measurement
-    let result = time_it!("Computing sum", {
-        (0..1000).sum::<i32>()
-    });
+    let result = time_it!("Computing sum", { (0..1000).sum::<i32>() });
     println!("Result: {result}");
 }
 
@@ -367,7 +365,9 @@ macro_rules! reverse {
 
 /// Recursive macro for compile-time computation.
 macro_rules! factorial {
-    (0) => { 1 };
+    (0) => {
+        1
+    };
     ($n:expr) => {
         $n * factorial!($n - 1)
     };
