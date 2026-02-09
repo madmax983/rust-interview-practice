@@ -31,45 +31,42 @@
 // Definition for singly-linked list.
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct ListNode {
-  pub val: i32,
-  pub next: Option<Box<ListNode>>
+    pub val: i32,
+    pub next: Option<Box<ListNode>>,
 }
 
 impl ListNode {
-  #[inline]
-  #[must_use]
-  pub const fn new(val: i32) -> Self {
-    Self {
-      next: None,
-      val
+    #[inline]
+    #[must_use]
+    pub const fn new(val: i32) -> Self {
+        Self { next: None, val }
     }
-  }
 
-  /// Helper to create a list from a vector (useful for tests and brute force)
-  #[must_use]
-  #[allow(clippy::needless_pass_by_value)]
-  pub fn from_vec(vec: Vec<i32>) -> Option<Box<ListNode>> {
-    let mut current = None;
-    for &val in vec.iter().rev() {
-        let mut node = ListNode::new(val);
-        node.next = current;
-        current = Some(Box::new(node));
+    /// Helper to create a list from a vector (useful for tests and brute force)
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn from_vec(vec: Vec<i32>) -> Option<Box<ListNode>> {
+        let mut current = None;
+        for &val in vec.iter().rev() {
+            let mut node = ListNode::new(val);
+            node.next = current;
+            current = Some(Box::new(node));
+        }
+        current
     }
-    current
-  }
 
-  /// Helper to convert list to vector
-  #[must_use]
-  pub fn to_vec(&self) -> Vec<i32> {
-      let mut vec = Vec::new();
-      let mut current = self;
-      vec.push(current.val);
-      while let Some(node) = &current.next {
-          current = node;
-          vec.push(current.val);
-      }
-      vec
-  }
+    /// Helper to convert list to vector
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<i32> {
+        let mut vec = Vec::new();
+        let mut current = self;
+        vec.push(current.val);
+        while let Some(node) = &current.next {
+            current = node;
+            vec.push(current.val);
+        }
+        vec
+    }
 }
 
 /// Brute force approach: Collect to Vec, sort, rebuild
@@ -80,7 +77,10 @@ impl ListNode {
 /// It's "brute force" in the sense that it does the most obvious work without
 /// leveraging the problem structure.
 #[must_use]
-pub fn merge_two_lists_brute_force(list1: Option<Box<ListNode>>, list2: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+pub fn merge_two_lists_brute_force(
+    list1: Option<Box<ListNode>>,
+    list2: Option<Box<ListNode>>,
+) -> Option<Box<ListNode>> {
     let mut vec = Vec::new();
 
     // Helper to collect nodes
@@ -113,7 +113,10 @@ pub fn merge_two_lists_brute_force(list1: Option<Box<ListNode>>, list2: Option<B
 /// this can overflow the stack for very large lists. The constraint N <= 50
 /// makes this safe here.
 #[must_use]
-pub fn merge_two_lists_recursive(list1: Option<Box<ListNode>>, list2: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+pub fn merge_two_lists_recursive(
+    list1: Option<Box<ListNode>>,
+    list2: Option<Box<ListNode>>,
+) -> Option<Box<ListNode>> {
     match (list1, list2) {
         (None, None) => None,
         (Some(l), None) => Some(l),
@@ -141,7 +144,10 @@ pub fn merge_two_lists_recursive(list1: Option<Box<ListNode>>, list2: Option<Box
 /// `ref mut` in pattern matching helps us get a mutable reference to the `Box`.
 #[must_use]
 #[allow(clippy::missing_panics_doc)] // Unwraps are safe due to loop invariants
-pub fn merge_two_lists_optimal(list1: Option<Box<ListNode>>, list2: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+pub fn merge_two_lists_optimal(
+    list1: Option<Box<ListNode>>,
+    list2: Option<Box<ListNode>>,
+) -> Option<Box<ListNode>> {
     let mut dummy = ListNode::new(0);
     let mut tail = &mut dummy;
     let mut l1 = list1;
@@ -159,7 +165,7 @@ pub fn merge_two_lists_optimal(list1: Option<Box<ListNode>>, list2: Option<Box<L
             // Append head to tail
             tail.next = Some(head);
         } else {
-             // Take the head of l2
+            // Take the head of l2
             let mut head = l2.take().unwrap();
             // Move l2 to next
             l2 = head.next.take();
@@ -182,7 +188,10 @@ pub fn merge_two_lists_optimal(list1: Option<Box<ListNode>>, list2: Option<Box<L
 
 /// Main entry point - uses optimal solution
 #[must_use]
-pub fn merge_two_lists(list1: Option<Box<ListNode>>, list2: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+pub fn merge_two_lists(
+    list1: Option<Box<ListNode>>,
+    list2: Option<Box<ListNode>>,
+) -> Option<Box<ListNode>> {
     merge_two_lists_optimal(list1, list2)
 }
 
