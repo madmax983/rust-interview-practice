@@ -16,10 +16,10 @@
 //! It teaches you about 2D data structures (Map of Lists) and managing complex invariants in Unsafe Rust.
 
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::ptr::NonNull;
-use std::mem;
 use std::fmt;
+use std::hash::Hash;
+use std::mem;
+use std::ptr::NonNull;
 
 // =========================================================================================
 // Architecture

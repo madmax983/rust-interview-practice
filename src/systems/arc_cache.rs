@@ -18,10 +18,10 @@
 //! and handling "phantom hits" (hits on evicted metadata).
 
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::ptr::NonNull;
-use std::mem;
 use std::fmt;
+use std::hash::Hash;
+use std::mem;
+use std::ptr::NonNull;
 
 // =========================================================================================
 // Architecture
@@ -341,9 +341,9 @@ impl<K: Hash + Eq + Clone + fmt::Debug, V> Cache<K, V> for ARCCache<K, V> {
                             self.b1.len / self.b2.len
                         };
                         if delta > self.p {
-                             self.p = 0;
+                            self.p = 0;
                         } else {
-                             self.p -= delta;
+                            self.p -= delta;
                         }
 
                         // Replace and Move
@@ -370,8 +370,9 @@ impl<K: Hash + Eq + Clone + fmt::Debug, V> Cache<K, V> for ARCCache<K, V> {
                 }
             }
             // Case B: L1 < c AND L1 + L2 >= c
-            else if (self.t1.len + self.b1.len < self.capacity) &&
-                    (self.t1.len + self.b1.len + self.t2.len + self.b2.len >= self.capacity) {
+            else if (self.t1.len + self.b1.len < self.capacity)
+                && (self.t1.len + self.b1.len + self.t2.len + self.b2.len >= self.capacity)
+            {
                 if self.t1.len + self.b1.len + self.t2.len + self.b2.len == 2 * self.capacity {
                     // Delete LRU of B2
                     self.delete_lru(ListType::B2);
@@ -525,11 +526,21 @@ mod tests {
 
         // Live items
         let mut live_count = 0;
-        if cache.get(&1).is_some() { live_count += 1; }
-        if cache.get(&2).is_some() { live_count += 1; }
-        if cache.get(&3).is_some() { live_count += 1; }
-        if cache.get(&4).is_some() { live_count += 1; }
-        if cache.get(&5).is_some() { live_count += 1; }
+        if cache.get(&1).is_some() {
+            live_count += 1;
+        }
+        if cache.get(&2).is_some() {
+            live_count += 1;
+        }
+        if cache.get(&3).is_some() {
+            live_count += 1;
+        }
+        if cache.get(&4).is_some() {
+            live_count += 1;
+        }
+        if cache.get(&5).is_some() {
+            live_count += 1;
+        }
 
         assert!(live_count <= 2);
     }
