@@ -7,3 +7,4 @@ pub mod networking;
 pub mod strings;
 pub mod systems;
 pub mod trees;
+pub mod data_structures;

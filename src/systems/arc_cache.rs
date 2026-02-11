@@ -119,12 +119,14 @@ impl<K, V> LinkedList<K, V> {
     /// Adds a node to the head of the list.
     /// Safety: Node must not be in any list.
     unsafe fn push_front(&mut self, mut node: NonNull<Node<K, V>>) {
-        let node_ref = node.as_mut();
+        // SAFETY: Caller guarantees node is valid.
+        let node_ref = unsafe { node.as_mut() };
         node_ref.next = self.head;
         node_ref.prev = None;
 
         if let Some(mut head) = self.head {
-            head.as_mut().prev = Some(node);
+            // SAFETY: head is valid.
+            unsafe { head.as_mut().prev = Some(node) };
         }
 
         self.head = Some(node);
@@ -137,18 +139,21 @@ impl<K, V> LinkedList<K, V> {
     /// Removes a specific node from the list.
     /// Safety: Node must be in this list.
     unsafe fn remove(&mut self, mut node: NonNull<Node<K, V>>) {
-        let node_ref = node.as_mut();
+        // SAFETY: Caller guarantees node is valid.
+        let node_ref = unsafe { node.as_mut() };
         let prev = node_ref.prev;
         let next = node_ref.next;
 
         if let Some(mut p) = prev {
-            p.as_mut().next = next;
+            // SAFETY: p is valid neighbor.
+            unsafe { p.as_mut().next = next };
         } else {
             self.head = next;
         }
 
         if let Some(mut n) = next {
-            n.as_mut().prev = prev;
+            // SAFETY: n is valid neighbor.
+            unsafe { n.as_mut().prev = prev };
         } else {
             self.tail = prev;
         }
@@ -161,7 +166,8 @@ impl<K, V> LinkedList<K, V> {
     /// Removes and returns the tail node (LRU).
     unsafe fn pop_back(&mut self) -> Option<NonNull<Node<K, V>>> {
         if let Some(tail) = self.tail {
-            self.remove(tail);
+            // SAFETY: tail is valid.
+            unsafe { self.remove(tail) };
             Some(tail)
         } else {
             None
@@ -233,22 +239,24 @@ impl<K: Hash + Eq + Clone + fmt::Debug, V> ARCCache<K, V> {
 
     /// Helper: Detaches a node from its current list.
     unsafe fn detach(&mut self, node: NonNull<Node<K, V>>) {
-        match node.as_ref().list_type {
-            ListType::T1 => self.t1.remove(node),
-            ListType::T2 => self.t2.remove(node),
-            ListType::B1 => self.b1.remove(node),
-            ListType::B2 => self.b2.remove(node),
+        // SAFETY: Caller guarantees node is valid.
+        match unsafe { node.as_ref().list_type } {
+            ListType::T1 => unsafe { self.t1.remove(node) },
+            ListType::T2 => unsafe { self.t2.remove(node) },
+            ListType::B1 => unsafe { self.b1.remove(node) },
+            ListType::B2 => unsafe { self.b2.remove(node) },
         }
     }
 
     /// Helper: Attaches a node to the head of a specific list.
     unsafe fn attach(&mut self, node: NonNull<Node<K, V>>, list_type: ListType) {
-        (*node.as_ptr()).list_type = list_type;
+        // SAFETY: Caller guarantees node is valid.
+        unsafe { (*node.as_ptr()).list_type = list_type };
         match list_type {
-            ListType::T1 => self.t1.push_front(node),
-            ListType::T2 => self.t2.push_front(node),
-            ListType::B1 => self.b1.push_front(node),
-            ListType::B2 => self.b2.push_front(node),
+            ListType::T1 => unsafe { self.t1.push_front(node) },
+            ListType::T2 => unsafe { self.t2.push_front(node) },
+            ListType::B1 => unsafe { self.b1.push_front(node) },
+            ListType::B2 => unsafe { self.b2.push_front(node) },
         }
     }
 
