@@ -1,9 +1,9 @@
 pub mod arrays;
+pub mod concurrency;
 pub mod fundamentals;
 pub mod graphs;
 pub mod linked_lists;
+pub mod networking;
 pub mod strings;
 pub mod systems;
 pub mod trees;
-pub mod networking;
-pub mod concurrency;

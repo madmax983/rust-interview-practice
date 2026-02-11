@@ -79,6 +79,7 @@ pub struct HttpRequest {
     pub path: String,
     pub version: String,
     pub headers: HashMap<String, String>,
+    pub params: HashMap<String, String>,
     pub body: Vec<u8>,
 }
 
@@ -151,7 +152,11 @@ impl<H: Handler> HttpServer<H> {
             Ok(req) => req,
             Err(e) => {
                 // Send 400 Bad Request
-                let response = HttpResponse::new(400, "Bad Request", Some(format!("Error parsing request: {}", e).into_bytes()));
+                let response = HttpResponse::new(
+                    400,
+                    "Bad Request",
+                    Some(format!("Error parsing request: {}", e).into_bytes()),
+                );
                 stream.write_all(&response.to_bytes())?;
                 return Ok(());
             }
@@ -179,7 +184,10 @@ impl HttpRequest {
 
         let parts: Vec<&str> = first_line.split_whitespace().collect();
         if parts.len() < 3 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid request line"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Invalid request line",
+            ));
         }
 
         let method = parts[0].to_string();
@@ -214,33 +222,36 @@ impl HttpRequest {
         // the Transfer-Encoding overrides the Content-Length.
         if let Some(transfer_encoding) = headers.get("transfer-encoding") {
             if transfer_encoding.contains("chunked") {
-                 // Basic chunked reader implementation
-                 loop {
-                     let mut size_line = String::new();
-                     let bytes_read = reader.read_line(&mut size_line)?;
-                     if bytes_read == 0 {
-                         break; // EOF
-                     }
+                // Basic chunked reader implementation
+                loop {
+                    let mut size_line = String::new();
+                    let bytes_read = reader.read_line(&mut size_line)?;
+                    if bytes_read == 0 {
+                        break; // EOF
+                    }
 
-                     let size_str = size_line.trim();
-                     if size_str.is_empty() { continue; }
+                    let size_str = size_line.trim();
+                    if size_str.is_empty() {
+                        continue;
+                    }
 
-                     let size = usize::from_str_radix(size_str, 16)
-                         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid chunk size"))?;
+                    let size = usize::from_str_radix(size_str, 16).map_err(|_| {
+                        io::Error::new(io::ErrorKind::InvalidData, "Invalid chunk size")
+                    })?;
 
-                     if size == 0 {
-                         // Read trailing CRLF
-                         reader.read_line(&mut String::new())?;
-                         break;
-                     }
+                    if size == 0 {
+                        // Read trailing CRLF
+                        reader.read_line(&mut String::new())?;
+                        break;
+                    }
 
-                     let mut chunk = vec![0; size];
-                     reader.read_exact(&mut chunk)?;
-                     body.extend(chunk);
+                    let mut chunk = vec![0; size];
+                    reader.read_exact(&mut chunk)?;
+                    body.extend(chunk);
 
-                     // Read trailing CRLF after chunk
-                     reader.read_line(&mut String::new())?;
-                 }
+                    // Read trailing CRLF after chunk
+                    reader.read_line(&mut String::new())?;
+                }
             }
         } else if let Some(content_length) = headers.get("content-length") {
             if let Ok(len) = content_length.parse::<usize>() {
@@ -257,6 +268,7 @@ impl HttpRequest {
             path,
             version,
             headers,
+            params: HashMap::new(),
             body,
         })
     }
@@ -276,11 +288,17 @@ impl HttpResponse {
         let mut response = Vec::new();
 
         // Status line
-        write!(&mut response, "HTTP/1.1 {} {}\r\n", self.status_code, self.status_text).unwrap();
+        write!(
+            &mut response,
+            "HTTP/1.1 {} {}\r\n",
+            self.status_code, self.status_text
+        )
+        .unwrap();
 
         // Headers
-        let is_chunked = self.headers.get("Transfer-Encoding").map(|v| v.as_str()) == Some("chunked")
-                      || self.headers.get("transfer-encoding").map(|v| v.as_str()) == Some("chunked");
+        let is_chunked = self.headers.get("Transfer-Encoding").map(|v| v.as_str())
+            == Some("chunked")
+            || self.headers.get("transfer-encoding").map(|v| v.as_str()) == Some("chunked");
 
         for (key, value) in &self.headers {
             write!(&mut response, "{}: {}\r\n", key, value).unwrap();
@@ -288,15 +306,20 @@ impl HttpResponse {
 
         // Content-Length or Transfer-Encoding
         if let Some(body) = &self.body {
-             if !is_chunked {
-                 if !self.headers.contains_key("Content-Length") && !self.headers.contains_key("content-length") {
-                     write!(&mut response, "Content-Length: {}\r\n", body.len()).unwrap();
-                 }
-             }
+            if !is_chunked {
+                if !self.headers.contains_key("Content-Length")
+                    && !self.headers.contains_key("content-length")
+                {
+                    write!(&mut response, "Content-Length: {}\r\n", body.len()).unwrap();
+                }
+            }
         } else {
-             if !is_chunked && !self.headers.contains_key("Content-Length") && !self.headers.contains_key("content-length") {
-                 write!(&mut response, "Content-Length: 0\r\n").unwrap();
-             }
+            if !is_chunked
+                && !self.headers.contains_key("Content-Length")
+                && !self.headers.contains_key("content-length")
+            {
+                write!(&mut response, "Content-Length: 0\r\n").unwrap();
+            }
         }
 
         write!(&mut response, "\r\n").unwrap();
@@ -372,7 +395,8 @@ mod tests {
     #[test]
     fn test_response_serialization() {
         let mut resp = HttpResponse::new(200, "OK", Some(b"Hello".to_vec()));
-        resp.headers.insert("Server".to_string(), "RustServer".to_string());
+        resp.headers
+            .insert("Server".to_string(), "RustServer".to_string());
 
         let bytes = resp.to_bytes();
         let s = String::from_utf8(bytes).unwrap();
@@ -386,7 +410,8 @@ mod tests {
     #[test]
     fn test_response_chunked() {
         let mut resp = HttpResponse::new(200, "OK", Some(b"Hello".to_vec()));
-        resp.headers.insert("Transfer-Encoding".to_string(), "chunked".to_string());
+        resp.headers
+            .insert("Transfer-Encoding".to_string(), "chunked".to_string());
 
         let bytes = resp.to_bytes();
         let s = String::from_utf8(bytes).unwrap();
@@ -408,7 +433,11 @@ mod tests {
         impl Handler for TestHandler {
             fn handle(&self, req: HttpRequest) -> HttpResponse {
                 if req.path == "/" {
-                    HttpResponse::new(200, "OK", Some(b"Welcome to the Rust HTTP Server!".to_vec()))
+                    HttpResponse::new(
+                        200,
+                        "OK",
+                        Some(b"Welcome to the Rust HTTP Server!".to_vec()),
+                    )
                 } else {
                     HttpResponse::new(404, "Not Found", None)
                 }
@@ -426,7 +455,9 @@ mod tests {
 
         // Client
         let mut client = TcpStream::connect(addr).unwrap();
-        client.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+        client
+            .write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .unwrap();
 
         let mut buffer = Vec::new();
         client.read_to_end(&mut buffer).unwrap();

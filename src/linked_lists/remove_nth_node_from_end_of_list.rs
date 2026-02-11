@@ -75,7 +75,10 @@ impl ListNode {
 /// we remove the node at index 3 (5-2).
 #[must_use]
 #[allow(clippy::cast_sign_loss)] // n is guaranteed positive by constraints/checks
-pub fn remove_nth_from_end_brute_force(head: Option<Box<ListNode>>, n: i32) -> Option<Box<ListNode>> {
+pub fn remove_nth_from_end_brute_force(
+    head: Option<Box<ListNode>>,
+    n: i32,
+) -> Option<Box<ListNode>> {
     let mut vec = Vec::new();
     let mut current = head;
 
