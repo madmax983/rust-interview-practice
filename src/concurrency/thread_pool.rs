@@ -17,7 +17,7 @@
 //! - Graceful shutdown patterns (ensuring all threads finish before exit).
 //! - Handling closures and trait objects (`Box<dyn FnOnce() + Send + 'static>`).
 
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 // =========================================================================================
@@ -123,7 +123,9 @@ impl ThreadPool {
         // However, since we own the sender and only drop it in `Drop`, this specific send should generally succeed
         // as long as the pool is alive.
         if let Some(sender) = &self.sender {
-            sender.send(job).expect("ThreadPool::execute failed sending job");
+            sender
+                .send(job)
+                .expect("ThreadPool::execute failed sending job");
         }
     }
 }

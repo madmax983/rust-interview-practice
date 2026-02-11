@@ -121,7 +121,8 @@ pub fn is_valid_bst_recursive(root: Option<Box<TreeNode>>) -> bool {
 
                 // Recurse left: max becomes current val
                 // Recurse right: min becomes current val
-                validate(n.left.as_ref(), min, Some(n.val)) && validate(n.right.as_ref(), Some(n.val), max)
+                validate(n.left.as_ref(), min, Some(n.val))
+                    && validate(n.right.as_ref(), Some(n.val), max)
             }
         }
     }
