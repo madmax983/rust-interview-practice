@@ -173,10 +173,12 @@ impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
         }
 
         // Unlink from current position
-        self.unlink(node);
+        // SAFETY: The caller ensures `node` is valid and in the list.
+        unsafe { self.unlink(node) };
 
         // Link to head
-        self.add_to_head(node);
+        // SAFETY: We just unlinked it, so it's not in the list. It's valid.
+        unsafe { self.add_to_head(node) };
     }
 
     /// Adds a node to the head of the list.
@@ -185,13 +187,15 @@ impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
     /// `node` must be a valid pointer to a node that is *not* currently in the list
     /// (or has been unlinked).
     unsafe fn add_to_head(&mut self, mut node: NonNull<Node<K, V>>) {
-        let node_ref = node.as_mut();
+        // SAFETY: Caller guarantees node is valid.
+        let node_ref = unsafe { node.as_mut() };
 
         node_ref.next = self.head;
         node_ref.prev = None;
 
         if let Some(mut old_head) = self.head {
-            old_head.as_mut().prev = Some(node);
+            // SAFETY: old_head is valid as per invariant.
+            unsafe { old_head.as_mut().prev = Some(node) };
         }
 
         self.head = Some(node);
@@ -206,20 +210,23 @@ impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
     /// # Safety
     /// `node` must be a valid pointer to a node currently in the list.
     unsafe fn unlink(&mut self, mut node: NonNull<Node<K, V>>) {
-        let node_ref = node.as_mut();
+        // SAFETY: Caller guarantees node is valid.
+        let node_ref = unsafe { node.as_mut() };
 
         let prev = node_ref.prev;
         let next = node_ref.next;
 
         if let Some(mut p) = prev {
-            p.as_mut().next = next;
+            // SAFETY: p is a valid neighbor.
+            unsafe { p.as_mut().next = next };
         } else {
             // Node was head
             self.head = next;
         }
 
         if let Some(mut n) = next {
-            n.as_mut().prev = prev;
+            // SAFETY: n is a valid neighbor.
+            unsafe { n.as_mut().prev = prev };
         } else {
             // Node was tail
             self.tail = prev;
