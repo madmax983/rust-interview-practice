@@ -1,5 +1,6 @@
 pub mod arrays;
 pub mod concurrency;
+pub mod data_structures;
 pub mod fundamentals;
 pub mod graphs;
 pub mod linked_lists;
