@@ -1,4 +1,5 @@
 pub mod arrays;
+pub mod backtracking;
 pub mod concurrency;
 pub mod fundamentals;
 pub mod graphs;
