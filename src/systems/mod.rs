@@ -5,3 +5,5 @@ pub mod ttl_cache;
 pub mod consistent_hashing;
 pub mod rate_limiter;
 pub mod concurrent_cache;
+pub mod wal;
+pub mod bump_allocator;
