@@ -5,3 +5,4 @@ pub mod cuckoo_filter;
 pub mod ring_buffer;
 pub mod union_find;
 pub mod merkle_tree;
+pub mod radix_trie;

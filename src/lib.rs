@@ -10,3 +10,4 @@ pub mod systems;
 pub mod trees;
 pub mod data_structures;
 pub mod serialization;
+pub mod cryptography;
