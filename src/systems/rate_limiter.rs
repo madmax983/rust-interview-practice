@@ -1,6 +1,6 @@
-//! # Rate Limiter Implementation (Token Bucket)
+//! # Rate Limiter Implementation
 //!
-//! A mechanism to control the rate of traffic sent or received.
+//! Mechanisms to control the rate of traffic sent or received.
 //!
 //! **Replaces Crates:** `governor`, `ratelimit_meter`
 //!
@@ -8,41 +8,27 @@
 //! - API Gateways (Kong, Nginx) to prevent abuse.
 //! - Microservices to prevent cascading failures (load shedding).
 //! - TCP congestion control.
+//! - Distributed throttling in cloud systems.
 //!
 //! **Why build it yourself?**
 //! Implementing Token Bucket correctly requires careful handling of time and floating point math.
-//! You'll learn how to "lazy refill" tokens only when a request comes in, avoiding background threads.
+//! Sliding Window logs teach you about time-series data management.
+//! Distributed rate limiting forces you to think about atomicity and race conditions across network boundaries.
 
-use std::sync::Mutex;
-use std::time::Instant;
+use std::collections::{HashMap, VecDeque};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 // =========================================================================================
-// Architecture
+// 1. Token Bucket (Single Node)
 // =========================================================================================
-//
+
 // Algorithm: Token Bucket (Lazy Refill)
 //
 // Bucket starts full.
 // Tokens drip into the bucket at `refill_rate` (tokens/sec).
 // Requests consume `n` tokens.
 // If not enough tokens, request is rejected.
-//
-// Lazy Refill:
-// Instead of a background timer adding tokens every tick, we calculate the tokens added
-// based on the time delta since the last check.
-//
-// State:
-// - Capacity (max tokens)
-// - Current Tokens
-// - Refill Rate (tokens/sec)
-// - Last Refill Timestamp
-//
-// Thread Safety:
-// - Mutex protects the state.
-//
-// Invariants:
-// 1. Tokens never exceed Capacity.
-// 2. Tokens are consumed atomically.
 
 struct BucketState {
     tokens: f64,
@@ -104,6 +90,170 @@ impl RateLimiter {
     }
 }
 
+// =========================================================================================
+// 2. Sliding Window Log (Single Node)
+// =========================================================================================
+
+// Algorithm: Sliding Window Log
+//
+// Keeps a log of timestamps for each request.
+// When a new request comes in:
+// 1. Remove timestamps older than the window.
+// 2. Count remaining timestamps.
+// 3. If count < limit, add new timestamp and allow.
+//
+// Pros: Highly accurate.
+// Cons: High memory usage (stores one entry per request).
+
+pub struct SlidingWindowRateLimiter {
+    // Stores timestamps of successful requests.
+    // In a real system, this might be a HashMap<Key, VecDeque<Instant>> for multiple users.
+    // Here we implement a single limiter instance.
+    log: Mutex<VecDeque<Instant>>,
+    window: Duration,
+    limit: usize,
+}
+
+impl SlidingWindowRateLimiter {
+    pub fn new(window: Duration, limit: usize) -> Self {
+        Self {
+            log: Mutex::new(VecDeque::new()),
+            window,
+            limit,
+        }
+    }
+
+    pub fn try_acquire(&self) -> bool {
+        let mut log = self.log.lock().unwrap();
+        let now = Instant::now();
+        let window_start = now.checked_sub(self.window);
+
+        // 1. Remove expired entries only if window start is valid (not before process start)
+        if let Some(start) = window_start {
+            while let Some(&t) = log.front() {
+                if t < start {
+                    log.pop_front();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // 2. Check limit
+        if log.len() < self.limit {
+            log.push_back(now);
+            true
+        } else {
+            false
+        }
+    }
+}
+
+// =========================================================================================
+// 3. Distributed Rate Limiter
+// =========================================================================================
+
+// Abstraction for a distributed store (like Redis).
+pub trait RateLimitStore: Send + Sync {
+    /// Checks if the request is allowed and updates the count/log atomically.
+    ///
+    /// # Arguments
+    /// * `key` - Unique identifier for the limit bucket (e.g., "ip:127.0.0.1").
+    /// * `window` - The time window for the limit.
+    /// * `limit` - Max requests in the window.
+    ///
+    /// Returns `Ok(true)` if allowed, `Ok(false)` if limited.
+    fn check_and_update(&self, key: &str, window: Duration, limit: usize) -> Result<bool, String>;
+}
+
+/// A local in-memory implementation of the store (for testing/single-node usage).
+pub struct MemoryStore {
+    // Map of Key -> List of timestamps (Sliding Window Log approach)
+    logs: Mutex<HashMap<String, VecDeque<Instant>>>,
+}
+
+impl MemoryStore {
+    pub fn new() -> Self {
+        Self {
+            logs: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
+impl RateLimitStore for MemoryStore {
+    fn check_and_update(&self, key: &str, window: Duration, limit: usize) -> Result<bool, String> {
+        let mut logs = self.logs.lock().unwrap();
+        let log = logs.entry(key.to_string()).or_insert_with(VecDeque::new);
+
+        let now = Instant::now();
+        // Since Instant is monotonic but not absolute, this works for single process.
+        // For distributed, we'd use SystemTime or a Redis server time.
+        let window_start = now.checked_sub(window);
+
+        // Remove expired
+        if let Some(start) = window_start {
+            while let Some(&t) = log.front() {
+                if t < start {
+                    log.pop_front();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        if log.len() < limit {
+            log.push_back(now);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+}
+
+/// A Distributed Rate Limiter that uses a backend store.
+pub struct DistributedRateLimiter<S: RateLimitStore> {
+    store: Arc<S>,
+}
+
+impl<S: RateLimitStore> DistributedRateLimiter<S> {
+    pub fn new(store: S) -> Self {
+        Self {
+            store: Arc::new(store),
+        }
+    }
+
+    pub fn try_acquire(&self, key: &str, window: Duration, limit: usize) -> bool {
+        match self.store.check_and_update(key, window, limit) {
+            Ok(allowed) => allowed,
+            Err(e) => {
+                // Fail-open or Fail-closed strategy?
+                // Usually fail-open (allow traffic) if Redis is down to avoid outage.
+                eprintln!("Rate limiter store error: {}", e);
+                true
+            }
+        }
+    }
+}
+
+// RUST INSIGHT:
+// Implementing a RedisStore would look like this:
+//
+// impl RateLimitStore for RedisStore {
+//     fn check_and_update(&self, key: &str, window: Duration, limit: usize) -> Result<bool, String> {
+//         // Use Lua script to ensure atomicity:
+//         // local current = redis.call('LLEN', KEYS[1])
+//         // if current < limit then
+//         //     redis.call('RPUSH', KEYS[1], ARGV[1]) // Push timestamp
+//         //     redis.call('PEXPIRE', KEYS[1], ARGV[2]) // Set expiry to window
+//         //     return 1
+//         // else
+//         //     return 0
+//         // end
+//         // (Note: Real sliding window in Redis usually uses ZSET / Sorted Sets)
+//         todo!("Implement using redis crate")
+//     }
+// }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,16 +261,10 @@ mod tests {
     use std::time::Duration;
 
     #[test]
-    fn test_basic_limit() {
-        let limiter = RateLimiter::new(10.0, 1.0); // 10 tokens, 1 per second
-
-        // Should be able to acquire initial capacity
+    fn test_token_bucket_basic() {
+        let limiter = RateLimiter::new(10.0, 1.0);
         assert!(limiter.try_acquire(10.0));
-
-        // Should fail immediately after
         assert!(!limiter.try_acquire(1.0));
-
-        // Wait 1.1 second (should get 1 token)
         thread::sleep(Duration::from_millis(1100));
         assert!(limiter.try_acquire(1.0));
     }
@@ -150,5 +294,48 @@ mod tests {
         // Should only have 5
         assert!(limiter.try_acquire(5.0));
         assert!(!limiter.try_acquire(0.1));
+    }
+
+    #[test]
+    fn test_sliding_window_basic() {
+        let limiter = SlidingWindowRateLimiter::new(Duration::from_millis(100), 2);
+        assert!(limiter.try_acquire());
+        assert!(limiter.try_acquire());
+        assert!(!limiter.try_acquire()); // Limit reached
+
+        thread::sleep(Duration::from_millis(110));
+        assert!(limiter.try_acquire()); // Window slid
+    }
+
+    #[test]
+    fn test_distributed_memory_store() {
+        let store = MemoryStore::new();
+        let limiter = DistributedRateLimiter::new(store);
+
+        let key = "user_1";
+        let window = Duration::from_millis(100);
+        let limit = 2;
+
+        assert!(limiter.try_acquire(key, window, limit));
+        assert!(limiter.try_acquire(key, window, limit));
+        assert!(!limiter.try_acquire(key, window, limit));
+
+        thread::sleep(Duration::from_millis(110));
+        assert!(limiter.try_acquire(key, window, limit));
+    }
+
+    #[test]
+    fn test_distributed_independent_keys() {
+        let store = MemoryStore::new();
+        let limiter = DistributedRateLimiter::new(store);
+
+        let window = Duration::from_millis(100);
+        let limit = 1;
+
+        assert!(limiter.try_acquire("A", window, limit));
+        assert!(!limiter.try_acquire("A", window, limit));
+
+        // B should still be allowed
+        assert!(limiter.try_acquire("B", window, limit));
     }
 }
