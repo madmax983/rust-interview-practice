@@ -9,7 +9,7 @@
 //! ## Examples
 //!
 //! ```
-//! use leetcode::linked_lists::reverse_linked_list::{reverse_list, ListNode};
+//! use rust_interview_practice::linked_lists::reverse_linked_list::{reverse_list, ListNode};
 //!
 //! let list = ListNode::from_vec(vec![1, 2, 3, 4, 5]);
 //! let reversed = reverse_list(list);

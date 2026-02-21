@@ -14,7 +14,7 @@
 //! ## Examples
 //!
 //! ```
-//! use leetcode::trees::max_depth::{max_depth, TreeNode};
+//! use rust_interview_practice::trees::max_depth::{max_depth, TreeNode};
 //!
 //! let mut root = TreeNode::new(3);
 //! root.left = Some(Box::new(TreeNode::new(9)));

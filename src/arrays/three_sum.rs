@@ -8,7 +8,7 @@
 //! ## Examples
 //!
 //! ```
-//! use leetcode::arrays::three_sum::three_sum;
+//! use rust_interview_practice::arrays::three_sum::three_sum;
 //!
 //! let result = three_sum(vec![-1, 0, 1, 2, -1, -4]);
 //! // Result contains [[-1, -1, 2], [-1, 0, 1]] in some order
