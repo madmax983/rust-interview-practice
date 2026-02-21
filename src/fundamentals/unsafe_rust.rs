@@ -513,7 +513,7 @@ const MIRI_GUIDE: &str = "Run: cargo +nightly miri test";
 /// 6. Consider alternatives first
 ///
 /// **Minimizing unsafe:**
-/// ```rust
+/// ```rust,ignore
 /// // Bad: large unsafe block
 /// unsafe {
 ///     // 100 lines of code

@@ -13,7 +13,7 @@
 //! ## Examples
 //!
 //! ```
-//! use leetcode::trees::level_order_traversal::{level_order, TreeNode};
+//! use rust_interview_practice::trees::level_order_traversal::{level_order, TreeNode};
 //!
 //! let mut root = TreeNode::new(3);
 //! root.left = Some(Box::new(TreeNode::new(9)));

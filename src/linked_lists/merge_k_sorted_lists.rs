@@ -15,7 +15,7 @@
 //! ## Examples
 //!
 //! ```
-//! use leetcode::linked_lists::merge_k_sorted_lists::{merge_k_lists, ListNode};
+//! use rust_interview_practice::linked_lists::merge_k_sorted_lists::{merge_k_lists, ListNode};
 //!
 //! let l1 = ListNode::from_vec(vec![1, 4, 5]);
 //! let l2 = ListNode::from_vec(vec![1, 3, 4]);

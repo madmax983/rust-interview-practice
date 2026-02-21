@@ -5,7 +5,7 @@
 //! ## Examples
 //!
 //! ```
-//! use leetcode::strings::longest_substring_without_repeating::length_of_longest_substring;
+//! use rust_interview_practice::strings::longest_substring_without_repeating::length_of_longest_substring;
 //!
 //! assert_eq!(length_of_longest_substring("abcabcbb".to_string()), 3);
 //! assert_eq!(length_of_longest_substring("bbbbb".to_string()), 1);

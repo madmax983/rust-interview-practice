@@ -9,7 +9,7 @@
 //! ## Examples
 //!
 //! ```
-//! use leetcode::trees::invert_binary_tree::{invert_tree, TreeNode};
+//! use rust_interview_practice::trees::invert_binary_tree::{invert_tree, TreeNode};
 //!
 //! let mut root = TreeNode::new(2);
 //! root.left = Some(Box::new(TreeNode::new(1)));
