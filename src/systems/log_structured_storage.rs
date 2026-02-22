@@ -14,7 +14,8 @@
 //! **Components:**
 //! 1.  **Memtable**: In-memory `BTreeMap`. Accepts writes. Sorted by key.
 //! 2.  **SSTable (Sorted String Table)**: Immutable, on-disk file. Created when Memtable is full.
-//! 3.  **WAL**: (Omitted for brevity, but crucial for durability).
+//! 3.  **WAL**: Write-Ahead Log for durability.
+//! 4.  **Bloom Filter**: Probabilistic structure to skip SSTables.
 //!
 //! **Read Path (`get`):**
 //! 1.  Check Memtable.
@@ -41,25 +42,27 @@
 //! # Production Note
 //!
 //! Real LSM-Trees use:
-//! *   **Bloom Filters**: To avoid reading SSTables for non-existent keys.
 //! *   **Sparse Index**: In-memory map of `Key -> FileOffset` to allow binary search in blocks.
-//! *   **Compaction**: Background threads merging SSTables to reclaim space and improve read speed.
+//! *   **Compaction**: Background threads merging SSTables to reclaim space and improve read speed. (Our `compact` is manual).
 //! *   **Binary Format**: Protobuf or custom binary for space efficiency.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::systems::wal::Wal;
+use crate::data_structures::bloom_filter::BloomFilter;
 
 pub struct LsmTree {
     memtable: BTreeMap<String, String>,
     memtable_size: usize,
     threshold: usize,
     dir: PathBuf,
-    sstables: Vec<PathBuf>, // Sorted Newest -> Oldest? No, Oldest -> Newest usually.
-                            // But for search we want Newest first.
-                            // Let's store Oldest -> Newest (append order).
+    sstables: Vec<PathBuf>, // Sorted Oldest -> Newest (append order).
+    wal: Wal,
+    bloom_filters: HashMap<PathBuf, BloomFilter<String>>,
 }
 
 impl LsmTree {
@@ -68,8 +71,46 @@ impl LsmTree {
         let dir = dir.as_ref().to_path_buf();
         fs::create_dir_all(&dir)?;
 
-        // Load existing SSTables
+        // 1. Open/Create WAL
+        let wal_path = dir.join("wal.log");
+        let mut wal = Wal::open(&wal_path)?;
+
+        // 2. Replay WAL into Memtable
+        // WAL Format: [Key Len (8)] [Key Bytes] [Value Bytes]
+        // Value len is implicit: Entry Len - 8 - Key Len.
+        let mut memtable = BTreeMap::new();
+        let mut memtable_size = 0;
+
+        let wal_entries = wal.replay()?;
+        for entry in wal_entries {
+            if entry.len() < 8 {
+                continue;
+            }
+            let key_len_bytes: [u8; 8] = entry[0..8].try_into().unwrap();
+            let key_len = u64::from_le_bytes(key_len_bytes) as usize;
+
+            if entry.len() < 8 + key_len {
+                continue;
+            }
+
+            let key_bytes = &entry[8..8+key_len];
+            let val_bytes = &entry[8+key_len..];
+
+            let key = String::from_utf8_lossy(key_bytes).to_string();
+            let val = String::from_utf8_lossy(val_bytes).to_string();
+
+            if let Some(old_val) = memtable.insert(key.clone(), val.clone()) {
+                memtable_size -= old_val.len();
+                memtable_size += val.len();
+            } else {
+                memtable_size += key.len() + val.len();
+            }
+        }
+
+        // 3. Load existing SSTables
         let mut sstables = Vec::new();
+        let mut bloom_filters = HashMap::new();
+
         if let Ok(entries) = fs::read_dir(&dir) {
             let mut paths: Vec<PathBuf> = entries
                 .filter_map(|e| e.ok().map(|e| e.path()))
@@ -89,12 +130,39 @@ impl LsmTree {
             sstables = paths;
         }
 
+        // 4. Load or Rebuild Bloom Filters
+        for sst_path in &sstables {
+            let filter_path = sst_path.with_extension("filter");
+            if filter_path.exists() {
+                if let Ok(bf) = BloomFilter::load_from_file(&filter_path) {
+                    bloom_filters.insert(sst_path.clone(), bf);
+                }
+            } else {
+                // Self-healing: Rebuild Bloom Filter from SSTable
+                if let Ok(file) = File::open(sst_path) {
+                    let mut bf = BloomFilter::new(1000, 0.01); // Default sizing
+                    let reader = BufReader::new(file);
+                    for line in reader.lines() {
+                        if let Ok(line) = line {
+                            if let Some((k, _)) = line.split_once(',') {
+                                bf.add(&k.to_string());
+                            }
+                        }
+                    }
+                    let _ = bf.save_to_file(&filter_path);
+                    bloom_filters.insert(sst_path.clone(), bf);
+                }
+            }
+        }
+
         Ok(Self {
-            memtable: BTreeMap::new(),
-            memtable_size: 0,
+            memtable,
+            memtable_size,
             threshold: threshold_bytes,
             dir,
             sstables,
+            wal,
+            bloom_filters,
         })
     }
 
@@ -102,16 +170,20 @@ impl LsmTree {
     pub fn put(&mut self, key: String, value: String) -> io::Result<()> {
         let entry_size = key.len() + value.len();
 
-        // Check if we need to flush BEFORE inserting?
-        // Usually we insert then check, or check then flush.
-        // If we flush, we clear memtable.
-
         if self.memtable_size + entry_size > self.threshold && !self.memtable.is_empty() {
             self.flush()?;
         }
 
-        // Insert into memtable
-        // If key exists, we update size diff
+        // 1. Write to WAL
+        // Format: [Key Len (8)] [Key Bytes] [Value Bytes]
+        let mut wal_entry = Vec::new();
+        wal_entry.extend_from_slice(&(key.len() as u64).to_le_bytes());
+        wal_entry.extend_from_slice(key.as_bytes());
+        wal_entry.extend_from_slice(value.as_bytes());
+
+        self.wal.append(&wal_entry)?;
+
+        // 2. Insert into Memtable
         if let Some(old_val) = self.memtable.insert(key.clone(), value.clone()) {
             self.memtable_size -= old_val.len();
             self.memtable_size += value.len();
@@ -131,6 +203,13 @@ impl LsmTree {
 
         // 2. Check SSTables (Reverse order: Newest first)
         for sst_path in self.sstables.iter().rev() {
+            // Check Bloom Filter first
+            if let Some(bf) = self.bloom_filters.get(sst_path) {
+                if !bf.contains(&key.to_string()) {
+                    continue;
+                }
+            }
+
             if let Some(val) = self.scan_sstable(sst_path, key)? {
                 return Ok(Some(val));
             }
@@ -151,26 +230,37 @@ impl LsmTree {
             .as_nanos();
 
         let filename = format!("{}.sst", timestamp);
-        let path = self.dir.join(filename);
+        let sst_path = self.dir.join(filename);
 
+        // 1. Write SSTable
         let file = OpenOptions::new()
             .write(true)
             .create(true)
-            .open(&path)?;
+            .open(&sst_path)?;
 
         let mut writer = std::io::BufWriter::new(file);
 
+        // We also build the Bloom Filter as we iterate
+        let mut bf = BloomFilter::new(self.memtable.len(), 0.01);
+
         for (k, v) in &self.memtable {
-            // Simple CSV-like format: key,value
-            // Escaping is needed for real production, here we assume alphanumeric simple keys for sketch.
             writeln!(writer, "{},{}", k, v)?;
+            bf.add(k);
         }
 
         writer.flush()?;
 
-        self.sstables.push(path);
+        // 2. Write Bloom Filter
+        let filter_path = sst_path.with_extension("filter");
+        bf.save_to_file(&filter_path)?;
+
+        self.bloom_filters.insert(sst_path.clone(), bf);
+        self.sstables.push(sst_path);
+
+        // 3. Clear Memtable and WAL
         self.memtable.clear();
         self.memtable_size = 0;
+        self.wal.clear()?;
 
         Ok(())
     }
@@ -197,7 +287,7 @@ impl LsmTree {
             }
         }
 
-        // 2. Write new SSTable
+        // 2. Write new SSTable and Bloom Filter
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -208,19 +298,32 @@ impl LsmTree {
         let file = OpenOptions::new().write(true).create(true).open(&new_path)?;
         let mut writer = std::io::BufWriter::new(file);
 
+        let mut bf = BloomFilter::new(merged_map.len().max(100), 0.01);
+
         for (k, v) in &merged_map {
             writeln!(writer, "{},{}", k, v)?;
+            bf.add(k);
         }
         writer.flush()?;
 
-        // 3. Delete old SSTables
+        let filter_path = new_path.with_extension("filter");
+        bf.save_to_file(&filter_path)?;
+
+        // 3. Delete old SSTables and Filters
         for path in &self.sstables {
             fs::remove_file(path)?;
+            let fp = path.with_extension("filter");
+            if fp.exists() {
+                 fs::remove_file(fp)?;
+            }
+            // Remove from bloom filters map
+            self.bloom_filters.remove(path);
         }
 
         // 4. Update list
         self.sstables.clear();
-        self.sstables.push(new_path);
+        self.sstables.push(new_path.clone());
+        self.bloom_filters.insert(new_path, bf);
 
         Ok(())
     }
@@ -334,6 +437,46 @@ mod tests {
 
         assert_eq!(lsm.sstables.len(), 1);
         assert_eq!(lsm.get("a").unwrap(), Some("2".to_string()));
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_crash_recovery() {
+        let dir = temp_dir();
+        {
+            let mut lsm = LsmTree::new(&dir, 100).unwrap();
+            lsm.put("key1".to_string(), "val1".to_string()).unwrap();
+            // We do NOT flush. Data is only in Memtable and WAL.
+        }
+
+        // Simulating crash (lsm dropped). Reopen.
+        {
+            let lsm = LsmTree::new(&dir, 100).unwrap();
+            // Data should be recovered from WAL.
+            assert_eq!(lsm.get("key1").unwrap(), Some("val1".to_string()));
+            // Should be in memtable
+            assert!(!lsm.memtable.is_empty());
+        }
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_bloom_filter_integration() {
+        let dir = temp_dir();
+        let mut lsm = LsmTree::new(&dir, 100).unwrap();
+
+        lsm.put("exists".to_string(), "yes".to_string()).unwrap();
+        lsm.flush().unwrap();
+
+        assert_eq!(lsm.get("exists").unwrap(), Some("yes".to_string()));
+        assert_eq!(lsm.get("missing").unwrap(), None);
+
+        // Verify .filter file exists
+        let sst_path = &lsm.sstables[0];
+        let filter_path = sst_path.with_extension("filter");
+        assert!(filter_path.exists());
 
         fs::remove_dir_all(&dir).unwrap();
     }
