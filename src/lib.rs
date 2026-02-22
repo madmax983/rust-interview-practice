@@ -9,6 +9,7 @@ pub mod strings;
 pub mod systems;
 pub mod trees;
 pub mod data_structures;
+pub mod dynamic_programming;
 pub mod serialization;
 pub mod cryptography;
 pub mod stacks;
