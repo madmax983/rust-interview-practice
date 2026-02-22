@@ -9,3 +9,4 @@ pub mod radix_trie;
 pub mod segment_tree;
 pub mod hyperloglog;
 pub mod spsc_ring_buffer;
+pub mod count_min_sketch;
