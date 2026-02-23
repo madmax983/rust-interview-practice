@@ -5,3 +5,4 @@ pub mod validate_binary_search_tree;
 pub mod serialize_and_deserialize_binary_tree;
 pub mod implement_trie;
 pub mod lowest_common_ancestor;
+pub mod bst_iterator;
