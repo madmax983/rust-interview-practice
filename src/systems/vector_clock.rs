@@ -245,7 +245,7 @@ mod tests {
         let mut b = VectorClock::new("B");
 
         a.increment(); // A: {A:1}
-        b.merge(&a);   // B: {A:1, B:0}
+        b.merge(&a); // B: {A:1, B:0}
         b.increment(); // B: {A:1, B:1}
 
         // B should be strictly greater than A

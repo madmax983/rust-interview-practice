@@ -15,9 +15,9 @@
 //! Implementing it teaches you about protocol upgrading, binary framing (handling bits, variable-length fields),
 //! and masking requirements designed to prevent proxy cache poisoning.
 
-use std::io::{self, Read, Write, BufReader, BufRead};
-use std::convert::TryInto;
 use crate::serialization::base64;
+use std::convert::TryInto;
+use std::io::{self, BufRead, BufReader, Read, Write};
 
 // =========================================================================================
 // Architecture
@@ -120,7 +120,10 @@ impl<S: Read + Write> WebSocketConnection<S> {
             // GOTCHA: read_line includes the newline.
             let bytes = reader.read_line(&mut line)?;
             if bytes == 0 {
-                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Stream closed during handshake"));
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "Stream closed during handshake",
+                ));
             }
             if line == "\r\n" || line == "\n" {
                 break;
@@ -129,9 +132,12 @@ impl<S: Read + Write> WebSocketConnection<S> {
         }
 
         // Find Sec-WebSocket-Key
-        let key_header = headers.iter()
+        let key_header = headers
+            .iter()
             .find(|h| h.to_lowercase().starts_with("sec-websocket-key:"))
-            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Missing Sec-WebSocket-Key"))?;
+            .ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "Missing Sec-WebSocket-Key")
+            })?;
 
         let key = key_header.split(':').nth(1).unwrap_or("").trim();
 
@@ -172,7 +178,10 @@ impl<S: Read + Write> WebSocketConnection<S> {
             Opcode::Close => Ok(Message::Close),
             Opcode::Ping => Ok(Message::Ping(payload)),
             Opcode::Pong => Ok(Message::Pong(payload)),
-            Opcode::Continuation => Err(io::Error::new(io::ErrorKind::Unsupported, "Fragmentation not supported")),
+            Opcode::Continuation => Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "Fragmentation not supported",
+            )),
         }
     }
 
@@ -218,7 +227,10 @@ impl<S: Read + Write> WebSocketConnection<S> {
         // Server MUST receive masked frames. Client MUST receive unmasked frames.
         // We enforce this if we know our role.
         if self.is_server && !masked {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Client sent unmasked frame"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Client sent unmasked frame",
+            ));
         }
         if !self.is_server && masked {
             // Technically allowed but unusual for server to mask. RFC says server must NOT mask.
@@ -244,7 +256,15 @@ impl<S: Read + Write> WebSocketConnection<S> {
             }
         }
 
-        Ok((FrameHeader { fin, opcode, masked, payload_len }, payload))
+        Ok((
+            FrameHeader {
+                fin,
+                opcode,
+                masked,
+                payload_len,
+            },
+            payload,
+        ))
     }
 
     fn write_frame(&mut self, opcode: Opcode, payload: &[u8]) -> io::Result<()> {
@@ -281,7 +301,9 @@ impl<S: Read + Write> WebSocketConnection<S> {
             let mask_key = [1, 2, 3, 4];
             stream.write_all(&mask_key)?;
 
-            let masked_payload: Vec<u8> = payload.iter().enumerate()
+            let masked_payload: Vec<u8> = payload
+                .iter()
+                .enumerate()
                 .map(|(i, b)| b ^ mask_key[i % 4])
                 .collect();
             stream.write_all(&masked_payload)?;
@@ -339,7 +361,7 @@ fn sha1(data: &[u8]) -> [u8; 20] {
         }
 
         for i in 16..80 {
-            let x = w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16];
+            let x = w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16];
             w[i] = x.rotate_left(1);
         }
 
@@ -360,7 +382,8 @@ fn sha1(data: &[u8]) -> [u8; 20] {
                 (b ^ c ^ d, 0xCA62C1D6)
             };
 
-            let temp = a.rotate_left(5)
+            let temp = a
+                .rotate_left(5)
                 .wrapping_add(f)
                 .wrapping_add(e)
                 .wrapping_add(k)
@@ -417,8 +440,8 @@ mod tests {
         // "abc"
         let digest = sha1(b"abc");
         let expected = [
-            0xA9, 0x99, 0x3E, 0x36, 0x47, 0x06, 0x81, 0x6A, 0xBA, 0x3E,
-            0x25, 0x71, 0x78, 0x50, 0xC2, 0x6C, 0x9C, 0xD0, 0xD8, 0x9D
+            0xA9, 0x99, 0x3E, 0x36, 0x47, 0x06, 0x81, 0x6A, 0xBA, 0x3E, 0x25, 0x71, 0x78, 0x50,
+            0xC2, 0x6C, 0x9C, 0xD0, 0xD8, 0x9D,
         ];
         assert_eq!(digest, expected);
     }
@@ -455,7 +478,9 @@ mod tests {
         // FIN=1, Binary(2), Masked, Len=4
         let mask = [0x10, 0x20, 0x30, 0x40];
         let payload = [0xAA, 0xBB, 0xCC, 0xDD];
-        let masked_payload: Vec<u8> = payload.iter().enumerate()
+        let masked_payload: Vec<u8> = payload
+            .iter()
+            .enumerate()
             .map(|(i, b)| b ^ mask[i % 4])
             .collect();
 
@@ -515,30 +540,31 @@ mod tests {
         // Since `conn` owns `stream`, we can't easily check `buf` if `buf` was moved?
         // Ah, `Cursor<Vec<u8>>` owns the Vec.
         // If I passed `Cursor<&mut Vec<u8>>`?
-
     }
 
     #[test]
     fn test_handshake_output() {
-         let mut output = Vec::new();
-         {
-             let mut cursor = Cursor::new(&mut output);
-             // Pre-populate input for read
-             // But cursor is Read+Write. If I write input, position advances.
-             // I need to write input, reset pos, then call handshake.
-             cursor.write_all(b"GET / HTTP/1.1\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n").unwrap();
-             cursor.set_position(0);
+        let mut output = Vec::new();
+        {
+            let mut cursor = Cursor::new(&mut output);
+            // Pre-populate input for read
+            // But cursor is Read+Write. If I write input, position advances.
+            // I need to write input, reset pos, then call handshake.
+            cursor
+                .write_all(b"GET / HTTP/1.1\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n")
+                .unwrap();
+            cursor.set_position(0);
 
-             let _conn = WebSocketConnection::perform_server_handshake(cursor).unwrap();
-         }
-         // Check output. It should contain the original request (written to cursor) AND the response (appended).
-         // Actually, `Cursor` works like a file. If I write at pos 0, I overwrite?
-         // No, I wrote, pos is at end. `set_position(0)`.
-         // Handshake reads from 0. `read_line` advances pos.
-         // Then it writes response at current pos (end of headers).
+            let _conn = WebSocketConnection::perform_server_handshake(cursor).unwrap();
+        }
+        // Check output. It should contain the original request (written to cursor) AND the response (appended).
+        // Actually, `Cursor` works like a file. If I write at pos 0, I overwrite?
+        // No, I wrote, pos is at end. `set_position(0)`.
+        // Handshake reads from 0. `read_line` advances pos.
+        // Then it writes response at current pos (end of headers).
 
-         let s = String::from_utf8(output).unwrap();
-         assert!(s.contains("HTTP/1.1 101 Switching Protocols"));
-         assert!(s.contains("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo="));
+        let s = String::from_utf8(output).unwrap();
+        assert!(s.contains("HTTP/1.1 101 Switching Protocols"));
+        assert!(s.contains("Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo="));
     }
 }

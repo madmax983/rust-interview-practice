@@ -278,6 +278,9 @@ mod tests {
         let list1 = ListNode::from_vec(v.clone());
         let list2 = ListNode::from_vec(v.clone());
 
-        assert_eq!(is_palindrome_brute_force(list1), is_palindrome_optimal(list2));
+        assert_eq!(
+            is_palindrome_brute_force(list1),
+            is_palindrome_optimal(list2)
+        );
     }
 }

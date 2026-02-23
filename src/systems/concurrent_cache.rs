@@ -57,10 +57,7 @@ impl<K: Hash + Eq + Clone + Send + 'static, V: Send + 'static> ConcurrentLruCach
             shards.push(Mutex::new(LRUCache::new(shard_capacity)));
         }
 
-        Self {
-            shards,
-            num_shards,
-        }
+        Self { shards, num_shards }
     }
 
     fn get_shard_index(&self, key: &K) -> usize {
@@ -72,7 +69,7 @@ impl<K: Hash + Eq + Clone + Send + 'static, V: Send + 'static> ConcurrentLruCach
     /// Gets the value associated with the key.
     pub fn get(&self, key: &K) -> Option<V>
     where
-        V: Clone
+        V: Clone,
     {
         // RUST INSIGHT: We require V: Clone here because we can't return a reference `&V`
         // that outlives the MutexGuard of the shard. To return a reference, we'd need

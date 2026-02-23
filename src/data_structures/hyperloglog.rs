@@ -98,8 +98,8 @@ impl Hasher for Fnv1aHasher {
 /// A HyperLogLog probabilistic counter.
 #[derive(Debug, Clone)]
 pub struct HyperLogLog {
-    p: u8,           // Precision parameter (4..16)
-    m: usize,        // Number of registers (2^p)
+    p: u8,    // Precision parameter (4..16)
+    m: usize, // Number of registers (2^p)
     registers: Vec<u8>,
 }
 
@@ -204,7 +204,10 @@ impl HyperLogLog {
     ///
     /// Panics if the precision `p` of the two HLLs does not match.
     pub fn merge(&mut self, other: &HyperLogLog) {
-        assert_eq!(self.p, other.p, "Cannot merge HLLs with different precision");
+        assert_eq!(
+            self.p, other.p,
+            "Cannot merge HLLs with different precision"
+        );
 
         for i in 0..self.m {
             if other.registers[i] > self.registers[i] {
@@ -289,7 +292,12 @@ mod tests {
         let count = hll.count();
         let error = (count as i64 - n as i64).abs() as f64 / n as f64;
 
-        println!("Expected: {}, Got: {}, Error: {:.4}%", n, count, error * 100.0);
+        println!(
+            "Expected: {}, Got: {}, Error: {:.4}%",
+            n,
+            count,
+            error * 100.0
+        );
 
         // Allow slightly generous margin for stochastic tests (2% is > 2 * std_err)
         assert!(error < 0.02, "Error too high: {:.4}%", error * 100.0);
@@ -328,7 +336,11 @@ mod tests {
         // Due to probabilistic collisions (birthday paradox), 10 items in 1024 buckets
         // has ~5% chance of collision. Allow +/- 1.
         let count = hll.count();
-        assert!(count >= 9 && count <= 11, "Expected 10 (+/- 1), got {}", count);
+        assert!(
+            count >= 9 && count <= 11,
+            "Expected 10 (+/- 1), got {}",
+            count
+        );
     }
 
     #[test]

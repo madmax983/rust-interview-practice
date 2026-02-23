@@ -191,7 +191,10 @@ impl<T> Receiver<T> {
             }
 
             // wait_timeout returns (guard, wait_timeout_result)
-            let (new_guard, _) = self.received.wait_timeout(guard, timeout - elapsed).unwrap();
+            let (new_guard, _) = self
+                .received
+                .wait_timeout(guard, timeout - elapsed)
+                .unwrap();
             guard = new_guard;
         }
     }

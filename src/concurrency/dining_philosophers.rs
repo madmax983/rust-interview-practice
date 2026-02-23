@@ -104,9 +104,7 @@ pub struct Table {
 impl Table {
     /// Create a new table with `n` philosophers.
     pub fn new(n: usize) -> Table {
-        let forks = (0..n)
-            .map(|_| Arc::new(Mutex::new(())))
-            .collect();
+        let forks = (0..n).map(|_| Arc::new(Mutex::new(()))).collect();
 
         Table { forks }
     }
@@ -118,7 +116,9 @@ impl Table {
 
         // Handle edge case: need at least 2 philosophers/forks to avoid self-deadlock on single mutex
         if num_philosophers < 2 {
-            panic!("Dining Philosophers requires at least 2 philosophers to avoid self-deadlock on a single fork.");
+            panic!(
+                "Dining Philosophers requires at least 2 philosophers to avoid self-deadlock on a single fork."
+            );
         }
 
         let mut handles = vec![];
@@ -133,9 +133,15 @@ impl Table {
             // Always acquire the fork with the lower index first.
             // This breaks the circular dependency chain.
             let (first_fork, second_fork) = if left_fork_idx < right_fork_idx {
-                (Arc::clone(&self.forks[left_fork_idx]), Arc::clone(&self.forks[right_fork_idx]))
+                (
+                    Arc::clone(&self.forks[left_fork_idx]),
+                    Arc::clone(&self.forks[right_fork_idx]),
+                )
             } else {
-                (Arc::clone(&self.forks[right_fork_idx]), Arc::clone(&self.forks[left_fork_idx]))
+                (
+                    Arc::clone(&self.forks[right_fork_idx]),
+                    Arc::clone(&self.forks[left_fork_idx]),
+                )
             };
 
             let philosopher = Philosopher::new(i, first_fork, second_fork);

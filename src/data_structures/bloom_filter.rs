@@ -126,7 +126,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
         let bit_idx = (index % 64) as usize;
         // GOTCHA: Ensure we don't go out of bounds if logic is wrong, though index % bit_count protects us.
         if vec_idx < self.bit_vec.len() {
-             self.bit_vec[vec_idx] |= 1 << bit_idx;
+            self.bit_vec[vec_idx] |= 1 << bit_idx;
         }
     }
 
@@ -299,7 +299,11 @@ mod tests {
         println!("Expected FPR: {}, Actual FPR: {}", p, actual_rate);
 
         // Allow some variance, but it shouldn't be way off (e.g. > 2*p)
-        assert!(actual_rate < p * 2.0 + 0.01, "FPR too high: {}", actual_rate);
+        assert!(
+            actual_rate < p * 2.0 + 0.01,
+            "FPR too high: {}",
+            actual_rate
+        );
     }
 
     #[test]
@@ -313,7 +317,10 @@ mod tests {
     #[test]
     fn test_save_load() {
         use std::time::{SystemTime, UNIX_EPOCH};
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         let path = format!("test_bloom_filter_{}.bin", now);
 
         let mut bf = BloomFilter::new(100, 0.01);

@@ -17,8 +17,8 @@
 //! 2. **Recursion in Data Structures**: Handling label pointers (`0xC0`) requires jumping around the buffer.
 //! 3. **UDP Networking**: Managing connectionless sockets and reliability (retries/timeouts - though simplified here).
 
-use std::net::{Ipv4Addr, UdpSocket};
 use crate::systems::ttl_cache::TTLCache;
+use std::net::{Ipv4Addr, UdpSocket};
 use std::time::Duration;
 
 // =========================================================================================
@@ -87,11 +87,11 @@ pub struct DnsHeader {
     pub opcode: u8,                 // 4 bits
     pub response: bool,             // 1 bit
 
-    pub rescode: ResultCode,        // 4 bits
-    pub checking_disabled: bool,    // 1 bit
-    pub authed_data: bool,          // 1 bit
-    pub z: bool,                    // 1 bit
-    pub recursion_available: bool,  // 1 bit
+    pub rescode: ResultCode,       // 4 bits
+    pub checking_disabled: bool,   // 1 bit
+    pub authed_data: bool,         // 1 bit
+    pub z: bool,                   // 1 bit
+    pub recursion_available: bool, // 1 bit
 
     pub questions: u16,             // 16 bits
     pub answers: u16,               // 16 bits
@@ -121,7 +121,7 @@ pub enum DnsRecord {
         addr: Ipv4Addr,
         ttl: u32,
     }, // 1
-    // We only implement A records for simplicity in this exercise
+       // We only implement A records for simplicity in this exercise
 }
 
 /// Query Type.
@@ -366,18 +366,34 @@ impl DnsHeader {
         buffer.write_u16(self.id)?;
 
         let mut a = 0u8;
-        if self.recursion_desired { a |= 1 << 0; }
-        if self.truncated_message { a |= 1 << 1; }
-        if self.authoritative_answer { a |= 1 << 2; }
+        if self.recursion_desired {
+            a |= 1 << 0;
+        }
+        if self.truncated_message {
+            a |= 1 << 1;
+        }
+        if self.authoritative_answer {
+            a |= 1 << 2;
+        }
         a |= self.opcode << 3;
-        if self.response { a |= 1 << 7; }
+        if self.response {
+            a |= 1 << 7;
+        }
 
         let mut b = 0u8;
         b |= self.rescode as u8;
-        if self.checking_disabled { b |= 1 << 4; }
-        if self.authed_data { b |= 1 << 5; }
-        if self.z { b |= 1 << 6; }
-        if self.recursion_available { b |= 1 << 7; }
+        if self.checking_disabled {
+            b |= 1 << 4;
+        }
+        if self.authed_data {
+            b |= 1 << 5;
+        }
+        if self.z {
+            b |= 1 << 6;
+        }
+        if self.recursion_available {
+            b |= 1 << 7;
+        }
 
         buffer.write(a)?;
         buffer.write(b)?;
@@ -467,11 +483,7 @@ impl DnsRecord {
                     ((raw_addr >> 8) & 0xFF) as u8,
                     (raw_addr & 0xFF) as u8,
                 );
-                Ok(DnsRecord::A {
-                    domain,
-                    addr,
-                    ttl,
-                })
+                Ok(DnsRecord::A { domain, addr, ttl })
             }
             QueryType::UNKNOWN(_) => {
                 let mut data = Vec::with_capacity(data_len as usize);
@@ -775,11 +787,17 @@ mod tests {
         // Write manually to test encoding
         // 3 www 6 google 3 com 0
         buf.write_u8(3).unwrap();
-        for b in b"www" { buf.write_u8(*b).unwrap(); }
+        for b in b"www" {
+            buf.write_u8(*b).unwrap();
+        }
         buf.write_u8(6).unwrap();
-        for b in b"google" { buf.write_u8(*b).unwrap(); }
+        for b in b"google" {
+            buf.write_u8(*b).unwrap();
+        }
         buf.write_u8(3).unwrap();
-        for b in b"com" { buf.write_u8(*b).unwrap(); }
+        for b in b"com" {
+            buf.write_u8(*b).unwrap();
+        }
         buf.write_u8(0).unwrap();
 
         buf.seek(0).unwrap();
@@ -798,11 +816,17 @@ mod tests {
         let name_pos = buf.pos();
         // Write "www.google.com"
         buf.write_u8(3).unwrap();
-        for b in b"www" { buf.write_u8(*b).unwrap(); }
+        for b in b"www" {
+            buf.write_u8(*b).unwrap();
+        }
         buf.write_u8(6).unwrap();
-        for b in b"google" { buf.write_u8(*b).unwrap(); }
+        for b in b"google" {
+            buf.write_u8(*b).unwrap();
+        }
         buf.write_u8(3).unwrap();
-        for b in b"com" { buf.write_u8(*b).unwrap(); }
+        for b in b"com" {
+            buf.write_u8(*b).unwrap();
+        }
         buf.write_u8(0).unwrap();
 
         // Write pointer to it
@@ -821,11 +845,13 @@ mod tests {
     fn test_packet_end_to_end() {
         let mut packet = DnsPacket::new();
         packet.header.id = 55;
-        packet.questions.push(DnsQuestion::new("test.com".to_string(), QueryType::A));
+        packet
+            .questions
+            .push(DnsQuestion::new("test.com".to_string(), QueryType::A));
         packet.answers.push(DnsRecord::A {
             domain: "test.com".to_string(),
             addr: Ipv4Addr::new(1, 2, 3, 4),
-            ttl: 100
+            ttl: 100,
         });
 
         let mut buf = BytePacketBuffer::new();
@@ -868,9 +894,13 @@ mod tests {
         // Name: test.com
         // 4 test 3 com 0
         buf.write_u8(4).unwrap();
-        for b in b"test" { buf.write_u8(*b).unwrap(); }
+        for b in b"test" {
+            buf.write_u8(*b).unwrap();
+        }
         buf.write_u8(3).unwrap();
-        for b in b"com" { buf.write_u8(*b).unwrap(); }
+        for b in b"com" {
+            buf.write_u8(*b).unwrap();
+        }
         buf.write_u8(0).unwrap();
 
         buf.write_u16(999).unwrap(); // TYPE
@@ -887,7 +917,10 @@ mod tests {
         buf.set_valid_len(end_pos); // Must set valid len for reading!
         let rec = DnsRecord::read(&mut buf).unwrap();
 
-        if let DnsRecord::UNKNOWN { qtype, ref data, .. } = rec {
+        if let DnsRecord::UNKNOWN {
+            qtype, ref data, ..
+        } = rec
+        {
             assert_eq!(qtype, 999);
             assert_eq!(data, &vec![1, 2, 3, 4]);
 

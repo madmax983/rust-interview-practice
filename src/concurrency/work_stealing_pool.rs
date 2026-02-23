@@ -126,68 +126,74 @@ impl WorkStealingPool {
 
             let builder = thread::Builder::new().name(format!("worker-{}", id));
 
-            let handle = builder.spawn(move || {
-                // Set thread-local ID
-                WORKER_ID.with(|id_cell| id_cell.set(Some(id)));
+            let handle = builder
+                .spawn(move || {
+                    // Set thread-local ID
+                    WORKER_ID.with(|id_cell| id_cell.set(Some(id)));
 
-                let mut rng = XorShift64::new(id as u64);
+                    let mut rng = XorShift64::new(id as u64);
 
-                loop {
-                    if thread_shutdown.load(Ordering::Relaxed) {
-                        break;
-                    }
+                    loop {
+                        if thread_shutdown.load(Ordering::Relaxed) {
+                            break;
+                        }
 
-                    // 1. Try Local Pop (LIFO)
-                    let job = {
-                        let mut local = thread_states[id].queue.lock().unwrap();
-                        local.pop_back()
-                    };
-
-                    if let Some(job) = job {
-                        job();
-                        continue;
-                    }
-
-                    // 2. Try Global Pop (FIFO)
-                    let job = {
-                        let mut global = thread_global.queue.lock().unwrap();
-                        global.pop_front()
-                    };
-
-                    if let Some(job) = job {
-                        job();
-                        continue;
-                    }
-
-                    // 3. Try Steal (FIFO)
-                    // Pick a random victim
-                    let victim_id = (rng.next() as usize) % thread_states.len();
-                    if victim_id != id {
+                        // 1. Try Local Pop (LIFO)
                         let job = {
-                            let mut victim_queue = thread_states[victim_id].queue.lock().unwrap();
-                            victim_queue.pop_front() // Steal from "bottom" (oldest)
+                            let mut local = thread_states[id].queue.lock().unwrap();
+                            local.pop_back()
                         };
 
                         if let Some(job) = job {
                             job();
                             continue;
                         }
-                    }
 
-                    // 4. Sleep
-                    // We must check global again and wait.
-                    // Ideally, we check everything one last time before sleeping to avoid race.
-                    // For simplicity, we just wait on global queue condvar.
-                    let mut global = thread_global.queue.lock().unwrap();
-                    if global.is_empty() && !thread_shutdown.load(Ordering::Relaxed) {
-                         // RUST INSIGHT: `wait` releases the lock and blocks.
-                         // When it returns, it re-acquires the lock.
-                         // We use `wait_timeout` to periodically check for shutdown or new steals
-                         // even if global queue is empty (spurious wakeups or just liveness).
-                         let _ = thread_global.condvar.wait_timeout(global, Duration::from_millis(10)).unwrap();
+                        // 2. Try Global Pop (FIFO)
+                        let job = {
+                            let mut global = thread_global.queue.lock().unwrap();
+                            global.pop_front()
+                        };
+
+                        if let Some(job) = job {
+                            job();
+                            continue;
+                        }
+
+                        // 3. Try Steal (FIFO)
+                        // Pick a random victim
+                        let victim_id = (rng.next() as usize) % thread_states.len();
+                        if victim_id != id {
+                            let job = {
+                                let mut victim_queue =
+                                    thread_states[victim_id].queue.lock().unwrap();
+                                victim_queue.pop_front() // Steal from "bottom" (oldest)
+                            };
+
+                            if let Some(job) = job {
+                                job();
+                                continue;
+                            }
+                        }
+
+                        // 4. Sleep
+                        // We must check global again and wait.
+                        // Ideally, we check everything one last time before sleeping to avoid race.
+                        // For simplicity, we just wait on global queue condvar.
+                        let mut global = thread_global.queue.lock().unwrap();
+                        if global.is_empty() && !thread_shutdown.load(Ordering::Relaxed) {
+                            // RUST INSIGHT: `wait` releases the lock and blocks.
+                            // When it returns, it re-acquires the lock.
+                            // We use `wait_timeout` to periodically check for shutdown or new steals
+                            // even if global queue is empty (spurious wakeups or just liveness).
+                            let _ = thread_global
+                                .condvar
+                                .wait_timeout(global, Duration::from_millis(10))
+                                .unwrap();
+                        }
                     }
-                }
-            }).unwrap();
+                })
+                .unwrap();
         }
 
         WorkStealingPool {

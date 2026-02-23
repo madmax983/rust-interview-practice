@@ -139,7 +139,7 @@ impl<V> RadixTrie<V> {
                     let key_suffix_char = key_suffix.chars().next().unwrap();
                     split_node.children.insert(
                         key_suffix_char,
-                        Box::new(Node::new(key_suffix, Some(value)))
+                        Box::new(Node::new(key_suffix, Some(value))),
                     );
                 }
 
@@ -148,7 +148,10 @@ impl<V> RadixTrie<V> {
             }
         } else {
             // Case 3: No matching child. Create a new one.
-            node.children.insert(first_char, Box::new(Node::new(key.to_string(), Some(value))));
+            node.children.insert(
+                first_char,
+                Box::new(Node::new(key.to_string(), Some(value))),
+            );
         }
     }
 

@@ -103,9 +103,9 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
             // After fill, if we merged with prev child, the index of interest might have shifted.
             let mut target_idx = idx;
             if is_last_child && idx > self.children.len() - 1 {
-                 target_idx -= 1;
+                target_idx -= 1;
             } else if idx >= self.children.len() {
-                 target_idx = self.children.len() - 1;
+                target_idx = self.children.len() - 1;
             }
 
             return self.children[target_idx].delete_key(t, key);
@@ -150,7 +150,10 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         while !cur.is_leaf() {
             cur = cur.children.last().unwrap();
         }
-        (cur.keys.last().unwrap().clone(), cur.vals.last().unwrap().clone())
+        (
+            cur.keys.last().unwrap().clone(),
+            cur.vals.last().unwrap().clone(),
+        )
     }
 
     fn get_succ(&self, idx: usize) -> (K, V) {
@@ -158,7 +161,10 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         while !cur.is_leaf() {
             cur = cur.children.first().unwrap();
         }
-        (cur.keys.first().unwrap().clone(), cur.vals.first().unwrap().clone())
+        (
+            cur.keys.first().unwrap().clone(),
+            cur.vals.first().unwrap().clone(),
+        )
     }
 
     fn fill(&mut self, t: usize, idx: usize) {
@@ -337,11 +343,11 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
 
         // If root has 0 keys (and is not a leaf), make its first child the new root.
         if self.root.keys.is_empty() {
-             if !self.root.is_leaf() {
-                 let child = self.root.children.remove(0);
-                 self.root = child;
-             }
-             // If leaf and empty, the tree is now empty but we keep the empty root node (as per `new`).
+            if !self.root.is_leaf() {
+                let child = self.root.children.remove(0);
+                self.root = child;
+            }
+            // If leaf and empty, the tree is now empty but we keep the empty root node (as per `new`).
         }
 
         if result.is_some() {
@@ -376,13 +382,19 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
         parent.children.insert(i + 1, new_child);
     }
 
-    fn insert_non_full(t: usize, len: &mut usize, node: &mut Node<K, V>, key: K, val: V) -> Option<V> {
+    fn insert_non_full(
+        t: usize,
+        len: &mut usize,
+        node: &mut Node<K, V>,
+        key: K,
+        val: V,
+    ) -> Option<V> {
         let mut i = node.keys.len();
 
         if node.is_leaf() {
             if let Ok(idx) = node.keys.binary_search(&key) {
-                 let old = mem::replace(&mut node.vals[idx], val);
-                 return Some(old);
+                let old = mem::replace(&mut node.vals[idx], val);
+                return Some(old);
             }
             while i > 0 && key < node.keys[i - 1] {
                 i -= 1;
@@ -415,8 +427,8 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
                 if key > node.keys[i] {
                     i += 1;
                 } else if key == node.keys[i] {
-                     let old = mem::replace(&mut node.vals[i], val);
-                     return Some(old);
+                    let old = mem::replace(&mut node.vals[i], val);
+                    return Some(old);
                 }
             }
 

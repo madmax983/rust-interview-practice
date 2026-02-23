@@ -89,7 +89,7 @@ impl<T> RingBuffer<T> {
             self.push(item).ok(); // Should always succeed
             None
         } else {
-        // Buffer is full. Overwrite at write index.
+            // Buffer is full. Overwrite at write index.
 
             let old_val = self.buffer[self.write].take();
             self.buffer[self.write] = Some(item);

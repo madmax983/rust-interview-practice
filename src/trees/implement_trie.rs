@@ -108,7 +108,10 @@ impl TrieOptimized {
     pub fn insert(&mut self, word: String) {
         let mut current = self;
         for c in word.chars() {
-            current = current.children.entry(c).or_insert_with(|| Box::new(TrieOptimized::new()));
+            current = current
+                .children
+                .entry(c)
+                .or_insert_with(|| Box::new(TrieOptimized::new()));
         }
         current.is_end_of_word = true;
     }

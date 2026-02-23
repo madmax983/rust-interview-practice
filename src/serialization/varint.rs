@@ -72,7 +72,10 @@ pub fn decode_u64<R: Read>(reader: &mut R) -> io::Result<u64> {
         // PRODUCTION NOTE: In a real implementation, we might check for overflow if shift > 63.
         // Here we assume valid u64 LEB128.
         if shift >= 64 {
-             return Err(io::Error::new(io::ErrorKind::InvalidData, "LEB128 overflow"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "LEB128 overflow",
+            ));
         }
 
         result |= ((byte & 0x7F) as u64) << shift;
@@ -114,9 +117,10 @@ mod tests {
             (127, vec![0x7F]),
             (128, vec![0x80, 0x01]),
             (300, vec![0xAC, 0x02]),
-            (u64::MAX, vec![
-                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01
-            ]),
+            (
+                u64::MAX,
+                vec![0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01],
+            ),
         ];
 
         for (value, expected) in test_cases {
@@ -138,12 +142,14 @@ mod tests {
             (1, vec![0x02]),
             (-2, vec![0x03]),
             (2, vec![0x04]),
-            (i64::MAX, vec![
-                0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01
-            ]),
-            (i64::MIN, vec![
-                0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01
-            ]),
+            (
+                i64::MAX,
+                vec![0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01],
+            ),
+            (
+                i64::MIN,
+                vec![0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01],
+            ),
         ];
 
         for (value, expected) in test_cases {

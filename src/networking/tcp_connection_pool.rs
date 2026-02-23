@@ -187,7 +187,7 @@ impl<M: ConnectionManager> Pool<M> {
 
             state = new_state;
             if result.timed_out() {
-                 return Err(PoolError::Timeout);
+                return Err(PoolError::Timeout);
             }
         }
     }
@@ -196,12 +196,12 @@ impl<M: ConnectionManager> Pool<M> {
         let mut state = self.shared.state.lock().unwrap();
 
         if state.idle_connections.len() < self.shared.config.max_size {
-             state.idle_connections.push(conn);
-             self.shared.cond.notify_one();
+            state.idle_connections.push(conn);
+            self.shared.cond.notify_one();
         } else {
-             // Should not happen if invariants are maintained, but if it does,
-             // we drop the connection (it goes out of scope).
-             state.num_connections -= 1;
+            // Should not happen if invariants are maintained, but if it does,
+            // we drop the connection (it goes out of scope).
+            state.num_connections -= 1;
         }
     }
 }
@@ -289,16 +289,29 @@ mod tests {
 
     #[test]
     fn test_pool_limit() {
-        let manager = FakeManager { count: AtomicUsize::new(0) };
-        let config = PoolConfig { max_size: 2, ..Default::default() };
+        let manager = FakeManager {
+            count: AtomicUsize::new(0),
+        };
+        let config = PoolConfig {
+            max_size: 2,
+            ..Default::default()
+        };
         let pool = Pool::new(manager, config);
 
         let _c1 = pool.get().unwrap();
         let _c2 = pool.get().unwrap();
 
         // This should timeout because pool is full (size 2)
-        let config_timeout = PoolConfig { max_size: 2, connection_timeout: Duration::from_millis(50) };
-        let pool_timeout = Pool::new(FakeManager { count: AtomicUsize::new(0) }, config_timeout);
+        let config_timeout = PoolConfig {
+            max_size: 2,
+            connection_timeout: Duration::from_millis(50),
+        };
+        let pool_timeout = Pool::new(
+            FakeManager {
+                count: AtomicUsize::new(0),
+            },
+            config_timeout,
+        );
         let _c3 = pool_timeout.get().unwrap();
         let _c4 = pool_timeout.get().unwrap();
 
@@ -307,8 +320,13 @@ mod tests {
 
     #[test]
     fn test_pool_reuse() {
-        let manager = FakeManager { count: AtomicUsize::new(0) };
-        let config = PoolConfig { max_size: 1, ..Default::default() };
+        let manager = FakeManager {
+            count: AtomicUsize::new(0),
+        };
+        let config = PoolConfig {
+            max_size: 1,
+            ..Default::default()
+        };
         let pool = Pool::new(manager, config);
 
         {
@@ -324,8 +342,13 @@ mod tests {
 
     #[test]
     fn test_concurrent_access() {
-        let manager = FakeManager { count: AtomicUsize::new(0) };
-        let config = PoolConfig { max_size: 5, ..Default::default() };
+        let manager = FakeManager {
+            count: AtomicUsize::new(0),
+        };
+        let config = PoolConfig {
+            max_size: 5,
+            ..Default::default()
+        };
         let pool = Pool::new(manager, config);
         let mut handles = vec![];
 

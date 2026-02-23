@@ -143,7 +143,9 @@ impl Codec {
         // RUST INSIGHT: parse() returns a Result. In a robust system we'd handle errors,
         // but here we assume valid input per problem constraints, so unwrap is "acceptable"
         // for LeetCode context, though expect() is better for debugging.
-        let val = token.parse::<i32>().expect("Invalid number in serialized data");
+        let val = token
+            .parse::<i32>()
+            .expect("Invalid number in serialized data");
 
         let mut node = TreeNode::new(val);
         node.left = self.deserialize_helper(tokens);

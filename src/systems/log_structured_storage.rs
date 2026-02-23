@@ -52,8 +52,8 @@ use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::systems::wal::Wal;
 use crate::data_structures::bloom_filter::BloomFilter;
+use crate::systems::wal::Wal;
 
 pub struct LsmTree {
     memtable: BTreeMap<String, String>,
@@ -93,8 +93,8 @@ impl LsmTree {
                 continue;
             }
 
-            let key_bytes = &entry[8..8+key_len];
-            let val_bytes = &entry[8+key_len..];
+            let key_bytes = &entry[8..8 + key_len];
+            let val_bytes = &entry[8 + key_len..];
 
             let key = String::from_utf8_lossy(key_bytes).to_string();
             let val = String::from_utf8_lossy(val_bytes).to_string();
@@ -295,7 +295,10 @@ impl LsmTree {
         let new_filename = format!("compacted_{}.sst", timestamp);
         let new_path = self.dir.join(new_filename);
 
-        let file = OpenOptions::new().write(true).create(true).open(&new_path)?;
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(&new_path)?;
         let mut writer = std::io::BufWriter::new(file);
 
         let mut bf = BloomFilter::new(merged_map.len().max(100), 0.01);
@@ -314,7 +317,7 @@ impl LsmTree {
             fs::remove_file(path)?;
             let fp = path.with_extension("filter");
             if fp.exists() {
-                 fs::remove_file(fp)?;
+                fs::remove_file(fp)?;
             }
             // Remove from bloom filters map
             self.bloom_filters.remove(path);
@@ -357,7 +360,10 @@ mod tests {
     use std::fs;
 
     fn temp_dir() -> String {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         format!("lsm_test_{}", now)
     }
 
@@ -405,7 +411,8 @@ mod tests {
         let dir = temp_dir();
         {
             let mut lsm = LsmTree::new(&dir, 10).unwrap();
-            lsm.put("persistent".to_string(), "data".to_string()).unwrap();
+            lsm.put("persistent".to_string(), "data".to_string())
+                .unwrap();
             lsm.flush().unwrap();
         }
 
