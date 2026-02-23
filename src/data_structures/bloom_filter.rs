@@ -14,8 +14,11 @@
 //! is crucial for system design. You'll also learn about double hashing to simulate k hash functions.
 
 use std::collections::hash_map::DefaultHasher;
+use std::fs::File;
 use std::hash::{Hash, Hasher};
+use std::io::{self, Read, Write};
 use std::marker::PhantomData;
+use std::path::Path;
 
 // =========================================================================================
 // Architecture
@@ -179,6 +182,48 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
 
         (h1, h2)
     }
+
+    /// Saves the Bloom Filter to a file.
+    /// Format: [bit_count (8 bytes)] [hash_count (4 bytes)] [vec_len (8 bytes)] [bit_vec (8 * vec_len bytes)]
+    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
+        let mut file = File::create(path)?;
+        file.write_all(&self.bit_count.to_le_bytes())?;
+        file.write_all(&self.hash_count.to_le_bytes())?;
+        file.write_all(&(self.bit_vec.len() as u64).to_le_bytes())?;
+        for word in &self.bit_vec {
+            file.write_all(&word.to_le_bytes())?;
+        }
+        Ok(())
+    }
+
+    /// Loads a Bloom Filter from a file.
+    pub fn load_from_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+        let mut file = File::open(path)?;
+
+        let mut buffer_u64 = [0u8; 8];
+        file.read_exact(&mut buffer_u64)?;
+        let bit_count = u64::from_le_bytes(buffer_u64);
+
+        let mut buffer_u32 = [0u8; 4];
+        file.read_exact(&mut buffer_u32)?;
+        let hash_count = u32::from_le_bytes(buffer_u32);
+
+        file.read_exact(&mut buffer_u64)?;
+        let vec_len = u64::from_le_bytes(buffer_u64);
+
+        let mut bit_vec = Vec::with_capacity(vec_len as usize);
+        for _ in 0..vec_len {
+            file.read_exact(&mut buffer_u64)?;
+            bit_vec.push(u64::from_le_bytes(buffer_u64));
+        }
+
+        Ok(Self {
+            bit_vec,
+            bit_count,
+            hash_count,
+            _marker: PhantomData,
+        })
+    }
 }
 
 // Minimal FNV-1a Hasher for the second hash function.
@@ -263,5 +308,24 @@ mod tests {
         let mut bf = BloomFilter::new(1, 0.5);
         bf.add("a");
         assert!(bf.contains("a"));
+    }
+
+    #[test]
+    fn test_save_load() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let path = format!("test_bloom_filter_{}.bin", now);
+
+        let mut bf = BloomFilter::new(100, 0.01);
+        bf.add("persist");
+        bf.save_to_file(&path).unwrap();
+
+        let loaded_bf: BloomFilter<String> = BloomFilter::load_from_file(&path).unwrap();
+        assert!(loaded_bf.contains(&"persist".to_string()));
+        // "missing" should be false with high probability (99%)
+        // but technically could be true. We trust it won't be for this specific case.
+        assert!(!loaded_bf.contains(&"missing".to_string()));
+
+        std::fs::remove_file(path).unwrap();
     }
 }

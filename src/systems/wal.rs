@@ -80,6 +80,16 @@ impl Wal {
         self.writer.get_ref().sync_all()
     }
 
+    /// Clears the WAL by truncating the file to 0 length.
+    pub fn clear(&mut self) -> io::Result<()> {
+        // Truncate file
+        self.file.set_len(0)?;
+        self.file.seek(std::io::SeekFrom::Start(0))?;
+        // Re-create writer to reset internal buffer
+        self.writer = BufWriter::new(self.file.try_clone()?);
+        Ok(())
+    }
+
     /// Replays entries from the WAL.
     // RUST INSIGHT: Returning an iterator would be ideal, but requires careful lifetime management with the file.
     // For simplicity, we return a Vec of payloads.
@@ -247,6 +257,25 @@ mod tests {
             assert_eq!(entries.len(), 1);
             assert_eq!(entries[0], b"valid");
         }
+
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn test_wal_clear() {
+        let path = temp_file();
+        let mut wal = Wal::open(&path).unwrap();
+
+        wal.append(b"data").unwrap();
+        wal.flush().unwrap();
+
+        let entries = wal.replay().unwrap();
+        assert_eq!(entries.len(), 1);
+
+        wal.clear().unwrap();
+
+        let entries = wal.replay().unwrap();
+        assert_eq!(entries.len(), 0);
 
         fs::remove_file(path).unwrap();
     }
