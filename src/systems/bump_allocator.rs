@@ -10,7 +10,7 @@
 //! # Architecture
 //!
 //! A Bump Allocator (or Arena) allocates memory by simply incrementing a pointer. It is extremely fast (O(1)) but cannot free individual objects.
-//! All objects are freed at once when the Arena is dropped.
+//! All objects are freed at once when the Arena is dropped or reset.
 //!
 //! **Diagram:**
 //!
@@ -29,37 +29,35 @@
 //! | Operation | Time | Space |
 //! | :--- | :--- | :--- |
 //! | Alloc | O(1) | O(1) overhead |
-//! | Dealloc | N/A | N/A |
-//! | Drop Arena | O(1) | O(N) |
+//! | Reset | O(1) | O(1) |
+//! | Drop | O(1) | O(N) |
 
 use std::alloc::{Layout, alloc, dealloc};
 use std::cell::UnsafeCell;
-use std::marker::PhantomData;
 use std::ptr::NonNull;
 
 /// A simple Bump Allocator that manages a fixed-size chunk of memory.
-// RUST INSIGHT: We use `UnsafeCell` to allow interior mutability (bumping the pointer)
-// even if we hand out shared references to the allocated objects. Wait, no.
-// If we use `&self` for alloc, we need interior mutability.
-// If we use `&mut self`, we can't allocate multiple objects and use them simultaneously if they borrow from self.
-// The classic Arena pattern in Rust uses interior mutability (`RefCell` or `UnsafeCell`) so `alloc` takes `&self`.
 pub struct BumpArena {
     start: NonNull<u8>,
     end: NonNull<u8>,
     next: UnsafeCell<NonNull<u8>>,
-    // Ensure we are not Send/Sync automatically unless we add synchronization.
-    _marker: PhantomData<*mut u8>,
 }
 
-// UNSAFE JUSTIFICATION: BumpArena owns the memory block. It is safe to move the Arena to another thread
-// because the memory address is stable (heap allocated via `alloc`) and `UnsafeCell` is only accessed
-// via `&self`. However, it is NOT `Sync` because `alloc` mutates the internal pointer without synchronization.
+// SAFETY:
+// BumpArena is Send because it owns the memory block. Moving it to another thread is safe.
+// BumpArena is !Sync because `alloc` uses `UnsafeCell` without synchronization.
+// Concurrent access to `alloc` would cause data races on `next`.
 unsafe impl Send for BumpArena {}
 
 impl BumpArena {
     /// Creates a new Arena with the specified capacity in bytes.
+    ///
+    /// # Panics
+    /// Panics if allocation fails or capacity is 0.
     pub fn new(capacity: usize) -> Self {
-        let layout = Layout::from_size_align(capacity, 1).unwrap();
+        assert!(capacity > 0, "Capacity must be positive");
+        let layout = Layout::from_size_align(capacity, 1).expect("Invalid layout");
+
         // UNSAFE JUSTIFICATION: We are manually allocating a raw block of memory.
         let ptr = unsafe { alloc(layout) };
         if ptr.is_null() {
@@ -67,43 +65,46 @@ impl BumpArena {
         }
 
         let start = NonNull::new(ptr).unwrap();
+        // Calculate end pointer. `ptr.add(capacity)` is safe because we just allocated it.
         let end = NonNull::new(unsafe { ptr.add(capacity) }).unwrap();
 
         BumpArena {
             start,
             end,
             next: UnsafeCell::new(start),
-            _marker: PhantomData,
         }
     }
 
     /// Allocates a value of type `T` in the arena.
-    // RUST INSIGHT: The returned reference `&T` has the same lifetime as `&self`.
-    // Because `alloc` takes `&self` (shared borrow), multiple objects can be allocated and alive simultaneously.
-    // We use `UnsafeCell` to mutate the `next` pointer internally.
+    ///
+    /// Returns a mutable reference to the allocated value.
+    /// The reference lifetime is tied to `&self`, meaning it cannot outlive the arena.
+    ///
+    /// # Panics
+    /// Panics if the arena is out of memory.
     pub fn alloc<T>(&self, value: T) -> &mut T {
         let layout = Layout::new::<T>();
 
-        // Calculate alignment
-        // UNSAFE JUSTIFICATION: We read the current pointer to calculate alignment.
-        // This is safe because we are single-threaded (not Sync) or would need a Mutex.
-        // For this simple implementation, we assume single-threaded access or external synchronization if Sync was implemented (it's not).
-        let current_ptr = unsafe { *self.next.get() };
-        let current_addr = current_ptr.as_ptr() as usize;
-
-        let align_offset = (layout.align() - (current_addr % layout.align())) % layout.align();
-        let alloc_start = current_addr + align_offset;
-        let alloc_end = alloc_start + layout.size();
-
-        // Check capacity
-        // UNSAFE JUSTIFICATION: Pointer comparison is valid within the same allocation.
-        if alloc_end > self.end.as_ptr() as usize {
-            panic!("BumpArena out of memory");
-        }
-
         unsafe {
+            // Read current pointer
+            let current_ptr = *self.next.get();
+            let current_addr = current_ptr.as_ptr() as usize;
+
+            // Calculate alignment padding
+            let align_offset = (layout.align() - (current_addr % layout.align())) % layout.align();
+            let alloc_start = current_addr + align_offset;
+            let alloc_end = alloc_start + layout.size();
+
+            // Check capacity
+            // Note: We cast to usize for comparison.
+            if alloc_end > self.end.as_ptr() as usize {
+                panic!("BumpArena out of memory");
+            }
+
             let ptr = alloc_start as *mut T;
+
             // Write the value into the memory
+            // `ptr::write` is safe because we verified bounds and alignment.
             std::ptr::write(ptr, value);
 
             // Update the next pointer
@@ -111,27 +112,44 @@ impl BumpArena {
             *self.next.get() = new_next;
 
             // Return a mutable reference.
-            // GOTCHA: We are handing out a `&mut T` from a `&self`. This is generally unsafe ("aliasing XOR mutability").
-            // However, in an Arena, the objects are distinct.
-            // BUT, if `alloc` returns `&mut T`, we can't call `alloc` again if we hold that `&mut T`?
-            // No, because `alloc` takes `&self`.
-            // Rust allows `&self` and multiple `&mut T` IF the `&mut T` don't overlap and don't alias `self`.
-            // The references point to the heap memory owned by `BumpArena`.
-            // The compiler sees `&self` -> `&mut T`. This is actually unsound if `T` has interior mutability or if we unsafe-cast it.
-            // Standard arenas usually return `&mut T` but ensure `T` doesn't reference `self`'s metadata.
-            // Actually, `&self` -> `&mut T` allows creating multiple mutable references to *different* T's, which is fine,
-            // provided they don't overlap.
+            // RUST INSIGHT: Returning `&mut T` from `&self`.
+            // This is allowed because `UnsafeCell` permits mutation through shared reference.
+            // Safety relies on the fact that every call to `alloc` returns a pointer to *new*, disjoint memory.
+            // Thus, we never hand out two mutable references to the *same* T.
+            // However, this does not prevent creating multiple mutable references to *different* T's within the same arena,
+            // which is perfectly safe.
             &mut *ptr
+        }
+    }
+
+    /// Resets the allocator, clearing all allocations.
+    ///
+    /// # Safety
+    /// This is unsafe because it invalidates all references previously handed out.
+    /// The caller must ensure that no references to allocated objects are used after calling reset.
+    /// Note: This does NOT run destructors (`Drop`) for allocated objects. They are simply forgotten.
+    pub unsafe fn reset(&mut self) {
+        *self.next.get_mut() = self.start;
+    }
+
+    /// Returns the total capacity of the arena.
+    pub fn capacity(&self) -> usize {
+        unsafe {
+            self.end.as_ptr().offset_from(self.start.as_ptr()) as usize
+        }
+    }
+
+    /// Returns the number of bytes used.
+    pub fn used(&self) -> usize {
+        unsafe {
+            let next = *self.next.get();
+            next.as_ptr().offset_from(self.start.as_ptr()) as usize
         }
     }
 }
 
 impl Drop for BumpArena {
     fn drop(&mut self) {
-        // UNSAFE JUSTIFICATION: We must deallocate the memory chunk we allocated in `new`.
-        // We do NOT drop the individual objects `T` because we don't know their types or locations anymore.
-        // This is a "POD" (Plain Old Data) arena. If `T` implements `Drop`, it will leak!
-        // PRODUCTION NOTE: A production Arena (like `bumpalo`) might register destructors or require `T: Copy`.
         unsafe {
             let capacity = self.end.as_ptr() as usize - self.start.as_ptr() as usize;
             let layout = Layout::from_size_align(capacity, 1).unwrap();
@@ -185,13 +203,27 @@ mod tests {
     #[test]
     #[should_panic(expected = "BumpArena out of memory")]
     fn test_out_of_memory() {
-        let arena = BumpArena::new(10); // Small arena
+        let arena = BumpArena::new(16);
         arena.alloc(0u64); // 8 bytes
-        arena.alloc(0u64); // 8 bytes -> Panic
+        arena.alloc(0u64); // 8 bytes -> 16 used.
+        arena.alloc(1u8);  // Boom
+    }
+
+    #[test]
+    fn test_reset() {
+        let mut arena = BumpArena::new(1024);
+
+        let _a = arena.alloc(10);
+        assert!(arena.used() >= 4);
+
+        unsafe {
+            arena.reset();
+        }
+
+        assert_eq!(arena.used(), 0);
+
+        // Allocate again
+        let b = arena.alloc(20);
+        assert_eq!(*b, 20);
     }
 }
-
-// Footer
-//
-// *   **Comparison**: Similar to `bumpalo` or `typed-arena` but simplified.
-// *   **Missing features**: Destructor support (`Drop`), resizing/chaining chunks, thread-safety (`Sync`).

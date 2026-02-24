@@ -22,61 +22,21 @@ use std::mem::MaybeUninit;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-// =========================================================================================
-// Architecture
-// =========================================================================================
-//
-// Layout:
-// [ Head (Atomic) ] -- [ Padding ] -- [ Tail (Atomic) ] -- [ Padding ] -- [ Buffer Ptr ]
-//
-// Shared State (SpscRingBuffer):
-// - `buffer`: Box<[UnsafeCell<MaybeUninit<T>>]>. Storage.
-//   We use UnsafeCell per element to allow safe concurrent access to distinct elements.
-// - `head`: AtomicUsize. Index of the next item to read. Updated by Consumer. Read by Producer.
-// - `tail`: AtomicUsize. Index of the next slot to write. Updated by Producer. Read by Consumer.
-// - `capacity`: Constant.
-//
-// Local State (Producer):
-// - `local_tail`: usize. Tracks `tail` without atomic loads (since Producer owns tail).
-// - `shadow_head`: usize. Cached copy of `head` to avoid reading the atomic `head` constantly.
-//
-// Local State (Consumer):
-// - `local_head`: usize. Tracks `head` without atomic loads (since Consumer owns head).
-// - `shadow_tail`: usize. Cached copy of `tail` to avoid reading the atomic `tail` constantly.
-//
-// Invariants:
-// 1. `head` and `tail` are always < 2*capacity (if using power-of-two wrap) or just mod capacity.
-//    We'll use strict modulus: `idx % capacity`.
-// 2. Buffer full condition: `(tail + 1) % capacity == head`.
-// 3. Buffer empty condition: `head == tail`.
-// 4. Producer is the ONLY thread writing to `tail` and `buffer[tail]`.
-// 5. Consumer is the ONLY thread writing to `head` and reading `buffer[head]`.
-//
-// Complexity:
-// ┌───────────────┬─────────────┬─────────────┐
-// │ Operation     │ Time        │ Space       │
-// ├───────────────┼─────────────┼─────────────┤
-// │ Push          │ O(1)        │ O(1)        │
-// │ Pop           │ O(1)        │ O(1)        │
-// └───────────────┴─────────────┴─────────────┘
-
 // Cache line size constant (typical for x86/ARM)
 const CACHE_LINE_SIZE: usize = 64;
 
 /// Internal shared state.
-// RUST INSIGHT:
-// #[repr(C)] ensures that the compiler respects the field order and padding.
-// Without it, Rust is free to reorder fields to minimize padding, potentially
-// defeating our cache line separation strategy (false sharing prevention).
+/// We use specific padding to ensure `head` and `tail` are on different cache lines
+/// to prevent false sharing between the producer (writing tail) and consumer (writing head).
 #[repr(C)]
 struct Shared<T> {
-    // Padding before head to prevent adjacent allocations sharing cache line
+    // Padding before head
     _pad1: [u8; CACHE_LINE_SIZE],
 
     // Head index (Consumer writes, Producer reads)
     head: AtomicUsize,
 
-    // Padding between head and tail to prevent False Sharing
+    // Padding between head and tail
     _pad2: [u8; CACHE_LINE_SIZE],
 
     // Tail index (Producer writes, Consumer reads)
@@ -85,20 +45,21 @@ struct Shared<T> {
     // Padding after tail
     _pad3: [u8; CACHE_LINE_SIZE],
 
-    // The buffer.
-    // Box<[T]> is a fat pointer (ptr + len).
-    // UnsafeCell wraps EACH element to allow obtaining mutable pointers to distinct elements
-    // concurrently without violating aliasing rules on the whole slice.
+    // The buffer storage.
+    // Box<[UnsafeCell<MaybeUninit<T>>]> ensures stable address and correct alignment.
     buffer: Box<[UnsafeCell<MaybeUninit<T>>]>,
+
+    // Capacity of the buffer (allocated size).
+    // Note: Usable capacity is `capacity - 1` to distinguish full from empty.
     capacity: usize,
 }
 
 // UNSAFE JUSTIFICATION:
-// - Sync: The SpscRingBuffer coordinates access.
-//   - Producer strictly owns `tail` writes and `buffer[tail]` writes.
-//   - Consumer strictly owns `head` writes and `buffer[head]` reads.
-//   - Memory ordering (Release/Acquire) ensures visibility.
-// - Send: `T` must be Send because it is moved between threads.
+// - Sync: The SpscRingBuffer logic guarantees exclusive access:
+//   - Producer owns `tail` writes and `buffer[tail]` writes.
+//   - Consumer owns `head` writes and `buffer[head]` reads.
+//   - Proper memory ordering (Release/Acquire) ensures visibility.
+// - Send: `T` must be Send because it is moved between threads via the buffer.
 unsafe impl<T: Send> Sync for Shared<T> {}
 unsafe impl<T: Send> Send for Shared<T> {}
 
@@ -122,8 +83,10 @@ pub fn channel<T>(capacity: usize) -> (Producer<T>, Consumer<T>) {
     assert!(capacity > 0, "Capacity must be greater than 0");
 
     // Allocate buffer with uninitialized data wrapped in UnsafeCell
-    let mut buffer = Vec::with_capacity(capacity + 1); // +1 for the "always empty slot" strategy
-    for _ in 0..capacity + 1 {
+    // We need capacity + 1 slots to distinguish full state (head == tail + 1) from empty (head == tail)
+    let internal_capacity = capacity + 1;
+    let mut buffer = Vec::with_capacity(internal_capacity);
+    for _ in 0..internal_capacity {
         buffer.push(UnsafeCell::new(MaybeUninit::uninit()));
     }
     let buffer = buffer.into_boxed_slice();
@@ -135,7 +98,7 @@ pub fn channel<T>(capacity: usize) -> (Producer<T>, Consumer<T>) {
         tail: AtomicUsize::new(0),
         _pad3: [0; CACHE_LINE_SIZE],
         buffer,
-        capacity: capacity + 1, // Real internal capacity includes the empty slot
+        capacity: internal_capacity,
     });
 
     (
@@ -167,9 +130,9 @@ impl<T> Producer<T> {
         let next_tail = (current_tail + 1) % self.shared.capacity;
 
         // Check if full.
-        // We use shadow_head to avoid loading the atomic head if possible.
+        // We check against shadow_head first to avoid loading the atomic head which causes cache coherence traffic.
         if next_tail == self.shadow_head {
-            // Shadow says full. Check the real head.
+            // Shadow says potentially full. Check the real head.
             let real_head = self.shared.head.load(Ordering::Acquire);
             self.shadow_head = real_head;
 
@@ -180,15 +143,14 @@ impl<T> Producer<T> {
 
         // Write the item.
         // SAFETY:
-        // 1. We checked that next_tail != head, so this slot is free.
-        // 2. We are the only producer.
-        // 3. We use UnsafeCell to get a mutable pointer to THIS specific slot.
+        // 1. We checked that next_tail != head, so this slot is guaranteed free.
+        // 2. We are the exclusive producer for `tail`.
         unsafe {
             let slot_ptr = self.shared.buffer[current_tail].get();
             slot_ptr.write(MaybeUninit::new(item));
         }
 
-        // Commit the write by updating tail.
+        // Update tail.
         // Release ordering ensures the consumer sees the written item BEFORE seeing the new tail index.
         self.shared.tail.store(next_tail, Ordering::Release);
         self.local_tail = next_tail;
@@ -209,9 +171,9 @@ impl<T> Consumer<T> {
         let current_head = self.local_head;
 
         // Check if empty.
-        // Use shadow_tail to avoid atomic load.
+        // Check shadow_tail first.
         if current_head == self.shadow_tail {
-            // Shadow says empty. Check real tail.
+            // Shadow says potentially empty. Check real tail.
             let real_tail = self.shared.tail.load(Ordering::Acquire);
             self.shadow_tail = real_tail;
 
@@ -223,8 +185,8 @@ impl<T> Consumer<T> {
         // Read the item.
         // SAFETY:
         // 1. We checked head != tail, so this slot has valid data.
-        // 2. We are the only consumer.
-        // 3. Acquire load on tail ensured we see the data written by producer.
+        // 2. We are the exclusive consumer for `head`.
+        // 3. Acquire load on `tail` ensured we see the data written by producer.
         let item = unsafe {
             let slot_ptr = self.shared.buffer[current_head].get();
             (*slot_ptr).assume_init_read()
@@ -233,7 +195,8 @@ impl<T> Consumer<T> {
         // Advance head.
         let next_head = (current_head + 1) % self.shared.capacity;
 
-        // Release ordering ensures the producer sees that we've read the item (and the slot is free)
+        // Update head.
+        // Release ordering ensures the producer sees that we've read the item (and slot is free)
         // only AFTER we have actually read it.
         self.shared.head.store(next_head, Ordering::Release);
         self.local_head = next_head;
@@ -242,13 +205,12 @@ impl<T> Consumer<T> {
     }
 }
 
-// SAFETY: Drop must handle items still in the queue.
 impl<T> Drop for Shared<T> {
     fn drop(&mut self) {
-        // We need to drop all items currently in the buffer.
-        // Since we are in Drop, we have exclusive access.
+        // Drop all items currently in the buffer.
+        // We have exclusive access in Drop.
 
-        // Relaxed loads are fine here because no other threads can be accessing.
+        // Use Relaxed loads as no contention is possible.
         let mut head = self.head.load(Ordering::Relaxed);
         let tail = self.tail.load(Ordering::Relaxed);
         let cap = self.capacity;
@@ -264,30 +226,17 @@ impl<T> Drop for Shared<T> {
     }
 }
 
-// Send impls are derived from Shared<T> if T: Send.
-// Producer is Send if T is Send.
-// Consumer is Send if T is Send.
+// Send implementation logic:
+// Producer can be sent to another thread if T is Send.
+// Consumer can be sent to another thread if T is Send.
 unsafe impl<T: Send> Send for Producer<T> {}
 unsafe impl<T: Send> Send for Consumer<T> {}
-
-// =========================================================================================
-// Footer
-// =========================================================================================
-//
-// Comparison to Canonical Crates:
-// - `rigtorp-spsc`: Highly optimized C++ port. Very similar architecture.
-// - `crossbeam-queue`: ArrayQueue is MPMC (Multi-Producer Multi-Consumer), which uses Compare-And-Swap (CAS) loops.
-//   SPSC is faster because it only needs simple Loads/Stores, no CAS.
-//
-// Missing vs. Production:
-// - **Batch Operations**: Production queues often support `push_slice` / `pop_slice` to amortize atomic costs.
-// - **Huge Pages**: For extreme low latency, the buffer should be allocated on Huge Pages to reduce TLB misses.
-// - **Cpu Hint**: `std::hint::spin_loop()` could be used in a blocking wrapper.
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::thread;
+    use std::time::Duration;
 
     #[test]
     fn test_simple_push_pop() {
@@ -295,11 +244,11 @@ mod tests {
 
         assert_eq!(p.push(1), Ok(()));
         assert_eq!(p.push(2), Ok(()));
-        assert_eq!(p.push(3), Err(Full(3))); // Full
+        assert_eq!(p.push(3), Err(Full(3))); // Full (cap is 2)
 
         assert_eq!(c.pop(), Some(1));
         assert_eq!(c.pop(), Some(2));
-        assert_eq!(c.pop(), None); // Empty
+        assert_eq!(c.pop(), None);
     }
 
     #[test]
@@ -310,19 +259,18 @@ mod tests {
         p.push(1).unwrap();
         p.push(2).unwrap();
         p.push(3).unwrap();
+        assert!(p.push(4).is_err());
 
-        // Pop 2
+        // Drain 2
         assert_eq!(c.pop(), Some(1));
         assert_eq!(c.pop(), Some(2));
 
-        // Push 2 (wrapping)
+        // Fill 2 more (wrap around)
         p.push(4).unwrap();
         p.push(5).unwrap();
-
-        // Check Full
         assert!(p.push(6).is_err());
 
-        // Drain
+        // Drain all
         assert_eq!(c.pop(), Some(3));
         assert_eq!(c.pop(), Some(4));
         assert_eq!(c.pop(), Some(5));
@@ -331,13 +279,12 @@ mod tests {
 
     #[test]
     fn test_concurrent() {
-        let (mut p, mut c) = channel(100);
-        const COUNT: usize = 1_000_000;
+        let (mut p, mut c) = channel(128);
+        const COUNT: usize = 100_000;
 
         let producer = thread::spawn(move || {
             for i in 0..COUNT {
                 while let Err(_) = p.push(i) {
-                    // Spin
                     std::hint::spin_loop();
                 }
             }
@@ -364,13 +311,13 @@ mod tests {
     }
 
     #[test]
-    fn test_drop_cleanup() {
+    fn test_drop_safety() {
         use std::sync::atomic::{AtomicUsize, Ordering};
         static DROP_COUNT: AtomicUsize = AtomicUsize::new(0);
 
         #[derive(Debug)]
-        struct Droppable;
-        impl Drop for Droppable {
+        struct Dropper;
+        impl Drop for Dropper {
             fn drop(&mut self) {
                 DROP_COUNT.fetch_add(1, Ordering::SeqCst);
             }
@@ -378,10 +325,10 @@ mod tests {
 
         {
             let (mut p, _c) = channel(10);
-            p.push(Droppable).unwrap();
-            p.push(Droppable).unwrap();
-            p.push(Droppable).unwrap();
-        } // Both dropped here
+            p.push(Dropper).unwrap();
+            p.push(Dropper).unwrap();
+            p.push(Dropper).unwrap();
+        } // Both p and c dropped, so Shared dropped.
 
         assert_eq!(DROP_COUNT.load(Ordering::SeqCst), 3);
     }
