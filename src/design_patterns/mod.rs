@@ -1,7 +1,9 @@
 pub mod actor;
 pub mod builder;
+pub mod concurrency_patterns;
 pub mod error_handling;
 pub mod handle_pattern;
+pub mod iterators;
 pub mod newtype;
 pub mod polymorphism;
 pub mod raii_guards;
