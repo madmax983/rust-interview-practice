@@ -274,25 +274,23 @@ impl<T: Ord> SkipList<T> {
 impl<T> Drop for SkipList<T> {
     fn drop(&mut self) {
         unsafe {
-            let curr = self.head;
-            // First, drop head
-            // Wait, we need to traverse and drop all nodes.
-            // head -> node1 -> node2
+            // Reconstruct the Box for the head node to take ownership
+            let head_ptr = self.head;
+            let head_box = Box::from_raw(head_ptr.as_ptr());
 
-            // We can iterate level 0.
-            let mut next_opt = curr.as_ref().forward[0];
+            // Get the first real node
+            let mut next_ptr_opt = head_box.forward[0];
 
-            // Drop head itself
-            let _ = Box::from_raw(curr.as_ptr());
+            // head_box is dropped here
 
-            while let Some(next_ptr) = next_opt {
-                let next_node = next_ptr.as_ref();
-                let next_next = next_node.forward[0];
+            while let Some(ptr) = next_ptr_opt {
+                // Reconstruct Box for the current node
+                let node_box = Box::from_raw(ptr.as_ptr());
 
-                // Drop current node
-                let _ = Box::from_raw(next_ptr.as_ptr());
+                // Save the next pointer before the node is dropped
+                next_ptr_opt = node_box.forward[0];
 
-                next_opt = next_next;
+                // node_box is dropped here
             }
         }
     }
