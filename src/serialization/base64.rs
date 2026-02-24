@@ -128,7 +128,7 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
     // Decoding logic iterating by 4 chars
     for chunk in input_bytes.chunks(4) {
         if chunk.len() != 4 {
-             return Err("Invalid chunk length".to_string());
+            return Err("Invalid chunk length".to_string());
         }
 
         let mut combined: u32 = 0;
@@ -144,7 +144,7 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
             // But standard decoders usually just stop or handle trailing padding.
             // Here, we check strictly.
             if padding_count > 0 {
-                 return Err("Unexpected character after padding".to_string());
+                return Err("Unexpected character after padding".to_string());
             }
 
             let val = decode_char(byte)?;
@@ -165,11 +165,11 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
         output.push(((combined >> 16) & 0xFF) as u8);
 
         if padding_count < 2 {
-             output.push(((combined >> 8) & 0xFF) as u8);
+            output.push(((combined >> 8) & 0xFF) as u8);
         }
 
         if padding_count < 1 {
-             output.push((combined & 0xFF) as u8);
+            output.push((combined & 0xFF) as u8);
         }
     }
 

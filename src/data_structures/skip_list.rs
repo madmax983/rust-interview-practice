@@ -333,7 +333,9 @@ struct XorShift {
 
 impl XorShift {
     fn new(seed: u32) -> Self {
-        Self { state: if seed == 0 { 12345 } else { seed } }
+        Self {
+            state: if seed == 0 { 12345 } else { seed },
+        }
     }
 
     fn next_u32(&mut self) -> u32 {

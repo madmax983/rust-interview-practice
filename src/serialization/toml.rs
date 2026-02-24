@@ -83,10 +83,18 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UnexpectedChar(c, s) => write!(f, "Unexpected character '{}' at {}:{}", c, s.line, s.col),
-            Self::UnexpectedToken(t, s) => write!(f, "Unexpected token {:?} at {}:{}", t, s.line, s.col),
-            Self::UnterminatedString(s) => write!(f, "Unterminated string starting at {}:{}", s.line, s.col),
-            Self::InvalidNumber(n, s) => write!(f, "Invalid number '{}' at {}:{}", n, s.line, s.col),
+            Self::UnexpectedChar(c, s) => {
+                write!(f, "Unexpected character '{}' at {}:{}", c, s.line, s.col)
+            }
+            Self::UnexpectedToken(t, s) => {
+                write!(f, "Unexpected token {:?} at {}:{}", t, s.line, s.col)
+            }
+            Self::UnterminatedString(s) => {
+                write!(f, "Unterminated string starting at {}:{}", s.line, s.col)
+            }
+            Self::InvalidNumber(n, s) => {
+                write!(f, "Invalid number '{}' at {}:{}", n, s.line, s.col)
+            }
             Self::Generic(msg, s) => write!(f, "Error '{}' at {}:{}", msg, s.line, s.col),
             Self::UnexpectedEOF => write!(f, "Unexpected End of File"),
         }
@@ -146,10 +154,12 @@ impl<'a> Lexer<'a> {
 
         let c = match self.advance() {
             Some(c) => c,
-            None => return Ok(Token {
-                kind: TokenKind::EOF,
-                span: start_span,
-            }),
+            None => {
+                return Ok(Token {
+                    kind: TokenKind::EOF,
+                    span: start_span,
+                });
+            }
         };
 
         let kind = match c {
@@ -292,7 +302,10 @@ impl<'a> Parser<'a> {
         if matches {
             self.advance()
         } else {
-            Err(ParseError::UnexpectedToken(self.current_token.kind.clone(), self.current_token.span))
+            Err(ParseError::UnexpectedToken(
+                self.current_token.kind.clone(),
+                self.current_token.span,
+            ))
         }
     }
 
@@ -327,7 +340,10 @@ impl<'a> Parser<'a> {
                         // Ensure section exists
                         sections.entry(current_section.clone()).or_default();
                     } else {
-                        return Err(ParseError::UnexpectedToken(self.current_token.kind.clone(), self.current_token.span));
+                        return Err(ParseError::UnexpectedToken(
+                            self.current_token.kind.clone(),
+                            self.current_token.span,
+                        ));
                     }
                 }
                 TokenKind::Identifier(key) => {
@@ -340,12 +356,20 @@ impl<'a> Parser<'a> {
 
                     if let Some(table) = sections.get_mut(&current_section) {
                         if table.contains_key(&key) {
-                             return Err(ParseError::Generic(format!("Duplicate key '{}'", key), self.current_token.span));
+                            return Err(ParseError::Generic(
+                                format!("Duplicate key '{}'", key),
+                                self.current_token.span,
+                            ));
                         }
                         table.insert(key, value);
                     }
                 }
-                _ => return Err(ParseError::UnexpectedToken(self.current_token.kind.clone(), self.current_token.span)),
+                _ => {
+                    return Err(ParseError::UnexpectedToken(
+                        self.current_token.kind.clone(),
+                        self.current_token.span,
+                    ));
+                }
             }
         }
 
@@ -366,7 +390,12 @@ impl<'a> Parser<'a> {
         let val = match &self.current_token.kind {
             TokenKind::StringLiteral(s) => TomlValue::String(s.clone()),
             TokenKind::IntegerLiteral(i) => TomlValue::Integer(*i),
-            _ => return Err(ParseError::UnexpectedToken(self.current_token.kind.clone(), self.current_token.span)),
+            _ => {
+                return Err(ParseError::UnexpectedToken(
+                    self.current_token.kind.clone(),
+                    self.current_token.span,
+                ));
+            }
         };
         self.advance()?;
         Ok(val)
@@ -408,7 +437,10 @@ mod tests {
         let result = parser.parse().unwrap();
 
         if let TomlValue::Table(map) = result {
-            assert_eq!(map.get("title"), Some(&TomlValue::String("TOML Example".to_string())));
+            assert_eq!(
+                map.get("title"),
+                Some(&TomlValue::String("TOML Example".to_string()))
+            );
             assert_eq!(map.get("count"), Some(&TomlValue::Integer(123)));
         } else {
             panic!("Expected Table");
@@ -431,17 +463,26 @@ mod tests {
         let result = parser.parse().unwrap();
 
         if let TomlValue::Table(root) = result {
-            assert_eq!(root.get("global"), Some(&TomlValue::String("init".to_string())));
+            assert_eq!(
+                root.get("global"),
+                Some(&TomlValue::String("init".to_string()))
+            );
 
             if let Some(TomlValue::Table(db)) = root.get("database") {
-                assert_eq!(db.get("server"), Some(&TomlValue::String("192.168.1.1".to_string())));
+                assert_eq!(
+                    db.get("server"),
+                    Some(&TomlValue::String("192.168.1.1".to_string()))
+                );
                 assert_eq!(db.get("ports"), Some(&TomlValue::Integer(8080)));
             } else {
                 panic!("Missing database section");
             }
 
-             if let Some(TomlValue::Table(users)) = root.get("users") {
-                assert_eq!(users.get("admin"), Some(&TomlValue::String("root".to_string())));
+            if let Some(TomlValue::Table(users)) = root.get("users") {
+                assert_eq!(
+                    users.get("admin"),
+                    Some(&TomlValue::String("root".to_string()))
+                );
             } else {
                 panic!("Missing users section");
             }

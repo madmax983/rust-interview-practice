@@ -20,7 +20,7 @@
 use std::future::Future;
 use std::mem::ManuallyDrop;
 use std::pin::Pin;
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 use std::thread;
@@ -144,12 +144,8 @@ fn arc_to_raw_waker(task: Arc<Task>) -> RawWaker {
     RawWaker::new(raw_ptr, &VTABLE)
 }
 
-const VTABLE: RawWakerVTable = RawWakerVTable::new(
-    task_clone,
-    task_wake,
-    task_wake_by_ref,
-    task_drop,
-);
+const VTABLE: RawWakerVTable =
+    RawWakerVTable::new(task_clone, task_wake, task_wake_by_ref, task_drop);
 
 unsafe fn task_clone(raw_ptr: *const ()) -> RawWaker {
     let ptr = raw_ptr as *const Task;

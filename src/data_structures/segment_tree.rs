@@ -263,7 +263,12 @@ mod tests {
     fn test_non_commutative_op() {
         // String concatenation is non-commutative.
         // "a" + "b" != "b" + "a"
-        let data = vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()];
+        let data = vec![
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+            "d".to_string(),
+        ];
         let op = |a: &String, b: &String| format!("{}{}", a, b);
         let st = SegmentTree::new(&data, op, String::new());
 

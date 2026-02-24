@@ -54,9 +54,13 @@ use std::collections::HashSet;
 #[allow(clippy::needless_pass_by_value)]
 pub fn exist_brute_force(board: Vec<Vec<char>>, word: String) -> bool {
     let rows = board.len();
-    if rows == 0 { return false; }
+    if rows == 0 {
+        return false;
+    }
     let cols = board[0].len();
-    if cols == 0 { return false; }
+    if cols == 0 {
+        return false;
+    }
 
     let word_chars: Vec<char> = word.chars().collect();
     let mut visited = HashSet::new();
@@ -77,28 +81,32 @@ fn dfs_hashset(
     i: usize,
     j: usize,
     k: usize,
-    visited: &mut HashSet<(usize, usize)>
+    visited: &mut HashSet<(usize, usize)>,
 ) -> bool {
-    if k == word.len() { return true; }
+    if k == word.len() {
+        return true;
+    }
 
     // Bounds check, char match, and visited check
-    if i >= board.len() || j >= board[0].len() ||
-       board[i][j] != word[k] || visited.contains(&(i, j)) {
+    if i >= board.len()
+        || j >= board[0].len()
+        || board[i][j] != word[k]
+        || visited.contains(&(i, j))
+    {
         return false;
     }
 
     visited.insert((i, j));
 
-    let found = dfs_hashset(board, word, i + 1, j, k + 1, visited) ||
-                dfs_hashset(board, word, i, j + 1, k + 1, visited) ||
-                (i > 0 && dfs_hashset(board, word, i - 1, j, k + 1, visited)) ||
-                (j > 0 && dfs_hashset(board, word, i, j - 1, k + 1, visited));
+    let found = dfs_hashset(board, word, i + 1, j, k + 1, visited)
+        || dfs_hashset(board, word, i, j + 1, k + 1, visited)
+        || (i > 0 && dfs_hashset(board, word, i - 1, j, k + 1, visited))
+        || (j > 0 && dfs_hashset(board, word, i, j - 1, k + 1, visited));
 
     visited.remove(&(i, j)); // Backtrack
 
     found
 }
-
 
 /// Optimized Approach: DFS with Visited Matrix
 ///
@@ -112,9 +120,13 @@ fn dfs_hashset(
 #[allow(clippy::needless_pass_by_value)]
 pub fn exist_optimized(board: Vec<Vec<char>>, word: String) -> bool {
     let rows = board.len();
-    if rows == 0 { return false; }
+    if rows == 0 {
+        return false;
+    }
     let cols = board[0].len();
-    if cols == 0 { return false; }
+    if cols == 0 {
+        return false;
+    }
 
     let word_chars: Vec<char> = word.chars().collect();
     // Allocate visited matrix once
@@ -136,27 +148,27 @@ fn dfs_matrix(
     i: usize,
     j: usize,
     k: usize,
-    visited: &mut Vec<Vec<bool>>
+    visited: &mut Vec<Vec<bool>>,
 ) -> bool {
-    if k == word.len() { return true; }
+    if k == word.len() {
+        return true;
+    }
 
-    if i >= board.len() || j >= board[0].len() ||
-       board[i][j] != word[k] || visited[i][j] {
+    if i >= board.len() || j >= board[0].len() || board[i][j] != word[k] || visited[i][j] {
         return false;
     }
 
     visited[i][j] = true;
 
-    let found = dfs_matrix(board, word, i + 1, j, k + 1, visited) ||
-                dfs_matrix(board, word, i, j + 1, k + 1, visited) ||
-                (i > 0 && dfs_matrix(board, word, i - 1, j, k + 1, visited)) ||
-                (j > 0 && dfs_matrix(board, word, i, j - 1, k + 1, visited));
+    let found = dfs_matrix(board, word, i + 1, j, k + 1, visited)
+        || dfs_matrix(board, word, i, j + 1, k + 1, visited)
+        || (i > 0 && dfs_matrix(board, word, i - 1, j, k + 1, visited))
+        || (j > 0 && dfs_matrix(board, word, i, j - 1, k + 1, visited));
 
     visited[i][j] = false; // Backtrack
 
     found
 }
-
 
 /// Optimal Approach: DFS with In-Place Mutation
 ///
@@ -171,9 +183,13 @@ fn dfs_matrix(
 #[allow(clippy::needless_pass_by_value)]
 pub fn exist_optimal(mut board: Vec<Vec<char>>, word: String) -> bool {
     let rows = board.len();
-    if rows == 0 { return false; }
+    if rows == 0 {
+        return false;
+    }
     let cols = board[0].len();
-    if cols == 0 { return false; }
+    if cols == 0 {
+        return false;
+    }
 
     let word_chars: Vec<char> = word.chars().collect();
 
@@ -187,14 +203,10 @@ pub fn exist_optimal(mut board: Vec<Vec<char>>, word: String) -> bool {
     false
 }
 
-fn dfs_inplace(
-    board: &mut Vec<Vec<char>>,
-    word: &[char],
-    i: usize,
-    j: usize,
-    k: usize
-) -> bool {
-    if k == word.len() { return true; }
+fn dfs_inplace(board: &mut Vec<Vec<char>>, word: &[char], i: usize, j: usize, k: usize) -> bool {
+    if k == word.len() {
+        return true;
+    }
 
     // Check bounds and character match
     // Note: We check `i >= board.len()` to handle `i + 1` overflow safely
@@ -206,10 +218,10 @@ fn dfs_inplace(
     let temp = board[i][j];
     board[i][j] = '#'; // Use a non-alpha char as sentinel
 
-    let found = dfs_inplace(board, word, i + 1, j, k + 1) ||
-                dfs_inplace(board, word, i, j + 1, k + 1) ||
-                (i > 0 && dfs_inplace(board, word, i - 1, j, k + 1)) ||
-                (j > 0 && dfs_inplace(board, word, i, j - 1, k + 1));
+    let found = dfs_inplace(board, word, i + 1, j, k + 1)
+        || dfs_inplace(board, word, i, j + 1, k + 1)
+        || (i > 0 && dfs_inplace(board, word, i - 1, j, k + 1))
+        || (j > 0 && dfs_inplace(board, word, i, j - 1, k + 1));
 
     // Backtrack
     board[i][j] = temp;
@@ -239,9 +251,21 @@ mod tests {
 
     // Helper for cross-verification
     fn run_all_approaches(board: Vec<Vec<char>>, word: String, expected: bool) {
-        assert_eq!(exist_brute_force(board.clone(), word.clone()), expected, "Brute force failed");
-        assert_eq!(exist_optimized(board.clone(), word.clone()), expected, "Optimized failed");
-        assert_eq!(exist_optimal(board.clone(), word.clone()), expected, "Optimal failed");
+        assert_eq!(
+            exist_brute_force(board.clone(), word.clone()),
+            expected,
+            "Brute force failed"
+        );
+        assert_eq!(
+            exist_optimized(board.clone(), word.clone()),
+            expected,
+            "Optimized failed"
+        );
+        assert_eq!(
+            exist_optimal(board.clone(), word.clone()),
+            expected,
+            "Optimal failed"
+        );
         assert_eq!(exist(board, word), expected, "Main wrapper failed");
     }
 
@@ -281,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_snake_path() {
-         let board = vec![
+        let board = vec![
             vec!['A', 'B', 'C'],
             vec!['F', 'E', 'D'],
             vec!['G', 'H', 'I'],
@@ -293,10 +317,7 @@ mod tests {
     #[test]
     fn test_visited_reuse_failure() {
         // "ABA" needs to reuse 'A' if allowed, but it's not.
-        let board = vec![
-            vec!['A', 'B'],
-            vec!['C', 'D'],
-        ];
+        let board = vec![vec!['A', 'B'], vec!['C', 'D']];
         run_all_approaches(board, "ABA".to_string(), false);
     }
 }

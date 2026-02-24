@@ -176,11 +176,7 @@ mod tests {
             vec!["JFK".to_string(), "KUL".to_string()],
             vec!["KUL".to_string(), "JFK".to_string()],
         ];
-        let expected = vec![
-            "JFK".to_string(),
-            "KUL".to_string(),
-            "JFK".to_string(),
-        ];
+        let expected = vec!["JFK".to_string(), "KUL".to_string(), "JFK".to_string()];
         assert_eq!(find_itinerary(tickets), expected);
     }
 

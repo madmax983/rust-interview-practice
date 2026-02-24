@@ -42,7 +42,6 @@
 //!
 //! M = regex length, N = text length.
 
-
 /// Represents a state in the NFA.
 #[derive(Debug, Clone, PartialEq)]
 pub enum State {
@@ -112,11 +111,19 @@ impl Regex {
         }
 
         // Check if any current state is a Match state
-        clist.iter().any(|&idx| matches!(self.nfa[idx], State::Match))
+        clist
+            .iter()
+            .any(|&idx| matches!(self.nfa[idx], State::Match))
     }
 
     // Helper to add state to list, resolving epsilon transitions.
-    fn add_state(&self, list: &mut Vec<usize>, visited: &mut Vec<usize>, generation: usize, idx: usize) {
+    fn add_state(
+        &self,
+        list: &mut Vec<usize>,
+        visited: &mut Vec<usize>,
+        generation: usize,
+        idx: usize,
+    ) {
         if visited[idx] == generation {
             return;
         }
@@ -155,106 +162,151 @@ fn infix_to_postfix(re: &str) -> Result<String, String> {
     let mut chars_iter = re.chars();
 
     while let Some(c) = chars_iter.next() {
-         let mut is_escaped = false;
-         let char_to_process = if c == '\\' {
-             is_escaped = true;
-             match chars_iter.next() {
-                 Some(escaped) => escaped,
-                 None => return Err("Trailing backslash".to_string()),
-             }
-         } else {
-             c
-         };
+        let mut is_escaped = false;
+        let char_to_process = if c == '\\' {
+            is_escaped = true;
+            match chars_iter.next() {
+                Some(escaped) => escaped,
+                None => return Err("Trailing backslash".to_string()),
+            }
+        } else {
+            c
+        };
 
-         if is_escaped {
-             // It is a literal even if it looks like an operator
-             handle_literal(char_to_process, &mut output, &mut operators, &mut previous_was_concat_source);
-         } else {
-             match char_to_process {
-                 '|' => {
-                     previous_was_concat_source = false;
-                     while let Some(&op) = operators.last() {
-                        if op == '(' { break; }
+        if is_escaped {
+            // It is a literal even if it looks like an operator
+            handle_literal(
+                char_to_process,
+                &mut output,
+                &mut operators,
+                &mut previous_was_concat_source,
+            );
+        } else {
+            match char_to_process {
+                '|' => {
+                    previous_was_concat_source = false;
+                    while let Some(&op) = operators.last() {
+                        if op == '(' {
+                            break;
+                        }
                         if precedence(op) >= precedence(OP_UNION) {
                             output.push(operators.pop().unwrap());
                         } else {
                             break;
                         }
-                     }
-                     operators.push(OP_UNION);
-                 },
-                 '*' => handle_unary_op(OP_STAR, &mut output, &mut operators, &mut previous_was_concat_source),
-                 '+' => handle_unary_op(OP_PLUS, &mut output, &mut operators, &mut previous_was_concat_source),
-                 '?' => handle_unary_op(OP_QUEST, &mut output, &mut operators, &mut previous_was_concat_source),
-                 '(' => {
-                     if previous_was_concat_source {
-                         handle_concat(&mut output, &mut operators);
-                     }
-                     operators.push('(');
-                     previous_was_concat_source = false;
-                 },
-                 ')' => {
-                     while let Some(op) = operators.pop() {
-                         if op == '(' { break; }
-                         output.push(op);
-                     }
-                     previous_was_concat_source = true;
-                 },
-                 '.' => {
-                     // Wildcard is treated as a literal in terms of concatenation source,
-                     // but pushes a special OP_WILDCARD token to output.
-                     if previous_was_concat_source {
-                         handle_concat(&mut output, &mut operators);
-                     }
-                     output.push(OP_WILDCARD);
-                     previous_was_concat_source = true;
-                 }
-                 _ => {
-                     handle_literal(char_to_process, &mut output, &mut operators, &mut previous_was_concat_source);
-                 }
-             }
-         }
+                    }
+                    operators.push(OP_UNION);
+                }
+                '*' => handle_unary_op(
+                    OP_STAR,
+                    &mut output,
+                    &mut operators,
+                    &mut previous_was_concat_source,
+                ),
+                '+' => handle_unary_op(
+                    OP_PLUS,
+                    &mut output,
+                    &mut operators,
+                    &mut previous_was_concat_source,
+                ),
+                '?' => handle_unary_op(
+                    OP_QUEST,
+                    &mut output,
+                    &mut operators,
+                    &mut previous_was_concat_source,
+                ),
+                '(' => {
+                    if previous_was_concat_source {
+                        handle_concat(&mut output, &mut operators);
+                    }
+                    operators.push('(');
+                    previous_was_concat_source = false;
+                }
+                ')' => {
+                    while let Some(op) = operators.pop() {
+                        if op == '(' {
+                            break;
+                        }
+                        output.push(op);
+                    }
+                    previous_was_concat_source = true;
+                }
+                '.' => {
+                    // Wildcard is treated as a literal in terms of concatenation source,
+                    // but pushes a special OP_WILDCARD token to output.
+                    if previous_was_concat_source {
+                        handle_concat(&mut output, &mut operators);
+                    }
+                    output.push(OP_WILDCARD);
+                    previous_was_concat_source = true;
+                }
+                _ => {
+                    handle_literal(
+                        char_to_process,
+                        &mut output,
+                        &mut operators,
+                        &mut previous_was_concat_source,
+                    );
+                }
+            }
+        }
     }
 
     while let Some(op) = operators.pop() {
-        if op == '(' { return Err("Mismatched parentheses".to_string()); }
+        if op == '(' {
+            return Err("Mismatched parentheses".to_string());
+        }
         output.push(op);
     }
 
     Ok(output)
 }
 
-fn handle_unary_op(op_char: char, output: &mut String, operators: &mut Vec<char>, previous_was_concat_source: &mut bool) {
+fn handle_unary_op(
+    op_char: char,
+    output: &mut String,
+    operators: &mut Vec<char>,
+    previous_was_concat_source: &mut bool,
+) {
     while let Some(&op) = operators.last() {
-       if op == '(' { break; }
-       if precedence(op) >= precedence(op_char) {
-           output.push(operators.pop().unwrap());
-       } else {
-           break;
-       }
+        if op == '(' {
+            break;
+        }
+        if precedence(op) >= precedence(op_char) {
+            output.push(operators.pop().unwrap());
+        } else {
+            break;
+        }
     }
     operators.push(op_char);
     *previous_was_concat_source = true;
 }
 
-fn handle_literal(c: char, output: &mut String, operators: &mut Vec<char>, previous_was_concat_source: &mut bool) {
-     if *previous_was_concat_source {
-         handle_concat(output, operators);
-     }
-     output.push(c);
-     *previous_was_concat_source = true;
+fn handle_literal(
+    c: char,
+    output: &mut String,
+    operators: &mut Vec<char>,
+    previous_was_concat_source: &mut bool,
+) {
+    if *previous_was_concat_source {
+        handle_concat(output, operators);
+    }
+    output.push(c);
+    *previous_was_concat_source = true;
 }
 
 fn handle_concat(output: &mut String, operators: &mut Vec<char>) {
-     while let Some(&op) = operators.last() {
-        if op == '(' { break; }
+    while let Some(&op) = operators.last() {
+        if op == '(' {
+            break;
+        }
         if precedence(op) >= precedence(OP_CONCAT) {
             output.push(operators.pop().unwrap());
         } else {
             break;
         }
-     }
-     operators.push(OP_CONCAT);
+    }
+    operators.push(OP_CONCAT);
 }
 
 fn precedence(op: char) -> u8 {
@@ -318,14 +370,11 @@ fn compile(postfix: &str) -> Result<Regex, String> {
                 let mut outs = frag1.outs;
                 outs.extend(frag2.outs);
 
-                stack.push(Fragment {
-                    start: idx,
-                    outs,
-                });
+                stack.push(Fragment { start: idx, outs });
             }
             OP_STAR => {
                 if stack.is_empty() {
-                     return Err("Invalid regex: missing operand for *".to_string());
+                    return Err("Invalid regex: missing operand for *".to_string());
                 }
                 let frag = stack.pop().unwrap();
                 let idx = nfa.len();
@@ -342,7 +391,7 @@ fn compile(postfix: &str) -> Result<Regex, String> {
             }
             OP_PLUS => {
                 if stack.is_empty() {
-                     return Err("Invalid regex: missing operand for +".to_string());
+                    return Err("Invalid regex: missing operand for +".to_string());
                 }
                 let frag = stack.pop().unwrap();
                 let idx = nfa.len();
@@ -359,7 +408,7 @@ fn compile(postfix: &str) -> Result<Regex, String> {
             }
             OP_QUEST => {
                 if stack.is_empty() {
-                     return Err("Invalid regex: missing operand for ?".to_string());
+                    return Err("Invalid regex: missing operand for ?".to_string());
                 }
                 let frag = stack.pop().unwrap();
                 let idx = nfa.len();
@@ -370,10 +419,7 @@ fn compile(postfix: &str) -> Result<Regex, String> {
                 let mut outs = frag.outs;
                 outs.push(Patch::Split2(idx));
 
-                stack.push(Fragment {
-                    start: idx,
-                    outs,
-                });
+                stack.push(Fragment { start: idx, outs });
             }
             _ => {
                 // Literal

@@ -227,7 +227,11 @@ mod tests {
             let new_node = ring.get_node(&key).unwrap();
             if new_node != &old_node {
                 // If it moved, it MUST have moved to C
-                assert_eq!(new_node, "C", "Key moved from {} to {} (not C)", old_node, new_node);
+                assert_eq!(
+                    new_node, "C",
+                    "Key moved from {} to {} (not C)",
+                    old_node, new_node
+                );
             }
         }
     }

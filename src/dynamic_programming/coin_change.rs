@@ -56,11 +56,7 @@ pub fn coin_change_brute_force(coins: &[i32], amount: i32) -> i32 {
         }
     }
 
-    if min_coins == i32::MAX {
-        -1
-    } else {
-        min_coins
-    }
+    if min_coins == i32::MAX { -1 } else { min_coins }
 }
 
 /// Optimized Approach: Top-Down DP (Memoization)
@@ -141,7 +137,7 @@ pub fn coin_change_optimal(coins: &[i32], amount: i32) -> i32 {
                 // dp[i] = min(dp[i], dp[i - coin] + 1)
                 let sub_res = dp[i - (coin as usize)];
                 if sub_res != max_val {
-                     dp[i] = std::cmp::min(dp[i], sub_res + 1);
+                    dp[i] = std::cmp::min(dp[i], sub_res + 1);
                 }
             }
         }

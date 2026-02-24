@@ -34,7 +34,9 @@ impl Ord for State {
         // Notice the order of arguments: `other.cost.cmp(&self.cost)`
         // This makes the element with the SMALLER cost appear "greater" to the Max-Heap,
         // so it will be popped first.
-        other.cost.cmp(&self.cost)
+        other
+            .cost
+            .cmp(&self.cost)
             // If costs are equal, use position as a tie-breaker (arbitrary but deterministic)
             .then_with(|| self.position.cmp(&other.position))
     }
@@ -87,7 +89,10 @@ pub fn network_delay_time(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
     // Start with node `k` (converted to 0-based index)
     let start_node = (k - 1) as usize;
     dist[start_node] = 0;
-    pq.push(State { cost: 0, position: start_node });
+    pq.push(State {
+        cost: 0,
+        position: start_node,
+    });
 
     while let Some(State { cost, position }) = pq.pop() {
         // RUST INSIGHT: We might have multiple entries for the same node in the heap
@@ -105,7 +110,10 @@ pub fn network_delay_time(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
                 // If we found a shorter path to the neighbor
                 if next_cost < dist[neighbor] {
                     dist[neighbor] = next_cost;
-                    pq.push(State { cost: next_cost, position: neighbor });
+                    pq.push(State {
+                        cost: next_cost,
+                        position: neighbor,
+                    });
                 }
             }
         }
@@ -116,11 +124,7 @@ pub fn network_delay_time(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
     // RUST INSIGHT: `iter().max()` returns an Option<&T>. We unwrap safely because `dist` is non-empty (n >= 1).
     let max_dist = *dist.iter().max().unwrap();
 
-    if max_dist == i32::MAX {
-        -1
-    } else {
-        max_dist
-    }
+    if max_dist == i32::MAX { -1 } else { max_dist }
 }
 
 /// Alternative approaches:
@@ -146,11 +150,7 @@ mod tests {
     fn test_example_1() {
         // Input: times = [[2,1,1],[2,3,1],[3,4,1]], n = 4, k = 2
         // Output: 2
-        let times = vec![
-            vec![2, 1, 1],
-            vec![2, 3, 1],
-            vec![3, 4, 1]
-        ];
+        let times = vec![vec![2, 1, 1], vec![2, 3, 1], vec![3, 4, 1]];
         assert_eq!(network_delay_time(times, 4, 2), 2);
     }
 
@@ -184,11 +184,7 @@ mod tests {
         // 1 -> 3 (4)
         // Path 1->2->3 is cost 3. Path 1->3 is cost 4.
         // Shortest to 3 is 3. Max time to reach all (2 and 3) is 3.
-        let times = vec![
-            vec![1, 2, 1],
-            vec![2, 3, 2],
-            vec![1, 3, 4]
-        ];
+        let times = vec![vec![1, 2, 1], vec![2, 3, 2], vec![1, 3, 4]];
         assert_eq!(network_delay_time(times, 3, 1), 3);
     }
 }

@@ -127,15 +127,23 @@ pub fn lowest_common_ancestor_brute_force(
             if let Some(left) = &node_ref.left {
                 let left_val = left.borrow().val;
                 parent.insert(left_val, Rc::clone(&node));
-                if left_val == p_val { found_p = true; }
-                if left_val == q_val { found_q = true; }
+                if left_val == p_val {
+                    found_p = true;
+                }
+                if left_val == q_val {
+                    found_q = true;
+                }
                 stack.push(Rc::clone(left));
             }
             if let Some(right) = &node_ref.right {
                 let right_val = right.borrow().val;
                 parent.insert(right_val, Rc::clone(&node));
-                if right_val == p_val { found_p = true; }
-                if right_val == q_val { found_q = true; }
+                if right_val == p_val {
+                    found_p = true;
+                }
+                if right_val == q_val {
+                    found_q = true;
+                }
                 stack.push(Rc::clone(right));
             }
         } else {
@@ -322,7 +330,11 @@ mod tests {
         TreeNode::new(val)
     }
 
-    fn create_test_tree() -> (Rc<RefCell<TreeNode>>, Rc<RefCell<TreeNode>>, Rc<RefCell<TreeNode>>) {
+    fn create_test_tree() -> (
+        Rc<RefCell<TreeNode>>,
+        Rc<RefCell<TreeNode>>,
+        Rc<RefCell<TreeNode>>,
+    ) {
         //      3
         //     / \
         //    5   1
@@ -381,9 +393,21 @@ mod tests {
         let (root, n5, n1) = create_test_tree();
 
         // LCA of 5 and 1 is 3 (root)
-        let lca_bf = lowest_common_ancestor_brute_force(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n1)));
-        let lca_opt = lowest_common_ancestor_optimized(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n1)));
-        let lca_iter = lowest_common_ancestor_optimal(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n1)));
+        let lca_bf = lowest_common_ancestor_brute_force(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n1)),
+        );
+        let lca_opt = lowest_common_ancestor_optimized(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n1)),
+        );
+        let lca_iter = lowest_common_ancestor_optimal(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n1)),
+        );
 
         assert_eq!(lca_bf.as_ref().unwrap().borrow().val, 3);
         assert_eq!(lca_opt.as_ref().unwrap().borrow().val, 3);
@@ -396,11 +420,36 @@ mod tests {
         // LCA of 5 and 4 is 5
         // We need to fetch n4 reference.
         // Traversing to get it:
-        let n4 = root.borrow().left.as_ref().unwrap().borrow().right.as_ref().unwrap().borrow().right.as_ref().unwrap().clone();
+        let n4 = root
+            .borrow()
+            .left
+            .as_ref()
+            .unwrap()
+            .borrow()
+            .right
+            .as_ref()
+            .unwrap()
+            .borrow()
+            .right
+            .as_ref()
+            .unwrap()
+            .clone();
 
-        let lca_bf = lowest_common_ancestor_brute_force(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n4)));
-        let lca_opt = lowest_common_ancestor_optimized(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n4)));
-        let lca_iter = lowest_common_ancestor_optimal(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n4)));
+        let lca_bf = lowest_common_ancestor_brute_force(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n4)),
+        );
+        let lca_opt = lowest_common_ancestor_optimized(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n4)),
+        );
+        let lca_iter = lowest_common_ancestor_optimal(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n4)),
+        );
 
         assert_eq!(lca_bf.as_ref().unwrap().borrow().val, 5);
         assert_eq!(lca_opt.as_ref().unwrap().borrow().val, 5);
@@ -411,11 +460,32 @@ mod tests {
     fn test_one_is_descendant_of_other() {
         let (root, n5, _n1) = create_test_tree();
         // LCA of 5 and 6 is 5.
-        let n6 = root.borrow().left.as_ref().unwrap().borrow().left.as_ref().unwrap().clone();
+        let n6 = root
+            .borrow()
+            .left
+            .as_ref()
+            .unwrap()
+            .borrow()
+            .left
+            .as_ref()
+            .unwrap()
+            .clone();
 
-        let lca_bf = lowest_common_ancestor_brute_force(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n6)));
-        let lca_opt = lowest_common_ancestor_optimized(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n6)));
-        let lca_iter = lowest_common_ancestor_optimal(Some(Rc::clone(&root)), Some(Rc::clone(&n5)), Some(Rc::clone(&n6)));
+        let lca_bf = lowest_common_ancestor_brute_force(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n6)),
+        );
+        let lca_opt = lowest_common_ancestor_optimized(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n6)),
+        );
+        let lca_iter = lowest_common_ancestor_optimal(
+            Some(Rc::clone(&root)),
+            Some(Rc::clone(&n5)),
+            Some(Rc::clone(&n6)),
+        );
 
         assert_eq!(lca_bf.as_ref().unwrap().borrow().val, 5);
         assert_eq!(lca_opt.as_ref().unwrap().borrow().val, 5);

@@ -137,7 +137,10 @@ impl Wal {
             // Verify Checksum
             let actual_checksum = Self::calculate_checksum(&payload);
             if actual_checksum != expected_checksum {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "Checksum mismatch"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Checksum mismatch",
+                ));
             }
 
             entries.push(payload);
@@ -161,7 +164,10 @@ mod tests {
     // Helper to get a temp file path
     fn temp_file() -> String {
         use std::time::{SystemTime, UNIX_EPOCH};
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
         format!("wal_test_{}.log", now)
     }
 

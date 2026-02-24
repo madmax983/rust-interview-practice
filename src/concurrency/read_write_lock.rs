@@ -231,8 +231,8 @@ mod tests {
 
         let lock_clone2 = lock.clone();
         let reader_thread = thread::spawn(move || {
-             let r = lock_clone2.read();
-             assert_eq!(*r, 1); // Should see the write
+            let r = lock_clone2.read();
+            assert_eq!(*r, 1); // Should see the write
         });
 
         // Drop r1, allowing writer to proceed

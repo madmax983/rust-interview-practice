@@ -124,13 +124,17 @@ mod tests {
     #[test]
     fn test_group_anagrams_basic() {
         let input = vec![
-            "eat".to_string(), "tea".to_string(), "tan".to_string(),
-            "ate".to_string(), "nat".to_string(), "bat".to_string()
+            "eat".to_string(),
+            "tea".to_string(),
+            "tan".to_string(),
+            "ate".to_string(),
+            "nat".to_string(),
+            "bat".to_string(),
         ];
         let expected = vec![
             vec!["ate".to_string(), "eat".to_string(), "tea".to_string()],
             vec!["bat".to_string()],
-            vec!["nat".to_string(), "tan".to_string()]
+            vec!["nat".to_string(), "tan".to_string()],
         ];
 
         let result_sort = normalize(group_anagrams_sort(input.clone()));
@@ -169,7 +173,7 @@ mod tests {
         let expected = vec![
             vec!["abc".to_string()],
             vec!["def".to_string()],
-            vec!["ghi".to_string()]
+            vec!["ghi".to_string()],
         ];
 
         let result = normalize(group_anagrams(input));

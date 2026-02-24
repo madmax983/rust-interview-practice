@@ -170,13 +170,7 @@ mod tests {
     #[test]
     fn test_deeply_nested() {
         // [1, [4, [6]]]
-        let input = vec![
-            int(1),
-            list(vec![
-                int(4),
-                list(vec![int(6)])
-            ])
-        ];
+        let input = vec![int(1), list(vec![int(4), list(vec![int(6)])])];
         let iter = NestedIterator::new(input);
         let result: Vec<i32> = iter.collect();
         assert_eq!(result, vec![1, 4, 6]);
@@ -189,7 +183,7 @@ mod tests {
             int(1),
             list(vec![]),
             list(vec![int(2), list(vec![])]),
-            int(3)
+            int(3),
         ];
         let iter = NestedIterator::new(input);
         let result: Vec<i32> = iter.collect();

@@ -36,8 +36,8 @@
 //! *   **WAL**: Often combined with a Write-Ahead Log to prevent data loss on crash.
 
 use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
 
 /// Abstraction for the persistent storage (Database, Disk, Network).
 pub trait BackingStore<K, V> {
@@ -199,7 +199,10 @@ mod tests {
         assert_eq!(cache.get(&"key1".to_string()), Some("value1".to_string()));
 
         // Should be in store immediately
-        assert_eq!(store.storage.borrow().get("key1"), Some(&"value1".to_string()));
+        assert_eq!(
+            store.storage.borrow().get("key1"),
+            Some(&"value1".to_string())
+        );
         assert_eq!(*store.save_calls.borrow(), 1);
     }
 
@@ -221,7 +224,10 @@ mod tests {
         cache.flush();
 
         // Now should be in store
-        assert_eq!(store.storage.borrow().get("key1"), Some(&"value1".to_string()));
+        assert_eq!(
+            store.storage.borrow().get("key1"),
+            Some(&"value1".to_string())
+        );
         assert_eq!(*store.save_calls.borrow(), 1);
     }
 
@@ -238,7 +244,10 @@ mod tests {
         cache.put("key2".to_string(), "value2".to_string());
 
         // k1 should be flushed to store
-        assert_eq!(store.storage.borrow().get("key1"), Some(&"value1".to_string()));
+        assert_eq!(
+            store.storage.borrow().get("key1"),
+            Some(&"value1".to_string())
+        );
         // k2 not yet
         assert_eq!(store.storage.borrow().get("key2"), None);
     }

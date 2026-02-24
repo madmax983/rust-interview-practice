@@ -199,7 +199,12 @@ mod tests {
 
         for (i, item) in data.iter().enumerate() {
             let proof = tree.generate_proof(i).unwrap();
-            assert!(MerkleTree::verify(root, item, &proof, i), "Failed to verify item {} at index {}", item, i);
+            assert!(
+                MerkleTree::verify(root, item, &proof, i),
+                "Failed to verify item {} at index {}",
+                item,
+                i
+            );
         }
     }
 

@@ -269,7 +269,7 @@ impl<'a> Parser<'a> {
         }
 
         if !has_digit {
-             return Err("Invalid number: no digits".to_string());
+            return Err("Invalid number: no digits".to_string());
         }
 
         // Handle fraction
@@ -299,7 +299,9 @@ impl<'a> Parser<'a> {
             }
         }
 
-        num_str.parse::<f64>().map_err(|_| "Invalid float".to_string())
+        num_str
+            .parse::<f64>()
+            .map_err(|_| "Invalid float".to_string())
     }
 }
 
@@ -363,7 +365,10 @@ mod tests {
         assert_eq!(parse("false"), Ok(JsonValue::Bool(false)));
         assert_eq!(parse("123"), Ok(JsonValue::Number(123.0)));
         assert_eq!(parse("12.34"), Ok(JsonValue::Number(12.34)));
-        assert_eq!(parse("\"hello\""), Ok(JsonValue::String("hello".to_string())));
+        assert_eq!(
+            parse("\"hello\""),
+            Ok(JsonValue::String("hello".to_string()))
+        );
     }
 
     #[test]
