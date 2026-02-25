@@ -130,9 +130,13 @@ impl<M: ConnectionManager> Pool<M> {
         let timeout = self.shared.config.connection_timeout;
 
         loop {
-            // 1. Try to get an idle connection
+            // 1. Try to reuse an idle connection
             if let Some(mut conn) = state.idle_connections.pop() {
-                // Check validity inside lock for simplicity.
+                // RUST INSIGHT: Drop Lock for Validation
+                // We drop the lock before calling user code (is_valid) to avoid holding the lock
+                // during potentially slow I/O operations. This improves concurrency.
+                drop(state);
+
                 match self.shared.manager.is_valid(&mut conn) {
                     Ok(()) => {
                         return Ok(PooledConnection {
@@ -141,19 +145,21 @@ impl<M: ConnectionManager> Pool<M> {
                         });
                     }
                     Err(_) => {
-                        // Invalid connection, discard it.
+                        // Connection is invalid. We must re-acquire lock to update state.
+                        state = self.shared.state.lock().unwrap();
                         state.num_connections -= 1;
+                        // We freed a slot, so notify waiting threads.
+                        self.shared.cond.notify_one();
                         continue;
                     }
                 }
             }
 
-            // 2. If no idle, can we create a new one?
+            // 2. If no idle, try to create new
             if state.num_connections < self.shared.config.max_size {
-                // Reserve space
+                // Reserve the slot
                 state.num_connections += 1;
-
-                // Release lock while creating connection to avoid blocking
+                // Drop lock for connection creation
                 drop(state);
 
                 match self.shared.manager.connect() {
@@ -164,9 +170,9 @@ impl<M: ConnectionManager> Pool<M> {
                         });
                     }
                     Err(e) => {
-                        // Creation failed, rollback reservation
-                        let mut state_guard = self.shared.state.lock().unwrap();
-                        state_guard.num_connections -= 1;
+                        // Creation failed. Re-acquire lock to rollback reservation.
+                        state = self.shared.state.lock().unwrap();
+                        state.num_connections -= 1;
                         self.shared.cond.notify_all();
                         return Err(PoolError::Manager(e));
                     }
@@ -175,17 +181,22 @@ impl<M: ConnectionManager> Pool<M> {
 
             // 3. Pool is full, wait.
             let elapsed = start.elapsed();
-            if elapsed >= timeout {
-                return Err(PoolError::Timeout);
-            }
+            let remaining = match timeout.checked_sub(elapsed) {
+                Some(duration) => duration,
+                None => return Err(PoolError::Timeout),
+            };
 
+            // RUST INSIGHT: Condvar Wait
+            // `wait_timeout` atomically releases the lock and blocks.
+            // When it returns (or times out), it re-acquires the lock.
             let (new_state, result) = self
                 .shared
                 .cond
-                .wait_timeout(state, timeout - elapsed)
+                .wait_timeout(state, remaining)
                 .unwrap();
 
             state = new_state;
+
             if result.timed_out() {
                 return Err(PoolError::Timeout);
             }
@@ -199,7 +210,7 @@ impl<M: ConnectionManager> Pool<M> {
             state.idle_connections.push(conn);
             self.shared.cond.notify_one();
         } else {
-            // Should not happen if invariants are maintained, but if it does,
+            // Should not happen if invariants are maintained, but if it does (e.g., bug),
             // we drop the connection (it goes out of scope).
             state.num_connections -= 1;
         }
@@ -226,17 +237,8 @@ impl<M: ConnectionManager> Drop for PooledConnection<M> {
     fn drop(&mut self) {
         // Take the connection out of the Option so we can move it back to the pool
         if let Some(conn) = self.conn.take() {
-            // We can optionally check if broken here, but usually pools check on checkout.
-            // If we wanted to check:
-            // if !self.pool.shared.manager.has_broken(&mut conn) {
-            //     self.pool.return_connection(conn);
-            // } else {
-            //     // Discard
-            //     let mut state = self.pool.shared.state.lock().unwrap();
-            //     state.num_connections -= 1;
-            // }
-
-            // For now, simpler strategy: always return. `get` will validate.
+            // We return logic to the pool. The pool does not validate on return (common optimization),
+            // relying on `get` to validate on checkout.
             self.pool.return_connection(conn);
         }
     }
@@ -312,6 +314,10 @@ mod tests {
             },
             config_timeout,
         );
+        // Ensure distinct pool state for this test
+        // Wait, creating a new pool creates new state. Yes.
+
+        // Wait, FakeManager count is distinct? Yes.
         let _c3 = pool_timeout.get().unwrap();
         let _c4 = pool_timeout.get().unwrap();
 
@@ -364,5 +370,72 @@ mod tests {
         for h in handles {
             h.join().unwrap();
         }
+    }
+
+    // New test for broken manager
+    struct BrokenManager {
+        should_fail_connect: bool,
+        should_fail_valid: bool,
+    }
+
+    impl ConnectionManager for BrokenManager {
+        type Connection = ();
+        type Error = String;
+
+        fn connect(&self) -> Result<Self::Connection, Self::Error> {
+            if self.should_fail_connect {
+                Err("Connect Failed".to_string())
+            } else {
+                Ok(())
+            }
+        }
+
+        fn is_valid(&self, _conn: &mut Self::Connection) -> Result<(), Self::Error> {
+            if self.should_fail_valid {
+                Err("Invalid Connection".to_string())
+            } else {
+                Ok(())
+            }
+        }
+
+        fn has_broken(&self, _conn: &mut Self::Connection) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn test_broken_manager() {
+        // Test 1: Connect failure
+        let manager = BrokenManager { should_fail_connect: true, should_fail_valid: false };
+        let pool = Pool::new(manager, PoolConfig { max_size: 1, ..Default::default() });
+
+        let res = pool.get();
+        assert!(matches!(res, Err(PoolError::Manager(_))));
+
+        // Ensure pool state is recovered (num_connections should be 0)
+        let state = pool.shared.state.lock().unwrap();
+        assert_eq!(state.num_connections, 0);
+        drop(state);
+
+        // Test 2: Validation failure
+        let manager_valid = BrokenManager { should_fail_connect: false, should_fail_valid: true };
+        let pool_valid = Pool::new(manager_valid, PoolConfig { max_size: 1, ..Default::default() });
+
+        // First get succeeds (creates new)
+        // But checking `is_valid` happens on reuse.
+        // So:
+        // 1. Get conn (create)
+        // 2. Return conn
+        // 3. Get conn (reuse -> check valid -> fail -> discard -> create new)
+
+        let c1 = pool_valid.get().unwrap();
+        drop(c1); // Returned to pool
+
+        // Reuse
+        // This will check is_valid -> fail.
+        // Then loop checks num_connections (0).
+        // Then tries to create new (succeeds).
+        let c2 = pool_valid.get();
+        assert!(c2.is_ok());
     }
 }
