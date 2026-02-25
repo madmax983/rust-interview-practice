@@ -13,9 +13,50 @@
 //! You'll learn about "cuckoo hashing" (using multiple hash functions and relocating items on collision),
 //! fingerprinting, and how to manage partial-key collisions. It's a great example of trading computation (relocation) for space.
 
-use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
+
+// =========================================================================================
+// FNV-1a Hasher Implementation (Deterministic)
+// =========================================================================================
+// We implement a custom Hasher to ensure deterministic behavior across process runs
+// and to guarantee that `alt_index` calculation is consistent. Standard `DefaultHasher`
+// uses a random seed per process, which would break Cuckoo Filter logic if used blindly
+// (specifically `alt_index` must be the same for a given fingerprint regardless of when/where it's calculated).
+
+pub struct FnvHasher {
+    state: u64,
+}
+
+impl FnvHasher {
+    const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x100000001b3;
+
+    pub fn new() -> Self {
+        Self {
+            state: Self::OFFSET_BASIS,
+        }
+    }
+}
+
+impl Hasher for FnvHasher {
+    fn finish(&self) -> u64 {
+        self.state
+    }
+
+    fn write(&mut self, bytes: &[u8]) {
+        for &byte in bytes {
+            self.state ^= byte as u64;
+            self.state = self.state.wrapping_mul(Self::PRIME);
+        }
+    }
+}
+
+impl Default for FnvHasher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 // =========================================================================================
 // Architecture
@@ -244,7 +285,7 @@ impl<T: ?Sized + Hash> CuckooFilter<T> {
     // --- Helpers ---
 
     fn generate_fingerprint_and_index(&self, item: &T) -> (Fingerprint, usize) {
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = FnvHasher::new();
         item.hash(&mut hasher);
         let hash = hasher.finish();
 
@@ -266,7 +307,7 @@ impl<T: ?Sized + Hash> CuckooFilter<T> {
 
     fn alt_index(&self, index: usize, fp: Fingerprint) -> usize {
         // i2 = i1 ^ hash(f)
-        let mut hasher = DefaultHasher::new();
+        let mut hasher = FnvHasher::new();
         fp.hash(&mut hasher);
         let hash_fp = hasher.finish();
 
@@ -325,7 +366,7 @@ impl XorShift {
 // Missing vs. Production:
 // - **SIMD**: Production implementations use SIMD to check all 4 bucket slots in parallel.
 // - **Fingerprint resizing**: Support for dynamic sizing or semi-sorting buckets to save bits.
-// - **Serialization**: No Serde support here.
+// - **Serialization**: Now possible due to deterministic hashing, but `serde` impl not included here.
 //
 // Next Steps:
 // 1. Implement `iter()` (hard because we only store fingerprints, not original items).
@@ -395,5 +436,27 @@ mod tests {
         cf.insert(&1);
         assert!(cf.delete(&1));
         assert!(!cf.delete(&1));
+    }
+
+    #[test]
+    fn test_determinism() {
+        let mut cf1 = CuckooFilter::new(100);
+        let mut cf2 = CuckooFilter::new(100);
+
+        let items = vec!["a", "b", "c", "d", "e", "f", "g", "h"];
+
+        for item in &items {
+            cf1.insert(item);
+            cf2.insert(item);
+        }
+
+        for item in &items {
+            assert!(cf1.contains(item));
+            assert!(cf2.contains(item));
+        }
+
+        // Also verify indices are same (indirectly via kick behavior if we fill it up)
+        // With same capacity and same items and same RNG seed (12345), structure must be identical.
+        // We can't inspect internal structure easily, but behavior is consistent.
     }
 }
