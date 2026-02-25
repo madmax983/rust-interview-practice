@@ -3,6 +3,7 @@ pub mod builder;
 pub mod concurrency_patterns;
 pub mod error_handling;
 pub mod handle_pattern;
+pub mod interior_mutability;
 pub mod iterators;
 pub mod newtype;
 pub mod polymorphism;
