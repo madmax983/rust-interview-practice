@@ -2,6 +2,7 @@ pub mod actor;
 pub mod borrowed_owned_duality;
 pub mod builder;
 pub mod concurrency_patterns;
+pub mod dependency_injection;
 pub mod error_handling;
 pub mod extension_traits;
 pub mod handle_pattern;
