@@ -1,12 +1,15 @@
 pub mod actor;
 pub mod borrowed_owned_duality;
 pub mod builder;
+pub mod command;
 pub mod concurrency_patterns;
+pub mod dependency_injection;
 pub mod error_handling;
 pub mod extension_traits;
 pub mod handle_pattern;
 pub mod interior_mutability;
 pub mod iterators;
+pub mod middleware;
 pub mod newtype;
 pub mod polymorphism;
 pub mod raii_guards;
