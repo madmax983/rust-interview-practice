@@ -2,6 +2,7 @@ pub mod b_tree;
 pub mod bloom_filter;
 pub mod count_min_sketch;
 pub mod cuckoo_filter;
+pub mod hashed_wheel_timer;
 pub mod hyperloglog;
 pub mod merkle_tree;
 pub mod radix_trie;

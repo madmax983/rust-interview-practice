@@ -1,5 +1,6 @@
 pub mod arc_cache;
 pub mod bump_allocator;
+pub mod circuit_breaker;
 pub mod concurrent_cache;
 pub mod consistent_hashing;
 pub mod design_twitter;
