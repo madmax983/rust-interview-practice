@@ -115,7 +115,7 @@ fn demonstrate_captures() {
 
 #[allow(dead_code)]
 fn demonstrate_iterator_closures() {
-    let numbers = vec![1, 2, 3, 4, 5];
+    let numbers = [1, 2, 3, 4, 5];
 
     // map - transform each element
     let doubled: Vec<i32> = numbers.iter().map(|x| x * 2).collect();
@@ -126,7 +126,7 @@ fn demonstrate_iterator_closures() {
     println!("Evens: {evens:?}");
 
     // fold - accumulate a value
-    let sum = numbers.iter().fold(0, |acc, x| acc + x);
+    let sum = numbers.iter().sum::<i32>();
     println!("Sum: {sum}");
 
     // Chaining: filter then map then collect
@@ -138,7 +138,7 @@ fn demonstrate_iterator_closures() {
     println!("Filtered and squared: {result:?}");
 
     // filter_map - combine filter and map
-    let strings = vec!["1", "two", "3", "four"];
+    let strings = ["1", "two", "3", "four"];
     let parsed: Vec<i32> = strings
         .iter()
         .filter_map(|s| s.parse().ok()) // Only keep successful parses
@@ -188,7 +188,7 @@ fn demonstrate_collection_closures() {
     }
 
     // partition - split into two collections based on predicate
-    let numbers = vec![1, 2, 3, 4, 5, 6];
+    let numbers = [1, 2, 3, 4, 5, 6];
     let (evens, odds): (Vec<i32>, Vec<i32>) = numbers.iter().partition(|&&x| x % 2 == 0);
     println!("Evens: {evens:?}, Odds: {odds:?}");
 }
@@ -253,7 +253,7 @@ fn demonstrate_type_inference() {
     println!("5 + 1 = {}", add_one(5));
 
     // Type inference from context
-    let numbers = vec![1, 2, 3];
+    let numbers = [1, 2, 3];
     let _doubled: Vec<i32> = numbers.iter().map(|x| x * 2).collect();
     // Compiler infers x is &i32 from iter()
 
@@ -280,7 +280,7 @@ fn demonstrate_type_inference() {
 #[allow(dead_code)]
 fn demonstrate_interview_patterns() {
     // Pattern 1: Frequency counting with closure
-    let words = vec!["apple", "banana", "apple", "cherry", "banana"];
+    let words = ["apple", "banana", "apple", "cherry", "banana"];
     let mut freq: HashMap<&str, i32> = HashMap::new();
     words.iter().for_each(|&word| {
         *freq.entry(word).or_insert(0) += 1;
@@ -314,8 +314,8 @@ fn demonstrate_interview_patterns() {
     println!("Indexed: {indexed:?}");
 
     // Pattern 5: reduce pattern (fold from right)
-    let numbers = vec![1, 2, 3, 4, 5];
-    let product = numbers.iter().fold(1, |acc, &x| acc * x);
+    let numbers = [1, 2, 3, 4, 5];
+    let product = numbers.iter().product::<i32>();
     println!("Product: {product}"); // 120
 }
 
@@ -327,7 +327,7 @@ fn demonstrate_interview_patterns() {
 fn demonstrate_move_for_threads() {
     use std::thread;
 
-    let data = vec![1, 2, 3, 4, 5];
+    let data = [1, 2, 3, 4, 5];
 
     // Must use 'move' to transfer ownership to thread
     let handle = thread::spawn(move || {

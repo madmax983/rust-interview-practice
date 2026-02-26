@@ -90,7 +90,7 @@ impl ConsistentHashRing {
             let hash = self.hash_key(&key);
             // We only remove if the value matches, in case of hash collision (unlikely but possible)
             // GOTCHA: Cannot remove while holding a reference from get()
-            let should_remove = self.ring.get(&hash).map_or(false, |val| val == node_id);
+            let should_remove = self.ring.get(&hash).is_some_and(|val| val == node_id);
 
             if should_remove {
                 self.ring.remove(&hash);

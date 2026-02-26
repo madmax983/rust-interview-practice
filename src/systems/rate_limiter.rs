@@ -172,6 +172,12 @@ pub struct MemoryStore {
     logs: Mutex<HashMap<String, VecDeque<Instant>>>,
 }
 
+impl Default for MemoryStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemoryStore {
     pub fn new() -> Self {
         Self {
@@ -183,7 +189,7 @@ impl MemoryStore {
 impl RateLimitStore for MemoryStore {
     fn check_and_update(&self, key: &str, window: Duration, limit: usize) -> Result<bool, String> {
         let mut logs = self.logs.lock().unwrap();
-        let log = logs.entry(key.to_string()).or_insert_with(VecDeque::new);
+        let log = logs.entry(key.to_string()).or_default();
 
         let now = Instant::now();
         // Since Instant is monotonic but not absolute, this works for single process.

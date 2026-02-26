@@ -54,7 +54,7 @@ fn helper_function(_nums: &mut Vec<i32>) {
 /// Pattern: Lifetime basics - return reference tied to input lifetime
 /// The 'a says: returned reference lives as long as input reference
 #[must_use]
-pub fn return_reference<'a>(nums: &'a [i32]) -> &'a i32 {
+pub fn return_reference(nums: &[i32]) -> &i32 {
     &nums[0] // Returned reference borrows from nums
 }
 
@@ -165,7 +165,7 @@ pub fn entry_api_no_double_borrow(map: &mut std::collections::HashMap<i32, Vec<i
     // (borrows twice - once for contains_key, once for get_mut)
 
     // RIGHT: Use entry API
-    map.entry(key).or_insert_with(Vec::new).push(1); // Single borrow
+    map.entry(key).or_default().push(1); // Single borrow
 }
 
 /// Pattern: NLL (Non-Lexical Lifetimes) - borrow ends at last use

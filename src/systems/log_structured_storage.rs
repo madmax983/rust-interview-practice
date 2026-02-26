@@ -114,7 +114,7 @@ impl LsmTree {
         if let Ok(entries) = fs::read_dir(&dir) {
             let mut paths: Vec<PathBuf> = entries
                 .filter_map(|e| e.ok().map(|e| e.path()))
-                .filter(|p| p.extension().map_or(false, |ext| ext == "sst"))
+                .filter(|p| p.extension().is_some_and(|ext| ext == "sst"))
                 .collect();
 
             // Sort by timestamp extracted from filename
@@ -143,10 +143,10 @@ impl LsmTree {
                     let mut bf = BloomFilter::new(1000, 0.01); // Default sizing
                     let reader = BufReader::new(file);
                     for line in reader.lines() {
-                        if let Ok(line) = line {
-                            if let Some((k, _)) = line.split_once(',') {
-                                bf.add(&k.to_string());
-                            }
+                        if let Ok(line) = line
+                            && let Some((k, _)) = line.split_once(',')
+                        {
+                            bf.add(&k.to_string());
                         }
                     }
                     let _ = bf.save_to_file(&filter_path);
@@ -204,10 +204,10 @@ impl LsmTree {
         // 2. Check SSTables (Reverse order: Newest first)
         for sst_path in self.sstables.iter().rev() {
             // Check Bloom Filter first
-            if let Some(bf) = self.bloom_filters.get(sst_path) {
-                if !bf.contains(&key.to_string()) {
-                    continue;
-                }
+            if let Some(bf) = self.bloom_filters.get(sst_path)
+                && !bf.contains(&key.to_string())
+            {
+                continue;
             }
 
             if let Some(val) = self.scan_sstable(sst_path, key)? {

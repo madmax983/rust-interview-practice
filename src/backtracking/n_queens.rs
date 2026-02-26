@@ -275,8 +275,18 @@ mod tests {
 
         let normalized = normalize_results(results);
         let expected = normalize_results(vec![
-            vec![".Q..".to_string(), "...Q".to_string(), "Q...".to_string(), "..Q.".to_string()],
-            vec!["..Q.".to_string(), "Q...".to_string(), "...Q".to_string(), ".Q..".to_string()],
+            vec![
+                ".Q..".to_string(),
+                "...Q".to_string(),
+                "Q...".to_string(),
+                "..Q.".to_string(),
+            ],
+            vec![
+                "..Q.".to_string(),
+                "Q...".to_string(),
+                "...Q".to_string(),
+                ".Q..".to_string(),
+            ],
         ]);
         assert_eq!(normalized, expected);
     }

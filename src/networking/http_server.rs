@@ -22,8 +22,7 @@ use crate::concurrency::thread_pool::ThreadPool;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::sync::Arc;
 
 // =========================================================================================
 // Architecture
@@ -205,11 +204,11 @@ impl HttpRequest {
 
         // Handle empty lines (some clients send newlines as keep-alive ping or before request)
         while first_line.trim().is_empty() {
-             first_line.clear();
-             let bytes = reader.read_line(&mut first_line)?;
-             if bytes == 0 {
-                 return Ok(None);
-             }
+            first_line.clear();
+            let bytes = reader.read_line(&mut first_line)?;
+            if bytes == 0 {
+                return Ok(None);
+            }
         }
 
         let parts: Vec<&str> = first_line.split_whitespace().collect();
@@ -283,14 +282,13 @@ impl HttpRequest {
                     reader.read_line(&mut String::new())?;
                 }
             }
-        } else if let Some(content_length) = headers.get("content-length") {
-            if let Ok(len) = content_length.parse::<usize>() {
-                if len > 0 {
-                    let mut buffer = vec![0; len];
-                    reader.read_exact(&mut buffer)?;
-                    body = buffer;
-                }
-            }
+        } else if let Some(content_length) = headers.get("content-length")
+            && let Ok(len) = content_length.parse::<usize>()
+            && len > 0
+        {
+            let mut buffer = vec![0; len];
+            reader.read_exact(&mut buffer)?;
+            body = buffer;
         }
 
         Ok(Some(HttpRequest {
@@ -336,20 +334,17 @@ impl HttpResponse {
 
         // Content-Length or Transfer-Encoding
         if let Some(body) = &self.body {
-            if !is_chunked {
-                if !self.headers.contains_key("Content-Length")
-                    && !self.headers.contains_key("content-length")
-                {
-                    write!(&mut response, "Content-Length: {}\r\n", body.len()).unwrap();
-                }
-            }
-        } else {
             if !is_chunked
                 && !self.headers.contains_key("Content-Length")
                 && !self.headers.contains_key("content-length")
             {
-                write!(&mut response, "Content-Length: 0\r\n").unwrap();
+                write!(&mut response, "Content-Length: {}\r\n", body.len()).unwrap();
             }
+        } else if !is_chunked
+            && !self.headers.contains_key("Content-Length")
+            && !self.headers.contains_key("content-length")
+        {
+            write!(&mut response, "Content-Length: 0\r\n").unwrap();
         }
 
         write!(&mut response, "\r\n").unwrap();

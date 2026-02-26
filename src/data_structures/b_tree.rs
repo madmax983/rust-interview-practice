@@ -85,9 +85,9 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         if idx < self.keys.len() && &self.keys[idx] == key {
             if self.is_leaf() {
                 self.keys.remove(idx);
-                return Some(self.vals.remove(idx));
+                Some(self.vals.remove(idx))
             } else {
-                return self.remove_from_non_leaf(t, idx);
+                self.remove_from_non_leaf(t, idx)
             }
         } else {
             if self.is_leaf() {
@@ -108,7 +108,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
                 target_idx = self.children.len() - 1;
             }
 
-            return self.children[target_idx].delete_key(t, key);
+            self.children[target_idx].delete_key(t, key)
         }
     }
 
@@ -172,12 +172,10 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
             self.borrow_from_prev(idx);
         } else if idx < self.children.len() - 1 && self.children[idx + 1].keys.len() >= t {
             self.borrow_from_next(idx);
+        } else if idx < self.children.len() - 1 {
+            self.merge(t, idx);
         } else {
-            if idx < self.children.len() - 1 {
-                self.merge(t, idx);
-            } else {
-                self.merge(t, idx - 1);
-            }
+            self.merge(t, idx - 1);
         }
     }
 
@@ -342,13 +340,11 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
         let result = self.root.delete_key(self.t, &key);
 
         // If root has 0 keys (and is not a leaf), make its first child the new root.
-        if self.root.keys.is_empty() {
-            if !self.root.is_leaf() {
-                let child = self.root.children.remove(0);
-                self.root = child;
-            }
-            // If leaf and empty, the tree is now empty but we keep the empty root node (as per `new`).
+        if self.root.keys.is_empty() && !self.root.is_leaf() {
+            let child = self.root.children.remove(0);
+            self.root = child;
         }
+        // If leaf and empty, the tree is now empty but we keep the empty root node (as per `new`).
 
         if result.is_some() {
             self.len -= 1;

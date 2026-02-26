@@ -73,10 +73,8 @@ pub fn can_finish_dfs(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
     let mut state = vec![State::Unvisited; num_courses];
 
     for i in 0..num_courses {
-        if state[i] == State::Unvisited {
-            if has_cycle_dfs(i, &adj, &mut state) {
-                return false;
-            }
+        if state[i] == State::Unvisited && has_cycle_dfs(i, &adj, &mut state) {
+            return false;
         }
     }
 

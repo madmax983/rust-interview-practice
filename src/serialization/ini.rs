@@ -24,6 +24,12 @@ pub struct Ini {
     pub sections: HashMap<String, HashMap<String, String>>,
 }
 
+impl Default for Ini {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Ini {
     pub fn new() -> Self {
         Self {

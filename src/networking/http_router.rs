@@ -89,13 +89,13 @@ impl Router {
                 // GOTCHA: If we already have a dynamic child, it must match the new one's name.
                 // In a production router, we might allow different names if they don't conflict,
                 // or return a Result. Here we panic on conflict for simplicity.
-                if let Some((existing_name, _)) = &current.dynamic_child {
-                    if existing_name != &param_name {
-                        panic!(
-                            "Conflict: Route already has dynamic parameter '{}', cannot add '{}'",
-                            existing_name, param_name
-                        );
-                    }
+                if let Some((existing_name, _)) = &current.dynamic_child
+                    && existing_name != &param_name
+                {
+                    panic!(
+                        "Conflict: Route already has dynamic parameter '{}', cannot add '{}'",
+                        existing_name, param_name
+                    );
                 }
 
                 if current.dynamic_child.is_none() {
@@ -112,10 +112,7 @@ impl Router {
                 }
             } else {
                 // Static segment
-                current = current
-                    .children
-                    .entry(part.to_string())
-                    .or_insert_with(Node::default);
+                current = current.children.entry(part.to_string()).or_default();
             }
         }
 

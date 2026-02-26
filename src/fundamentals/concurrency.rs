@@ -487,7 +487,7 @@ fn pattern_fan_out() {
 /// Pattern 3: Parallel map-reduce.
 #[allow(dead_code)]
 fn pattern_map_reduce() {
-    let numbers = vec![1, 2, 3, 4, 5, 6, 7, 8];
+    let numbers = [1, 2, 3, 4, 5, 6, 7, 8];
     let num_threads = 4;
     let chunk_size = numbers.len() / num_threads;
 

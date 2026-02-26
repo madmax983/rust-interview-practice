@@ -15,7 +15,6 @@
 //! It's a perfect playground for `NonNull` and manual memory management in Rust.
 
 use std::cmp::Ordering;
-use std::fmt;
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
@@ -117,7 +116,7 @@ impl<T: Ord> SkipList<T> {
     /// Inserts a value into the list.
     /// Returns true if the value was inserted, false if it already existed (no duplicates).
     pub fn insert(&mut self, val: T) -> bool {
-        let mut update = vec![None; MAX_LEVEL + 1];
+        let mut update = [None; MAX_LEVEL + 1];
         let mut curr = self.head;
 
         // 1. Traverse to find position
@@ -196,7 +195,7 @@ impl<T: Ord> SkipList<T> {
     /// Removes a value from the list.
     /// Returns true if the value was found and removed.
     pub fn remove(&mut self, val: &T) -> bool {
-        let mut update = vec![None; MAX_LEVEL + 1];
+        let mut update = [None; MAX_LEVEL + 1];
         let mut curr = self.head;
 
         unsafe {
@@ -204,11 +203,11 @@ impl<T: Ord> SkipList<T> {
             for i in (0..=self.level).rev() {
                 while let Some(next_ptr) = curr.as_ref().forward[i] {
                     let next_node = next_ptr.as_ref();
-                    if let Some(ref next_val) = next_node.val {
-                        if next_val < val {
-                            curr = next_ptr;
-                            continue;
-                        }
+                    if let Some(ref next_val) = next_node.val
+                        && next_val < val
+                    {
+                        curr = next_ptr;
+                        continue;
                     }
                     break;
                 }
@@ -220,30 +219,30 @@ impl<T: Ord> SkipList<T> {
             let target_ptr_opt = curr.as_ref().forward[0];
             if let Some(target_ptr) = target_ptr_opt {
                 let target_node = target_ptr.as_ref();
-                if let Some(ref target_val) = target_node.val {
-                    if target_val == val {
-                        // Found. Remove it.
-                        // We must unlink at all levels where it exists.
-                        for i in 0..=self.level {
-                            let mut prev_ptr = update[i].unwrap();
-                            let prev_node = prev_ptr.as_mut();
+                if let Some(ref target_val) = target_node.val
+                    && target_val == val
+                {
+                    // Found. Remove it.
+                    // We must unlink at all levels where it exists.
+                    for i in 0..=self.level {
+                        let mut prev_ptr = update[i].unwrap();
+                        let prev_node = prev_ptr.as_mut();
 
-                            if prev_node.forward[i] != Some(target_ptr) {
-                                break; // Target doesn't extend this high
-                            }
-                            prev_node.forward[i] = target_node.forward[i];
+                        if prev_node.forward[i] != Some(target_ptr) {
+                            break; // Target doesn't extend this high
                         }
-
-                        // Drop node
-                        let _ = Box::from_raw(target_ptr.as_ptr());
-                        self.length -= 1;
-
-                        // Lower level if needed
-                        while self.level > 0 && self.head.as_ref().forward[self.level].is_none() {
-                            self.level -= 1;
-                        }
-                        return true;
+                        prev_node.forward[i] = target_node.forward[i];
                     }
+
+                    // Drop node
+                    let _ = Box::from_raw(target_ptr.as_ptr());
+                    self.length -= 1;
+
+                    // Lower level if needed
+                    while self.level > 0 && self.head.as_ref().forward[self.level].is_none() {
+                        self.level -= 1;
+                    }
+                    return true;
                 }
             }
         }
@@ -346,7 +345,7 @@ impl XorShift {
     }
 
     fn next_bool(&mut self) -> bool {
-        self.next_u32() % 2 == 0
+        self.next_u32().is_multiple_of(2)
     }
 }
 

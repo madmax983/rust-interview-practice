@@ -113,7 +113,7 @@ impl<B: Backend> LoadBalancer<B> {
 
                 let total_weight: usize = backends.iter().map(|b| b.weight()).sum();
                 if total_weight == 0 {
-                     return backends.first().cloned();
+                    return backends.first().cloned();
                 }
 
                 let idx = self.rr_index.fetch_add(1, Ordering::Relaxed) % total_weight;

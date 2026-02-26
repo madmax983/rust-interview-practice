@@ -136,11 +136,11 @@ impl Bucket {
 
     fn remove(&mut self, fp: Fingerprint) -> bool {
         for entry in self.entries.iter_mut() {
-            if let Some(existing) = entry {
-                if *existing == fp {
-                    *entry = None;
-                    return true;
-                }
+            if let Some(existing) = entry
+                && *existing == fp
+            {
+                *entry = None;
+                return true;
             }
         }
         false
@@ -148,10 +148,10 @@ impl Bucket {
 
     fn contains(&self, fp: Fingerprint) -> bool {
         for entry in self.entries.iter() {
-            if let Some(existing) = entry {
-                if *existing == fp {
-                    return true;
-                }
+            if let Some(existing) = entry
+                && *existing == fp
+            {
+                return true;
             }
         }
         false
@@ -177,7 +177,7 @@ impl<T: ?Sized + Hash> CuckooFilter<T> {
         // Target 95% load factor roughly.
         // capacity / 4 = num_buckets needed (since 4 slots per bucket).
         // We round up to power of 2.
-        let mut num_buckets = (capacity + BUCKET_SIZE - 1) / BUCKET_SIZE;
+        let mut num_buckets = capacity.div_ceil(BUCKET_SIZE);
         if num_buckets == 0 {
             num_buckets = 1;
         }
@@ -351,7 +351,7 @@ impl XorShift {
     }
 
     fn next_bool(&mut self) -> bool {
-        self.next_u32() % 2 == 0
+        self.next_u32().is_multiple_of(2)
     }
 }
 

@@ -96,7 +96,7 @@ impl<T: Hash + Clone> MerkleTree<T> {
 
         // Iterate through all layers except the root (which is the last layer)
         for layer in self.layers.iter().take(self.layers.len() - 1) {
-            let is_left_child = current_index % 2 == 0;
+            let is_left_child = current_index.is_multiple_of(2);
             let sibling_index = if is_left_child {
                 current_index + 1
             } else {
@@ -126,7 +126,7 @@ impl<T: Hash + Clone> MerkleTree<T> {
         let mut current_hash = Self::hash_item(item);
 
         for &sibling_hash in proof {
-            let is_left_child = index % 2 == 0;
+            let is_left_child = index.is_multiple_of(2);
             if is_left_child {
                 current_hash = Self::hash_pair(current_hash, sibling_hash);
             } else {

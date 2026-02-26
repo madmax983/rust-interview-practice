@@ -110,7 +110,7 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
     // Actually, let's just strip whitespace first or iterate carefully.
     // For simplicity and strictness, we assume no whitespace.
 
-    let trimmed = input.trim_end_matches('=');
+    let _trimmed = input.trim_end_matches('=');
     let input_bytes = input.as_bytes();
 
     if input_bytes.len() % 4 != 0 {

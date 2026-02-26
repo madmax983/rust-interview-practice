@@ -14,7 +14,7 @@ pub fn unwrap_or_example(opt: Option<i32>) -> i32 {
 /// Pattern: Option - unwrap_or_else for computed defaults
 #[must_use]
 pub fn unwrap_or_else_example(opt: Option<i32>) -> i32 {
-    opt.unwrap_or_else(|| 42)
+    opt.unwrap_or(42)
 }
 
 /// Pattern: Option - map to transform inner value
@@ -52,7 +52,7 @@ pub fn result_map_example(res: Result<i32, String>) -> Result<i32, String> {
 /// Pattern: Result - map_err for transforming error value
 #[must_use]
 pub fn result_map_err_example(res: Result<i32, String>) -> Result<i32, std::io::Error> {
-    res.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+    res.map_err(std::io::Error::other)
 }
 
 /// Pattern: Result - and_then for chaining operations
@@ -99,10 +99,7 @@ pub fn match_option_example(opt: Option<i32>) -> i32 {
 /// Pattern: match on Result
 #[must_use]
 pub fn match_result_example(res: Result<i32, String>) -> i32 {
-    match res {
-        Ok(x) => x,
-        Err(_) => 0,
-    }
+    res.unwrap_or_default()
 }
 
 /// Pattern: if let for Option

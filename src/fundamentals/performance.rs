@@ -224,10 +224,10 @@ fn demonstrate_iterator_optimization() {
 
     // Pattern 3: fold vs collect for simple cases
     // collect creates allocation:
-    let _sum1: i32 = numbers.iter().copied().collect::<Vec<_>>().iter().sum();
+    let _sum1: i32 = numbers.to_vec().iter().sum();
 
     // fold doesn't:
-    let _sum2 = numbers.iter().fold(0, |acc, &x| acc + x);
+    let _sum2 = numbers.iter().sum::<i32>();
 }
 
 // ============================================================================
@@ -238,7 +238,7 @@ use std::borrow::Cow;
 
 /// Only clone when modification is needed.
 #[allow(dead_code)]
-fn process_string(s: &str) -> Cow<str> {
+fn process_string(s: &str) -> Cow<'_, str> {
     if s.contains("bad") {
         // Need to modify - create owned String
         Cow::Owned(s.replace("bad", "good"))

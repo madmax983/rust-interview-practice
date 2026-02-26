@@ -74,8 +74,10 @@ pub fn simplify_path(path: &str) -> String {
 pub fn simplify_path_functional(path: &str) -> String {
     let stack = path.split('/').fold(Vec::new(), |mut stack, component| {
         match component {
-            "" | "." => {},
-            ".." => { stack.pop(); },
+            "" | "." => {}
+            ".." => {
+                stack.pop();
+            }
             dir => stack.push(dir),
         }
         stack

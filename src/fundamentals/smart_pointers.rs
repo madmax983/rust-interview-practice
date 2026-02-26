@@ -25,7 +25,7 @@ fn demonstrate_box_basics() {
     println!("Boxed point: {boxed_point:?}");
 
     // Dereferencing Box
-    let x_value = (*boxed_point).x; // Explicit dereference
+    let x_value = boxed_point.x; // Explicit dereference
     let y_value = boxed_point.y; // Automatic dereference (deref coercion)
     println!("x: {x_value}, y: {y_value}");
 
@@ -268,10 +268,10 @@ fn demonstrate_rc_refcell_tree() {
     println!("Modified root value: {}", root.borrow().value);
 
     // Navigate to parent from child
-    if let Some(parent_weak) = &child1.borrow().parent {
-        if let Some(parent) = parent_weak.upgrade() {
-            println!("Child1's parent value: {}", parent.borrow().value);
-        }
+    if let Some(parent_weak) = &child1.borrow().parent
+        && let Some(parent) = parent_weak.upgrade()
+    {
+        println!("Child1's parent value: {}", parent.borrow().value);
     }
 }
 
@@ -346,7 +346,7 @@ fn demonstrate_cow_basics() {
 /// Function that conditionally modifies a string.
 /// Uses Cow to avoid cloning if no modification is needed.
 #[allow(dead_code)]
-fn remove_spaces(input: &str) -> Cow<str> {
+fn remove_spaces(input: &str) -> Cow<'_, str> {
     if input.contains(' ') {
         // Need to modify - return owned
         Cow::Owned(input.replace(' ', ""))
@@ -521,9 +521,9 @@ fn demonstrate_lru_node() {
         println!("Node1's next value: {}", next.borrow().value);
     }
 
-    if let Some(prev_weak) = &node2.borrow().prev {
-        if let Some(prev) = prev_weak.upgrade() {
-            println!("Node2's prev value: {}", prev.borrow().value);
-        }
+    if let Some(prev_weak) = &node2.borrow().prev
+        && let Some(prev) = prev_weak.upgrade()
+    {
+        println!("Node2's prev value: {}", prev.borrow().value);
     }
 }

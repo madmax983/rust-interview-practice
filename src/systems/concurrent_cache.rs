@@ -50,7 +50,7 @@ impl<K: Hash + Eq + Clone + Send + 'static, V: Send + 'static> ConcurrentLruCach
         assert!(capacity > 0, "Capacity must be greater than 0");
         assert!(num_shards > 0, "Number of shards must be greater than 0");
 
-        let shard_capacity = (capacity + num_shards - 1) / num_shards; // Ceiling division
+        let shard_capacity = capacity.div_ceil(num_shards); // Ceiling division
         let mut shards = Vec::with_capacity(num_shards);
 
         for _ in 0..num_shards {

@@ -16,7 +16,6 @@
 //! 3. **Cancellation:** Broadcast channel or `CancellationToken` - Structured teardown.
 
 use std::sync::{Arc, Mutex};
-use std::thread;
 
 // ============================================================================
 // Pattern 1: The Arc<Mutex<T>> Discipline

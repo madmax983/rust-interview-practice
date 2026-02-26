@@ -145,6 +145,12 @@ pub struct TextEditor {
     history_index: usize,
 }
 
+impl Default for TextEditor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TextEditor {
     pub fn new() -> Self {
         TextEditor {

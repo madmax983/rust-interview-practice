@@ -92,9 +92,7 @@ impl HashedWheelTimer {
         F: Fn() + Send + Sync + 'static,
     {
         let mut ticks = (delay.as_nanos() / self.tick_duration.as_nanos()) as usize;
-        if ticks > 0 {
-            ticks -= 1;
-        }
+        ticks = ticks.saturating_sub(1);
 
         let wheel_size = self.wheel.len();
         let rounds = ticks / wheel_size;
@@ -191,8 +189,8 @@ impl HashedWheelTimer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
     fn test_schedule_execution() {

@@ -61,7 +61,7 @@ fn demonstrate_basic_macros() {
     fragment_types!(ident my_variable);
     fragment_types!(ty i32);
     fragment_types!(pat Some(x));
-    fragment_types!(stmt let y = 10);
+    fragment_types!(stmt let _y = 10);
 }
 
 // ============================================================================

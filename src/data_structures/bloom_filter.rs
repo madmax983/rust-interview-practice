@@ -84,7 +84,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
         let hash_count = hash_count.max(1);
 
         // We use u64 for the bit vector, so we need (bit_count + 63) / 64 u64s.
-        let vec_size = ((bit_count + 63) / 64) as usize;
+        let vec_size = bit_count.div_ceil(64) as usize;
 
         Self {
             bit_vec: vec![0; vec_size],
@@ -151,7 +151,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
         item.hash(&mut hasher1);
         let h1 = hasher1.finish();
 
-        let mut hasher2 = DefaultHasher::new();
+        let _hasher2 = DefaultHasher::new();
         // Hash the item again. To get a different hash, we could try to hash something else too,
         // but DefaultHasher doesn't take a seed.
         // PRODUCTION NOTE: A real implementation would use a hasher that supports seeding,

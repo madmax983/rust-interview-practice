@@ -63,11 +63,11 @@ pub fn two_sum_optimized(nums: Vec<i32>, target: i32) -> Vec<i32> {
         let complement = target - num; // What we need to find
 
         // Check if complement exists and it's not the same element
-        if let Some(&j) = map.get(&complement) {
-            if i != j {
-                // Found a pair!
-                return vec![i as i32, j as i32];
-            }
+        if let Some(&j) = map.get(&complement)
+            && i != j
+        {
+            // Found a pair!
+            return vec![i as i32, j as i32];
         }
     }
 

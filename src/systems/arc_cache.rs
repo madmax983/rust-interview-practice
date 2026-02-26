@@ -20,7 +20,6 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
-use std::mem;
 use std::ptr::NonNull;
 
 // =========================================================================================

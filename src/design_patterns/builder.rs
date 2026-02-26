@@ -46,6 +46,12 @@ pub struct ServerBuilder<P> {
     _marker: PhantomData<P>,
 }
 
+impl Default for ServerBuilder<NoPort> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ServerBuilder<NoPort> {
     pub fn new() -> Self {
         ServerBuilder {

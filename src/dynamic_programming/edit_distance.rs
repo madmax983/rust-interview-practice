@@ -62,7 +62,7 @@ pub fn min_distance_brute_force(word1: String, word2: String) -> i32 {
             1 + cmp::min(
                 solve(i, j - 1, s1, s2), // Insert
                 cmp::min(
-                    solve(i - 1, j, s1, s2),    // Delete
+                    solve(i - 1, j, s1, s2),     // Delete
                     solve(i - 1, j - 1, s1, s2), // Replace
                 ),
             )
@@ -92,7 +92,13 @@ pub fn min_distance_optimized(word1: String, word2: String) -> i32 {
     // Initialize memo table with None
     let mut memo = vec![vec![None; n + 1]; m + 1];
 
-    fn solve(i: usize, j: usize, s1: &[char], s2: &[char], memo: &mut Vec<Vec<Option<i32>>>) -> i32 {
+    fn solve(
+        i: usize,
+        j: usize,
+        s1: &[char],
+        s2: &[char],
+        memo: &mut Vec<Vec<Option<i32>>>,
+    ) -> i32 {
         if let Some(val) = memo[i][j] {
             return val;
         }

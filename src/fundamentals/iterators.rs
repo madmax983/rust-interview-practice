@@ -65,10 +65,7 @@ pub fn chain_example(nums1: Vec<i32>, nums2: Vec<i32>) -> Vec<i32> {
 /// Pattern: fold for custom accumulation
 #[must_use]
 pub fn fold_example(nums: Vec<i32>) -> i32 {
-    nums.iter().fold(0, |acc, &x| {
-        // fold(initial_value, |accumulator, element| { ... })
-        acc + x // Return new accumulator value
-    })
+    nums.iter().sum::<i32>()
 }
 
 /// Pattern: sum/product for simple aggregation

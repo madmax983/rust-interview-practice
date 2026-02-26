@@ -174,7 +174,12 @@ impl<T> Store<T> {
         // If generation matches, it MUST be occupied because we increment generation on free.
 
         // Move data out
-        let data = match std::mem::replace(&mut entry.payload, Payload::Free { next_free: self.free_head }) {
+        let data = match std::mem::replace(
+            &mut entry.payload,
+            Payload::Free {
+                next_free: self.free_head,
+            },
+        ) {
             Payload::Occupied(d) => d,
             Payload::Free { .. } => return None, // Should be unreachable with generation check
         };
@@ -295,10 +300,14 @@ mod tests {
             vel: Handle<Velocity>,
         }
 
-        let entity = Entity { pos: h_pos, vel: h_vel };
+        let entity = Entity {
+            pos: h_pos,
+            vel: h_vel,
+        };
 
         // System: Update position based on velocity
-        if let (Some(pos), Some(vel)) = (positions.get_mut(entity.pos), velocities.get(entity.vel)) {
+        if let (Some(pos), Some(vel)) = (positions.get_mut(entity.pos), velocities.get(entity.vel))
+        {
             pos.x += vel.dx;
             pos.y += vel.dy;
         }
