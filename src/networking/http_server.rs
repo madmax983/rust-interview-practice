@@ -18,6 +18,7 @@
 //! It demystifies how a raw TCP stream becomes a structured request and how to speak the
 //! universal language of the internet.
 
+use crate::concurrency::thread_pool::ThreadPool;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
@@ -61,10 +62,10 @@ use std::thread;
 // └───────────────┴─────────────┴─────────────┘
 //
 // Design Decisions:
-// - **Threading Model**: Thread-per-request.
-//   - *Tradeoff*: Simple to implement and debug.
-//   - *Downside*: High memory overhead per connection; vulnerable to DoS (Slowloris).
-//   - *Alternative*: Non-blocking I/O with an event loop (Tokio/Mio) - much more complex.
+// - **Threading Model**: ThreadPool.
+//   - *Tradeoff*: Limits concurrency but prevents OOM.
+//   - *Downside*: Blocking I/O means one slow client can occupy a thread.
+//   - *Alternative*: Non-blocking I/O with an event loop (Tokio/Mio).
 // - **Parsing**: `BufReader` with `read_line` for headers.
 //   - *Tradeoff*: Allocates strings.
 //   - *Alternative*: Zero-copy parsing using a cursor over a byte buffer (httparse crate style).
@@ -110,15 +111,18 @@ where
 pub struct HttpServer<H: Handler> {
     listener: TcpListener,
     handler: Arc<H>,
+    pool: ThreadPool,
 }
 
 impl<H: Handler> HttpServer<H> {
     /// Creates a new HTTP Server bound to the given address with a request handler.
-    pub fn new<A: ToSocketAddrs>(addr: A, handler: H) -> io::Result<Self> {
+    pub fn new<A: ToSocketAddrs>(addr: A, handler: H, pool_size: usize) -> io::Result<Self> {
         let listener = TcpListener::bind(addr)?;
+        let pool = ThreadPool::new(pool_size);
         Ok(Self {
             listener,
             handler: Arc::new(handler),
+            pool,
         })
     }
 
@@ -131,12 +135,12 @@ impl<H: Handler> HttpServer<H> {
                 Ok(stream) => {
                     let handler = Arc::clone(&self.handler);
 
-                    // PRODUCTION NOTE: Thread-per-request models struggle with high concurrency (C10k problem).
-                    // Production servers (Hyper, Actix) use Non-blocking I/O (epoll/kqueue) and an async runtime (Tokio)
-                    // to handle thousands of connections with a small thread pool.
-                    thread::spawn(move || {
+                    self.pool.execute(move || {
                         if let Err(e) = Self::handle_connection(stream, handler) {
-                            eprintln!("Error handling connection: {}", e);
+                            // Don't log unexpected EOF which is normal connection close
+                            if e.kind() != io::ErrorKind::UnexpectedEof {
+                                eprintln!("Error handling connection: {}", e);
+                            }
                         }
                     });
                 }
@@ -147,39 +151,65 @@ impl<H: Handler> HttpServer<H> {
     }
 
     fn handle_connection(mut stream: TcpStream, handler: Arc<H>) -> io::Result<()> {
-        let reader = BufReader::new(stream.try_clone()?);
-        let request = match HttpRequest::parse(reader) {
-            Ok(req) => req,
-            Err(e) => {
-                // Send 400 Bad Request
-                let response = HttpResponse::new(
-                    400,
-                    "Bad Request",
-                    Some(format!("Error parsing request: {}", e).into_bytes()),
-                );
-                stream.write_all(&response.to_bytes())?;
-                return Ok(());
+        let mut reader = BufReader::new(stream.try_clone()?);
+
+        loop {
+            let request = match HttpRequest::parse(&mut reader) {
+                Ok(Some(req)) => req,
+                Ok(None) => return Ok(()), // Clean EOF
+                Err(e) => {
+                    // Send 400 Bad Request
+                    let response = HttpResponse::new(
+                        400,
+                        "Bad Request",
+                        Some(format!("Error parsing request: {}", e).into_bytes()),
+                    );
+                    // Ignore write error on broken pipe
+                    let _ = stream.write_all(&response.to_bytes());
+                    return Ok(());
+                }
+            };
+
+            println!("Request: {} {}", request.method, request.path);
+
+            // Check for Connection: close
+            let close_connection = request
+                .headers
+                .get("connection")
+                .map(|v| v.to_lowercase() == "close")
+                .unwrap_or(false);
+
+            let response = handler.handle(request);
+            stream.write_all(&response.to_bytes())?;
+
+            if close_connection {
+                break;
             }
-        };
-
-        println!("Request: {} {}", request.method, request.path);
-
-        let response = handler.handle(request);
-        stream.write_all(&response.to_bytes())?;
+        }
         Ok(())
     }
 }
 
 impl HttpRequest {
     /// Reads and parses an HTTP request from the given reader.
-    pub fn parse<R: Read>(mut reader: BufReader<R>) -> io::Result<Self> {
+    /// Returns `Ok(None)` if the stream ends cleanly at the start of a request.
+    pub fn parse<R: Read>(reader: &mut BufReader<R>) -> io::Result<Option<Self>> {
         // GOTCHA: `read_line` appends to the string. If we reused a buffer, we'd need to clear it.
         // It also includes the newline characters, which we must trim.
         let mut first_line = String::new();
-        reader.read_line(&mut first_line)?;
+        let bytes_read = reader.read_line(&mut first_line)?;
 
-        if first_line.is_empty() {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Empty request"));
+        if bytes_read == 0 {
+            return Ok(None);
+        }
+
+        // Handle empty lines (some clients send newlines as keep-alive ping or before request)
+        while first_line.trim().is_empty() {
+             first_line.clear();
+             let bytes = reader.read_line(&mut first_line)?;
+             if bytes == 0 {
+                 return Ok(None);
+             }
         }
 
         let parts: Vec<&str> = first_line.split_whitespace().collect();
@@ -263,14 +293,14 @@ impl HttpRequest {
             }
         }
 
-        Ok(HttpRequest {
+        Ok(Some(HttpRequest {
             method,
             path,
             version,
             headers,
             params: HashMap::new(),
             body,
-        })
+        }))
     }
 }
 
@@ -354,15 +384,12 @@ impl HttpResponse {
 //
 // Missing vs. Production:
 // - **Async I/O**: Essential for high-concurrency performance.
-// - **Keep-Alive**: We close the connection after every request (or rather, the thread dies, dropping the stream).
-//   A real server parses multiple requests from a single stream.
 // - **Security**: No protection against Slowloris, large payload DoS, or malformed header attacks (beyond basic parsing).
 // - **Full RFC Compliance**: We skip many headers, status codes, and edge cases.
 //
 // Next Steps:
-// 1. Implement Keep-Alive support (loop in `handle_connection`).
-// 2. Add a `ThreadPool` to limit the number of active threads.
-// 3. Port to `mio` for non-blocking I/O.
+// 1. Port to `mio` for non-blocking I/O.
+// 2. Implement HTTP/2 support.
 
 #[cfg(test)]
 mod tests {
@@ -372,8 +399,8 @@ mod tests {
     #[test]
     fn test_parse_simple_get() {
         let input = b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
-        let reader = BufReader::new(Cursor::new(input));
-        let req = HttpRequest::parse(reader).unwrap();
+        let mut reader = BufReader::new(Cursor::new(input));
+        let req = HttpRequest::parse(&mut reader).unwrap().unwrap();
 
         assert_eq!(req.method, "GET");
         assert_eq!(req.path, "/");
@@ -385,8 +412,8 @@ mod tests {
     #[test]
     fn test_parse_post_with_body() {
         let input = b"POST /submit HTTP/1.1\r\nContent-Length: 11\r\n\r\nHello World";
-        let reader = BufReader::new(Cursor::new(input));
-        let req = HttpRequest::parse(reader).unwrap();
+        let mut reader = BufReader::new(Cursor::new(input));
+        let req = HttpRequest::parse(&mut reader).unwrap().unwrap();
 
         assert_eq!(req.method, "POST");
         assert_eq!(req.body, b"Hello World");
@@ -456,7 +483,7 @@ mod tests {
         // Client
         let mut client = TcpStream::connect(addr).unwrap();
         client
-            .write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
             .unwrap();
 
         let mut buffer = Vec::new();
@@ -473,10 +500,10 @@ mod tests {
     fn test_chunked_reader_eof_safety() {
         // Chunk size 5, but EOF immediately
         let input = b"POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5\r\n";
-        let reader = BufReader::new(Cursor::new(input));
+        let mut reader = BufReader::new(Cursor::new(input));
 
         // Should return error due to UnexpectedEof in read_exact
-        let result = HttpRequest::parse(reader);
+        let result = HttpRequest::parse(&mut reader);
         assert!(result.is_err());
     }
 
@@ -484,10 +511,10 @@ mod tests {
     fn test_chunked_reader_infinite_loop_bug() {
         // Chunk size line is empty (EOF) immediately after headers
         let input = b"POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n";
-        let reader = BufReader::new(Cursor::new(input));
+        let mut reader = BufReader::new(Cursor::new(input));
 
         // Should return empty body, not loop infinitely
-        let req = HttpRequest::parse(reader).unwrap();
+        let req = HttpRequest::parse(&mut reader).unwrap().unwrap();
         assert!(req.body.is_empty());
     }
 }
