@@ -1,191 +1,137 @@
-//! # The Visitor / Walker Pattern
+//! # Visitor Pattern (Rust-Style)
 //!
-//! Replaces: **Double Dispatch** (OOP), **Instance Checks** (Java `instanceof`)
+//! Replaces: **Double Dispatch** (OOP), **Pattern Matching** (Functional)
 //!
-//! Real Rust usage: `syn::visit`, `serde::de::Visitor`, `rustc_ast`
+//! Real Rust usage: `serde::de::Visitor`, `syn::visit::Visit`, `rustc_ast::visit::Visitor`
 //!
 //! ## Why this pattern exists in Rust
-//! The "Expression Problem" asks: is it easier to add new types or new operations?
-//! - **Enum Dispatch (Closed Set):** Easy to add operations (new `match` function), hard to add types (must update enum and all matches).
-//! - **Trait Visitor (Open Set):** Easy to add types (impl Trait), hard to add operations (must update Trait and all impls).
-//!
-//! Rust defaults to Enums because they are zero-cost and data-oriented. However, when the set of types
-//! needs to be extensible by downstream crates (like an AST in a library), the Visitor trait becomes necessary.
+//! In OOP, the Visitor pattern solves the "double dispatch" problem (choosing a function based on two types:
+//! the element and the visitor). In Rust, we have two primary ways to traverse structures:
+//! 1. **Enum Dispatch (Idiomatic):** A closed set of types (Sum Type) matched exhaustively. Fast, simple, inlineable.
+//! 2. **Visitor Trait (Open Set):** An open set of types where the visitor is generic. Essential for serialization (Serde)
+//!    where you don't know the data format beforehand.
 //!
 //! ## Architecture
 //!
-//! **Approach 1: Enum Dispatch (The Rust Default)**
+//! **Approach 1: Enum Dispatch (Closed Set)**
 //! ```text
-//! enum Expr { Literal(i64), Binary(...) }
-//! fn eval(e: &Expr) -> i64 { match e { ... } }
+//! enum Expr { Lit(i32), Add(Box<Expr>, Box<Expr>) }
+//! impl Expr {
+//!     fn eval(&self) -> i32 { match self { ... } }
+//! }
 //! ```
 //!
-//! **Approach 2: Visitor Trait (The Extensible Way)**
+//! **Approach 2: Visitor Trait (Open Set / Double Dispatch)**
 //! ```text
-//! trait Visitor<T> { fn visit_literal(&mut self, i: i64) -> T; ... }
-//! trait Accept { fn accept<V: Visitor<T>>(&self, v: &mut V) -> T; }
+//! trait AstVisitor {
+//!     fn visit_literal(&mut self, val: i32);
+//!     fn visit_add(&mut self, lhs: &Expr, rhs: &Expr);
+//! }
+//!
+//! impl Expr {
+//!     fn accept(&self, visitor: &mut impl AstVisitor) { ... }
+//! }
 //! ```
+//!
+//! ## When to use
+//! - **Enum Dispatch:** When the set of types is fixed (e.g., your own AST). This is 99% of cases.
+//! - **Visitor Trait:** When you need to decouple the algorithm from the data structure, or when the set of operations is open-ended
+//!   (e.g., a linter where users can add new checks without recompiling the AST).
 
 // ============================================================================
-// Common Definitions (The AST)
+// The Data Structure (AST)
 // ============================================================================
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Operator {
-    Add,
-    Sub,
-    Mul,
-    Div,
-}
-
-// OWNERSHIP INSIGHT:
-// We use Box<Expr> for recursive types because Expr has infinite size otherwise.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub enum Expr {
-    Literal(i64),
-    Binary {
-        left: Box<Expr>,
-        op: Operator,
-        right: Box<Expr>,
-    },
-    Grouping(Box<Expr>),
+    Literal(i32),
+    // Recursive structure using Box
+    Add(Box<Expr>, Box<Expr>),
+    Mul(Box<Expr>, Box<Expr>),
 }
 
-// Helper to build ASTs easily in tests
+// ============================================================================
+// Approach 1: Pattern Matching (Internal Visitor)
+// ============================================================================
+
 impl Expr {
-    pub fn lit(i: i64) -> Self {
-        Expr::Literal(i)
-    }
-    pub fn bin(left: Expr, op: Operator, right: Expr) -> Self {
-        Expr::Binary {
-            left: Box::new(left),
-            op,
-            right: Box::new(right),
-        }
-    }
-    pub fn group(expr: Expr) -> Self {
-        Expr::Grouping(Box::new(expr))
-    }
-}
-
-// ============================================================================
-// Approach 1: Enum Dispatch (Closed Set)
-// ============================================================================
-
-/// The "Functional" style.
-///
-/// **PROS:**
-/// - Zero boilerplate.
-/// - Compiler enforces exhaustiveness (you can't forget a variant).
-/// - Best performance (branches often optimized better than vtables).
-///
-/// **CONS:**
-/// - If you add a variant to `Expr`, you must update *every* match expression in the codebase.
-/// - Logic is coupled to the definition of `Expr`.
-pub fn eval_recursive(expr: &Expr) -> i64 {
-    match expr {
-        Expr::Literal(val) => *val,
-        Expr::Binary { left, op, right } => {
-            let l = eval_recursive(left);
-            let r = eval_recursive(right);
-            match op {
-                Operator::Add => l + r,
-                Operator::Sub => l - r,
-                Operator::Mul => l * r,
-                Operator::Div => l / r, // Panics on zero, simpler for demo
-            }
-        }
-        Expr::Grouping(inner) => eval_recursive(inner),
-    }
-}
-
-// ============================================================================
-// Approach 2: Visitor Trait (Open Set / Double Dispatch)
-// ============================================================================
-
-/// The "OOP" style (Double Dispatch).
-///
-/// **PROS:**
-/// - Decouples algorithm (Visitor) from data (Expr).
-/// - You can add new Visitors (operations) without recompiling `Expr`.
-///
-/// **CONS:**
-/// - Boilerplate (Accept traits, Visitor traits).
-/// - Hard to add new `Expr` variants (breaks the Visitor trait).
-/// - Slightly slower due to function call overhead (though generic monomorphization helps).
-
-// The Visitor Interface
-// We use a generic return type `R` so visitors can return values.
-pub trait Visitor<R> {
-    fn visit_literal(&mut self, value: i64) -> R;
-    fn visit_binary(&mut self, left: &Expr, op: &Operator, right: &Expr) -> R;
-    fn visit_grouping(&mut self, inner: &Expr) -> R;
-}
-
-// The Accept Interface
-// This enables the "Double Dispatch": Expr calls v.visit_...(self)
-pub trait Accept {
-    fn accept<R, V: Visitor<R>>(&self, visitor: &mut V) -> R;
-}
-
-impl Accept for Expr {
-    fn accept<R, V: Visitor<R>>(&self, visitor: &mut V) -> R {
+    // OWNERSHIP INSIGHT: We borrow self recursively.
+    // The compiler ensures we cover all variants.
+    pub fn eval(&self) -> i32 {
         match self {
-            Expr::Literal(v) => visitor.visit_literal(*v),
-            Expr::Binary { left, op, right } => visitor.visit_binary(left, op, right),
-            Expr::Grouping(inner) => visitor.visit_grouping(inner),
+            Expr::Literal(val) => *val,
+            Expr::Add(lhs, rhs) => lhs.eval() + rhs.eval(),
+            Expr::Mul(lhs, rhs) => lhs.eval() * rhs.eval(),
         }
     }
 }
 
-// Example Visitor 1: AST Printer (Lisp style)
-pub struct AstPrinter;
+// ============================================================================
+// Approach 2: Visitor Trait (External Visitor / Double Dispatch)
+// ============================================================================
 
-impl Visitor<String> for AstPrinter {
-    fn visit_literal(&mut self, value: i64) -> String {
-        value.to_string()
-    }
+// The "True" Visitor pattern separates the types.
+// This decouples the operation from the structure.
 
-    fn visit_binary(&mut self, left: &Expr, op: &Operator, right: &Expr) -> String {
-        let op_str = match op {
-            Operator::Add => "+",
-            Operator::Sub => "-",
-            Operator::Mul => "*",
-            Operator::Div => "/",
-        };
-        let l = left.accept(self);
-        let r = right.accept(self);
-        format!("({} {} {})", op_str, l, r)
-    }
+pub trait AstVisitor {
+    fn visit_literal(&mut self, value: i32);
+    fn visit_add(&mut self, lhs: &Expr, rhs: &Expr);
+    fn visit_mul(&mut self, lhs: &Expr, rhs: &Expr);
+}
 
-    fn visit_grouping(&mut self, inner: &Expr) -> String {
-        // Just print expression, maybe wrap in parens if we wanted
-        // explicit grouping, but let's keep it simple.
-        format!("(group {})", inner.accept(self))
+// Dispatcher logic
+impl Expr {
+    pub fn accept(&self, visitor: &mut impl AstVisitor) {
+        match self {
+            Expr::Literal(val) => visitor.visit_literal(*val),
+            Expr::Add(lhs, rhs) => visitor.visit_add(lhs, rhs),
+            Expr::Mul(lhs, rhs) => visitor.visit_mul(lhs, rhs),
+        }
     }
 }
 
-// Example Visitor 2: Evaluator (Re-implementing eval as a Visitor)
-pub struct EvalVisitor;
+// Concrete Visitor: Evaluator (Stateful)
+pub struct EvaluatorVisitor {
+    result: i32,
+}
 
-impl Visitor<i64> for EvalVisitor {
-    fn visit_literal(&mut self, value: i64) -> i64 {
-        value
+impl EvaluatorVisitor {
+    pub fn new() -> Self {
+        EvaluatorVisitor { result: 0 }
+    }
+}
+
+impl Default for EvaluatorVisitor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AstVisitor for EvaluatorVisitor {
+    fn visit_literal(&mut self, value: i32) {
+        self.result = value;
     }
 
-    fn visit_binary(&mut self, left: &Expr, op: &Operator, right: &Expr) -> i64 {
-        let l = left.accept(self);
-        let r = right.accept(self);
-        match op {
-            Operator::Add => l + r,
-            Operator::Sub => l - r,
-            Operator::Mul => l * r,
-            Operator::Div => l / r,
-        }
+    fn visit_add(&mut self, lhs: &Expr, rhs: &Expr) {
+        // Double dispatch:
+        // 1. Visit left child (updates self.result)
+        lhs.accept(self);
+        let left = self.result;
+
+        // 2. Visit right child (updates self.result)
+        rhs.accept(self);
+        let right = self.result;
+
+        // 3. Combine
+        self.result = left + right;
     }
 
-    fn visit_grouping(&mut self, inner: &Expr) -> i64 {
-        inner.accept(self)
+    fn visit_mul(&mut self, lhs: &Expr, rhs: &Expr) {
+        lhs.accept(self);
+        let left = self.result;
+        rhs.accept(self);
+        let right = self.result;
+        self.result = left * right;
     }
 }
 
@@ -197,39 +143,28 @@ impl Visitor<i64> for EvalVisitor {
 mod tests {
     use super::*;
 
-    // Helper to create (1 + 2) * 3
-    fn make_ast() -> Expr {
-        Expr::bin(
-            Expr::group(Expr::bin(Expr::lit(1), Operator::Add, Expr::lit(2))),
-            Operator::Mul,
-            Expr::lit(3),
-        )
+    #[test]
+    fn test_enum_dispatch() {
+        // (1 + 2) * 3
+        let ast = Expr::Mul(
+            Box::new(Expr::Add(Box::new(Expr::Literal(1)), Box::new(Expr::Literal(2)))),
+            Box::new(Expr::Literal(3)),
+        );
+
+        assert_eq!(ast.eval(), 9);
     }
 
     #[test]
-    fn test_enum_dispatch_eval() {
-        let expr = make_ast();
-        // (1 + 2) * 3 = 9
-        assert_eq!(eval_recursive(&expr), 9);
-    }
+    fn test_visitor_pattern() {
+        // (1 + 2) * 3
+        let ast = Expr::Mul(
+            Box::new(Expr::Add(Box::new(Expr::Literal(1)), Box::new(Expr::Literal(2)))),
+            Box::new(Expr::Literal(3)),
+        );
 
-    #[test]
-    fn test_visitor_eval() {
-        let expr = make_ast();
-        let mut evaluator = EvalVisitor;
-        assert_eq!(expr.accept(&mut evaluator), 9);
-    }
+        let mut visitor = EvaluatorVisitor::new();
+        ast.accept(&mut visitor);
 
-    #[test]
-    fn test_visitor_printer() {
-        let expr = make_ast();
-        let mut printer = AstPrinter;
-        // Expected: (* (group (+ 1 2)) 3)
-        // Logic:
-        // Outermost is Mul
-        // Left is Grouping -> Inner is Add -> (+ 1 2) -> (group (+ 1 2))
-        // Right is 3
-        // Result: (* (group (+ 1 2)) 3)
-        assert_eq!(expr.accept(&mut printer), "(* (group (+ 1 2)) 3)");
+        assert_eq!(visitor.result, 9);
     }
 }
