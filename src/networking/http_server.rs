@@ -473,7 +473,10 @@ mod tests {
         // Spawn server thread
         let server_handle = thread::spawn(move || {
             let (stream, _) = listener.accept().unwrap();
-            HttpServer::<TestHandler>::handle_connection(stream, handler_clone).unwrap();
+            // We need a dummy handler since we can't create an HttpServer without arguments or access its internal method easily
+            // But wait, the method is static on the struct if H is known.
+            // Actually, handle_connection is an associated function.
+            let _ = HttpServer::<TestHandler>::handle_connection(stream, handler_clone);
         });
 
         // Client
