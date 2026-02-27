@@ -8,6 +8,7 @@ pub mod lfu_cache;
 pub mod log_structured_storage;
 pub mod lru_cache;
 pub mod rate_limiter;
+pub mod slab_allocator;
 pub mod ttl_cache;
 pub mod vector_clock;
 pub mod wal;

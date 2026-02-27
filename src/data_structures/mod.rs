@@ -5,6 +5,7 @@ pub mod cuckoo_filter;
 pub mod hashed_wheel_timer;
 pub mod hyperloglog;
 pub mod merkle_tree;
+pub mod quadtree;
 pub mod radix_trie;
 pub mod ring_buffer;
 pub mod segment_tree;
