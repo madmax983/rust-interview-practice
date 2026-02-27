@@ -176,12 +176,15 @@ impl ShutdownManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::thread; // FIX: Added import for thread
 
     #[test]
     fn test_arc_mutex_counter() {
         let counter = ConcurrentCounter::new();
         let mut handles = vec![];
 
+        // RUST INSIGHT: We clone the Arc to pass shared ownership to the thread.
+        // We cannot pass a reference because the thread might outlive this function scope.
         for _ in 0..10 {
             let c = counter.clone();
             handles.push(thread::spawn(move || {

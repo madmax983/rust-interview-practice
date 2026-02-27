@@ -6,3 +6,4 @@ pub mod lowest_common_ancestor;
 pub mod max_depth;
 pub mod serialize_and_deserialize_binary_tree;
 pub mod validate_binary_search_tree;
+pub mod red_black_tree;
