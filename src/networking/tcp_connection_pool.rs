@@ -189,11 +189,7 @@ impl<M: ConnectionManager> Pool<M> {
             // RUST INSIGHT: Condvar Wait
             // `wait_timeout` atomically releases the lock and blocks.
             // When it returns (or times out), it re-acquires the lock.
-            let (new_state, result) = self
-                .shared
-                .cond
-                .wait_timeout(state, remaining)
-                .unwrap();
+            let (new_state, result) = self.shared.cond.wait_timeout(state, remaining).unwrap();
 
             state = new_state;
 
@@ -406,8 +402,17 @@ mod tests {
     #[test]
     fn test_broken_manager() {
         // Test 1: Connect failure
-        let manager = BrokenManager { should_fail_connect: true, should_fail_valid: false };
-        let pool = Pool::new(manager, PoolConfig { max_size: 1, ..Default::default() });
+        let manager = BrokenManager {
+            should_fail_connect: true,
+            should_fail_valid: false,
+        };
+        let pool = Pool::new(
+            manager,
+            PoolConfig {
+                max_size: 1,
+                ..Default::default()
+            },
+        );
 
         let res = pool.get();
         assert!(matches!(res, Err(PoolError::Manager(_))));
@@ -418,8 +423,17 @@ mod tests {
         drop(state);
 
         // Test 2: Validation failure
-        let manager_valid = BrokenManager { should_fail_connect: false, should_fail_valid: true };
-        let pool_valid = Pool::new(manager_valid, PoolConfig { max_size: 1, ..Default::default() });
+        let manager_valid = BrokenManager {
+            should_fail_connect: false,
+            should_fail_valid: true,
+        };
+        let pool_valid = Pool::new(
+            manager_valid,
+            PoolConfig {
+                max_size: 1,
+                ..Default::default()
+            },
+        );
 
         // First get succeeds (creates new)
         // But checking `is_valid` happens on reuse.

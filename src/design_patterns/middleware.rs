@@ -28,7 +28,6 @@
 
 use std::future::Future;
 use std::pin::Pin;
-use std::task::{Context, Poll};
 
 // ============================================================================
 // The Service Trait
@@ -140,9 +139,7 @@ where
     fn call(&mut self, req: String) -> Self::Future {
         if req.is_empty() {
             // Short-circuit: Return a ready future with error
-            return Box::pin(async move {
-                Err("Request cannot be empty".to_string().into())
-            });
+            return Box::pin(async move { Err("Request cannot be empty".to_string().into()) });
         }
 
         // Forward to inner

@@ -110,7 +110,7 @@ impl<S: Read + Write> WebSocketConnection<S> {
 
     /// Performs the Server-side handshake.
     /// Reads the HTTP Upgrade request and sends the 101 Switching Protocols response.
-    pub fn perform_server_handshake(mut stream: S) -> io::Result<Self> {
+    pub fn perform_server_handshake(stream: S) -> io::Result<Self> {
         // Use a buffered reader to parse HTTP headers
         let mut reader = BufReader::new(stream);
         let mut headers = Vec::new();
@@ -268,7 +268,7 @@ impl<S: Read + Write> WebSocketConnection<S> {
     }
 
     fn write_frame(&mut self, opcode: Opcode, payload: &[u8]) -> io::Result<()> {
-        let mut first_byte = 0x80 | (opcode as u8); // FIN set + Opcode
+        let first_byte = 0x80 | (opcode as u8); // FIN set + Opcode
 
         let mut len_bytes = Vec::new();
         let payload_len_code;

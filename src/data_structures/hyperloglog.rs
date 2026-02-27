@@ -117,7 +117,10 @@ impl HyperLogLog {
     ///
     /// Panics if `p` is not in the range [4, 16].
     pub fn new(p: u8) -> Self {
-        assert!(p >= 4 && p <= 16, "Precision p must be between 4 and 16");
+        assert!(
+            (4..=16).contains(&p),
+            "Precision p must be between 4 and 16"
+        );
         let m = 1 << p;
         HyperLogLog {
             p,

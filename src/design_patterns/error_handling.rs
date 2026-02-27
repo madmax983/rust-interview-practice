@@ -48,7 +48,9 @@ pub enum DatabaseError {
 impl fmt::Display for DatabaseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DatabaseError::ConnectionFailed(addr) => write!(f, "Failed to connect to DB at {}", addr),
+            DatabaseError::ConnectionFailed(addr) => {
+                write!(f, "Failed to connect to DB at {}", addr)
+            }
             DatabaseError::QueryFailed { query, reason } => {
                 write!(f, "Query failed: '{}', reason: {}", query, reason)
             }
@@ -168,8 +170,7 @@ fn handle_request(user_id: u32) -> Result<String> {
 fn load_config() -> Result<()> {
     // Explicit mapping because we decided NOT to impl From<io::Error> for AppError
     // due to ambiguity (it could be DB IO or Config IO).
-    std::fs::read_to_string("config.toml")
-        .map_err(AppError::ConfigLoad)?;
+    std::fs::read_to_string("config.toml").map_err(AppError::ConfigLoad)?;
     Ok(())
 }
 

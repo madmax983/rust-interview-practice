@@ -123,16 +123,16 @@ impl Twitter {
 
         // 2. Initialize Heap
         for &source_id in sources {
-            if let Some(user_tweets) = self.tweets.get(&source_id) {
-                if let Some(&(timestamp, tweet_id)) = user_tweets.last() {
-                    // Push the most recent tweet of this user
-                    heap.push(HeapItem {
-                        timestamp,
-                        tweet_id,
-                        user_id: source_id,
-                        index: user_tweets.len() - 1,
-                    });
-                }
+            if let Some(user_tweets) = self.tweets.get(&source_id)
+                && let Some(&(timestamp, tweet_id)) = user_tweets.last()
+            {
+                // Push the most recent tweet of this user
+                heap.push(HeapItem {
+                    timestamp,
+                    tweet_id,
+                    user_id: source_id,
+                    index: user_tweets.len() - 1,
+                });
             }
         }
 

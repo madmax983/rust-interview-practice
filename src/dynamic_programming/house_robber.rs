@@ -144,7 +144,7 @@ pub fn rob_tabulation(nums: Vec<i32>) -> i32 {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn rob_optimal(nums: Vec<i32>) -> i32 {
-    let (final_prev2, final_prev1) = nums.iter().fold((0, 0), |(prev2, prev1), &num| {
+    let (_final_prev2, final_prev1) = nums.iter().fold((0, 0), |(prev2, prev1), &num| {
         // prev2 is dp[i-2], prev1 is dp[i-1], num is nums[i]
         // new_max = max(dp[i-1], dp[i-2] + num)
         let new_max = max(prev1, prev2 + num);

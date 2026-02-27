@@ -135,7 +135,7 @@ fn safe_read_value(value: &i32) -> i32 {
 /// slice::from_raw_parts - classic unsafe function.
 #[allow(dead_code)]
 fn demonstrate_from_raw_parts() {
-    let values = vec![1, 2, 3, 4, 5];
+    let values = [1, 2, 3, 4, 5];
     let ptr = values.as_ptr();
     let len = values.len();
 
@@ -250,7 +250,7 @@ fn demonstrate_transmute() {
     let x: u32 = 42;
 
     // SAFETY: u32 and i32 have same size and layout
-    let y: i32 = unsafe { std::mem::transmute(x) };
+    let y: i32 = unsafe { u32::cast_signed(x) };
     println!("Transmuted: {y}");
 
     // Common use: transmute lifetime (dangerous!)
@@ -578,8 +578,6 @@ struct Iter<'a, T> {
 /// Pattern 4: Pin for self-referential structs.
 #[allow(dead_code)]
 fn demonstrate_pin() {
-    use std::pin::Pin;
-
     struct SelfReferential {
         data: String,
         ptr: *const String,
@@ -615,7 +613,7 @@ fn dangling_pointer_mistake() {
 #[allow(dead_code)]
 fn aliasing_mistake() {
     let mut data = vec![1, 2, 3];
-    let ptr = data.as_mut_ptr();
+    let _ptr = data.as_mut_ptr();
 
     // DON'T DO THIS - creating aliasing mutable references!
     // unsafe {

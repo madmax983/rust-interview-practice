@@ -74,7 +74,7 @@ pub fn if_let_single(value: Option<i32>) -> i32 {
 pub fn if_let_multiple(value: Result<i32, String>) -> i32 {
     if let Ok(x) = value {
         x
-    } else if let Err(_) = value {
+    } else if value.is_err() {
         0
     } else {
         -1

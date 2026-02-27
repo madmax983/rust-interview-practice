@@ -182,7 +182,7 @@ fn get_product(id: ProductId) -> String {
 #[allow(dead_code)]
 fn demonstrate_newtype() {
     let user_id = UserId::new(42);
-    let product_id = ProductId::new(99);
+    let _product_id = ProductId::new(99);
 
     let _ = get_user(user_id);
 

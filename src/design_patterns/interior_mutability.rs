@@ -226,9 +226,7 @@ impl<T> OnceInit<T> {
         }
 
         // SAFETY: Once Initialized, the value is present and won't move.
-        unsafe {
-            (*self.inner.get()).as_ref().unwrap()
-        }
+        unsafe { (*self.inner.get()).as_ref().unwrap() }
     }
 }
 

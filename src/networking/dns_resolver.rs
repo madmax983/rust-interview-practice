@@ -714,7 +714,7 @@ impl DnsResolver {
             if let DnsRecord::A {
                 domain: _,
                 addr,
-                ttl,
+                ttl: _,
             } = answer
             {
                 // Update cache with actual TTL if we could adjust it per item,

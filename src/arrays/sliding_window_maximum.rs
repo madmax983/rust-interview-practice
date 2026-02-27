@@ -80,17 +80,17 @@ pub fn max_sliding_window_optimized(nums: &[i32], k: i32) -> Vec<i32> {
 
         // 3. Remove out-of-bound indices from front
         // The window is [i - k + 1, i]. Any index < i - k + 1 is invalid.
-        if let Some(&front_idx) = deque.front() {
-            if front_idx + k <= i {
-                deque.pop_front();
-            }
+        if let Some(&front_idx) = deque.front()
+            && front_idx + k <= i
+        {
+            deque.pop_front();
         }
 
         // 4. Record result (only valid once we've processed at least k elements)
-        if i >= k - 1 {
-            if let Some(&max_idx) = deque.front() {
-                result.push(nums[max_idx]);
-            }
+        if i >= k - 1
+            && let Some(&max_idx) = deque.front()
+        {
+            result.push(nums[max_idx]);
         }
     }
 

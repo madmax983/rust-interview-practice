@@ -134,9 +134,7 @@ impl BumpArena {
 
     /// Returns the total capacity of the arena.
     pub fn capacity(&self) -> usize {
-        unsafe {
-            self.end.as_ptr().offset_from(self.start.as_ptr()) as usize
-        }
+        unsafe { self.end.as_ptr().offset_from(self.start.as_ptr()) as usize }
     }
 
     /// Returns the number of bytes used.
@@ -206,7 +204,7 @@ mod tests {
         let arena = BumpArena::new(16);
         arena.alloc(0u64); // 8 bytes
         arena.alloc(0u64); // 8 bytes -> 16 used.
-        arena.alloc(1u8);  // Boom
+        arena.alloc(1u8); // Boom
     }
 
     #[test]

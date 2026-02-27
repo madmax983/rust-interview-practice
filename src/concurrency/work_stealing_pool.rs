@@ -74,7 +74,7 @@ type Job = Box<dyn FnOnce() + Send + 'static>;
 
 // Thread-local variable to identify if the current thread is a worker.
 thread_local! {
-    static WORKER_ID: Cell<Option<usize>> = Cell::new(None);
+    static WORKER_ID: Cell<Option<usize>> = const { Cell::new(None) };
 }
 
 /// The main ThreadPool struct.
@@ -118,7 +118,7 @@ impl WorkStealingPool {
         let shared_states = Arc::new(worker_states);
 
         for id in 0..size {
-            let state = shared_states[id].queue.lock().unwrap(); // Just to access mutex type? No, arc cloning.
+            let _state = shared_states[id].queue.lock().unwrap(); // Just to access mutex type? No, arc cloning.
             // Actually, we need to pass the whole `shared_states` to each thread so they can steal.
             let thread_states = shared_states.clone();
             let thread_global = global_queue.clone();
@@ -126,7 +126,7 @@ impl WorkStealingPool {
 
             let builder = thread::Builder::new().name(format!("worker-{}", id));
 
-            let handle = builder
+            let _handle = builder
                 .spawn(move || {
                     // Set thread-local ID
                     WORKER_ID.with(|id_cell| id_cell.set(Some(id)));
@@ -180,7 +180,7 @@ impl WorkStealingPool {
                         // We must check global again and wait.
                         // Ideally, we check everything one last time before sleeping to avoid race.
                         // For simplicity, we just wait on global queue condvar.
-                        let mut global = thread_global.queue.lock().unwrap();
+                        let global = thread_global.queue.lock().unwrap();
                         if global.is_empty() && !thread_shutdown.load(Ordering::Relaxed) {
                             // RUST INSIGHT: `wait` releases the lock and blocks.
                             // When it returns, it re-acquires the lock.

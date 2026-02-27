@@ -368,7 +368,7 @@ fn demonstrate_parsing() {
     println!("Digits: {digits:?}"); // [1, 2, 3, 4, 5]
 
     // Build number from digits
-    let digits = vec![1, 2, 3, 4, 5];
+    let digits = [1, 2, 3, 4, 5];
     let n = digits.iter().fold(0, |acc, &d| acc * 10 + d);
     println!("Number: {n}"); // 12345
 

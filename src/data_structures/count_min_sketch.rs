@@ -120,9 +120,8 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
 
     fn get_hash_pair(&self, item: &T) -> (u64, u64) {
         // Use RandomState for h1 to prevent HashDoS.
-        let mut hasher1 = self.hasher.build_hasher();
-        item.hash(&mut hasher1);
-        let h1 = hasher1.finish();
+
+        let h1 = self.hasher.hash_one(item);
 
         // Use a simple custom hasher for the second hash to ensure independence.
         // FNV-1a style is fine here as secondary mixing.
