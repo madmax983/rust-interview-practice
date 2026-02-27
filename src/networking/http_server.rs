@@ -390,6 +390,7 @@ impl HttpResponse {
 mod tests {
     use super::*;
     use std::io::Cursor;
+    use std::thread;
 
     #[test]
     fn test_parse_simple_get() {

@@ -15,3 +15,4 @@ pub mod polymorphism;
 pub mod raii_guards;
 pub mod sealed_traits;
 pub mod typestate;
+pub mod visitor;
