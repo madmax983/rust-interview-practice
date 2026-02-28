@@ -130,6 +130,96 @@ impl From<DatabaseError> for AppError {
 // But it's often safer to be explicit at the callsite for top-level errors.
 
 // ============================================================================
+// Pattern 2: The `Result`-Everywhere Pipeline
+// ============================================================================
+
+/// Replaces: Exception-based control flow (try/catch blocks).
+///
+/// **COMPILE-TIME WIN:** A function signature `-> Result<T, E>` makes error
+/// possibilities explicit. There are no "hidden" exceptions thrown. The `?`
+/// operator ergonomically bubbles up errors without boilerplate.
+#[derive(Debug)]
+pub struct AppConfig {
+    pub db_url: String,
+}
+
+// Result-everywhere pipeline
+pub fn read_config_file() -> Result<String> {
+    // Simulate fs read
+    Ok("db_url=postgres://localhost".to_string())
+}
+
+pub fn parse_config(content: &str) -> Result<AppConfig> {
+    if content.starts_with("db_url=") {
+        Ok(AppConfig {
+            db_url: content[7..].to_string(),
+        })
+    } else {
+        Err(AppError::ConfigLoad(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Invalid format",
+        )))
+    }
+}
+
+pub fn load_and_parse_config() -> Result<AppConfig> {
+    let content = read_config_file()?;
+    let config = parse_config(&content)?;
+    Ok(config)
+}
+
+// ============================================================================
+// Pattern 3: Opaque Error Types for Library Boundaries
+// ============================================================================
+
+/// Replaces: Leaky abstractions where internal implementations (like `reqwest::Error`)
+/// are exposed to users of a crate.
+///
+/// **OWNERSHIP INSIGHT:** We hide the actual error inside a `Box<dyn Error + Send + Sync>`
+/// (or just wrap it in a struct with private fields) so the library can change its
+/// internal dependencies without breaking the public API.
+#[derive(Debug)]
+pub struct OpaqueLibError {
+    // We keep the inner error private
+    inner: Box<dyn Error + Send + Sync + 'static>,
+}
+
+impl fmt::Display for OpaqueLibError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Library error: {}", self.inner)
+    }
+}
+
+impl Error for OpaqueLibError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&*self.inner)
+    }
+}
+
+// ============================================================================
+// Pattern 4: The `must_use` and Exhaustive Matching Discipline
+// ============================================================================
+
+/// Replaces: Ignoring return codes (C) or unhandled checked exceptions.
+///
+/// **COMPILE-TIME WIN:** The `#[must_use]` attribute (which `Result` already has)
+/// forces the caller to acknowledge the error. `#[non_exhaustive]` on an enum
+/// forces downstream code to use a wildcard `_ =>` match, allowing you to add
+/// new error variants later without breaking their code.
+#[non_exhaustive]
+#[derive(Debug)]
+pub enum FutureProofError {
+    Timeout,
+    Disconnected,
+    // Other variants can be added later without breaking semver if users match exhaustively
+}
+
+#[must_use = "You must handle the initialization result"]
+pub fn initialize_system() -> std::result::Result<(), FutureProofError> {
+    Ok(())
+}
+
+// ============================================================================
 // Logic Simulation
 // ============================================================================
 

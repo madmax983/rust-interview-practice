@@ -161,6 +161,70 @@ pub trait IteratorExt: Iterator {
 impl<I: Iterator> IteratorExt for I {}
 
 // ============================================================================
+// Pattern 4: The Collect Pattern & `FromIterator`
+// ============================================================================
+
+/// Replaces: Builder patterns for collections.
+///
+/// **OWNERSHIP INSIGHT:** `FromIterator` takes an iterator and consumes it
+/// entirely, building a new collection. The items are moved into the collection.
+#[derive(Debug, PartialEq, Eq)]
+pub struct CustomList<T> {
+    elements: Vec<T>,
+}
+
+impl<T> std::iter::FromIterator<T> for CustomList<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        // COMPILE-TIME WIN: By implementing FromIterator, users can use `.collect()`.
+        // We can manually utilize `size_hint` to pre-allocate capacity.
+        let iter = iter.into_iter();
+        let (lower, _upper) = iter.size_hint();
+        let mut elements = Vec::with_capacity(lower);
+
+        for item in iter {
+            elements.push(item);
+        }
+        CustomList { elements }
+    }
+}
+
+/// A custom implementation of `.collect::<Result<_, _>>()` short-circuiting.
+///
+/// **OWNERSHIP INSIGHT:** This implements `FromIterator` for a `Result` of `CustomList`.
+/// When an iterator yields `Result<T, E>`, it will stop at the first `Err` and return it,
+/// avoiding further processing or allocation.
+// We cannot implement `FromIterator<Result<T, E>> for Result<CustomList<T>, E>` directly
+// because of the orphan rule (both `Result` and `FromIterator` are from `std`).
+// Instead, we implement it for `CustomList<T>` to accept `Result`, or we rely on
+// `Result`'s own implementation of `FromIterator` which delegates to the inner type's
+// `FromIterator` implementation.
+//
+// Because we already implemented `FromIterator<T> for CustomList<T>`,
+// `Result<CustomList<T>, E>` will AUTOMATICALLY implement `FromIterator<Result<T, E>>`
+// via the standard library's blanket implementation!
+//
+// This is exactly how `collect::<Result<Vec<_>, _>>()` works.
+
+// ============================================================================
+// Pattern 5: Fallible Iteration
+// ============================================================================
+
+/// Replaces: Exceptions inside loops, manual error checking.
+///
+/// **COMPILE-TIME WIN:** The `?` operator works perfectly inside `try_fold`
+/// and `try_for_each`. The iterator chain will automatically short-circuit
+/// upon encountering the first `Err`, returning it immediately.
+pub fn parse_and_sum(strings: &[&str]) -> Result<i32, std::num::ParseIntError> {
+    strings
+        .iter()
+        // Here, a closure returning a Result allows us to use `try_fold`
+        .try_fold(0, |acc, &s| {
+            let val: i32 = s.parse()?; // Short-circuits on failure
+            Ok(acc + val)
+        })
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -227,5 +291,42 @@ mod tests {
         }
         // (10+20) + (20+30) + (30+40) = 30 + 50 + 70 = 150
         assert_eq!(sum, 150);
+    }
+
+    #[test]
+    fn test_collect_pattern() {
+        let nums = vec![1, 2, 3];
+        // The turbofish `::<>` syntax is required because `.collect()` can build any type
+        // that implements `FromIterator`.
+        let custom: CustomList<i32> = nums.into_iter().collect();
+        assert_eq!(
+            custom,
+            CustomList {
+                elements: vec![1, 2, 3]
+            }
+        );
+    }
+
+    #[test]
+    fn test_fallible_iteration() {
+        let valid = vec!["1", "2", "3"];
+        let invalid = vec!["1", "foo", "3"];
+
+        // Returns Ok(6) since all parse successfully
+        assert_eq!(parse_and_sum(&valid), Ok(6));
+
+        // Returns Err(...) as it short-circuits on "foo"
+        assert!(parse_and_sum(&invalid).is_err());
+
+        // Bonus: Collect can also handle results and transpose them automatically
+        let results: Result<Vec<i32>, _> = invalid.iter().map(|s| s.parse::<i32>()).collect();
+        assert!(results.is_err());
+
+        // Custom Collect Pattern short-circuiting test
+        let custom_results: Result<CustomList<i32>, _> = invalid.iter().map(|s| s.parse::<i32>()).collect();
+        assert!(custom_results.is_err());
+
+        let custom_valid: Result<CustomList<i32>, _> = valid.iter().map(|s| s.parse::<i32>()).collect();
+        assert_eq!(custom_valid.unwrap().elements, vec![1, 2, 3]);
     }
 }
