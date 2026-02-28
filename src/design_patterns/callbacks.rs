@@ -142,11 +142,7 @@ pub fn conditional_map<T, F>(val: T, condition: bool, mapper: F) -> T
 where
     F: FnOnce(T) -> T,
 {
-    if condition {
-        mapper(val)
-    } else {
-        val
-    }
+    if condition { mapper(val) } else { val }
 }
 
 // ============================================================================

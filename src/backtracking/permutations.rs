@@ -103,7 +103,11 @@ mod tests {
 
         // Convert to HashSet for order-independent comparison
         let result_set: HashSet<Vec<i32>> = result.into_iter().collect();
-        assert_eq!(result_set.len(), expected_count, "Duplicate permutations found");
+        assert_eq!(
+            result_set.len(),
+            expected_count,
+            "Duplicate permutations found"
+        );
 
         // Check that all results are valid permutations (contain same elements)
         let expected_elements: HashSet<i32> = nums.into_iter().collect();

@@ -1,4 +1,5 @@
 pub mod b_tree;
+pub mod binary_heap;
 pub mod bloom_filter;
 pub mod count_min_sketch;
 pub mod cuckoo_filter;
@@ -12,4 +13,3 @@ pub mod segment_tree;
 pub mod skip_list;
 pub mod spsc_ring_buffer;
 pub mod union_find;
-pub mod binary_heap;

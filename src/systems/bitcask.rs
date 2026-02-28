@@ -304,7 +304,13 @@ mod tests {
     // Helper to create a temp dir without external crates
     fn temp_dir() -> PathBuf {
         let mut dir = env::temp_dir();
-        dir.push(format!("bitcask_test_{}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos()));
+        dir.push(format!(
+            "bitcask_test_{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         fs::create_dir_all(&dir).unwrap();
         dir
     }

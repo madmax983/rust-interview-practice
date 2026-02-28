@@ -123,7 +123,10 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     //       / \        / \
     //      B   C      A   B
     fn rotate_left(mut h: Box<Node<K, V>>) -> Box<Node<K, V>> {
-        let mut x = h.right.take().expect("Right child must exist for rotate_left");
+        let mut x = h
+            .right
+            .take()
+            .expect("Right child must exist for rotate_left");
         h.right = x.left.take();
         x.color = h.color;
         h.color = Color::Red;
@@ -137,7 +140,10 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     //   / \                / \
     //  A   B              B   C
     fn rotate_right(mut h: Box<Node<K, V>>) -> Box<Node<K, V>> {
-        let mut x = h.left.take().expect("Left child must exist for rotate_right");
+        let mut x = h
+            .left
+            .take()
+            .expect("Left child must exist for rotate_right");
         h.left = x.right.take();
         x.color = h.color;
         h.color = Color::Red;
