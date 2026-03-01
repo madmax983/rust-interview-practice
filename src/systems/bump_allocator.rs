@@ -82,6 +82,7 @@ impl BumpArena {
     ///
     /// # Panics
     /// Panics if the arena is out of memory.
+    #[allow(clippy::mut_from_ref)]
     pub fn alloc<T>(&self, value: T) -> &mut T {
         let layout = Layout::new::<T>();
 
