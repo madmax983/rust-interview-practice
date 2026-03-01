@@ -16,6 +16,7 @@ pub mod macros;
 pub mod marker_traits;
 pub mod middleware;
 pub mod newtype;
+pub mod observer;
 pub mod plugin;
 pub mod polymorphism;
 pub mod raii_guards;
