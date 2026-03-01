@@ -75,10 +75,14 @@ fn dfs(grid: &mut Vec<Vec<char>>, r: usize, c: usize) {
     // To check "left" (c - 1) or "up" (r - 1), we must ensure c > 0 / r > 0 first.
     // Alternatively, we can use checking adds/subs or cast to isize, but careful logic is idiomatic.
 
-    if r > 0 { dfs(grid, r - 1, c); }    // Up
-    dfs(grid, r + 1, c);                 // Down
-    if c > 0 { dfs(grid, r, c - 1); }    // Left
-    dfs(grid, r, c + 1);                 // Right
+    if r > 0 {
+        dfs(grid, r - 1, c);
+    } // Up
+    dfs(grid, r + 1, c); // Down
+    if c > 0 {
+        dfs(grid, r, c - 1);
+    } // Left
+    dfs(grid, r, c + 1); // Right
 }
 
 /// Breadth-First Search (Iterative)
@@ -131,8 +135,11 @@ fn bfs(grid: &mut Vec<Vec<char>>, start_r: usize, start_c: usize) {
             let nr_isize = r as isize + dr;
             let nc_isize = c as isize + dc;
 
-            if nr_isize >= 0 && nr_isize < rows as isize &&
-               nc_isize >= 0 && nc_isize < cols as isize {
+            if nr_isize >= 0
+                && nr_isize < rows as isize
+                && nc_isize >= 0
+                && nc_isize < cols as isize
+            {
                 let nr = nr_isize as usize;
                 let nc = nc_isize as usize;
 

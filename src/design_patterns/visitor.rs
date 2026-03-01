@@ -147,7 +147,10 @@ mod tests {
     fn test_enum_dispatch() {
         // (1 + 2) * 3
         let ast = Expr::Mul(
-            Box::new(Expr::Add(Box::new(Expr::Literal(1)), Box::new(Expr::Literal(2)))),
+            Box::new(Expr::Add(
+                Box::new(Expr::Literal(1)),
+                Box::new(Expr::Literal(2)),
+            )),
             Box::new(Expr::Literal(3)),
         );
 
@@ -158,7 +161,10 @@ mod tests {
     fn test_visitor_pattern() {
         // (1 + 2) * 3
         let ast = Expr::Mul(
-            Box::new(Expr::Add(Box::new(Expr::Literal(1)), Box::new(Expr::Literal(2)))),
+            Box::new(Expr::Add(
+                Box::new(Expr::Literal(1)),
+                Box::new(Expr::Literal(2)),
+            )),
             Box::new(Expr::Literal(3)),
         );
 

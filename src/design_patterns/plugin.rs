@@ -152,7 +152,9 @@ mod tests {
         let mut app = App::new();
 
         app.add_plugin(LoggerPlugin);
-        app.add_plugin(MetricsPlugin { id: "prod-1".to_string() });
+        app.add_plugin(MetricsPlugin {
+            id: "prod-1".to_string(),
+        });
 
         // Verify on_register ran
         assert_eq!(app.tick_count, 0);
@@ -164,7 +166,9 @@ mod tests {
     #[test]
     fn test_plugin_downcasting() {
         let mut app = App::new();
-        app.add_plugin(MetricsPlugin { id: "test-id".to_string() });
+        app.add_plugin(MetricsPlugin {
+            id: "test-id".to_string(),
+        });
 
         let metrics = app.get_plugin::<MetricsPlugin>().unwrap();
         assert_eq!(metrics.id, "test-id");

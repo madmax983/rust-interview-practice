@@ -323,10 +323,12 @@ mod tests {
         assert!(results.is_err());
 
         // Custom Collect Pattern short-circuiting test
-        let custom_results: Result<CustomList<i32>, _> = invalid.iter().map(|s| s.parse::<i32>()).collect();
+        let custom_results: Result<CustomList<i32>, _> =
+            invalid.iter().map(|s| s.parse::<i32>()).collect();
         assert!(custom_results.is_err());
 
-        let custom_valid: Result<CustomList<i32>, _> = valid.iter().map(|s| s.parse::<i32>()).collect();
+        let custom_valid: Result<CustomList<i32>, _> =
+            valid.iter().map(|s| s.parse::<i32>()).collect();
         assert_eq!(custom_valid.unwrap().elements, vec![1, 2, 3]);
     }
 }

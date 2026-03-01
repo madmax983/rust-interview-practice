@@ -56,8 +56,16 @@ use std::mem;
 /// A node in the B-Tree.
 #[derive(Debug, Clone)]
 struct Node<K, V> {
+    // RUST INSIGHT:
+    // We use parallel vectors (`keys` and `vals`) instead of a single vector of tuples `Vec<(K, V)>`.
+    // This improves cache locality when searching through keys via binary search, as the values
+    // aren't polluting the cache line if we only need to compare keys.
     keys: Vec<K>,
     vals: Vec<V>,
+    // PRODUCTION NOTE:
+    // We use `Vec<Box<Node<K, V>>>` for children. A real production B-Tree (like standard library `BTreeMap`)
+    // often uses raw pointers and allocates nodes manually or via an arena to guarantee nodes are stored
+    // contiguously or strictly manage lifetimes without the overhead of `Box`.
     children: Vec<Box<Node<K, V>>>,
 }
 
@@ -90,6 +98,12 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
                 self.remove_from_non_leaf(t, idx)
             }
         } else {
+            // GOTCHA:
+            // If the key is not in this node and this is a leaf, the key does not exist.
+            // But if it's an internal node, we must descend. Before descending, we MUST ensure
+            // the child we are descending into has at least `t` keys, so that if we delete
+            // from it, it won't underflow. This proactive filling is what makes deletion O(log N)
+            // in a single downward pass without needing to backtrack.
             if self.is_leaf() {
                 return None; // Key not found
             }
@@ -236,7 +250,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         // Let's construct the new merged child.
         // We'll reuse `child` node (left one).
         let mut new_child = child; // Box<Node>
-        let right_child = sibling; // Box<Node>
+        let mut right_child = sibling; // Box<Node>
 
         // Move key from parent to new_child
         let parent_key = self.keys.remove(idx);
@@ -246,12 +260,14 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         new_child.vals.push(parent_val);
 
         // Move keys/vals from right_child
-        new_child.keys.extend(right_child.keys);
-        new_child.vals.extend(right_child.vals);
+        // RUST INSIGHT: We use `append` instead of `extend` to transfer ownership of elements efficiently
+        // from one vector to another without reallocating or cloning individually.
+        new_child.keys.append(&mut right_child.keys);
+        new_child.vals.append(&mut right_child.vals);
 
         // Move children from right_child
         if !new_child.is_leaf() {
-            new_child.children.extend(right_child.children);
+            new_child.children.append(&mut right_child.children);
         }
 
         // Insert new_child back to children

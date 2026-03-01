@@ -131,10 +131,18 @@ impl Quadtree {
 
         let children = self.children.as_mut().unwrap();
 
-        if children[0].insert(p) { return true; }
-        if children[1].insert(p) { return true; }
-        if children[2].insert(p) { return true; }
-        if children[3].insert(p) { return true; }
+        if children[0].insert(p) {
+            return true;
+        }
+        if children[1].insert(p) {
+            return true;
+        }
+        if children[2].insert(p) {
+            return true;
+        }
+        if children[3].insert(p) {
+            return true;
+        }
 
         // Should be unreachable if boundary check passed and subdivide works
         false
@@ -157,10 +165,18 @@ impl Quadtree {
         // RUST INSIGHT: We need to drain points from self.points to avoid cloning.
         while let Some(p) = self.points.pop() {
             let children = self.children.as_mut().unwrap();
-            if children[0].insert(p) { continue; }
-            if children[1].insert(p) { continue; }
-            if children[2].insert(p) { continue; }
-            if children[3].insert(p) { continue; }
+            if children[0].insert(p) {
+                continue;
+            }
+            if children[1].insert(p) {
+                continue;
+            }
+            if children[2].insert(p) {
+                continue;
+            }
+            if children[3].insert(p) {
+                continue;
+            }
         }
     }
 
@@ -220,7 +236,7 @@ mod tests {
     fn test_aabb_intersects() {
         let b1 = AABB::new(Point::new(0.0, 0.0), 10.0); // -10..10
         let b2 = AABB::new(Point::new(15.0, 0.0), 10.0); // 5..25 (Overlaps 5..10)
-        let b3 = AABB::new(Point::new(25.0, 0.0), 1.0);  // 24..26 (No overlap)
+        let b3 = AABB::new(Point::new(25.0, 0.0), 1.0); // 24..26 (No overlap)
 
         assert!(b1.intersects(&b2));
         assert!(!b1.intersects(&b3));
