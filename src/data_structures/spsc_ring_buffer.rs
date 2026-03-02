@@ -236,7 +236,7 @@ unsafe impl<T: Send> Send for Consumer<T> {}
 mod tests {
     use super::*;
     use std::thread;
-    use std::time::Duration;
+
 
     #[test]
     fn test_simple_push_pop() {

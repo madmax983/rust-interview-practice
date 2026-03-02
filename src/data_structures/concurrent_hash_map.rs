@@ -14,8 +14,8 @@
 //! Building a sharded concurrent map teaches you how to reduce lock contention by partitioning data.
 //! You'll learn how to pre-hash keys, route them to specific shards, and understand the trade-offs of returning owned values versus lock guards.
 
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::RwLock;
 

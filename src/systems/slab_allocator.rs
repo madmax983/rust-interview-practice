@@ -15,7 +15,6 @@
 //! A Slab provides stable indices and O(1) removal by tracking a "free list" of vacant slots within the vector itself.
 //! Adding "Generational Indices" solves the "ABA Problem" where a slot is reused but an old reference (handle) still points to it.
 
-use std::marker::PhantomData;
 
 // =========================================================================================
 // Architecture
