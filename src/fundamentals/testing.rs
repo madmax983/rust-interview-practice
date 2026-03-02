@@ -361,12 +361,12 @@ mod mock_tests {
     struct RealDataStore;
 
     impl DataStore for RealDataStore {
-        fn get(&self, key: &str) -> Option<String> {
+        fn get(&self, _key: &str) -> Option<String> {
             // Real database lookup
             None
         }
 
-        fn set(&mut self, key: &str, value: String) {
+        fn set(&mut self, _key: &str, _value: String) {
             // Real database write
         }
     }
