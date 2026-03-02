@@ -1,3 +1,4 @@
+pub mod actor_system;
 pub mod async_executor;
 pub mod channel;
 pub mod dining_philosophers;
