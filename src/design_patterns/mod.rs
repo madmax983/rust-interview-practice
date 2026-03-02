@@ -23,5 +23,8 @@ pub mod polymorphism;
 pub mod raii_guards;
 pub mod sealed_traits;
 pub mod singleton;
+pub mod state;
+pub mod strategy;
+pub mod template_method;
 pub mod typestate;
 pub mod visitor;
