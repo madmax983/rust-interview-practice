@@ -1,3 +1,4 @@
+pub mod adapter;
 pub mod actor;
 pub mod borrowed_owned_duality;
 pub mod builder;
