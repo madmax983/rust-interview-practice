@@ -237,7 +237,6 @@ mod tests {
     use super::*;
     use std::thread;
 
-
     #[test]
     fn test_simple_push_pop() {
         let (mut p, mut c) = channel(2);

@@ -1,5 +1,5 @@
-pub mod adapter;
 pub mod actor;
+pub mod adapter;
 pub mod borrowed_owned_duality;
 pub mod builder;
 pub mod callbacks;

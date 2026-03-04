@@ -284,7 +284,11 @@ mod tests {
     }
 
     impl Handler<Increment> for CounterActor {
-        fn handle(&mut self, msg: Increment, _ctx: &mut Self::Context) -> <Increment as Message>::Result {
+        fn handle(
+            &mut self,
+            msg: Increment,
+            _ctx: &mut Self::Context,
+        ) -> <Increment as Message>::Result {
             self.count += msg.0;
         }
     }
@@ -295,7 +299,11 @@ mod tests {
     }
 
     impl Handler<GetCount> for CounterActor {
-        fn handle(&mut self, _msg: GetCount, _ctx: &mut Self::Context) -> <GetCount as Message>::Result {
+        fn handle(
+            &mut self,
+            _msg: GetCount,
+            _ctx: &mut Self::Context,
+        ) -> <GetCount as Message>::Result {
             self.count
         }
     }
@@ -306,7 +314,11 @@ mod tests {
     }
 
     impl Handler<StopActor> for CounterActor {
-        fn handle(&mut self, _msg: StopActor, ctx: &mut Self::Context) -> <StopActor as Message>::Result {
+        fn handle(
+            &mut self,
+            _msg: StopActor,
+            ctx: &mut Self::Context,
+        ) -> <StopActor as Message>::Result {
             ctx.stop();
         }
     }

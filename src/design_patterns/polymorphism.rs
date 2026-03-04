@@ -89,7 +89,6 @@ impl ShapeTrait for Rectangle {
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_enum_dispatch() {
         let shapes = vec![

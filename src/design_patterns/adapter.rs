@@ -67,7 +67,12 @@ pub struct LegacyRectangle {
 impl LegacyRectangle {
     #[must_use]
     pub const fn new(left: f64, top: f64, right: f64, bottom: f64) -> Self {
-        Self { left, top, right, bottom }
+        Self {
+            left,
+            top,
+            right,
+            bottom,
+        }
     }
 }
 

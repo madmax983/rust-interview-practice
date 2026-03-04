@@ -27,8 +27,8 @@
 //! - `k` is in the range `[1, the number of unique elements in the array]`.
 //! - It is guaranteed that the answer is unique.
 
-use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 
 /// Brute Force approach: Hash Map and Sorting
 ///
@@ -210,7 +210,10 @@ mod tests {
 
     #[test]
     fn test_brute_force_happy_path() {
-        assert_unstable_eq(top_k_frequent_brute_force(vec![1, 1, 1, 2, 2, 3], 2), vec![1, 2]);
+        assert_unstable_eq(
+            top_k_frequent_brute_force(vec![1, 1, 1, 2, 2, 3], 2),
+            vec![1, 2],
+        );
     }
 
     #[test]
@@ -223,13 +226,16 @@ mod tests {
         // Negative numbers and all unique elements
         assert_unstable_eq(
             top_k_frequent_brute_force(vec![-1, -1, 2, 3, 4, 4, 4], 2),
-            vec![4, -1]
+            vec![4, -1],
         );
     }
 
     #[test]
     fn test_optimized_happy_path() {
-        assert_unstable_eq(top_k_frequent_optimized(vec![1, 1, 1, 2, 2, 3], 2), vec![1, 2]);
+        assert_unstable_eq(
+            top_k_frequent_optimized(vec![1, 1, 1, 2, 2, 3], 2),
+            vec![1, 2],
+        );
     }
 
     #[test]
@@ -241,13 +247,16 @@ mod tests {
     fn test_optimized_stress_boundaries() {
         assert_unstable_eq(
             top_k_frequent_optimized(vec![-1, -1, 2, 3, 4, 4, 4], 2),
-            vec![4, -1]
+            vec![4, -1],
         );
     }
 
     #[test]
     fn test_optimal_happy_path() {
-        assert_unstable_eq(top_k_frequent_optimal(vec![1, 1, 1, 2, 2, 3], 2), vec![1, 2]);
+        assert_unstable_eq(
+            top_k_frequent_optimal(vec![1, 1, 1, 2, 2, 3], 2),
+            vec![1, 2],
+        );
     }
 
     #[test]
@@ -259,7 +268,7 @@ mod tests {
     fn test_optimal_stress_boundaries() {
         assert_unstable_eq(
             top_k_frequent_optimal(vec![-1, -1, 2, 3, 4, 4, 4], 2),
-            vec![4, -1]
+            vec![4, -1],
         );
     }
 
