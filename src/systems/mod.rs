@@ -5,6 +5,7 @@ pub mod circuit_breaker;
 pub mod concurrent_cache;
 pub mod consistent_hashing;
 pub mod design_twitter;
+pub mod ecs;
 pub mod lfu_cache;
 pub mod log_structured_storage;
 pub mod lru_cache;
