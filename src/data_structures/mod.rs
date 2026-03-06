@@ -1,5 +1,6 @@
 pub mod b_tree;
 pub mod binary_heap;
+pub mod lru_cache;
 pub mod bloom_filter;
 pub mod concurrent_hash_map;
 pub mod count_min_sketch;
