@@ -1,6 +1,7 @@
 pub mod actor;
 pub mod adapter;
 pub mod borrowed_owned_duality;
+pub mod bridge;
 pub mod builder;
 pub mod callbacks;
 pub mod chain_of_responsibility;
