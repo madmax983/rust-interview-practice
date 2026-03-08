@@ -140,7 +140,9 @@ impl World {
         let storage = self.storages.entry(type_id).or_insert_with(|| {
             // RUST INSIGHT: We box the newly created VecStorage
             // because `storages` takes `Box<dyn StorageTrait>`.
-            Box::new(VecStorage::<T> { components: Vec::new() })
+            Box::new(VecStorage::<T> {
+                components: Vec::new(),
+            })
         });
 
         // UNSAFE JUSTIFICATION: This downcast is safe because we only ever
@@ -206,19 +208,21 @@ impl World {
     #[must_use]
     pub fn query<T: 'static>(&self) -> Vec<(Entity, &T)> {
         let type_id = TypeId::of::<T>();
-        self.storages.get(&type_id).map_or_else(Vec::new, |storage| {
-            let vec_storage = storage
-                .as_any()
-                .downcast_ref::<VecStorage<T>>()
-                .expect("Type mismatch in storage map");
+        self.storages
+            .get(&type_id)
+            .map_or_else(Vec::new, |storage| {
+                let vec_storage = storage
+                    .as_any()
+                    .downcast_ref::<VecStorage<T>>()
+                    .expect("Type mismatch in storage map");
 
-            vec_storage
-                .components
-                .iter()
-                .enumerate()
-                .filter_map(|(id, comp)| comp.as_ref().map(|c| (id, c)))
-                .collect()
-        })
+                vec_storage
+                    .components
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(id, comp)| comp.as_ref().map(|c| (id, c)))
+                    .collect()
+            })
     }
 
     /// Returns a vector of tuples representing entities that have both component `T` and `U`.
@@ -240,8 +244,16 @@ impl World {
             return Vec::new();
         }
 
-        let t_vec = t_storage.unwrap().as_any().downcast_ref::<VecStorage<T>>().unwrap();
-        let u_vec = u_storage.unwrap().as_any().downcast_ref::<VecStorage<U>>().unwrap();
+        let t_vec = t_storage
+            .unwrap()
+            .as_any()
+            .downcast_ref::<VecStorage<T>>()
+            .unwrap();
+        let u_vec = u_storage
+            .unwrap()
+            .as_any()
+            .downcast_ref::<VecStorage<U>>()
+            .unwrap();
 
         let mut results = Vec::new();
 
@@ -249,7 +261,9 @@ impl World {
         let len = std::cmp::min(t_vec.components.len(), u_vec.components.len());
 
         for id in 0..len {
-            if let (Some(t_comp), Some(u_comp)) = (t_vec.components[id].as_ref(), u_vec.components[id].as_ref()) {
+            if let (Some(t_comp), Some(u_comp)) =
+                (t_vec.components[id].as_ref(), u_vec.components[id].as_ref())
+            {
                 results.push((id, t_comp, u_comp));
             }
         }
@@ -303,9 +317,18 @@ mod tests {
         world.insert_component(e1, Position { x: 10.0, y: 10.0 });
         world.insert_component(e1, Velocity { dx: 1.0, dy: 1.0 });
 
-        assert_eq!(world.get_component::<Position>(e0), Some(&Position { x: 0.0, y: 0.0 }));
-        assert_eq!(world.get_component::<Position>(e1), Some(&Position { x: 10.0, y: 10.0 }));
-        assert_eq!(world.get_component::<Velocity>(e1), Some(&Velocity { dx: 1.0, dy: 1.0 }));
+        assert_eq!(
+            world.get_component::<Position>(e0),
+            Some(&Position { x: 0.0, y: 0.0 })
+        );
+        assert_eq!(
+            world.get_component::<Position>(e1),
+            Some(&Position { x: 10.0, y: 10.0 })
+        );
+        assert_eq!(
+            world.get_component::<Velocity>(e1),
+            Some(&Velocity { dx: 1.0, dy: 1.0 })
+        );
         assert_eq!(world.get_component::<Velocity>(e0), None);
     }
 

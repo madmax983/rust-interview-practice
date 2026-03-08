@@ -146,8 +146,18 @@ impl LRUCacheOptimal {
         let mut nodes = Vec::with_capacity(capacity + 2);
 
         // Push dummy head (index 0) and dummy tail (index 1)
-        nodes.push(Node { key: 0, val: 0, prev: 0, next: 1 });
-        nodes.push(Node { key: 0, val: 0, prev: 0, next: 1 });
+        nodes.push(Node {
+            key: 0,
+            val: 0,
+            prev: 0,
+            next: 1,
+        });
+        nodes.push(Node {
+            key: 0,
+            val: 0,
+            prev: 0,
+            next: 1,
+        });
 
         Self {
             capacity,
