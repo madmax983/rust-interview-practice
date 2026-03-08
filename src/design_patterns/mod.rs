@@ -18,6 +18,7 @@ pub mod factory;
 pub mod flyweight;
 pub mod handle_pattern;
 pub mod interior_mutability;
+pub mod interpreter;
 pub mod iterators;
 pub mod macros;
 pub mod marker_traits;
