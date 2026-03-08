@@ -242,23 +242,38 @@ mod tests {
 
     #[test]
     fn test_brute_force() {
-        assert_eq!(decode_string_brute_force("3[a]2[bc]".to_string()), "aaabcbc");
-        assert_eq!(decode_string_brute_force("3[a2[c]]".to_string()), "accaccacc");
-        assert_eq!(decode_string_brute_force("2[abc]3[cd]ef".to_string()), "abcabccdcdcdef");
+        assert_eq!(
+            decode_string_brute_force("3[a]2[bc]".to_string()),
+            "aaabcbc"
+        );
+        assert_eq!(
+            decode_string_brute_force("3[a2[c]]".to_string()),
+            "accaccacc"
+        );
+        assert_eq!(
+            decode_string_brute_force("2[abc]3[cd]ef".to_string()),
+            "abcabccdcdcdef"
+        );
     }
 
     #[test]
     fn test_optimized() {
         assert_eq!(decode_string_optimized("3[a]2[bc]".to_string()), "aaabcbc");
         assert_eq!(decode_string_optimized("3[a2[c]]".to_string()), "accaccacc");
-        assert_eq!(decode_string_optimized("2[abc]3[cd]ef".to_string()), "abcabccdcdcdef");
+        assert_eq!(
+            decode_string_optimized("2[abc]3[cd]ef".to_string()),
+            "abcabccdcdcdef"
+        );
     }
 
     #[test]
     fn test_optimal() {
         assert_eq!(decode_string_optimal("3[a]2[bc]".to_string()), "aaabcbc");
         assert_eq!(decode_string_optimal("3[a2[c]]".to_string()), "accaccacc");
-        assert_eq!(decode_string_optimal("2[abc]3[cd]ef".to_string()), "abcabccdcdcdef");
+        assert_eq!(
+            decode_string_optimal("2[abc]3[cd]ef".to_string()),
+            "abcabccdcdcdef"
+        );
     }
 
     #[test]
