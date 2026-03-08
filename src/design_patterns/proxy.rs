@@ -172,9 +172,8 @@ where
     pub fn get_or_init(&mut self) -> &T {
         // TRADEOFF: Requires `&mut self` to take the initializer, or `Cell`/`Mutex` if we wanted `&self`.
         let initializer = self.initializer.take();
-        self.value.get_or_init(|| {
-            initializer.expect("Initializer should be present on first call")()
-        })
+        self.value
+            .get_or_init(|| initializer.expect("Initializer should be present on first call")())
     }
 }
 
@@ -219,8 +218,8 @@ mod tests {
 
     #[test]
     fn test_lazy_proxy() {
-        use std::sync::atomic::{AtomicBool, Ordering};
         use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
 
         let called = Arc::new(AtomicBool::new(false));
         let called_clone = Arc::clone(&called);
