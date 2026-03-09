@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Trait-Based Dependency Injection
 //!
 //! Replaces: **Dependency Injection Container** (Spring, Guice), **Mocking Frameworks** (Mockito)

@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Composite Pattern
 //!
 //! Replaces: **Composite Pattern** (OOP), **Abstract Base Classes for Nodes/Leaves**

@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Template Method Pattern
 //!
 //! Replaces: **Template Method** (OOP / Inheritance)

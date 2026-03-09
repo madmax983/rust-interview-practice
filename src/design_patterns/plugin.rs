@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Plugin Architecture with Trait Objects
 //!
 //! Replaces: **Dynamic Class Loading** (Java), **Duck Typing Registries** (Python)
@@ -62,6 +64,7 @@ pub struct App {
 }
 
 impl App {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             plugins: Vec::new(),

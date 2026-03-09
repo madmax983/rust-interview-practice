@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # The Error Enum Hierarchy
 //!
 //! Replaces: **Exceptions** (Java/Python/C++), **Error Codes** (C)
@@ -150,9 +152,9 @@ pub fn read_config_file() -> Result<String> {
 }
 
 pub fn parse_config(content: &str) -> Result<AppConfig> {
-    if content.starts_with("db_url=") {
+    if let Some(stripped) = content.strip_prefix("db_url=") {
         Ok(AppConfig {
-            db_url: content[7..].to_string(),
+            db_url: stripped.to_string(),
         })
     } else {
         Err(AppError::ConfigLoad(io::Error::new(

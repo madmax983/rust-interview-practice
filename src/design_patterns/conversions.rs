@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # The `From`/`Into` Conversion Web
 //!
 //! Replaces: **Constructor Overloading** (C++, Java), **Implicit Type Conversions** (C)

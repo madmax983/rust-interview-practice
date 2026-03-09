@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # RAII Guards (Scope-based Resource Management)
 //!
 //! Replaces: **try/finally blocks, Context Managers** (Python `with`), **IDisposable** (C#)

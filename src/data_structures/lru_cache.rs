@@ -211,31 +211,29 @@ impl LRUCacheOptimal {
             // Update existing node
             self.nodes[idx].val = value;
             self.move_to_front(idx);
-        } else {
-            if self.map.len() == self.capacity {
-                // Evict LRU node (node just before dummy tail)
-                let lru_idx = self.nodes[self.tail].prev;
-                self.remove_node(lru_idx);
-                self.map.remove(&self.nodes[lru_idx].key);
+        } else if self.map.len() == self.capacity {
+            // Evict LRU node (node just before dummy tail)
+            let lru_idx = self.nodes[self.tail].prev;
+            self.remove_node(lru_idx);
+            self.map.remove(&self.nodes[lru_idx].key);
 
-                // GOTCHA: Instead of creating a new node, we reuse the evicted node's slot!
-                // This prevents the `Vec` from growing indefinitely.
-                self.nodes[lru_idx].key = key;
-                self.nodes[lru_idx].val = value;
-                self.add_node(lru_idx);
-                self.map.insert(key, lru_idx);
-            } else {
-                // Create new node
-                let idx = self.nodes.len();
-                self.nodes.push(Node {
-                    key,
-                    val: value,
-                    prev: 0,
-                    next: 0,
-                });
-                self.add_node(idx);
-                self.map.insert(key, idx);
-            }
+            // GOTCHA: Instead of creating a new node, we reuse the evicted node's slot!
+            // This prevents the `Vec` from growing indefinitely.
+            self.nodes[lru_idx].key = key;
+            self.nodes[lru_idx].val = value;
+            self.add_node(lru_idx);
+            self.map.insert(key, lru_idx);
+        } else {
+            // Create new node
+            let idx = self.nodes.len();
+            self.nodes.push(Node {
+                key,
+                val: value,
+                prev: 0,
+                next: 0,
+            });
+            self.add_node(idx);
+            self.map.insert(key, idx);
         }
     }
 }

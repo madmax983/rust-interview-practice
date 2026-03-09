@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Builder Pattern (Typestate Variant)
 //!
 //! Replaces: **Telescoping Constructor**, **Builder Pattern** (GoF, runtime checks)

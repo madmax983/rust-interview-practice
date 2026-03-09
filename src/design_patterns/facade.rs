@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # The Facade / Session Pattern
 //!
 //! Replaces: **Facade Pattern** (GoF), **Session Beans** (Java)
@@ -37,6 +39,7 @@ pub struct ConnectionPool {
 }
 
 impl ConnectionPool {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self { connected: true }
     }

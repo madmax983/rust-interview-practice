@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Closure-Based Callbacks & Higher-Order Functions
 //!
 //! Replaces: **Strategy Pattern** (OOP), **Delegates** (C#), **Lambdas** (Java 8+)

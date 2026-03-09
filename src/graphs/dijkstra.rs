@@ -96,17 +96,16 @@ where
         }
 
         // Important check: if we found a shorter way to `node` already, skip.
-        if let Some(&d) = dist.get(&node) {
-            if cost > d {
+        if let Some(&d) = dist.get(&node)
+            && cost > d {
                 continue;
             }
-        }
 
         for (next_node, edge_cost) in successors(&node) {
             let new_cost = cost + edge_cost;
             let next_cost = dist.get(&next_node);
 
-            if next_cost.map_or(true, |&c| new_cost < c) {
+            if next_cost.is_none_or(|&c| new_cost < c) {
                 heap.push(State {
                     cost: new_cost,
                     node: next_node.clone(),

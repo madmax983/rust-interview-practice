@@ -1,3 +1,6 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
+#![allow(clippy::empty_line_after_doc_comments)]
 //! # Iterator Adapter Chains
 //!
 //! Replaces: **Loops** (Imperative), **Streams** (Java), **LINQ** (C#)
@@ -193,7 +196,6 @@ impl<T> std::iter::FromIterator<T> for CustomList<T> {
 /// **OWNERSHIP INSIGHT:** This implements `FromIterator` for a `Result` of `CustomList`.
 /// When an iterator yields `Result<T, E>`, it will stop at the first `Err` and return it,
 /// avoiding further processing or allocation.
-// We cannot implement `FromIterator<Result<T, E>> for Result<CustomList<T>, E>` directly
 // because of the orphan rule (both `Result` and `FromIterator` are from `std`).
 // Instead, we implement it for `CustomList<T>` to accept `Result`, or we rely on
 // `Result`'s own implementation of `FromIterator` which delegates to the inner type's

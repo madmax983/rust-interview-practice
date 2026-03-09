@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Memento Pattern
 //!
 //! Replaces: **Memento Pattern** (OOP)

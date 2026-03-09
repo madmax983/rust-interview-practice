@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Factory Patterns
 //!
 //! Replaces: **Factory Method** (OOP), **Abstract Factory** (OOP)

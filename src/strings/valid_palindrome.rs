@@ -108,7 +108,7 @@ pub fn is_palindrome_optimal(s: String) -> bool {
             right -= 1;
         }
         // Compare the lowercase versions of both bytes
-        else if bytes[left].to_ascii_lowercase() != bytes[right].to_ascii_lowercase() {
+        else if !bytes[left].eq_ignore_ascii_case(&bytes[right]) {
             return false;
         }
         // Characters matched, move both pointers inward

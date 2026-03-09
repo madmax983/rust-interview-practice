@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Chain of Responsibility Pattern
 //!
 //! Replaces: **Chain of Responsibility** (OOP), **Nested If-Else Statements**
