@@ -91,9 +91,7 @@ pub fn longest_consecutive_optimal(nums: Vec<i32>) -> i32 {
             // but Rust's iterators allow a more functional approach. However, generating
             // an infinite iterator `(num..)` and taking while the condition is true
             // is perfectly idiomatic and prevents manual mutation of `current_num`.
-            let current_len = (num..)
-                .take_while(|n| set.contains(n))
-                .count();
+            let current_len = (num..).take_while(|n| set.contains(n)).count();
 
             // Cast back to i32 to match LeetCode signature, and update max
             // `.try_into().unwrap()` or `as i32` is needed because `.count()` returns `usize`.
