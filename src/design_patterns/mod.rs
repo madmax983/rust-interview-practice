@@ -39,3 +39,6 @@ pub mod strategy;
 pub mod template_method;
 pub mod typestate;
 pub mod visitor;
+pub mod drop_bomb;
+pub mod null_object;
+pub mod object_pool;
