@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # State Pattern (Dynamic State)
 //!
 //! Replaces: **State Pattern** (OOP / GoF)

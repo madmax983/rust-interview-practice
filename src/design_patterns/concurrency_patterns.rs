@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Concurrency & Async Patterns
 //!
 //! Replaces: **Synchronized Methods** (Java), **threading** (Python), **Callbacks** (Node.js)

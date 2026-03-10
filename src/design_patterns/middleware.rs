@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Tower-Style Middleware / Service Composition
 //!
 //! Replaces: **Decorator Pattern** (OOP), **Interceptors** (Java EE), **Middleware** (Express/Koa)

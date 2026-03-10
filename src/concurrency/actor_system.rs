@@ -54,7 +54,6 @@
 //   - *Tradeoff*: Requires an allocation per message.
 //   - *Alternative*: Typed channels per message type (complex routing) or `Any` downcasting.
 
-use std::any::Any;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 

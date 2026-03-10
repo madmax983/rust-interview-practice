@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Borrowed vs. Owned Duality (`Cow`)
 //!
 //! Replaces: **Defensive Copying** (C++/Java), **Immutable/Mutable Split**

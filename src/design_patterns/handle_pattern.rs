@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # The Handle Pattern (Indirection via ID)
 //!
 //! Replaces: **Pointer/Reference Graph** (C++), **Garbage Collected References** (Java/Python)

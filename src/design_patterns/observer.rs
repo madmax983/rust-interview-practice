@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Observer Pattern
 //!
 //! Replaces: **Observer Pattern** (OOP), **Callbacks / Event Listeners**
@@ -53,6 +55,8 @@ pub struct Event {
 // in the external environment unless those variables are wrapped in `Rc<RefCell<T>>`.
 pub struct Subject {
     // TRADEOFF: Storing closures requires heap allocation (`Box`) and dynamic dispatch (`dyn`).
+    #[allow(clippy::type_complexity)]
+
     listeners: Vec<Box<dyn FnMut(&Event)>>,
 }
 

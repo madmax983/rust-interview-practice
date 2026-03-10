@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Polymorphism: Trait Objects vs. Enum Dispatch
 //!
 //! Replaces: **Strategy Pattern** (OOP), **Command Pattern** (OOP)

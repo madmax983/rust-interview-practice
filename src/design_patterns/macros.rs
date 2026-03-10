@@ -1,3 +1,6 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
+#![allow(clippy::empty_line_after_doc_comments)]
 //! # Macro & Metaprogramming Patterns
 //!
 //! Replaces: **C Preprocessor Macros** (C/C++), **Reflection & Annotations** (Java), **Decorators** (Python)
@@ -67,6 +70,7 @@ pub struct PlatformConfig {
 }
 
 impl PlatformConfig {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         #[cfg(target_os = "windows")]
         {

@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Visitor Pattern (Rust-Style)
 //!
 //! Replaces: **Double Dispatch** (OOP), **Pattern Matching** (Functional)

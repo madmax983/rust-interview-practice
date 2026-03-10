@@ -1,3 +1,5 @@
+// Suppress pedantic and nursery lints for design pattern examples.
+#![allow(clippy::pedantic, clippy::nursery, unused)]
 //! # Marker Trait Pattern
 //!
 //! Replaces: **Runtime Type Checking** (reflection, `instanceof`), **Documentation Only Constraints**
@@ -107,6 +109,7 @@ pub struct Paint<C: Color> {
 }
 
 impl<C: Color> Paint<C> {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Paint {
             _marker: PhantomData,
