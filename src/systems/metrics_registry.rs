@@ -194,7 +194,10 @@ impl Histogram {
     }
 
     pub fn bucket_counts(&self) -> Vec<u64> {
-        self.counts.iter().map(|c| c.load(Ordering::Relaxed)).collect()
+        self.counts
+            .iter()
+            .map(|c| c.load(Ordering::Relaxed))
+            .collect()
     }
 
     pub fn total_sum(&self) -> f64 {
@@ -294,7 +297,10 @@ impl Registry {
                 } else {
                     bound.to_string()
                 };
-                output.push_str(&format!("{}_bucket{{le=\"{}\"}} {}\n", name, bound_str, count));
+                output.push_str(&format!(
+                    "{}_bucket{{le=\"{}\"}} {}\n",
+                    name, bound_str, count
+                ));
             }
             output.push_str(&format!("{}_sum {}\n", name, hist.total_sum()));
             output.push_str(&format!("{}_count {}\n", name, hist.total_count()));

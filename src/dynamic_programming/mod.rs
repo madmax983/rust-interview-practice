@@ -1,3 +1,4 @@
+pub mod climbing_stairs;
 pub mod coin_change;
 pub mod edit_distance;
 pub mod house_robber;

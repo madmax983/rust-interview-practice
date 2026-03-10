@@ -337,7 +337,10 @@ mod tests {
         });
 
         // Wait up to 100ms, should get it in ~20ms
-        assert_eq!(future.get_timeout(Duration::from_millis(100)), Ok(Some(100)));
+        assert_eq!(
+            future.get_timeout(Duration::from_millis(100)),
+            Ok(Some(100))
+        );
         handle.join().unwrap();
     }
 
