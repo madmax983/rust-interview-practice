@@ -199,9 +199,11 @@ impl<K: Ord, V> RedBlackTree<K, V> {
         // We cannot borrow `node.left` then mutate `node`.
         let mut needs_rotate_right = false;
         if let Some(ref l) = node.left
-            && l.color == Color::Red && Self::is_red(l.left.as_ref()) {
-                needs_rotate_right = true;
-            }
+            && l.color == Color::Red
+            && Self::is_red(l.left.as_ref())
+        {
+            needs_rotate_right = true;
+        }
         if needs_rotate_right {
             node = Self::rotate_right(node);
         }

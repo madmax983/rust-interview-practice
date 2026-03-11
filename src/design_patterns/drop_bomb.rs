@@ -87,7 +87,10 @@ impl Drop for Transaction {
             // GOTCHA: We check `!std::thread::panicking()` to avoid double-panicking.
             // If the thread is already panicking due to another error, we don't want to
             // abort the entire process by panicking again during the unwinding phase.
-            panic!("DROP BOMB EXPLODED: Transaction '{}' was dropped without being committed or rolled back!", self.name);
+            panic!(
+                "DROP BOMB EXPLODED: Transaction '{}' was dropped without being committed or rolled back!",
+                self.name
+            );
         } else if !self.defused {
             // Silently swallow the error because we are already panicking.
             println!("Transaction '{}' dropped during unwind.", self.name);

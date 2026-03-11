@@ -97,9 +97,10 @@ where
 
         // Important check: if we found a shorter way to `node` already, skip.
         if let Some(&d) = dist.get(&node)
-            && cost > d {
-                continue;
-            }
+            && cost > d
+        {
+            continue;
+        }
 
         for (next_node, edge_cost) in successors(&node) {
             let new_cost = cost + edge_cost;
