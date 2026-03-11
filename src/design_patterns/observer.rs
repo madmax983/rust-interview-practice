@@ -56,7 +56,6 @@ pub struct Event {
 pub struct Subject {
     // TRADEOFF: Storing closures requires heap allocation (`Box`) and dynamic dispatch (`dyn`).
     #[allow(clippy::type_complexity)]
-
     listeners: Vec<Box<dyn FnMut(&Event)>>,
 }
 

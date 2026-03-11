@@ -104,10 +104,9 @@ pub fn max_sub_array_functional(nums: Vec<i32>) -> i32 {
     // We init with the first element, so we skip(1).
     // State tuple: (current_sum, max_sum)
     // RUST INSIGHT: `fold` accumulates state. Here the accumulator is `(i32, i32)`.
-     // Extract max_sum
+    // Extract max_sum
 
-    nums
-        .iter()
+    nums.iter()
         .skip(1)
         .fold((nums[0], nums[0]), |(curr, max_so_far), &num| {
             let new_curr = cmp::max(num, curr + num);

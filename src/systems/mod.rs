@@ -16,6 +16,7 @@ pub mod rate_limiter;
 pub mod slab_allocator;
 pub mod snowflake;
 pub mod task_scheduler;
+pub mod tracing;
 pub mod ttl_cache;
 pub mod vector_clock;
 pub mod wal;
