@@ -1,5 +1,6 @@
 // Suppress pedantic and nursery lints for design pattern examples.
 #![allow(clippy::pedantic, clippy::nursery, unused)]
+
 //! # Observer Pattern
 //!
 //! Replaces: **Observer Pattern** (OOP), **Callbacks / Event Listeners**
@@ -12,23 +13,26 @@
 //! strictly controlled by the compiler ("Shared XOR Mutable").
 //!
 //! Instead of lists of mutable object references, Rust implements observation through:
-//! 1. **Trait Objects (Synchronous):** A list of boxed closures `Vec<Box<dyn FnMut(...)>>`.
-//! 2. **Channels (Asynchronous/Concurrent):** Using `mpsc` (Multi-Producer, Single-Consumer) or broadcast channels,
+//! 1. **Channels (Asynchronous/Concurrent):** Using `mpsc` (Multi-Producer, Single-Consumer) or broadcast channels,
 //!    where the subject sends messages to subscribers. This is the idiomatic, safe approach for concurrent systems.
+//! 2. **Trait Objects (Synchronous):** A list of boxed closures `Vec<Box<dyn FnMut(...)>>`.
+//!
+//! By strictly isolating state via message passing, Rust implements the meta-pattern:
+//! **"make illegal states unrepresentable"**, completely eliminating dangling listener references.
 //!
 //! ## Architecture
 //!
-//! **Approach 1: Synchronous Callbacks**
+//! **Approach 1: Channel-Based (Idiomatic)**
+//! ```text
+//! [ Subject ] --(Event)--> [ Sender ] =====> [ Receiver ] --> [ Observer Task ]
+//! ```
+//!
+//! **Approach 2: Synchronous Callbacks**
 //! ```text
 //! [ Subject ]
 //!    |--- vec![ Box<dyn FnMut(&Event)> ]
 //!    |---> listener_1(event)
 //!    |---> listener_2(event)
-//! ```
-//!
-//! **Approach 2: Channel-Based (Idiomatic)**
-//! ```text
-//! [ Subject ] --(Event)--> [ Sender ] =====> [ Receiver ] --> [ Observer Task ]
 //! ```
 //!
 //! **Invariants:**
@@ -39,9 +43,14 @@
 //! ## When to use
 //! - **Channels:** For decoupled, concurrent systems, GUI event loops, or async programming.
 //! - **Callbacks:** For simple, single-threaded synchronous updates where low latency is critical.
+//!
+//! ## Anti-patterns
+//! - A `Vec<&mut dyn Observer>` that requires immense lifetime acrobatics or `Rc<RefCell<T>>` hell to manage.
+
+use std::sync::mpsc;
 
 // ============================================================================
-// Approach 1: Synchronous Callbacks (Single-threaded)
+// Approach 1: Channel-Based Observer (Idiomatic Rust)
 // ============================================================================
 
 #[derive(Clone, Debug, PartialEq)]
@@ -50,48 +59,6 @@ pub struct Event {
     pub payload: i32,
 }
 
-// OWNERSHIP INSIGHT: We use `Box<dyn FnMut>` to store closures.
-// Because the Subject owns these closures, they cannot easily mutate variables
-// in the external environment unless those variables are wrapped in `Rc<RefCell<T>>`.
-pub struct Subject {
-    // TRADEOFF: Storing closures requires heap allocation (`Box`) and dynamic dispatch (`dyn`).
-    #[allow(clippy::type_complexity)]
-    listeners: Vec<Box<dyn FnMut(&Event)>>,
-}
-
-impl Subject {
-    pub fn new() -> Self {
-        Self {
-            listeners: Vec::new(),
-        }
-    }
-
-    pub fn subscribe<F>(&mut self, callback: F)
-    where
-        F: FnMut(&Event) + 'static,
-    {
-        self.listeners.push(Box::new(callback));
-    }
-
-    pub fn notify(&mut self, event: &Event) {
-        for listener in &mut self.listeners {
-            listener(event);
-        }
-    }
-}
-
-impl Default for Subject {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-// ============================================================================
-// Approach 2: Channel-Based Observer (Idiomatic Rust)
-// ============================================================================
-
-use std::sync::mpsc;
-
 /// A thread-safe, decoupled subject using channels.
 ///
 /// **COMPILE-TIME WIN:** The compiler guarantees `Event` is safe to send across threads (`Send`),
@@ -99,6 +66,12 @@ use std::sync::mpsc;
 pub struct ConcurrentSubject {
     // The subject holds a list of senders. It doesn't know who is listening.
     subscribers: Vec<mpsc::Sender<Event>>,
+}
+
+impl Default for ConcurrentSubject {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ConcurrentSubject {
@@ -114,6 +87,8 @@ impl ConcurrentSubject {
     /// The subject retains the `Sender`. When the receiver is dropped, `send()` will return an error,
     /// allowing us to clean up dead subscribers.
     pub fn subscribe(&mut self) -> mpsc::Receiver<Event> {
+        // TRADEOFF: Channels introduce minor allocation overhead compared to raw pointers,
+        // but completely eliminate the risk of memory leaks and race conditions.
         let (tx, rx) = mpsc::channel();
         self.subscribers.push(tx);
         rx
@@ -122,60 +97,51 @@ impl ConcurrentSubject {
     pub fn notify(&mut self, event: Event) {
         // We use `retain` to automatically remove disconnected subscribers.
         // If `send` returns an Err, it means the Receiver was dropped.
+        // GOTCHA: Forgetting to handle dropped Receivers will cause a memory leak of Senders.
         self.subscribers.retain(|tx| tx.send(event.clone()).is_ok());
     }
 }
 
-impl Default for ConcurrentSubject {
+// ============================================================================
+// Approach 2: Synchronous Callbacks (Single-threaded)
+// ============================================================================
+
+// OWNERSHIP INSIGHT: We use `Box<dyn FnMut>` to store closures.
+// Because the Subject owns these closures, they cannot easily mutate variables
+// in the external environment unless those variables are wrapped in `Rc<RefCell<T>>`.
+pub struct Subject {
+    #[allow(clippy::type_complexity)]
+    listeners: Vec<Box<dyn FnMut(&Event)>>,
+}
+
+impl Default for Subject {
     fn default() -> Self {
         Self::new()
     }
 }
 
-// ============================================================================
-// Footer
-// ============================================================================
-//
-// How this pattern appears in std/crates:
-// - `tokio::sync::broadcast`: A true multi-producer, multi-consumer broadcast channel often used for pub/sub.
-// - `std::sync::mpsc`: Standard multi-producer, single-consumer channels.
-//
-// What the GoF/OOP equivalent is and why it doesn't translate directly:
-// In OOP, observers register themselves (`this`) with the subject. In Rust, you cannot easily
-// pass `&mut self` to a subject and keep it alive indefinitely without violating borrowing rules.
-//
-// When to reach for this vs. simpler alternatives:
-// Reach for channels when you need decoupled, concurrent event processing.
-// If you just need to call a function on state change in a single thread, a simple callback
-// (`Option<Box<dyn FnMut>>`) is often simpler than a full observer list.
-//
-// Suggested combinations with other patterns in this collection:
-// - **Actor Pattern**: The channel-based observer is essentially a lightweight Actor pattern.
-// - **Command Pattern**: Events sent through the channel are often Commands that dictate state changes.
-//
-// PRODUCTION NOTE:
-// In high-throughput production systems, `mpsc::channel` is often replaced with bounded channels
-// (`mpsc::sync_channel` or `tokio::sync::mpsc::channel`) to provide backpressure, ensuring the
-// subject doesn't run out of memory if observers are slow.
-//
-// GOTCHA:
-// When using channels, if the `Receiver` is dropped but the `Sender` is not removed from the subject's list,
-// the subject will eventually panic or leak memory if it doesn't handle the `SendError`.
-// We handle this above using `retain` to actively purge dead channels.
-//
-// META-PATTERN: "Make illegal states unrepresentable"
-// By transferring ownership of the `Receiver` to the observer, it becomes impossible for the observer
-// to be notified after it has been destroyed (the channel simply closes), preventing the classic OOP
-// "dangling listener / memory leak" problem at compile time.
+impl Subject {
+    pub fn new() -> Self {
+        Self {
+            listeners: Vec::new(),
+        }
+    }
 
-// ANTI-PATTERN:
-// Translating the OOP Observer literally:
-// ```rust
-// trait Observer { fn notify(&mut self, event: &Event); }
-// struct Subject { observers: Vec<&mut dyn Observer> } // Lifetime nightmares!
-// ```
-// Rust's borrowing rules make keeping a list of `&mut` references extremely difficult.
-// This is why we use owned closures or channels instead.
+    pub fn subscribe<F>(&mut self, callback: F)
+    where
+        F: FnMut(&Event) + 'static,
+    {
+        // PRODUCTION NOTE: Storing closures requires heap allocation (`Box`) and dynamic dispatch (`dyn`).
+        // If high-performance is needed, a channel or a trait-based approach may be superior.
+        self.listeners.push(Box::new(callback));
+    }
+
+    pub fn notify(&mut self, event: &Event) {
+        for listener in &mut self.listeners {
+            listener(event);
+        }
+    }
+}
 
 // ============================================================================
 // Tests
@@ -187,29 +153,6 @@ mod tests {
     use std::cell::RefCell;
     use std::rc::Rc;
     use std::thread;
-
-    #[test]
-    fn test_synchronous_callbacks() {
-        let mut subject = Subject::new();
-
-        // We use Rc<RefCell> to mutate external state from within the closure
-        let received_events = Rc::new(RefCell::new(Vec::new()));
-
-        let state_clone = Rc::clone(&received_events);
-        subject.subscribe(move |event| {
-            state_clone.borrow_mut().push(event.clone());
-        });
-
-        subject.notify(&Event {
-            name: "Click".to_string(),
-            payload: 42,
-        });
-
-        let events = received_events.borrow();
-        assert_eq!(events.len(), 1);
-        assert_eq!(events[0].name, "Click");
-        assert_eq!(events[0].payload, 42);
-    }
 
     #[test]
     fn test_concurrent_subject() {
@@ -259,20 +202,61 @@ mod tests {
             sum
         });
 
-        subject.notify(Event {
-            name: "Data".to_string(),
-            payload: 10,
-        });
-        subject.notify(Event {
-            name: "Data".to_string(),
-            payload: 20,
-        });
-        subject.notify(Event {
-            name: "Stop".to_string(),
-            payload: 0,
-        });
+        subject.notify(Event { name: "Data".to_string(), payload: 10 });
+        subject.notify(Event { name: "Data".to_string(), payload: 20 });
+        subject.notify(Event { name: "Stop".to_string(), payload: 0 });
 
         let result = handle.join().unwrap();
         assert_eq!(result, 30);
     }
+
+    #[test]
+    fn test_synchronous_callbacks() {
+        let mut subject = Subject::new();
+
+        // We use Rc<RefCell> to mutate external state from within the closure
+        let received_events = Rc::new(RefCell::new(Vec::new()));
+
+        let state_clone = Rc::clone(&received_events);
+        subject.subscribe(move |event| {
+            state_clone.borrow_mut().push(event.clone());
+        });
+
+        subject.notify(&Event {
+            name: "Click".to_string(),
+            payload: 42,
+        });
+
+        let events = received_events.borrow();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].name, "Click");
+        assert_eq!(events[0].payload, 42);
+    }
 }
+
+// ============================================================================
+// Footer
+// ============================================================================
+//
+// How this pattern appears in std/crates:
+// - `tokio::sync::broadcast`: A true multi-producer, multi-consumer broadcast channel often used for pub/sub.
+// - `std::sync::mpsc`: Standard multi-producer, single-consumer channels.
+//
+// What the GoF/OOP equivalent is and why it doesn't translate directly:
+// In OOP, observers register themselves (`this`) with the subject. In Rust, you cannot easily
+// pass `&mut self` to a subject and keep it alive indefinitely without violating borrowing rules.
+// Attempting to do so requires a dense web of `Rc<RefCell<Observer>>`, which is an anti-pattern.
+//
+// When to reach for this vs. simpler alternatives:
+// Reach for channels when you need decoupled, concurrent event processing.
+// If you just need to call a function on state change in a single thread, a simple callback
+// (`Option<Box<dyn FnMut>>`) is often simpler than a full observer list.
+//
+// Suggested combinations with other patterns in this collection:
+// - **Actor Pattern**: The channel-based observer is essentially a lightweight Actor pattern.
+// - **Command Pattern**: Events sent through the channel are often Commands that dictate state changes.
+//
+// META-PATTERN: "Make illegal states unrepresentable"
+// By transferring ownership of the `Receiver` to the observer via Channels, it becomes impossible for the observer
+// to be notified after it has been destroyed (the channel simply closes), preventing the classic OOP
+// "dangling listener / memory leak" problem at compile time.
