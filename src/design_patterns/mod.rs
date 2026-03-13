@@ -30,6 +30,7 @@ pub mod newtype;
 pub mod null_object;
 pub mod object_pool;
 pub mod observer;
+pub mod oop_correction;
 pub mod plugin;
 pub mod polymorphism;
 pub mod prototype;
