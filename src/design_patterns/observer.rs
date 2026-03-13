@@ -202,9 +202,18 @@ mod tests {
             sum
         });
 
-        subject.notify(Event { name: "Data".to_string(), payload: 10 });
-        subject.notify(Event { name: "Data".to_string(), payload: 20 });
-        subject.notify(Event { name: "Stop".to_string(), payload: 0 });
+        subject.notify(Event {
+            name: "Data".to_string(),
+            payload: 10,
+        });
+        subject.notify(Event {
+            name: "Data".to_string(),
+            payload: 20,
+        });
+        subject.notify(Event {
+            name: "Stop".to_string(),
+            payload: 0,
+        });
 
         let result = handle.join().unwrap();
         assert_eq!(result, 30);

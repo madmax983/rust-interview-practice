@@ -183,9 +183,8 @@ where
 
         let mut list = subs.lock().unwrap();
         let mut delivered = 0;
-        let mut to_remove = Vec::new();
 
-        for (i, weak_sender) in list.iter().enumerate() {
+        list.retain(|weak_sender| {
             if let Some(sender) = weak_sender.upgrade() {
                 // RUST INSIGHT: We clone the message for each subscriber.
                 // If the message is large, `M` should be an `Arc<ActualData>` to avoid deep copies.
@@ -194,18 +193,13 @@ where
                 if sender.try_send(message.clone()).is_ok() {
                     delivered += 1;
                 }
+                true
             } else {
                 // The subscriber dropped their Subscription handle.
-                // Mark for removal.
-                to_remove.push(i);
+                // Remove it.
+                false
             }
-        }
-
-        // Clean up dead weak pointers
-        // Iterate backwards to safely remove by index without shifting issues
-        for idx in to_remove.into_iter().rev() {
-            list.remove(idx);
-        }
+        });
 
         delivered
     }
