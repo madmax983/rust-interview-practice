@@ -100,7 +100,8 @@ pub fn subsets_functional(nums: Vec<i32>) -> Vec<Vec<i32>> {
         // We can't mutate `acc` while iterating over it, so we iterate over a clone of its current state,
         // or we iterate and map, then extend.
         // Let's take a snapshot of the current subsets to avoid borrowing issues.
-        let new_subsets: Vec<Vec<i32>> = acc.iter()
+        let new_subsets: Vec<Vec<i32>> = acc
+            .iter()
             .map(|subset| {
                 let mut new_subset = subset.clone();
                 new_subset.push(num);
