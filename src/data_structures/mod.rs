@@ -16,3 +16,6 @@ pub mod segment_tree;
 pub mod skip_list;
 pub mod spsc_ring_buffer;
 pub mod union_find;
+pub mod smallvec;
+pub mod slotmap;
+pub mod bytes;
