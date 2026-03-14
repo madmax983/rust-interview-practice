@@ -7,4 +7,5 @@ pub mod max_depth;
 pub mod red_black_tree;
 pub mod same_tree;
 pub mod serialize_and_deserialize_binary_tree;
+pub mod symmetric_tree;
 pub mod validate_binary_search_tree;
