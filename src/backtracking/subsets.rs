@@ -50,7 +50,8 @@
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn subsets_backtracking(nums: Vec<i32>) -> Vec<Vec<i32>> {
-    let mut results = Vec::new();
+    // 2^N subsets are generated, so we pre-allocate the capacity
+    let mut results = Vec::with_capacity(1 << nums.len());
     let mut current_path = Vec::new();
 
     // We use an inner closure or helper function for recursion.
@@ -100,7 +101,8 @@ pub fn subsets_functional(nums: Vec<i32>) -> Vec<Vec<i32>> {
         // We can't mutate `acc` while iterating over it, so we iterate over a clone of its current state,
         // or we iterate and map, then extend.
         // Let's take a snapshot of the current subsets to avoid borrowing issues.
-        let new_subsets: Vec<Vec<i32>> = acc.iter()
+        let new_subsets: Vec<Vec<i32>> = acc
+            .iter()
             .map(|subset| {
                 let mut new_subset = subset.clone();
                 new_subset.push(num);

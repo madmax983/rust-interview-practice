@@ -50,8 +50,12 @@
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn permute_recursive(mut nums: Vec<i32>) -> Vec<Vec<i32>> {
-    let mut results = Vec::new();
     let n = nums.len();
+
+    // Calculate factorial to pre-allocate exact capacity
+    let capacity = (1..=n).product();
+    let mut results = Vec::with_capacity(capacity);
+
     backtrack(n, 0, &mut nums, &mut results);
     results
 }
@@ -140,10 +144,11 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let nums = vec![];
+        let nums: Vec<i32> = vec![];
         let result = permute(nums);
         // Permutation of empty set is a set containing empty set: [[]]
-        assert_eq!(result, vec![vec![]]);
+        let expected: Vec<Vec<i32>> = vec![vec![]];
+        assert_eq!(result, expected);
     }
 
     #[test]
