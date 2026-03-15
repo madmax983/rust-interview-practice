@@ -50,7 +50,8 @@
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn subsets_backtracking(nums: Vec<i32>) -> Vec<Vec<i32>> {
-    let mut results = Vec::new();
+    // 2^N subsets are generated, so we pre-allocate the capacity
+    let mut results = Vec::with_capacity(1 << nums.len());
     let mut current_path = Vec::new();
 
     // We use an inner closure or helper function for recursion.
