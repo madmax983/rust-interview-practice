@@ -283,8 +283,8 @@ mod tests {
 
     #[test]
     fn test_drop_behavior() {
-        use std::sync::atomic::{AtomicUsize, Ordering};
         use std::sync::Arc;
+        use std::sync::atomic::{AtomicUsize, Ordering};
 
         struct DropTracker(Arc<AtomicUsize>);
 

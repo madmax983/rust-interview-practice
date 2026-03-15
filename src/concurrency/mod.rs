@@ -6,5 +6,6 @@ pub mod once_cell;
 pub mod promise;
 pub mod read_write_lock;
 pub mod semaphore;
+pub mod thread_local;
 pub mod thread_pool;
 pub mod work_stealing_pool;

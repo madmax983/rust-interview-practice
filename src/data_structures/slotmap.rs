@@ -131,12 +131,13 @@ impl<T> SlotMap<T> {
             // RUST INSIGHT:
             // We use pattern matching to safely extract the next free node's index
             // and the slot's generation, ensuring we update the free list correctly.
-            if let Slot::Free { next_free, generation } = self.slots[index] {
+            if let Slot::Free {
+                next_free,
+                generation,
+            } = self.slots[index]
+            {
                 self.free_head = next_free;
-                self.slots[index] = Slot::Occupied {
-                    value,
-                    generation,
-                };
+                self.slots[index] = Slot::Occupied { value, generation };
                 Key { index, generation }
             } else {
                 unreachable!("free_head pointed to an Occupied slot");
@@ -214,7 +215,13 @@ impl<T> SlotMap<T> {
         // We can't iterate and mutate self easily without index looping.
         for index in 0..self.slots.len() {
             let retain = if let Slot::Occupied { value, generation } = &mut self.slots[index] {
-                f(Key { index, generation: *generation }, value)
+                f(
+                    Key {
+                        index,
+                        generation: *generation,
+                    },
+                    value,
+                )
             } else {
                 true // Keep free slots as they are
             };
@@ -226,7 +233,10 @@ impl<T> SlotMap<T> {
                     Slot::Occupied { generation, .. } => generation,
                     _ => unreachable!(),
                 };
-                self.remove(Key { index, generation: g });
+                self.remove(Key {
+                    index,
+                    generation: g,
+                });
             }
         }
     }
