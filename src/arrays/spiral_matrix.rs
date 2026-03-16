@@ -225,11 +225,7 @@ mod tests {
 
     #[test]
     fn test_happy_path_square() {
-        let matrix = vec![
-            vec![1, 2, 3],
-            vec![4, 5, 6],
-            vec![7, 8, 9]
-        ];
+        let matrix = vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]];
         let expected = vec![1, 2, 3, 6, 9, 8, 7, 4, 5];
         assert_eq!(spiral_order_straightforward(matrix.clone()), expected);
         assert_eq!(spiral_order_optimal(matrix.clone()), expected);
@@ -238,11 +234,7 @@ mod tests {
 
     #[test]
     fn test_happy_path_rectangle() {
-        let matrix = vec![
-            vec![1, 2, 3, 4],
-            vec![5, 6, 7, 8],
-            vec![9, 10, 11, 12]
-        ];
+        let matrix = vec![vec![1, 2, 3, 4], vec![5, 6, 7, 8], vec![9, 10, 11, 12]];
         let expected = vec![1, 2, 3, 4, 8, 12, 11, 10, 9, 5, 6, 7];
         assert_eq!(spiral_order_straightforward(matrix.clone()), expected);
         assert_eq!(spiral_order_optimal(matrix), expected);
@@ -259,7 +251,10 @@ mod tests {
         // Single column
         let matrix_col = vec![vec![1], vec![2], vec![3]];
         let expected_col = vec![1, 2, 3];
-        assert_eq!(spiral_order_straightforward(matrix_col.clone()), expected_col);
+        assert_eq!(
+            spiral_order_straightforward(matrix_col.clone()),
+            expected_col
+        );
         assert_eq!(spiral_order_optimal(matrix_col), expected_col);
     }
 
@@ -273,7 +268,10 @@ mod tests {
 
         // Empty inner
         let empty_inner: Vec<Vec<i32>> = vec![vec![]];
-        assert_eq!(spiral_order_straightforward(empty_inner.clone()), expected_empty);
+        assert_eq!(
+            spiral_order_straightforward(empty_inner.clone()),
+            expected_empty
+        );
         assert_eq!(spiral_order_optimal(empty_inner), expected_empty);
 
         // Single element
