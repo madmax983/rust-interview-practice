@@ -19,4 +19,5 @@ pub mod skip_list;
 pub mod slotmap;
 pub mod smallvec;
 pub mod spsc_ring_buffer;
+pub mod type_map;
 pub mod union_find;
