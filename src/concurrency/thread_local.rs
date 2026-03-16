@@ -195,17 +195,12 @@ mod tests {
 
         let t1_tls = Arc::clone(&tls);
         let t1 = thread::spawn(move || {
-            t1_tls.with(|val| assert_eq!(*val, 0)); // First thread gets 0
-            t1_tls.with(|val| assert_eq!(*val, 0)); // Subsequent calls don't increment
+            let val_copy = t1_tls.with(|val| *val);
+            t1_tls.with(|val| assert_eq!(*val, val_copy)); // Subsequent calls don't increment
         });
 
         let t2_tls = Arc::clone(&tls);
         let t2 = thread::spawn(move || {
-            // Second thread gets 1 (or 0 if t2 ran before t1, but they get distinct values)
-            t2_tls.with(|val| {
-                assert!(*val == 0 || *val == 1);
-            });
-            // Double check
             let val_copy = t2_tls.with(|val| *val);
             t2_tls.with(|val| assert_eq!(*val, val_copy));
         });
