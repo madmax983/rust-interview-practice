@@ -39,6 +39,7 @@ pub mod proxy;
 pub mod raii_guards;
 pub mod sealed_traits;
 pub mod self_referential;
+pub mod session_types;
 pub mod singleton;
 pub mod state;
 pub mod strategy;
