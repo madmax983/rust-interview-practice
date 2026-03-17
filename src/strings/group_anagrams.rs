@@ -54,7 +54,9 @@ pub fn group_anagrams_sort(strs: Vec<String>) -> Vec<Vec<String>> {
     // RUST INSIGHT: `HashMap` ownership.
     // We need to store the strings in groups. The key is the sorted version (temporary),
     // and the value is a vector of original strings. The HashMap owns the keys and the values.
-    let mut map: HashMap<Vec<char>, Vec<String>> = HashMap::new();
+    // BOLT OPTIMIZATION: Pre-allocate capacity to avoid reallocations.
+    // In the worst case (all unique strings), we need `strs.len()` capacity.
+    let mut map: HashMap<Vec<char>, Vec<String>> = HashMap::with_capacity(strs.len());
 
     for s in strs {
         // Create the key by sorting characters
@@ -83,7 +85,9 @@ pub fn group_anagrams_sort(strs: Vec<String>) -> Vec<Vec<String>> {
 #[allow(clippy::needless_pass_by_value)]
 pub fn group_anagrams_frequency(strs: Vec<String>) -> Vec<Vec<String>> {
     // Key is an array of 26 counts. `[u8; 26]` implements `Hash` and `Eq` automatically.
-    let mut map: HashMap<[u8; 26], Vec<String>> = HashMap::new();
+    // BOLT OPTIMIZATION: Pre-allocate capacity to avoid reallocations.
+    // In the worst case (all unique strings), we need `strs.len()` capacity.
+    let mut map: HashMap<[u8; 26], Vec<String>> = HashMap::with_capacity(strs.len());
 
     for s in strs {
         let mut count = [0u8; 26];
