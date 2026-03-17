@@ -90,12 +90,11 @@ impl<T> Mutex<T> {
             // Fast path: attempt to acquire the lock.
             // GOTCHA: `compare_exchange_weak` inside a loop is generally preferred over `compare_exchange`
             // on some architectures (like ARM) because it can fail spuriously but is faster on success.
-            if self.is_locked.compare_exchange_weak(
-                false,
-                true,
-                Ordering::Acquire,
-                Ordering::Relaxed,
-            ).is_ok() {
+            if self
+                .is_locked
+                .compare_exchange_weak(false, true, Ordering::Acquire, Ordering::Relaxed)
+                .is_ok()
+            {
                 break;
             }
 

@@ -194,7 +194,7 @@ mod tests {
     fn test_sort_colors_optimal_empty() {
         let mut nums: Vec<i32> = vec![];
         sort_colors_optimal(&mut nums);
-        assert_eq!(nums, vec![]);
+        assert_eq!(nums, Vec::<i32>::new());
     }
 
     // Boundary Case: Single element

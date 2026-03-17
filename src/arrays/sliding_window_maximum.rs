@@ -173,6 +173,6 @@ mod tests {
     fn test_empty_input() {
         let nums: Vec<i32> = vec![];
         let k = 0;
-        assert_eq!(max_sliding_window_optimized(&nums, k), vec![]);
+        assert_eq!(max_sliding_window_optimized(&nums, k), Vec::<i32>::new());
     }
 }

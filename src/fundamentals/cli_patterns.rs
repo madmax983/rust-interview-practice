@@ -481,7 +481,7 @@ async fn run_async_tui() -> io::Result<()> {
     // Event loop
     loop {
         terminal.draw(|f| {
-            let area = f.area();
+            let area = f.size();
             let block = Block::default()
                 .title("Async Updates")
                 .borders(Borders::ALL);
