@@ -105,34 +105,32 @@ pub fn length_of_longest_substring_optimized(s: String) -> i32 {
 #[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
 #[allow(clippy::cast_possible_wrap)]
 pub fn length_of_longest_substring_optimal(s: String) -> i32 {
-    use std::collections::HashMap;
-
-    // Convert to vec for indexing
-    let chars: Vec<char> = s.chars().collect();
-    let mut char_index = HashMap::new(); // Track: character -> last seen index
-    let mut left = 0; // Left boundary of sliding window
-    let mut max_len = 0; // Best result so far
+    // RUST INSIGHT: Since the problem constraints specify English letters, digits,
+    // symbols and spaces, we are dealing with ASCII characters. We can use a
+    // flat array of size 128 instead of a HashMap, and operate on bytes
+    // directly avoiding a Vec<char> allocation and UTF-8 decoding overhead.
+    // We use a size of 256 to ensure we don't panic on non-ASCII characters.
+    let mut char_index = [-1i32; 256]; // Track: character -> last seen index
+    let mut left = 0i32; // Left boundary of sliding window
+    let mut max_len = 0i32; // Best result so far
 
     // Strategy: Sliding window with smart jumping
     // Instead of incrementing left by 1, we jump directly past duplicates
-    #[allow(clippy::needless_range_loop)] // Index needed for multiple operations
-    for right in 0..chars.len() {
-        let ch = chars[right];
+    for (right, &b) in s.as_bytes().iter().enumerate() {
+        let ch = b as usize;
+        let prev_index = char_index[ch];
 
-        // If we've seen this char before AND it's in our current window
-        if let Some(&prev_index) = char_index.get(&ch) {
-            // Jump left boundary past the duplicate (but never move left backward)
-            left = left.max(prev_index + 1);
-        }
+        // Jump left boundary past the duplicate (but never move left backward)
+        left = left.max(prev_index + 1);
 
         // Always update this character's latest position
-        char_index.insert(ch, right);
+        char_index[ch] = right as i32;
 
         // Calculate current window size and update max
-        max_len = max_len.max(right - left + 1);
+        max_len = max_len.max(right as i32 - left + 1);
     }
 
-    max_len as i32
+    max_len
 }
 
 /// Main entry point - uses optimal solution
