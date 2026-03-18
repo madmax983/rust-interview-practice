@@ -75,11 +75,14 @@ impl Iterator for LevelOrderIterator {
             return None;
         }
 
-        let mut level_values = Vec::new();
         // RUST INSIGHT: We capture the *current* length of the queue.
         // This snapshot is crucial because we will be pushing children
         // to the back of the queue during this loop, but those belong to the *next* level.
         let level_size = self.queue.len();
+
+        // BOLT OPTIMIZATION: Pre-allocate capacity using `Vec::with_capacity`
+        // since the level size is known upfront, preventing unnecessary heap reallocations.
+        let mut level_values = Vec::with_capacity(level_size);
 
         for _ in 0..level_size {
             // unwrap is safe here because we checked is_empty() and loop is bounded by initial len
