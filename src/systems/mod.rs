@@ -10,6 +10,7 @@ pub mod inverted_index;
 pub mod lfu_cache;
 pub mod log_structured_storage;
 pub mod lru_cache;
+pub mod lsm_tree;
 pub mod metrics_registry;
 pub mod pub_sub;
 pub mod rate_limiter;
