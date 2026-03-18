@@ -489,7 +489,7 @@ pub fn count_greater_sse(data: &[f32], threshold: f32) -> usize {
 #[allow(dead_code)]
 mod portable_simd {
     use std::simd::prelude::*;
-    use std::simd::{f32x4, f32x8, i32x4, StdFloat};
+    use std::simd::{StdFloat, f32x4, f32x8, i32x4};
 
     /// Add arrays using portable SIMD (4-wide).
     pub fn add_floats_portable(a: &[f32], b: &[f32], result: &mut [f32]) {
