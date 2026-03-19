@@ -1,6 +1,7 @@
 pub mod bst_iterator;
 pub mod implement_trie;
 pub mod invert_binary_tree;
+pub mod kth_smallest_element_in_a_bst;
 pub mod level_order_traversal;
 pub mod lowest_common_ancestor;
 pub mod max_depth;
