@@ -250,7 +250,7 @@ fn demonstrate_transmute() {
     let x: u32 = 42;
 
     // SAFETY: u32 and i32 have same size and layout
-    let y: i32 = unsafe { u32::cast_signed(x) };
+    let y: i32 = u32::cast_signed(x);
     println!("Transmuted: {y}");
 
     // Common use: transmute lifetime (dangerous!)
