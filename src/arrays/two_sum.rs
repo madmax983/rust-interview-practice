@@ -51,7 +51,7 @@ pub fn two_sum_brute_force(nums: Vec<i32>, target: i32) -> Vec<i32> {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn two_sum_optimized(nums: Vec<i32>, target: i32) -> Vec<i32> {
-    let mut map = HashMap::new(); // Maps value -> index
+    let mut map = HashMap::with_capacity(nums.len()); // Maps value -> index
 
     // First pass: Build the hash map
     for (i, &num) in nums.iter().enumerate() {
@@ -82,7 +82,7 @@ pub fn two_sum_optimized(nums: Vec<i32>, target: i32) -> Vec<i32> {
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_possible_wrap)]
 pub fn two_sum_optimal(nums: Vec<i32>, target: i32) -> Vec<i32> {
-    let mut map = HashMap::new(); // Maps value -> index
+    let mut map = HashMap::with_capacity(nums.len()); // Maps value -> index
 
     // Strategy: Build map and search simultaneously
     // As we add each element, check if its complement was already seen
