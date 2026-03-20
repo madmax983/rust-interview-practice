@@ -50,7 +50,7 @@ use std::collections::{BinaryHeap, HashMap};
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_sign_loss)]
 pub fn top_k_frequent_brute_force(nums: Vec<i32>, k: i32) -> Vec<i32> {
-    let mut counts = HashMap::new();
+    let mut counts = HashMap::with_capacity(nums.len());
     // RUST INSIGHT: `.entry()` API is idiomatic for frequency maps,
     // avoiding double lookups (contains_key + insert).
     for num in nums {
@@ -109,7 +109,7 @@ impl PartialOrd for FreqNode {
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_sign_loss)]
 pub fn top_k_frequent_optimized(nums: Vec<i32>, k: i32) -> Vec<i32> {
-    let mut counts = HashMap::new();
+    let mut counts = HashMap::with_capacity(nums.len());
     for num in nums {
         *counts.entry(num).or_insert(0) += 1;
     }
@@ -149,7 +149,7 @@ pub fn top_k_frequent_optimized(nums: Vec<i32>, k: i32) -> Vec<i32> {
 #[allow(clippy::cast_sign_loss)]
 pub fn top_k_frequent_optimal(nums: Vec<i32>, k: i32) -> Vec<i32> {
     let n = nums.len();
-    let mut counts = HashMap::new();
+    let mut counts = HashMap::with_capacity(nums.len());
 
     for num in nums {
         *counts.entry(num).or_insert(0) += 1;
