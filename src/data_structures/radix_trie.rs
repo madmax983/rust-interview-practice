@@ -170,17 +170,16 @@ impl<V> RadixTrie<V> {
 
         while !remaining_key.is_empty() {
             let first_char = remaining_key.chars().next().unwrap();
-            match current.children.get(&first_char) {
-                Some(child) => {
-                    if remaining_key.starts_with(&child.prefix) {
-                        remaining_key = &remaining_key[child.prefix.len()..];
-                        current = child;
-                    } else {
-                        // Key diverges from prefix -> Not found
-                        return None;
-                    }
+            if let Some(child) = current.children.get(&first_char) {
+                if remaining_key.starts_with(&child.prefix) {
+                    remaining_key = &remaining_key[child.prefix.len()..];
+                    current = child;
+                } else {
+                    // Key diverges from prefix -> Not found
+                    return None;
                 }
-                None => return None,
+            } else {
+                return None;
             }
         }
 

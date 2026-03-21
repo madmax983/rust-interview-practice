@@ -151,7 +151,11 @@ mod tests {
     // Happy Path
     #[test]
     fn test_happy_path() {
-        let input = vec!["flower".to_string(), "flow".to_string(), "flight".to_string()];
+        let input = vec![
+            "flower".to_string(),
+            "flow".to_string(),
+            "flight".to_string(),
+        ];
         let expected = "fl".to_string();
 
         assert_eq!(longest_common_prefix_brute_force(input.clone()), expected);
