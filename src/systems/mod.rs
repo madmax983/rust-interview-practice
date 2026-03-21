@@ -3,6 +3,7 @@ pub mod bitcask;
 pub mod bump_allocator;
 pub mod circuit_breaker;
 pub mod concurrent_cache;
+pub mod connection_pool;
 pub mod consistent_hashing;
 pub mod design_twitter;
 pub mod ecs;
