@@ -8,6 +8,7 @@ pub mod cuckoo_filter;
 pub mod hash_map;
 pub mod hashed_wheel_timer;
 pub mod hyperloglog;
+pub mod index_map;
 pub mod lfu_cache;
 pub mod lru_cache;
 pub mod merkle_tree;

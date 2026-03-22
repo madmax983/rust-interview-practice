@@ -1,6 +1,7 @@
 pub mod actor_system;
 pub mod arc;
 pub mod async_executor;
+pub mod async_mutex;
 pub mod channel;
 pub mod dining_philosophers;
 pub mod mutex;
