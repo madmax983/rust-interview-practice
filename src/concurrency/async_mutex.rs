@@ -144,11 +144,10 @@ impl<'a, T> Drop for MutexAcquire<'a, T> {
         // If this task was at the front of the queue and the lock is NOT held,
         // (meaning the previous holder dropped the lock and woke THIS dropped future),
         // we must wake the next future in the queue so the chain doesn't break.
-        if was_first && !state.locked {
-            if let Some((_, waker)) = state.wakers.front() {
+        if was_first && !state.locked
+            && let Some((_, waker)) = state.wakers.front() {
                 waker.wake_by_ref();
             }
-        }
     }
 }
 
@@ -328,7 +327,7 @@ mod tests {
         spawner.spawn(async move {
             let mut guard = m1.lock().await;
             TimerFuture::new(Duration::from_millis(20)).await;
-            guard.push_str("A");
+            guard.push('A');
             o1.store(1, Ordering::SeqCst);
         });
 
@@ -338,7 +337,7 @@ mod tests {
             // Task 2 starts shortly after Task 1
             TimerFuture::new(Duration::from_millis(5)).await;
             let mut guard = m2.lock().await;
-            guard.push_str("B");
+            guard.push('B');
             o2.store(2, Ordering::SeqCst);
         });
 

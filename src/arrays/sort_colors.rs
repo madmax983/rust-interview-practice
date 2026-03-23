@@ -54,7 +54,7 @@ pub fn sort_colors_optimized(nums: &mut Vec<i32>) {
 
     // First pass: count frequencies
     for &num in nums.iter() {
-        if num >= 0 && num <= 2 {
+        if (0..=2).contains(&num) {
             counts[num as usize] += 1;
         }
     }

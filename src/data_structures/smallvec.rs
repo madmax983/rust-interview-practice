@@ -16,7 +16,7 @@
 //! allocations for the common case (small arrays) while retaining the flexibility of `Vec` for
 //! edge cases, and demonstrates managing the tricky "inline vs heap" state transitions safely.
 
-use std::mem::{self, ManuallyDrop, MaybeUninit};
+use std::mem::MaybeUninit;
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::slice;

@@ -414,45 +414,6 @@ impl<T> Drop for MyVec<T> {
 }
 
 // ============================================================================
-// Testing Unsafe Code
-// ============================================================================
-
-#[cfg(test)]
-mod unsafe_tests {
-    use super::*;
-
-    #[test]
-    fn test_safe_read_value() {
-        let x = 42;
-        assert_eq!(safe_read_value(&x), 42);
-    }
-
-    #[test]
-    fn test_split_at_mut() {
-        let mut arr = [1, 2, 3, 4, 5];
-        let (left, right) = safe_split_at_mut(&mut arr, 2);
-
-        assert_eq!(left, &[1, 2]);
-        assert_eq!(right, &[3, 4, 5]);
-
-        left[0] = 10;
-        right[0] = 30;
-
-        assert_eq!(arr, [10, 2, 30, 4, 5]);
-    }
-
-    #[test]
-    fn test_my_vec() {
-        let mut vec = MyVec::new();
-        vec.push(1);
-        vec.push(2);
-        vec.push(3);
-
-        assert_eq!(vec.len, 3);
-    }
-}
-
-// ============================================================================
 // Miri - Undefined Behavior Detection
 // ============================================================================
 
@@ -638,4 +599,43 @@ fn uninitialized_mistake() {
     x.write(42);
     let value = unsafe { x.assume_init() };
     let _ = value;
+}
+
+// ============================================================================
+// Testing Unsafe Code
+// ============================================================================
+
+#[cfg(test)]
+mod unsafe_tests {
+    use super::*;
+
+    #[test]
+    fn test_safe_read_value() {
+        let x = 42;
+        assert_eq!(safe_read_value(&x), 42);
+    }
+
+    #[test]
+    fn test_split_at_mut() {
+        let mut arr = [1, 2, 3, 4, 5];
+        let (left, right) = safe_split_at_mut(&mut arr, 2);
+
+        assert_eq!(left, &[1, 2]);
+        assert_eq!(right, &[3, 4, 5]);
+
+        left[0] = 10;
+        right[0] = 30;
+
+        assert_eq!(arr, [10, 2, 30, 4, 5]);
+    }
+
+    #[test]
+    fn test_my_vec() {
+        let mut vec = MyVec::new();
+        vec.push(1);
+        vec.push(2);
+        vec.push(3);
+
+        assert_eq!(vec.len, 3);
+    }
 }

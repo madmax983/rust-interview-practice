@@ -134,6 +134,12 @@ pub struct ShutdownManager {
 }
 
 #[cfg(feature = "async-parallel")]
+impl Default for ShutdownManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShutdownManager {
     pub fn new() -> Self {
         let (notify_shutdown, _) = broadcast::channel(1);

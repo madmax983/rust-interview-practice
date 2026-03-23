@@ -252,13 +252,13 @@ mod tests {
     #[test]
     fn test_all_approaches_consistency() {
         let tree1 = build_symmetric_tree();
-        assert_eq!(is_symmetric_brute_force(tree1.clone()), true);
-        assert_eq!(is_symmetric_optimized(tree1.clone()), true);
-        assert_eq!(is_symmetric_optimal(tree1), true);
+        assert!(is_symmetric_brute_force(tree1.clone()));
+        assert!(is_symmetric_optimized(tree1.clone()));
+        assert!(is_symmetric_optimal(tree1));
 
         let tree2 = build_asymmetric_tree();
-        assert_eq!(is_symmetric_brute_force(tree2.clone()), false);
-        assert_eq!(is_symmetric_optimized(tree2.clone()), false);
-        assert_eq!(is_symmetric_optimal(tree2), false);
+        assert!(!is_symmetric_brute_force(tree2.clone()));
+        assert!(!is_symmetric_optimized(tree2.clone()));
+        assert!(!is_symmetric_optimal(tree2));
     }
 }

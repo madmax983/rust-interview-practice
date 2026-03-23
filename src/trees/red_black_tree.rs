@@ -219,11 +219,10 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     /// Checks invariants for testing
     #[cfg(test)]
     fn check_invariants(&self) -> bool {
-        if let Some(ref root) = self.root {
-            if root.color != Color::Black {
+        if let Some(ref root) = self.root
+            && root.color != Color::Black {
                 return false;
             }
-        }
         // Check standard RB properties
         // 1. No red node has a red child
         // 2. Black height is consistent
@@ -251,11 +250,10 @@ impl<K: Ord, V> RedBlackTree<K, V> {
         match node {
             None => true,
             Some(n) => {
-                if n.color == Color::Red {
-                    if Self::is_red(n.left.as_ref()) || Self::is_red(n.right.as_ref()) {
+                if n.color == Color::Red
+                    && (Self::is_red(n.left.as_ref()) || Self::is_red(n.right.as_ref())) {
                         return false;
                     }
-                }
                 self.check_no_red_red(n.left.as_ref()) && self.check_no_red_red(n.right.as_ref())
             }
         }

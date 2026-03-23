@@ -189,21 +189,19 @@ impl<T> SlotMap<T> {
     /// Gets a reference to the value associated with the key.
     #[must_use]
     pub fn get(&self, key: Key) -> Option<&T> {
-        if let Some(Slot::Occupied { value, generation }) = self.slots.get(key.index) {
-            if *generation == key.generation {
+        if let Some(Slot::Occupied { value, generation }) = self.slots.get(key.index)
+            && *generation == key.generation {
                 return Some(value);
             }
-        }
         None
     }
 
     /// Gets a mutable reference to the value associated with the key.
     pub fn get_mut(&mut self, key: Key) -> Option<&mut T> {
-        if let Some(Slot::Occupied { value, generation }) = self.slots.get_mut(key.index) {
-            if *generation == key.generation {
+        if let Some(Slot::Occupied { value, generation }) = self.slots.get_mut(key.index)
+            && *generation == key.generation {
                 return Some(value);
             }
-        }
         None
     }
 
@@ -303,7 +301,7 @@ mod tests {
         let mut sm = SlotMap::new();
         let k1 = sm.insert(1);
         let k2 = sm.insert(2);
-        let k3 = sm.insert(3);
+        let _k3 = sm.insert(3);
 
         sm.remove(k2);
         sm.remove(k1);

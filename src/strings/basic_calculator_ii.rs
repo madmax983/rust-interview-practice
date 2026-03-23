@@ -218,13 +218,13 @@ impl<'a> Iterator for Lexer<'a> {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn calculate_optimal(s: String) -> i32 {
-    let mut lexer = Lexer::new(&s);
+    let lexer = Lexer::new(&s);
 
     let mut result = 0;
     let mut last_number = 0;
     let mut current_op = Token::Add; // Default starting operation is addition
 
-    while let Some(token) = lexer.next() {
+    for token in lexer {
         match token {
             Token::Number(num) => {
                 match current_op {

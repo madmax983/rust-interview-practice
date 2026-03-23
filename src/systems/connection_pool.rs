@@ -405,7 +405,7 @@ mod tests {
             assert_eq!(pool.active_count(), 1);
             assert_eq!(pool.idle_count(), 0);
 
-            let conn2 = pool.get().unwrap();
+            let _conn2 = pool.get().unwrap();
             assert_eq!(pool.active_count(), 2);
 
             // Both connections drop here

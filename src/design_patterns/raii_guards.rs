@@ -170,7 +170,7 @@ mod tests {
             let guard = ScopeGuard::new((), move |_| {
                 flag.store(true, Ordering::SeqCst);
             });
-            let _ = guard.into_inner(); // Defuse
+            guard.into_inner(); // Defuse
         }
 
         assert!(!cleaned_up.load(Ordering::SeqCst));

@@ -1,4 +1,5 @@
 pub mod bst_iterator;
+pub mod construct_binary_tree_from_preorder_and_inorder_traversal;
 pub mod implement_trie;
 pub mod invert_binary_tree;
 pub mod kth_smallest_element_in_a_bst;

@@ -187,7 +187,7 @@ mod tests {
 
         // Mutation triggers clone
         let string_ref = cow.to_mut();
-        string_ref.push_str("!");
+        string_ref.push('!');
 
         assert!(cow.is_owned());
         assert_eq!(&*cow, "hello world!");

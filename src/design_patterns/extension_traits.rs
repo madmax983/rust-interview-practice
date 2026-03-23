@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn test_iterator_ext() {
-        let nums = vec![1, 2, 3, 4, 5, 6];
+        let nums = [1, 2, 3, 4, 5, 6];
         // We can call count_where directly on the iterator because of the blanket impl
         let evens = nums.iter().count_where(|&x| x % 2 == 0);
         assert_eq!(evens, 3);
