@@ -283,7 +283,7 @@ mod tests {
 
         let producer = thread::spawn(move || {
             for i in 0..COUNT {
-                while let Err(_) = p.push(i) {
+                while p.push(i).is_err() {
                     std::hint::spin_loop();
                 }
             }

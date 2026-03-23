@@ -294,16 +294,14 @@ impl LsmTree {
             for entry in fs::read_dir(&base_path)? {
                 let entry = entry?;
                 let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("sst") {
-                    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                        if let Ok(id) = stem.parse::<usize>() {
+                if path.extension().and_then(|s| s.to_str()) == Some("sst")
+                    && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
+                        && let Ok(id) = stem.parse::<usize>() {
                             sst_paths.push((id, path.clone()));
                             if id > max_id {
                                 max_id = id;
                             }
                         }
-                    }
-                }
             }
         }
 

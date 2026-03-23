@@ -269,7 +269,7 @@ mod tests {
 
         let count = hll.count();
         // For very small N, Linear Counting should be exact if no collisions
-        assert!(count >= 3 && count <= 3, "Count should be 3, got {}", count);
+        assert!(count == 3, "Count should be 3, got {}", count);
     }
 
     #[test]
@@ -340,7 +340,7 @@ mod tests {
         // has ~5% chance of collision. Allow +/- 1.
         let count = hll.count();
         assert!(
-            count >= 9 && count <= 11,
+            (9..=11).contains(&count),
             "Expected 10 (+/- 1), got {}",
             count
         );

@@ -16,7 +16,6 @@
 //! of TLS: cleaning up memory when a thread exits.
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, ThreadId};
 
@@ -92,10 +91,10 @@ impl<T> ThreadLocal<T> {
         let tid = thread::current().id();
 
         let mut map = self.registry.lock().unwrap();
-        if !map.contains_key(&tid) {
+        map.entry(tid).or_insert_with(|| {
             let value = (self.init)();
-            map.insert(tid, Box::new(value));
-        }
+            Box::new(value)
+        });
 
         let val_ref = map.get(&tid).unwrap();
         f(val_ref)
@@ -115,10 +114,10 @@ impl<T> ThreadLocal<T> {
         let tid = thread::current().id();
 
         let mut map = self.registry.lock().unwrap();
-        if !map.contains_key(&tid) {
+        map.entry(tid).or_insert_with(|| {
             let value = (self.init)();
-            map.insert(tid, Box::new(value));
-        }
+            Box::new(value)
+        });
 
         let val_mut = map.get_mut(&tid).unwrap();
         f(val_mut)

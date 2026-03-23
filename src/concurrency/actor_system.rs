@@ -353,7 +353,7 @@ mod tests {
 
         // Attempting to send a message requiring a reply will fail if the channel is closed
         let res = addr.send(GetCount);
-        assert_eq!(res.is_err(), true);
+        assert!(res.is_err());
         if let Err(e) = res {
             assert_eq!(e, SendError::Closed);
         }

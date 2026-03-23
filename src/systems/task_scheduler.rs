@@ -222,7 +222,7 @@ impl Scheduler for TaskScheduler {
 
         // Check if the newly scheduled task is sooner than all existing tasks.
         // If it is, we need to wake up the worker thread so it can adjust its sleep timeout.
-        let is_earliest = state.tasks.peek().map_or(true, |top| run_at < top.run_at);
+        let is_earliest = state.tasks.peek().is_none_or(|top| run_at < top.run_at);
 
         state.tasks.push(Task::new(run_at, action));
 
