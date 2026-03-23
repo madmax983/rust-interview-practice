@@ -110,13 +110,15 @@ impl Twitter {
     /// Each item must be posted by users who the user followed or by the user themselves.
     /// Tweets must be ordered from most recent to least recent.
     pub fn get_news_feed(&self, user_id: UserId) -> Vec<TweetId> {
-        let mut heap = BinaryHeap::new();
-
         // 1. Identify sources: The user themselves + their followees
         // RUST INSIGHT: We can use `std::iter::once` chained with the followees iterator
         // to treat them uniformly.
         let empty_set = HashSet::new();
         let followees = self.follows.get(&user_id).unwrap_or(&empty_set);
+
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate heap capacity to avoid reallocations.
+        // We will insert at most 1 item per source (user + followees).
+        let mut heap = BinaryHeap::with_capacity(followees.len() + 1);
 
         // We need to look at the user + followees
         let sources = std::iter::once(&user_id).chain(followees.iter());
@@ -137,7 +139,8 @@ impl Twitter {
         }
 
         // 3. Extract top 10
-        let mut feed = Vec::new();
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate feed vector capacity since we know the exact maximum size (10).
+        let mut feed = Vec::with_capacity(10);
         while feed.len() < 10 {
             if let Some(item) = heap.pop() {
                 feed.push(item.tweet_id);
