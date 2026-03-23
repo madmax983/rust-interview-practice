@@ -31,6 +31,7 @@ pub mod null_object;
 pub mod object_pool;
 pub mod observer;
 pub mod oop_correction;
+pub mod oop_correction_factor;
 pub mod parse_dont_validate;
 pub mod plugin;
 pub mod polymorphism;
