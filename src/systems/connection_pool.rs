@@ -213,7 +213,10 @@ impl<M: ManageConnection> ConnectionPool<M> {
     }
 
     /// Retrieves a connection from the pool, waiting up to `timeout`.
-    pub fn get_timeout(&self, timeout: Duration) -> Result<PooledConnection<M>, PoolError<M::Error>> {
+    pub fn get_timeout(
+        &self,
+        timeout: Duration,
+    ) -> Result<PooledConnection<M>, PoolError<M::Error>> {
         let mut state = self.shared.state.lock().unwrap();
         let end_time = Instant::now() + timeout;
 
@@ -252,7 +255,8 @@ impl<M: ManageConnection> ConnectionPool<M> {
             }
 
             let remaining = end_time - now;
-            let (new_state, timeout_result) = self.shared.cvar.wait_timeout(state, remaining).unwrap();
+            let (new_state, timeout_result) =
+                self.shared.cvar.wait_timeout(state, remaining).unwrap();
             state = new_state;
 
             if timeout_result.timed_out() {
@@ -457,7 +461,10 @@ mod tests {
         let pool = make_pool(2, || Err::<(), &str>("Failed to connect"));
 
         let result = pool.get();
-        assert_eq!(result.map(|_| ()).unwrap_err(), PoolError::Factory("Failed to connect"));
+        assert_eq!(
+            result.map(|_| ()).unwrap_err(),
+            PoolError::Factory("Failed to connect")
+        );
         assert_eq!(pool.active_count(), 0);
     }
 

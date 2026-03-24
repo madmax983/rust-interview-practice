@@ -130,9 +130,10 @@ impl<K: std::hash::Hash + Eq + Clone, V> LFUCache<K, V> {
 
         // Update previous head's prev pointer
         if let Some(head_idx) = list.head
-            && let Some(head_node) = &mut self.nodes[head_idx] {
-                head_node.prev = Some(node_idx);
-            }
+            && let Some(head_node) = &mut self.nodes[head_idx]
+        {
+            head_node.prev = Some(node_idx);
+        }
 
         list.head = Some(node_idx);
 
@@ -260,13 +261,14 @@ impl<K: std::hash::Hash + Eq + Clone, V> Cache<K, V> for LFUCache<K, V> {
 
         // Evict if at capacity
         if self.key_map.len() == self.capacity
-            && let Some(lru_idx) = self.pop_tail(self.min_freq) {
-                if let Some(node) = self.nodes[lru_idx].take() {
-                    self.key_map.remove(&node.key);
-                }
-                // Add the index to the free list to be reused
-                self.free_list.push(lru_idx);
+            && let Some(lru_idx) = self.pop_tail(self.min_freq)
+        {
+            if let Some(node) = self.nodes[lru_idx].take() {
+                self.key_map.remove(&node.key);
             }
+            // Add the index to the free list to be reused
+            self.free_list.push(lru_idx);
+        }
 
         // Create new node
         let new_node = Node {

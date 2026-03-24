@@ -23,7 +23,10 @@ use std::future::Future;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::pin::Pin;
-use std::sync::{atomic::{AtomicUsize, Ordering}, Mutex};
+use std::sync::{
+    Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
 use std::task::{Context, Poll, Waker};
 
 static NEXT_WAITER_ID: AtomicUsize = AtomicUsize::new(1);
@@ -144,10 +147,12 @@ impl<'a, T> Drop for MutexAcquire<'a, T> {
         // If this task was at the front of the queue and the lock is NOT held,
         // (meaning the previous holder dropped the lock and woke THIS dropped future),
         // we must wake the next future in the queue so the chain doesn't break.
-        if was_first && !state.locked
-            && let Some((_, waker)) = state.wakers.front() {
-                waker.wake_by_ref();
-            }
+        if was_first
+            && !state.locked
+            && let Some((_, waker)) = state.wakers.front()
+        {
+            waker.wake_by_ref();
+        }
     }
 }
 
@@ -269,9 +274,9 @@ impl<'a, T> Drop for AsyncMutexGuard<'a, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::concurrency::async_executor::{new_executor_and_spawner, TimerFuture};
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use crate::concurrency::async_executor::{TimerFuture, new_executor_and_spawner};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
 
     #[test]

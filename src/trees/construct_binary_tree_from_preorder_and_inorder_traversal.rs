@@ -255,8 +255,14 @@ mod tests {
     fn test_empty() {
         let preorder = vec![];
         let inorder = vec![];
-        assert_eq!(build_tree_brute_force(preorder.clone(), inorder.clone()), None);
-        assert_eq!(build_tree_optimized(preorder.clone(), inorder.clone()), None);
+        assert_eq!(
+            build_tree_brute_force(preorder.clone(), inorder.clone()),
+            None
+        );
+        assert_eq!(
+            build_tree_optimized(preorder.clone(), inorder.clone()),
+            None
+        );
         assert_eq!(build_tree_optimal(preorder, inorder), None);
     }
 
@@ -264,8 +270,14 @@ mod tests {
     fn test_single_node() {
         let preorder = vec![-1];
         let inorder = vec![-1];
-        assert_eq!(build_tree_brute_force(preorder.clone(), inorder.clone()), leaf(-1));
-        assert_eq!(build_tree_optimized(preorder.clone(), inorder.clone()), leaf(-1));
+        assert_eq!(
+            build_tree_brute_force(preorder.clone(), inorder.clone()),
+            leaf(-1)
+        );
+        assert_eq!(
+            build_tree_optimized(preorder.clone(), inorder.clone()),
+            leaf(-1)
+        );
         assert_eq!(build_tree_optimal(preorder, inorder), leaf(-1));
     }
 
@@ -280,8 +292,14 @@ mod tests {
         expected.left = Some(Box::new(left1));
         let expected = Some(Box::new(expected));
 
-        assert_eq!(build_tree_brute_force(preorder.clone(), inorder.clone()), expected);
-        assert_eq!(build_tree_optimized(preorder.clone(), inorder.clone()), expected);
+        assert_eq!(
+            build_tree_brute_force(preorder.clone(), inorder.clone()),
+            expected
+        );
+        assert_eq!(
+            build_tree_optimized(preorder.clone(), inorder.clone()),
+            expected
+        );
         assert_eq!(build_tree_optimal(preorder, inorder), expected);
     }
 }
