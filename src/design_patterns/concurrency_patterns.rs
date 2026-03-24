@@ -140,6 +140,7 @@ impl Default for ShutdownManager {
     }
 }
 
+#[cfg(feature = "async-parallel")]
 impl ShutdownManager {
     pub fn new() -> Self {
         let (notify_shutdown, _) = broadcast::channel(1);

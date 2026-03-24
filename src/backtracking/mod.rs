@@ -1,3 +1,4 @@
+pub mod combination_sum;
 pub mod generate_parentheses;
 pub mod n_queens;
 pub mod permutations;
