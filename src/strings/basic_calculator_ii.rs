@@ -226,25 +226,23 @@ pub fn calculate_optimal(s: String) -> i32 {
 
     for token in lexer {
         match token {
-            Token::Number(num) => {
-                match current_op {
-                    Token::Add => {
-                        result += last_number;
-                        last_number = num;
-                    }
-                    Token::Subtract => {
-                        result += last_number;
-                        last_number = -num;
-                    }
-                    Token::Multiply => {
-                        last_number *= num;
-                    }
-                    Token::Divide => {
-                        last_number /= num;
-                    }
-                    _ => unreachable!(),
+            Token::Number(num) => match current_op {
+                Token::Add => {
+                    result += last_number;
+                    last_number = num;
                 }
-            }
+                Token::Subtract => {
+                    result += last_number;
+                    last_number = -num;
+                }
+                Token::Multiply => {
+                    last_number *= num;
+                }
+                Token::Divide => {
+                    last_number /= num;
+                }
+                _ => unreachable!(),
+            },
             op => current_op = op,
         }
     }
@@ -305,9 +303,24 @@ mod tests {
         ];
 
         for (s, expected) in cases {
-            assert_eq!(calculate_brute_force(s.to_string()), expected, "Brute force failed for {}", s);
-            assert_eq!(calculate_optimized(s.to_string()), expected, "Optimized failed for {}", s);
-            assert_eq!(calculate_optimal(s.to_string()), expected, "Optimal failed for {}", s);
+            assert_eq!(
+                calculate_brute_force(s.to_string()),
+                expected,
+                "Brute force failed for {}",
+                s
+            );
+            assert_eq!(
+                calculate_optimized(s.to_string()),
+                expected,
+                "Optimized failed for {}",
+                s
+            );
+            assert_eq!(
+                calculate_optimal(s.to_string()),
+                expected,
+                "Optimal failed for {}",
+                s
+            );
         }
     }
 }

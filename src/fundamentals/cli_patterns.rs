@@ -102,9 +102,10 @@ fn run_basic_app() -> io::Result<()> {
 
         // Handle events
         if event::poll(std::time::Duration::from_millis(100))?
-            && let Event::Key(key) = event::read()? {
-                handle_key_basic(&mut app, key);
-            }
+            && let Event::Key(key) = event::read()?
+        {
+            handle_key_basic(&mut app, key);
+        }
 
         // Update state
         app.on_tick();

@@ -93,11 +93,13 @@ mod tests {
 
     #[test]
     fn test_enum_dispatch() {
-        let shapes = [ShapeEnum::Circle { radius: 1.0 },
+        let shapes = [
+            ShapeEnum::Circle { radius: 1.0 },
             ShapeEnum::Rectangle {
                 width: 2.0,
                 height: 3.0,
-            }];
+            },
+        ];
 
         let total_area: f64 = shapes.iter().map(|s| s.area()).sum();
         assert!((total_area - (std::f64::consts::PI + 6.0)).abs() < 1e-6);

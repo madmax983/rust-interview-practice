@@ -53,7 +53,7 @@
 //! - Storing a list of `Rc<RefCell<dyn Observer>>` to simulate OOP event listeners.
 //! - Using boolean flags (`is_initialized`) inside structs instead of consuming the struct to produce a new type.
 
-use std::sync::{mpsc, OnceLock};
+use std::sync::{OnceLock, mpsc};
 use std::thread;
 
 // ============================================================================
@@ -220,11 +220,16 @@ mod tests {
         let receiver = bus.into_receiver();
 
         // Simulate multiple subjects emitting events
-        sender1.send(Event::UserLoggedIn("Alice".to_string())).unwrap();
+        sender1
+            .send(Event::UserLoggedIn("Alice".to_string()))
+            .unwrap();
         sender2.send(Event::ServerShutdown).unwrap();
 
         // Listener processes events sequentially
-        assert_eq!(receiver.recv().unwrap(), Event::UserLoggedIn("Alice".to_string()));
+        assert_eq!(
+            receiver.recv().unwrap(),
+            Event::UserLoggedIn("Alice".to_string())
+        );
         assert_eq!(receiver.recv().unwrap(), Event::ServerShutdown);
     }
 

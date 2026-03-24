@@ -97,36 +97,48 @@ pub fn longest_common_prefix_optimized(mut strs: Vec<String>) -> String {
     strs[0][0..i].to_string()
 }
 
-/// Optimal approach: Iterator folding with `zip`.
+/// Optimal approach: Iterator folding with `zip` in-place.
 /// Time: O(S) where S is the sum of all characters in all strings.
-/// Space: O(1) since we return a slice and build one string at the end.
+/// Space: O(1) auxiliary space beyond the input (which is consumed).
+///
+/// ⚡ BOLT OPTIMIZATION:
+/// We consume the input `Vec<String>` using `.into_iter()`. We take ownership
+/// of the first `String` and modify it in-place using `.truncate()`. This
+/// eliminates the need to allocate a brand new `String` on the heap at the end
+/// and avoids any intermediate heap allocations, representing a zero-cost abstraction.
 ///
 /// This approach uses idiomatic Rust iterators. We start with the first string
-/// as our initial "prefix". Then we fold over the rest of the strings, updating
+/// as our initial "prefix". Then we iterate over the rest of the strings, updating
 /// the prefix by safely comparing byte by byte using `zip`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn longest_common_prefix_optimal(strs: Vec<String>) -> String {
-    if strs.is_empty() {
-        return String::new();
-    }
+    let mut iter = strs.into_iter();
+    let mut prefix = match iter.next() {
+        Some(s) => s,
+        None => return String::new(),
+    };
 
-    // We can convert to iterator, taking the first element as the accumulator
-    let prefix = strs.iter().skip(1).fold(strs[0].as_str(), |acc, s| {
+    for s in iter {
         // Find how many bytes match between the accumulator and the current string
-        let match_len = acc
+        let match_len = prefix
             .bytes()
             .zip(s.bytes())
             .take_while(|(a, b)| a == b)
             .count();
 
-        // RUST INSIGHT: Slicing a string is O(1) and creates a new `&str`.
-        // We ensure we only slice at valid ASCII boundaries because `match_len`
+        // RUST INSIGHT: `truncate` is an O(1) operation on a `String` since it
+        // just modifies the internal length property without freeing capacity.
+        // We ensure we only truncate at valid ASCII boundaries because `match_len`
         // is determined by matching byte values in ASCII strings.
-        &acc[..match_len]
-    });
+        prefix.truncate(match_len);
 
-    prefix.to_string()
+        if prefix.is_empty() {
+            break;
+        }
+    }
+
+    prefix
 }
 
 /// Main entry point - uses the optimal iterator folding approach.
