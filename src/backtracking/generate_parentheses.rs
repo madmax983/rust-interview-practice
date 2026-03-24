@@ -109,7 +109,13 @@ pub fn generate_parenthesis_optimized(n: i32) -> Vec<String> {
     result
 }
 
-fn backtrack_optimized(current: &mut String, open: i32, close: i32, max: i32, result: &mut Vec<String>) {
+fn backtrack_optimized(
+    current: &mut String,
+    open: i32,
+    close: i32,
+    max: i32,
+    result: &mut Vec<String>,
+) {
     if current.len() as i32 == max * 2 {
         result.push(current.clone());
         return;

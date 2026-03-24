@@ -241,9 +241,11 @@ mod tokio_patterns {
             format!("Content from {url}")
         }
 
-        let urls = ["https://example.com/1",
+        let urls = [
+            "https://example.com/1",
             "https://example.com/2",
-            "https://example.com/3"];
+            "https://example.com/3",
+        ];
 
         // Fetch concurrently
         let futures = urls.iter().map(|url| fetch_url(url));

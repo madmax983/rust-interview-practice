@@ -296,12 +296,13 @@ impl LsmTree {
                 let path = entry.path();
                 if path.extension().and_then(|s| s.to_str()) == Some("sst")
                     && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
-                        && let Ok(id) = stem.parse::<usize>() {
-                            sst_paths.push((id, path.clone()));
-                            if id > max_id {
-                                max_id = id;
-                            }
-                        }
+                    && let Ok(id) = stem.parse::<usize>()
+                {
+                    sst_paths.push((id, path.clone()));
+                    if id > max_id {
+                        max_id = id;
+                    }
+                }
             }
         }
 
