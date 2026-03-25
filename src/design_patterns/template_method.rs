@@ -82,12 +82,8 @@ pub struct CsvParser;
 impl DataParser for CsvParser {
     fn parse_header(&self, data: &str) -> String {
         // Simple mock implementation
-        data.lines()
-            .next()
-            .unwrap_or("")
-            .split(',')
-            .collect::<Vec<_>>()
-            .join(" | ")
+        /// BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<_>>()` by using `replace` directly.
+        data.lines().next().unwrap_or("").replace(',', " | ")
     }
 
     fn parse_body(&self, data: &str) -> Vec<String> {
