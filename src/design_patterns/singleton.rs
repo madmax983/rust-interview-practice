@@ -41,9 +41,6 @@
 //! ## Anti-patterns
 //! - `static mut`: Requires `unsafe` block for every access, highly discouraged due to data race risks.
 //!
-//! ## Footer
-//! The GoF Singleton relies on a private constructor and a static `getInstance()` method. Rust replaces this with module-level `static` variables wrapped in safe synchronization primitives, or ideally, by passing state as parameters (often via traits).
-
 use std::sync::{Mutex, OnceLock};
 
 // ============================================================================
@@ -177,3 +174,19 @@ mod tests {
         );
     }
 }
+
+// ============================================================================
+// Footer
+// ============================================================================
+//
+// How this pattern appears in std/major crates:
+// - **std::sync::OnceLock:** The standard way to implement a safe, one-time initialized global variable.
+// - **lazy_static / once_cell:** Historically used crates for the same purpose before OnceLock was stabilized.
+//
+// What the GoF/OOP equivalent is and why it doesn't translate directly:
+// The GoF Singleton relies on a private constructor and a static `getInstance()` method, often containing hidden mutable state.
+// Rust replaces this with module-level `static` variables wrapped in safe synchronization primitives, or ideally, by passing state as parameters.
+//
+// When to reach for this vs simpler alternatives:
+// Reach for `OnceLock` only when the data is truly global, immutable after initialization, and needed across many deeply nested functions without passing it explicitly.
+// Always default to Dependency Injection (passing the struct as an argument) as the simpler, more testable alternative.

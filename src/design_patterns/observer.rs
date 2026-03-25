@@ -106,7 +106,8 @@ impl ConcurrentSubject {
 // Approach 2: Synchronous Callbacks (Single-threaded)
 // ============================================================================
 
-// OWNERSHIP INSIGHT: We use `Box<dyn FnMut>` to store closures.
+// ANTI-PATTERN: The traditional `Vec<Rc<RefCell<dyn Observer>>>` is slower and introduces reference cycles easily.
+// OWNERSHIP INSIGHT: We use `Box<dyn FnMut>` to store closures instead of trait objects directly.
 // Because the Subject owns these closures, they cannot easily mutate variables
 // in the external environment unless those variables are wrapped in `Rc<RefCell<T>>`.
 pub struct Subject {

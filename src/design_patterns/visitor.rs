@@ -39,6 +39,9 @@
 //! - **Enum Dispatch:** When the set of types is fixed (e.g., your own AST). This is 99% of cases.
 //! - **Visitor Trait:** When you need to decouple the algorithm from the data structure, or when the set of operations is open-ended
 //!   (e.g., a linter where users can add new checks without recompiling the AST).
+//!
+//! ## Anti-patterns
+//! - Forcing the Visitor trait pattern when a simple `match` statement on an enum would suffice.
 
 // ============================================================================
 // The Data Structure (AST)
@@ -57,8 +60,9 @@ pub enum Expr {
 // ============================================================================
 
 impl Expr {
-    // OWNERSHIP INSIGHT: We borrow self recursively.
-    // The compiler ensures we cover all variants.
+    // ANTI-PATTERN: Using a full Visitor trait when a simple match on a closed enum works perfectly.
+    // OWNERSHIP INSIGHT: We borrow self recursively (`&self`).
+    // COMPILE-TIME WIN: The compiler ensures we cover all variants in the `match` block exhaustively.
     pub fn eval(&self) -> i32 {
         match self {
             Expr::Literal(val) => *val,
@@ -75,6 +79,8 @@ impl Expr {
 // The "True" Visitor pattern separates the types.
 // This decouples the operation from the structure.
 
+// TRADEOFF: The Visitor trait decouples logic from data, but at the cost of significantly
+// more boilerplate and indirection compared to standard enum pattern matching.
 pub trait AstVisitor {
     fn visit_literal(&mut self, value: i32);
     fn visit_add(&mut self, lhs: &Expr, rhs: &Expr);
@@ -83,6 +89,8 @@ pub trait AstVisitor {
 
 // Dispatcher logic
 impl Expr {
+    // PRODUCTION NOTE: In complex systems (like `syn`), `accept` often takes `&mut self` or consumes `self`,
+    // and returns a `Result` to allow for fallible traversal.
     pub fn accept(&self, visitor: &mut impl AstVisitor) {
         match self {
             Expr::Literal(val) => visitor.visit_literal(*val),
@@ -115,6 +123,9 @@ impl AstVisitor for EvaluatorVisitor {
     }
 
     fn visit_add(&mut self, lhs: &Expr, rhs: &Expr) {
+        // GOTCHA: Stateful visitors require careful management of intermediate results.
+        // Overwriting `self.result` recursively means we must extract it immediately after returning.
+
         // Double dispatch:
         // 1. Visit left child (updates self.result)
         lhs.accept(self);
@@ -176,3 +187,21 @@ mod tests {
         assert_eq!(visitor.result, 9);
     }
 }
+
+// ============================================================================
+// Footer
+// ============================================================================
+//
+// How this pattern appears in std/major crates:
+// - **Serde:** `serde::de::Visitor` for deserializing arbitrary data formats.
+// - **Syn/Rustc:** `syn::visit::Visit` and `rustc_ast::visit::Visitor` for AST traversal.
+//
+// What the GoF/OOP equivalent is and why it doesn't translate directly:
+// The OOP Visitor pattern exists to implement "double dispatch" when classes form an inheritance hierarchy.
+// Rust natively solves this for closed sets using Enums and Pattern Matching, which is the preferred approach
+// for 99% of use cases.
+//
+// When to reach for this vs simpler alternatives:
+// - Always default to Enum + `match` (Approach 1).
+// - Reach for the Visitor Trait (Approach 2) only when the data types are an open set, or when
+//   you are building a framework (like Serde) where users need to provide custom traversal logic.
