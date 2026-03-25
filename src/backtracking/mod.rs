@@ -1,6 +1,7 @@
 pub mod combination_sum;
 pub mod generate_parentheses;
 pub mod n_queens;
+pub mod palindrome_partitioning;
 pub mod permutations;
 pub mod subsets;
 pub mod sudoku_solver;

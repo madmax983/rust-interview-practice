@@ -112,14 +112,21 @@ impl Node {
                 // GOTCHA: Splitting a string slice must happen at a valid UTF-8 character boundary.
                 // Rust will panic if we split `s` at an invalid byte index.
                 // A production rope would enforce character boundaries during insertion/deletion.
-                assert!(s.is_char_boundary(index), "Split index is not a char boundary");
+                assert!(
+                    s.is_char_boundary(index),
+                    "Split index is not a char boundary"
+                );
                 let (left_str, right_str) = s.split_at(index);
                 (
                     Node::Leaf(left_str.to_string()),
                     Node::Leaf(right_str.to_string()),
                 )
             }
-            Node::Internal { weight, left, right } => {
+            Node::Internal {
+                weight,
+                left,
+                right,
+            } => {
                 if index < weight {
                     // Split point is in the left child.
                     let (l_left, l_right) = left.split(index);
@@ -320,7 +327,8 @@ mod tests {
     #[test]
     fn test_rope_large_string() {
         // Exceeds LEAF_MAX (32) to force chunking
-        let long_str = "A quick brown fox jumps over the lazy dog repeatedly to test the chunking mechanism.";
+        let long_str =
+            "A quick brown fox jumps over the lazy dog repeatedly to test the chunking mechanism.";
         let mut rope = Rope::from_str(long_str);
 
         rope.insert(1, " very");
