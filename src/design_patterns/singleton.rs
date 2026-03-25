@@ -40,9 +40,7 @@
 //!
 //! ## Anti-patterns
 //! - `static mut`: Requires `unsafe` block for every access, highly discouraged due to data race risks.
-//!
-//! ## Footer
-//! The GoF Singleton relies on a private constructor and a static `getInstance()` method. Rust replaces this with module-level `static` variables wrapped in safe synchronization primitives, or ideally, by passing state as parameters (often via traits).
+//! - Forcing `Arc<Mutex<T>>` into a lazy static block instead of passing state via Dependency Injection.
 
 use std::sync::{Mutex, OnceLock};
 
@@ -177,3 +175,25 @@ mod tests {
         );
     }
 }
+
+// ============================================================================
+// Footer
+// ============================================================================
+//
+// How this pattern appears in std/crates:
+// - `std::sync::OnceLock`: The standard way to lazily initialize global state.
+// - `lazy_static` / `once_cell`: Third-party crates that provided this functionality before it stabilized in std.
+//
+// What the GoF/OOP equivalent is and why it doesn't translate directly:
+// The GoF Singleton relies on a private constructor and a static `getInstance()` method,
+// often mutating its own state. Rust heavily discourages global mutable state, replacing it with
+// module-level `static` variables wrapped in safe synchronization primitives, or ideally,
+// by passing state as parameters.
+//
+// When to reach for this vs simpler alternatives:
+// Reach for `OnceLock` only when the state is truly global and initialization is expensive
+// or configuration-based. Otherwise, prefer Dependency Injection (passing state via structs).
+//
+// META-PATTERN: "Make illegal states unrepresentable"
+// `OnceLock` moves the runtime risk of uninitialized global state or data races during initialization
+// into a compile-time/safe abstraction. You cannot access the inner value without initializing it safely.

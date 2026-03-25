@@ -35,10 +35,16 @@
 //! }
 //! ```
 //!
+//! **Invariants:**
+//! - Extensibility is orthogonal. Enums allow adding new operations easily but modifying types is hard. Visitor allows adding new operations easily but adding new types requires updating all visitors.
+//!
 //! ## When to use
 //! - **Enum Dispatch:** When the set of types is fixed (e.g., your own AST). This is 99% of cases.
 //! - **Visitor Trait:** When you need to decouple the algorithm from the data structure, or when the set of operations is open-ended
 //!   (e.g., a linter where users can add new checks without recompiling the AST).
+//!
+//! ## Anti-patterns
+//! - Using the Visitor Trait when the data structure is fully controlled by your application and won't change independently. Instead, just use Enum Dispatch.
 
 // ============================================================================
 // The Data Structure (AST)
@@ -72,6 +78,9 @@ impl Expr {
 // Approach 2: Visitor Trait (External Visitor / Double Dispatch)
 // ============================================================================
 
+// ANTI-PATTERN: Defaulting to this complex trait approach when Enum dispatch would suffice.
+// COMPILE-TIME WIN: Adding a new variant to `Expr` forces updates across all `AstVisitor` implementations.
+
 // The "True" Visitor pattern separates the types.
 // This decouples the operation from the structure.
 
@@ -84,6 +93,9 @@ pub trait AstVisitor {
 // Dispatcher logic
 impl Expr {
     pub fn accept(&self, visitor: &mut impl AstVisitor) {
+        // TRADEOFF: Visitor relies heavily on recursive double dispatch, which is often slower than
+        // direct enum dispatch due to more virtual calls or monomorphization bloat.
+        // GOTCHA: Don't forget that implementing the double dispatch can overflow the stack for deep trees.
         match self {
             Expr::Literal(val) => visitor.visit_literal(*val),
             Expr::Add(lhs, rhs) => visitor.visit_add(lhs, rhs),
@@ -115,6 +127,7 @@ impl AstVisitor for EvaluatorVisitor {
     }
 
     fn visit_add(&mut self, lhs: &Expr, rhs: &Expr) {
+        // PRODUCTION NOTE: Often visitors will return `Result` or `ControlFlow` rather than mutating `self` directly.
         // Double dispatch:
         // 1. Visit left child (updates self.result)
         lhs.accept(self);
@@ -176,3 +189,24 @@ mod tests {
         assert_eq!(visitor.result, 9);
     }
 }
+
+// ============================================================================
+// Footer
+// ============================================================================
+//
+// How this pattern appears in std/crates:
+// - `serde::de::Visitor`: Decouples the deserialization format from the data type.
+// - `syn::visit::Visit`: Allows traversing Rust ASTs without matching every node type.
+//
+// What the GoF/OOP equivalent is and why it doesn't translate directly:
+// In OOP, Visitor avoids runtime type checking via double dispatch. In Rust, enum
+// dispatch (pattern matching) natively solves this exact problem with better performance
+// and safety, so the actual Visitor pattern is reserved strictly for open sets.
+//
+// When to reach for this vs simpler alternatives:
+// Always default to Enum Dispatch (pattern matching). Only reach for Visitor
+// when you are writing a library and users must be able to add operations over your data.
+//
+// META-PATTERN: "Make illegal states unrepresentable"
+// Enum dispatch naturally enforces exhaustive coverage checking, turning unhandled
+// data structure variants into compile-time errors.
