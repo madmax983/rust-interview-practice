@@ -2,6 +2,7 @@ pub mod arc_cache;
 pub mod bitcask;
 pub mod bump_allocator;
 pub mod circuit_breaker;
+pub mod cli_parser;
 pub mod concurrent_cache;
 pub mod connection_pool;
 pub mod consistent_hashing;

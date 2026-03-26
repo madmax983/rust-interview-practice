@@ -1,4 +1,5 @@
 pub mod base64;
+pub mod csv;
 pub mod ini;
 pub mod json;
 pub mod toml;
