@@ -1,3 +1,4 @@
+pub mod aho_corasick;
 pub mod basic_calculator_ii;
 pub mod group_anagrams;
 pub mod longest_common_prefix;
