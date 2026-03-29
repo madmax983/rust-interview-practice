@@ -21,6 +21,7 @@ pub mod snowflake;
 pub mod task_scheduler;
 pub mod tracing;
 pub mod ttl_cache;
+pub mod uuid;
 pub mod vector_clock;
 pub mod wal;
 pub mod write_strategies;
