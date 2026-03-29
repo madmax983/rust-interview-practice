@@ -137,7 +137,9 @@ impl AhoCorasick {
                 None => {
                     let new_state_idx = self.states.len();
                     self.states.push(State::default());
-                    self.states[current_state].transitions.insert(byte, new_state_idx);
+                    self.states[current_state]
+                        .transitions
+                        .insert(byte, new_state_idx);
                     current_state = new_state_idx;
                 }
             }
@@ -198,7 +200,6 @@ impl AhoCorasick {
             }
         }
     }
-
 }
 
 impl MultiPatternSearch for AhoCorasick {
@@ -209,7 +210,8 @@ impl MultiPatternSearch for AhoCorasick {
 
         for (i, &byte) in text.iter().enumerate() {
             // Follow failure links if there is no direct transition.
-            while current_state != 0 && !self.states[current_state].transitions.contains_key(&byte) {
+            while current_state != 0 && !self.states[current_state].transitions.contains_key(&byte)
+            {
                 current_state = self.states[current_state].fail;
             }
 
@@ -274,7 +276,14 @@ mod tests {
         let matches = ac.search(text);
 
         assert_eq!(matches.len(), 1);
-        assert_eq!(matches[0], Match { pattern_idx: 0, start: 7, end: 12 });
+        assert_eq!(
+            matches[0],
+            Match {
+                pattern_idx: 0,
+                start: 7,
+                end: 12
+            }
+        );
     }
 
     #[test]
@@ -285,8 +294,22 @@ mod tests {
         let matches = ac.search(text);
 
         assert_eq!(matches.len(), 2);
-        assert_eq!(matches[0], Match { pattern_idx: 0, start: 4, end: 7 });
-        assert_eq!(matches[1], Match { pattern_idx: 1, start: 16, end: 19 });
+        assert_eq!(
+            matches[0],
+            Match {
+                pattern_idx: 0,
+                start: 4,
+                end: 7
+            }
+        );
+        assert_eq!(
+            matches[1],
+            Match {
+                pattern_idx: 1,
+                start: 16,
+                end: 19
+            }
+        );
     }
 
     #[test]
@@ -302,9 +325,21 @@ mod tests {
         // - "he" at 2..4  <-- This must be found due to output merging!
         // - "hers" at 2..6
         assert_eq!(matches.len(), 3);
-        assert!(matches.contains(&Match { pattern_idx: 1, start: 1, end: 4 })); // she
-        assert!(matches.contains(&Match { pattern_idx: 0, start: 2, end: 4 })); // he
-        assert!(matches.contains(&Match { pattern_idx: 3, start: 2, end: 6 })); // hers
+        assert!(matches.contains(&Match {
+            pattern_idx: 1,
+            start: 1,
+            end: 4
+        })); // she
+        assert!(matches.contains(&Match {
+            pattern_idx: 0,
+            start: 2,
+            end: 4
+        })); // he
+        assert!(matches.contains(&Match {
+            pattern_idx: 3,
+            start: 2,
+            end: 6
+        })); // hers
     }
 
     #[test]
@@ -329,9 +364,30 @@ mod tests {
         // It will match at every single step, including start (index 0) and each character.
         // The implementation finds matches at index 0 (before 'a'), 1, and 2.
         assert_eq!(matches.len(), 3);
-        assert_eq!(matches[0], Match { pattern_idx: 0, start: 1, end: 1 });
-        assert_eq!(matches[1], Match { pattern_idx: 0, start: 2, end: 2 });
-        assert_eq!(matches[2], Match { pattern_idx: 0, start: 3, end: 3 });
+        assert_eq!(
+            matches[0],
+            Match {
+                pattern_idx: 0,
+                start: 1,
+                end: 1
+            }
+        );
+        assert_eq!(
+            matches[1],
+            Match {
+                pattern_idx: 0,
+                start: 2,
+                end: 2
+            }
+        );
+        assert_eq!(
+            matches[2],
+            Match {
+                pattern_idx: 0,
+                start: 3,
+                end: 3
+            }
+        );
     }
 
     #[test]
@@ -342,7 +398,21 @@ mod tests {
         let matches = ac.search(text);
 
         assert_eq!(matches.len(), 2);
-        assert_eq!(matches[0], Match { pattern_idx: 0, start: 10, end: 14 });
-        assert_eq!(matches[1], Match { pattern_idx: 1, start: 10, end: 14 });
+        assert_eq!(
+            matches[0],
+            Match {
+                pattern_idx: 0,
+                start: 10,
+                end: 14
+            }
+        );
+        assert_eq!(
+            matches[1],
+            Match {
+                pattern_idx: 1,
+                start: 10,
+                end: 14
+            }
+        );
     }
 }
