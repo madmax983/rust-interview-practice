@@ -1,5 +1,3 @@
-#![feature(portable_simd)]
-
 pub mod arrays;
 pub mod backtracking;
 pub mod concurrency;
