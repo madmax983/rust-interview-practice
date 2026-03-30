@@ -145,6 +145,72 @@ pub fn parse_positive_int(input: &str) -> Result<u32, ParseError> {
 }
 
 // ============================================================================
+// Approach 4: Dependency Injection via Generics/Traits over Constructor Injection
+// ============================================================================
+
+// ANTI-PATTERN: Passing concrete classes or relying on runtime DI frameworks.
+// PRODUCTION NOTE: In Rust, DI is naturally achieved using Trait Bounds.
+
+pub trait Logger {
+    fn log(&self, msg: &str);
+}
+
+// Concrete implementation 1
+pub struct StdoutLogger;
+impl Logger for StdoutLogger {
+    fn log(&self, msg: &str) {
+        println!("STDOUT: {msg}");
+    }
+}
+
+// Concrete implementation 2
+pub struct MockLogger {
+    pub messages: std::cell::RefCell<Vec<String>>,
+}
+impl Logger for MockLogger {
+    fn log(&self, msg: &str) {
+        self.messages.borrow_mut().push(msg.to_string());
+    }
+}
+
+// COMPILE-TIME WIN: Zero-cost abstraction. The compiler generates specialized
+// versions of this struct for each logger type (monomorphization).
+pub struct Service<L: Logger> {
+    logger: L,
+}
+
+impl<L: Logger> Service<L> {
+    pub fn new(logger: L) -> Self {
+        Self { logger }
+    }
+
+    pub fn do_work(&self) {
+        // ... some work ...
+        self.logger.log("Work completed");
+    }
+}
+
+// ============================================================================
+// Approach 5: Value semantics over Reference semantics
+// ============================================================================
+
+// ANTI-PATTERN: `new Date()` creating a reference that can be accidentally mutated elsewhere.
+// OWNERSHIP INSIGHT: In Rust, simple data types use `Copy`, and complex types use `Clone`.
+// We move values instead of sharing references unless sharing is explicitly required.
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
+}
+
+pub fn move_point(mut p: Point, dx: i32, dy: i32) -> Point {
+    p.x += dx;
+    p.y += dy;
+    p // Returns a completely new independent value
+}
+
+// ============================================================================
 // Tests
 // ============================================================================
 
@@ -193,4 +259,48 @@ mod tests {
         assert_eq!(parse_positive_int("abc"), Err(ParseError::InvalidNumber));
         assert_eq!(parse_positive_int("-5"), Err(ParseError::NegativeValue));
     }
+
+    #[test]
+    fn test_dependency_injection_mock() {
+        let mock_logger = MockLogger {
+            messages: std::cell::RefCell::new(Vec::new()),
+        };
+        let service = Service::new(mock_logger);
+
+        service.do_work();
+
+        // We couldn't do this easily with static methods or global loggers
+        assert_eq!(service.logger.messages.borrow()[0], "Work completed");
+    }
+
+    #[test]
+    fn test_value_semantics() {
+        let p1 = Point { x: 0, y: 0 };
+        // p2 is a complete copy, mutating p2 inside move_point does not affect p1
+        let p2 = move_point(p1, 5, 10);
+
+        assert_eq!(p1, Point { x: 0, y: 0 }); // p1 is unchanged
+        assert_eq!(p2, Point { x: 5, y: 10 });
+    }
 }
+
+// ============================================================================
+// Footer
+// ============================================================================
+//
+// How this pattern appears in std/crates:
+// - `std::iter::Iterator` uses traits instead of abstract base classes.
+// - `tokio::sync::mpsc` uses message passing instead of shared mutable state.
+// - `std::result::Result` handles errors instead of exceptions.
+//
+// What the GoF/OOP equivalent is and why it doesn't translate directly:
+// In OOP, state is hidden and mutation is shared by default. Rust forces state
+// mutation to be isolated and explicitly shared. Inherited classes are replaced
+// by enums (for closed sets of data) or trait objects (for open sets of behavior).
+//
+// When to reach for this vs. simpler alternatives:
+// Always use these! They are the idiomatic Rust way to write scalable, safe software.
+//
+// META-PATTERN: "Make illegal states unrepresentable"
+// Every approach listed here relies heavily on Rust's type system to enforce
+// what was previously a runtime-only check in OOP languages.
