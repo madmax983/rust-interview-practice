@@ -7,6 +7,7 @@ pub mod design_patterns;
 pub mod dynamic_programming;
 pub mod fundamentals;
 pub mod graphs;
+pub mod heaps;
 pub mod linked_lists;
 pub mod networking;
 pub mod serialization;
