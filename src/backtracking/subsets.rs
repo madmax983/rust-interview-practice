@@ -98,19 +98,19 @@ fn backtrack(nums: &[i32], index: usize, current_path: &mut Vec<i32>, results: &
 #[allow(clippy::needless_pass_by_value)]
 pub fn subsets_functional(nums: Vec<i32>) -> Vec<Vec<i32>> {
     nums.into_iter().fold(vec![vec![]], |mut acc, num| {
-        // We can't mutate `acc` while iterating over it, so we iterate over a clone of its current state,
-        // or we iterate and map, then extend.
-        // Let's take a snapshot of the current subsets to avoid borrowing issues.
-        let new_subsets: Vec<Vec<i32>> = acc
-            .iter()
-            .map(|subset| {
-                let mut new_subset = subset.clone();
-                new_subset.push(num);
-                new_subset
-            })
-            .collect();
+        // BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<_>>()` chains.
+        // We know exactly how many new subsets we will add (the current length of `acc`).
+        // By pre-allocating the space and pushing directly, we eliminate an unnecessary
+        // heap allocation of `Vec<Vec<i32>>` in every iteration step.
+        let len = acc.len();
+        acc.reserve(len);
 
-        acc.extend(new_subsets);
+        for i in 0..len {
+            let mut new_subset = acc[i].clone();
+            new_subset.push(num);
+            acc.push(new_subset);
+        }
+
         acc
     })
 }

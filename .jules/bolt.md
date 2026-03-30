@@ -9,3 +9,7 @@
 **[String Allocation vs Unicode Correctness]**
 **Learning:** Blindly replacing `s.chars().collect::<Vec<char>>()` with `s.as_bytes()` to remove a heap allocation completely breaks algorithms when dealing with non-ASCII text, because a `char` is a 4-byte scalar value while UTF-8 characters have variable byte lengths.
 **Action:** Only swap character iteration for byte slice manipulation (`&[u8]`) if the algorithm constraints explicitly guarantee strictly ASCII input. Otherwise, the performance optimization is a functional regression.
+
+**[Subsets Fold Intermediate Allocation Removal]**
+**Learning:** When using `Iterator::fold` to build up a collection (like subsets), mapping over the accumulator and then calling `.collect::<Vec<_>>()` to create an intermediate vector before `.extend()` causes an unnecessary heap allocation on every iteration step.
+**Action:** Pre-allocate space in the accumulator using `.reserve(len)` and use an indexed `for` loop to mutate the accumulator in place directly, removing all intermediate `Vec` allocations during fold accumulation.
