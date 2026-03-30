@@ -33,6 +33,7 @@ pub mod object_pool;
 pub mod observer;
 pub mod oop_correction;
 pub mod oop_correction_factor;
+pub mod oop_mindset_cures;
 pub mod parse_dont_validate;
 pub mod plugin;
 pub mod polymorphism;
