@@ -88,18 +88,23 @@ impl Codec {
     /// # Rust Insight
     /// We use a `String` buffer and append to it. This is more efficient than
     /// repeated concatenation (`format!`) which would allocate new strings constantly.
+    ///
+    /// BOLT OPTIMIZATION: We use `String::with_capacity` to prevent initial heap
+    /// reallocations. Instead of `n.val.to_string()` which allocates a temporary
+    /// string per node, we use `use std::fmt::Write; write!(out, ...)` to write
+    /// directly to the buffer in-place, achieving zero-allocation formatting.
     pub fn serialize(&self, root: Option<Box<TreeNode>>) -> String {
-        let mut out = String::new();
+        let mut out = String::with_capacity(128);
         self.serialize_helper(&root, &mut out);
         out
     }
 
     fn serialize_helper(&self, node: &Option<Box<TreeNode>>, out: &mut String) {
+        use std::fmt::Write;
         match node {
             Some(n) => {
                 // Pre-order: Process root, then left, then right
-                out.push_str(&n.val.to_string());
-                out.push(' ');
+                write!(out, "{} ", n.val).unwrap();
                 self.serialize_helper(&n.left, out);
                 self.serialize_helper(&n.right, out);
             }
