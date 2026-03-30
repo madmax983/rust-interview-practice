@@ -208,9 +208,19 @@ impl<'a, T> Iterator for SpiralIterator<'a, T> {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn spiral_order_optimal(matrix: Vec<Vec<i32>>) -> Vec<i32> {
-    // We can just collect our iterator!
+    if matrix.is_empty() || matrix[0].is_empty() {
+        return vec![];
+    }
+
+    // BOLT OPTIMIZATION: Pre-allocate capacity to avoid intermediate reallocations
+    // during collection, as the exact number of elements is known beforehand.
+    let capacity = matrix.len() * matrix[0].len();
+    let mut result = Vec::with_capacity(capacity);
+
     // We use `.copied()` because our iterator yields `&i32` but we want `i32`.
-    SpiralIterator::new(&matrix).copied().collect()
+    result.extend(SpiralIterator::new(&matrix).copied());
+
+    result
 }
 
 /// Main entry point - uses optimal solution
