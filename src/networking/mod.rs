@@ -1,4 +1,5 @@
 pub mod dns_resolver;
+pub mod http_client;
 pub mod http_router;
 pub mod http_server;
 pub mod load_balancer;
