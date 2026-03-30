@@ -1,3 +1,4 @@
+pub mod active_record_vs_repository;
 pub mod actor;
 pub mod adapter;
 pub mod borrowed_owned_duality;
