@@ -40,6 +40,7 @@ pub mod polymorphism;
 pub mod prototype;
 pub mod proxy;
 pub mod raii_guards;
+pub mod registry;
 pub mod sealed_traits;
 pub mod self_referential;
 pub mod session_types;
