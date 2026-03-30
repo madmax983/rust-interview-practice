@@ -92,9 +92,12 @@ pub fn group_anagrams_frequency(strs: Vec<String>) -> Vec<Vec<String>> {
     for s in strs {
         let mut count = [0u8; 26];
 
-        for byte in s.bytes() {
+        // BOLT OPTIMIZATION: Iterate over the bytes directly via `.as_bytes()`.
+        // This is a zero-cost abstraction that skips the overhead of the `.bytes()` iterator
+        // adapter, which can be measurably faster in hot loops.
+        for &byte in s.as_bytes() {
             // RUST INSIGHT: Byte-level iteration.
-            // Since constraints guarantee lowercase English letters (ASCII), `s.bytes()` is efficient.
+            // Since constraints guarantee lowercase English letters (ASCII), `s.as_bytes()` is efficient.
             // We subtract b'a' to map 'a'..='z' to 0..=25.
             count[(byte - b'a') as usize] += 1;
         }
