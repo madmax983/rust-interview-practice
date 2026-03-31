@@ -112,7 +112,6 @@ impl Barrier {
             num_threads,
         }
     }
-
 }
 
 impl BarrierSync for Barrier {
