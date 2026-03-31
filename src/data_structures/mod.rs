@@ -20,6 +20,7 @@ pub mod segment_tree;
 pub mod skip_list;
 pub mod slotmap;
 pub mod smallvec;
+pub mod sparse_set;
 pub mod spsc_ring_buffer;
 pub mod type_map;
 pub mod union_find;

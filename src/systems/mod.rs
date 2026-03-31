@@ -14,6 +14,7 @@ pub mod log_structured_storage;
 pub mod lru_cache;
 pub mod lsm_tree;
 pub mod metrics_registry;
+pub mod mvcc;
 pub mod pub_sub;
 pub mod rate_limiter;
 pub mod slab_allocator;
