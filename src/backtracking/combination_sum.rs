@@ -106,12 +106,21 @@ pub fn combination_sum_brute_force(candidates: Vec<i32>, target: i32) -> Vec<Vec
 #[allow(clippy::needless_pass_by_value)]
 pub fn combination_sum_optimized(mut candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
     let mut results = Vec::new();
-    let mut path = Vec::new();
 
     // RUST INSIGHT: `sort_unstable()` is generally faster than `sort()` and
     // is perfectly fine here since we are dealing with primitive integers (i32)
     // where elements with the same value are indistinguishable anyway.
     candidates.sort_unstable();
+
+    if candidates.is_empty() {
+        return results;
+    }
+
+    // RUST INSIGHT: We pre-allocate `path` with exact maximum depth `target / candidates[0]`
+    // to eliminate heap reallocations. Since we sorted `candidates`, index 0 holds the minimum value.
+    // GOTCHA: We must protect against division by zero or negative targets to prevent panic/underflow.
+    let max_depth = (target.max(0) / candidates[0].max(1)) as usize;
+    let mut path = Vec::with_capacity(max_depth);
 
     fn backtrack(
         candidates: &[i32],
