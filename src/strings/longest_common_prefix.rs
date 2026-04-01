@@ -64,8 +64,11 @@ pub fn longest_common_prefix_brute_force(strs: Vec<String>) -> String {
         }
     }
 
+    // ⚡ BOLT OPTIMIZATION:
     // If we reach here, the first string is the common prefix.
-    strs[0].clone()
+    // Instead of cloning it (`strs[0].clone()`), we consume the `Vec` and move the first element
+    // out of it. This is a zero-cost abstraction that eliminates a heap allocation.
+    strs.into_iter().next().unwrap()
 }
 
 /// Optimized approach: Sorting and comparing extremes.
