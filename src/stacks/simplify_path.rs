@@ -37,7 +37,9 @@ pub fn simplify_path(path: &str) -> String {
     // It has O(1) amortized push/pop and contiguous memory layout.
     // Here we store `&str` slices, which are references into the original `path` string.
     // This avoids allocating new `String` objects for each component.
-    let mut stack: Vec<&str> = Vec::new();
+    // ⚡ BOLT OPTIMIZATION: Pre-allocate capacity. The maximum number of components
+    // is half the path length (e.g., "/a/b/c"). Clamping the denominator handles empty strings safely.
+    let mut stack: Vec<&str> = Vec::with_capacity(path.len() / 2);
 
     // GOTCHA: `split('/')` yields empty strings when multiple slashes are adjacent (e.g., "//").
     // It also yields an empty string at the start if the path starts with `/`.
@@ -58,9 +60,20 @@ pub fn simplify_path(path: &str) -> String {
         }
     }
 
-    // Join the components with `/` and ensure it starts with `/`
-    // If the stack is empty, this results in just "/" which is correct for root.
-    format!("/{}", stack.join("/"))
+    // ⚡ BOLT OPTIMIZATION: Build the result string in-place with pre-allocated capacity.
+    // This removes 2 heap allocations (`stack.join("/")` and `format!()`) and prevents
+    // dynamic reallocations while building the final path.
+    let mut result = String::with_capacity(path.len().max(1));
+    if stack.is_empty() {
+        result.push('/');
+    } else {
+        for dir in stack {
+            result.push('/');
+            result.push_str(dir);
+        }
+    }
+
+    result
 }
 
 /// Alternative functional approach: `fold`
@@ -72,18 +85,31 @@ pub fn simplify_path(path: &str) -> String {
 /// due to the `mut` accumulator.
 #[allow(dead_code)]
 pub fn simplify_path_functional(path: &str) -> String {
-    let stack = path.split('/').fold(Vec::new(), |mut stack, component| {
-        match component {
-            "" | "." => {}
-            ".." => {
-                stack.pop();
+    let stack = path.split('/').fold(
+        Vec::with_capacity(path.len() / 2),
+        |mut stack, component| {
+            match component {
+                "" | "." => {}
+                ".." => {
+                    stack.pop();
+                }
+                dir => stack.push(dir),
             }
-            dir => stack.push(dir),
-        }
-        stack
-    });
+            stack
+        },
+    );
 
-    format!("/{}", stack.join("/"))
+    let mut result = String::with_capacity(path.len().max(1));
+    if stack.is_empty() {
+        result.push('/');
+    } else {
+        for dir in stack {
+            result.push('/');
+            result.push_str(dir);
+        }
+    }
+
+    result
 }
 
 /*
@@ -122,5 +148,17 @@ mod tests {
     #[test]
     fn test_functional_approach() {
         assert_eq!(simplify_path_functional("/a/./b/../../c/"), "/c");
+    }
+
+    #[test]
+    fn test_capacity_optimization() {
+        let path = "/a//b////c/d//././/..";
+        let result = simplify_path(path);
+        // The result should have pre-allocated capacity to avoid reallocations.
+        // It should be at least as large as the original string to prevent reallocation.
+        assert!(
+            result.capacity() >= path.len(),
+            "String capacity should be pre-allocated to at least path.len()"
+        );
     }
 }
