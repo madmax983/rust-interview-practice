@@ -1,10 +1,12 @@
 pub mod b_tree;
 pub mod binary_heap;
+pub mod bit_vec;
 pub mod bloom_filter;
 pub mod bytes;
 pub mod concurrent_hash_map;
 pub mod count_min_sketch;
 pub mod cuckoo_filter;
+pub mod graph;
 pub mod hash_map;
 pub mod hashed_wheel_timer;
 pub mod hyperloglog;
