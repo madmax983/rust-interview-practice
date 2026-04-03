@@ -62,10 +62,14 @@ pub struct LRUCacheNaive {
 impl LRUCacheNaive {
     #[must_use]
     pub fn new(capacity: i32) -> Self {
+        let cap = capacity as usize;
         Self {
-            capacity: capacity as usize,
-            map: HashMap::new(),
-            order: Vec::new(),
+            capacity: cap,
+            // BOLT OPTIMIZATION: Pre-allocate capacity to eliminate dynamic heap reallocations.
+            // Since the cache has a fixed maximum size, pre-allocating the underlying HashMap
+            // and Vec exactly to this capacity prevents reallocations during inserts.
+            map: HashMap::with_capacity(cap),
+            order: Vec::with_capacity(cap),
         }
     }
 

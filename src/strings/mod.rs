@@ -7,7 +7,7 @@ pub mod longest_substring_without_repeating;
 pub mod minimum_window_substring;
 pub mod regex;
 pub mod string_to_integer_atoi;
+pub mod text_justification;
 pub mod valid_anagram;
 pub mod valid_number;
-pub mod text_justification;
 pub mod valid_palindrome;
