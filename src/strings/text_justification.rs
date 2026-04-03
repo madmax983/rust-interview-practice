@@ -208,47 +208,77 @@ mod tests {
 
     #[test]
     fn test_brute_force_example() {
-        let words = vec!["This".to_string(), "is".to_string(), "an".to_string(), "example".to_string(), "of".to_string(), "text".to_string(), "justification.".to_string()];
-        let expected = vec![
-            "This    is    an",
-            "example  of text",
-            "justification.  "
+        let words = vec![
+            "This".to_string(),
+            "is".to_string(),
+            "an".to_string(),
+            "example".to_string(),
+            "of".to_string(),
+            "text".to_string(),
+            "justification.".to_string(),
         ];
+        let expected = vec!["This    is    an", "example  of text", "justification.  "];
         assert_eq!(full_justify_brute_force(words, 16), expected);
     }
 
     #[test]
     fn test_optimal_example() {
-        let words = vec!["This".to_string(), "is".to_string(), "an".to_string(), "example".to_string(), "of".to_string(), "text".to_string(), "justification.".to_string()];
-        let expected = vec![
-            "This    is    an",
-            "example  of text",
-            "justification.  "
+        let words = vec![
+            "This".to_string(),
+            "is".to_string(),
+            "an".to_string(),
+            "example".to_string(),
+            "of".to_string(),
+            "text".to_string(),
+            "justification.".to_string(),
         ];
+        let expected = vec!["This    is    an", "example  of text", "justification.  "];
         assert_eq!(full_justify_optimal(words, 16), expected);
     }
 
     #[test]
     fn test_single_word_line() {
-        let words = vec!["What".to_string(), "must".to_string(), "be".to_string(), "acknowledgment".to_string(), "shall".to_string(), "be".to_string()];
-        let expected = vec![
-            "What   must   be",
-            "acknowledgment  ",
-            "shall be        "
+        let words = vec![
+            "What".to_string(),
+            "must".to_string(),
+            "be".to_string(),
+            "acknowledgment".to_string(),
+            "shall".to_string(),
+            "be".to_string(),
         ];
+        let expected = vec!["What   must   be", "acknowledgment  ", "shall be        "];
         assert_eq!(full_justify(words, 16), expected);
     }
 
     #[test]
     fn test_long_spaces() {
-        let words = vec!["Science".to_string(), "is".to_string(), "what".to_string(), "we".to_string(), "understand".to_string(), "well".to_string(), "enough".to_string(), "to".to_string(), "explain".to_string(), "to".to_string(), "a".to_string(), "computer.".to_string(), "Art".to_string(), "is".to_string(), "everything".to_string(), "else".to_string(), "we".to_string(), "do".to_string()];
+        let words = vec![
+            "Science".to_string(),
+            "is".to_string(),
+            "what".to_string(),
+            "we".to_string(),
+            "understand".to_string(),
+            "well".to_string(),
+            "enough".to_string(),
+            "to".to_string(),
+            "explain".to_string(),
+            "to".to_string(),
+            "a".to_string(),
+            "computer.".to_string(),
+            "Art".to_string(),
+            "is".to_string(),
+            "everything".to_string(),
+            "else".to_string(),
+            "we".to_string(),
+            "do".to_string(),
+        ];
         let expected = vec![
             "Science  is  what we",
             "understand      well",
             "enough to explain to",
             "a  computer.  Art is",
             "everything  else  we",
-            "do                  "
+            "do                  ",
         ];
         assert_eq!(full_justify(words, 20), expected);
     }
