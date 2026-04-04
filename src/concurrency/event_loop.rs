@@ -113,9 +113,9 @@ impl SimulatedSelector {
     fn select(&mut self, timeout: Option<Duration>) -> Vec<(Fd, Interest)> {
         // If we have ready events, return them immediately
         if !self.ready.is_empty() {
-            let events = self.ready.clone();
-            self.ready.clear();
-            return events;
+            // BOLT OPTIMIZATION: Avoid `.clone()` and `.clear()` allocation overhead.
+            // `std::mem::take` returns the vector and leaves an empty one in its place without allocating.
+            return std::mem::take(&mut self.ready);
         }
 
         // If no events and we have a timeout, we simulate blocking by sleeping.
@@ -133,9 +133,8 @@ impl SimulatedSelector {
         }
 
         // Return whatever is ready (likely nothing in this simulation unless populated before)
-        let events = self.ready.clone();
-        self.ready.clear();
-        events
+        // BOLT OPTIMIZATION: Avoid `.clone()` and `.clear()` allocation overhead.
+        std::mem::take(&mut self.ready)
     }
 }
 
