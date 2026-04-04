@@ -188,7 +188,11 @@ impl fmt::Display for Url {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:", self.scheme)?;
 
-        if self.host.is_some() || self.username.is_some() || self.password.is_some() || self.port.is_some() {
+        if self.host.is_some()
+            || self.username.is_some()
+            || self.password.is_some()
+            || self.port.is_some()
+        {
             write!(f, "//")?;
 
             if let Some(user) = &self.username {
@@ -237,8 +241,7 @@ pub fn percent_decode(input: &str) -> Result<String, ParseError> {
             if i + 2 < bytes.len() {
                 let hex = std::str::from_utf8(&bytes[i + 1..i + 3])
                     .map_err(|_| ParseError::InvalidEncoding)?;
-                let byte = u8::from_str_radix(hex, 16)
-                    .map_err(|_| ParseError::InvalidEncoding)?;
+                let byte = u8::from_str_radix(hex, 16).map_err(|_| ParseError::InvalidEncoding)?;
                 result.push(byte);
                 i += 3;
             } else {
@@ -260,7 +263,12 @@ pub fn percent_encode(input: &str) -> String {
     // functions like `is_ascii_alphanumeric()`.
     let mut result = String::with_capacity(input.len());
     for byte in input.bytes() {
-        if byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'.' || byte == b'_' || byte == b'~' {
+        if byte.is_ascii_alphanumeric()
+            || byte == b'-'
+            || byte == b'.'
+            || byte == b'_'
+            || byte == b'~'
+        {
             result.push(byte as char);
         } else {
             result.push_str(&format!("%{:02X}", byte));
@@ -303,7 +311,8 @@ mod tests {
 
     #[test]
     fn test_parse_full() {
-        let url = Url::parse("https://user:pass@example.com:8080/path/to/resource?query=1#frag").unwrap();
+        let url =
+            Url::parse("https://user:pass@example.com:8080/path/to/resource?query=1#frag").unwrap();
         assert_eq!(url.scheme, "https");
         assert_eq!(url.username.as_deref(), Some("user"));
         assert_eq!(url.password.as_deref(), Some("pass"));
@@ -325,7 +334,10 @@ mod tests {
     #[test]
     fn test_percent_decoding() {
         assert_eq!(percent_decode("hello%20world").unwrap(), "hello world");
-        assert_eq!(percent_decode("user%40email.com").unwrap(), "user@email.com");
+        assert_eq!(
+            percent_decode("user%40email.com").unwrap(),
+            "user@email.com"
+        );
     }
 
     #[test]
@@ -343,7 +355,10 @@ mod tests {
 
     #[test]
     fn test_invalid_scheme() {
-        assert_eq!(Url::parse("123://example.com"), Err(ParseError::InvalidScheme));
+        assert_eq!(
+            Url::parse("123://example.com"),
+            Err(ParseError::InvalidScheme)
+        );
         assert_eq!(Url::parse("://example.com"), Err(ParseError::MissingScheme));
     }
 }

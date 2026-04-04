@@ -102,11 +102,7 @@ impl Prng {
 
         // GOTCHA: If the state is exactly (0, 0), the Xoroshiro generator will only output 0 forever.
         // We must prevent this invalid state.
-        let (s0, s1) = if s0 == 0 && s1 == 0 {
-            (1, 0)
-        } else {
-            (s0, s1)
-        };
+        let (s0, s1) = if s0 == 0 && s1 == 0 { (1, 0) } else { (s0, s1) };
 
         Self { s0, s1 }
     }
