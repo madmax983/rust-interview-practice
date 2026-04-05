@@ -1,5 +1,6 @@
 pub mod combination_sum;
 pub mod generate_parentheses;
+pub mod letter_combinations;
 pub mod n_queens;
 pub mod palindrome_partitioning;
 pub mod permutations;
