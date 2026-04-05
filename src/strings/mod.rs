@@ -5,6 +5,7 @@ pub mod longest_common_prefix;
 pub mod longest_palindromic_substring;
 pub mod longest_substring_without_repeating;
 pub mod minimum_window_substring;
+pub mod parser_combinator;
 pub mod regex;
 pub mod roman_to_integer;
 pub mod string_to_integer_atoi;
