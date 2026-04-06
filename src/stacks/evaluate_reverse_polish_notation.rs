@@ -94,10 +94,15 @@ impl FromStr for Token {
 /// Space Complexity: O(N)
 #[allow(clippy::needless_pass_by_value)]
 pub fn eval_rpn_functional(tokens: Vec<String>) -> Result<i32, String> {
+    // BOLT OPTIMIZATION: Pre-allocate capacity for the stack.
+    // In valid RPN, the maximum number of elements on the stack at any time
+    // is (N / 2) + 1, where N is the number of tokens. Pre-allocating this
+    // prevents dynamic heap reallocations during evaluation.
+    let capacity = (tokens.len() / 2) + 1;
     let final_stack = tokens
         .iter()
         .map(|s| s.parse::<Token>()) // Parse strings to Tokens lazily
-        .try_fold(Vec::new(), |mut stack, token_result| {
+        .try_fold(Vec::with_capacity(capacity), |mut stack, token_result| {
             // Propagate parsing errors immediately
             let token = token_result?;
 
@@ -130,7 +135,11 @@ pub fn eval_rpn_functional(tokens: Vec<String>) -> Result<i32, String> {
 /// Space Complexity: O(N)
 #[allow(clippy::needless_pass_by_value)]
 pub fn eval_rpn_iterative(tokens: Vec<String>) -> i32 {
-    let mut stack = Vec::new();
+    // BOLT OPTIMIZATION: Pre-allocate capacity for the stack.
+    // In valid RPN, the maximum number of elements on the stack at any time
+    // is (N / 2) + 1, where N is the number of tokens. Pre-allocating this
+    // prevents dynamic heap reallocations during evaluation.
+    let mut stack = Vec::with_capacity((tokens.len() / 2) + 1);
 
     for token_str in tokens {
         // We can parse directly here or use the Enum. using the Enum strictly is cleaner.
