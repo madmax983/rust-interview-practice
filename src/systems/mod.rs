@@ -21,6 +21,7 @@ pub mod rate_limiter;
 pub mod slab_allocator;
 pub mod snowflake;
 pub mod task_scheduler;
+pub mod template_engine;
 pub mod tracing;
 pub mod ttl_cache;
 pub mod uuid;
