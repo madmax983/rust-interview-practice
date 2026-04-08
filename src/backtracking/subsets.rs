@@ -136,7 +136,9 @@ pub fn subsets_bitwise(nums: Vec<i32>) -> Vec<Vec<i32>> {
     let mut results = Vec::with_capacity(subset_count);
 
     for mask in 0..subset_count {
-        let mut subset = Vec::new();
+        // BOLT OPTIMIZATION: Mathematically pre-allocate exact capacity using count_ones()
+        // to prevent heap reallocations during subset construction.
+        let mut subset = Vec::with_capacity(mask.count_ones() as usize);
         for (i, &num) in nums.iter().enumerate() {
             // Check if the i-th bit of `mask` is set
             if (mask & (1 << i)) != 0 {
