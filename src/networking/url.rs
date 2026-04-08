@@ -112,8 +112,10 @@ impl UrlParser for Url {
         // 3. Extract Scheme
         let scheme_end = current.find(':').ok_or(ParseError::MissingScheme)?;
         let scheme = &current[..scheme_end];
-        if scheme.is_empty()
-            || !scheme.chars().next().unwrap().is_ascii_alphabetic()
+        if scheme.is_empty() {
+            return Err(ParseError::MissingScheme);
+        }
+        if !scheme.chars().next().unwrap().is_ascii_alphabetic()
             || !scheme
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.')
