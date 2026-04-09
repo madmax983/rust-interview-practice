@@ -132,7 +132,10 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                 if !row.is_empty() || !self.field_buf.is_empty() || in_quotes {
                     // Even if in quotes, we reached EOF, so we close the field.
                     // This handles malformed CSVs with missing closing quotes gracefully.
-                    row.push(self.field_buf.clone());
+                    // BOLT OPTIMIZATION: Avoid `.clone()` and `.clear()` allocation overhead.
+                    // Using `std::mem::take` directly moves the string buffer into the row, leaving an empty string
+                    // behind and saving us a heap allocation per field. This prevents String reallocation when `field_buf.push(c)` runs later.
+                    row.push(std::mem::take(&mut self.field_buf));
                     return Some(Ok(row));
                 }
                 return None;
@@ -163,11 +166,10 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                         in_quotes = true;
                     } else if c == self.config.delimiter {
                         // End of field
-                        // PRODUCTION NOTE: We use `clone` here to avoid lifetime issues
-                        // with yielding references to an internal buffer. A true zero-copy
-                        // parser would yield a `&str` or a custom `ByteRecord`.
-                        row.push(self.field_buf.clone());
-                        self.field_buf.clear();
+                        // PRODUCTION NOTE: We use `std::mem::take` to directly take ownership of the field buffer
+                        // and push it to the row, leaving an empty String in `self.field_buf`.
+                        // This entirely removes the `.clone()` and `.clear()` overhead.
+                        row.push(std::mem::take(&mut self.field_buf));
                     } else if c == '\r' || c == '\n' {
                         // End of line.
                         // If it's `\r`, check if next is `\n`
@@ -178,7 +180,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                         }
 
                         // We finish the row
-                        row.push(self.field_buf.clone());
+                        row.push(std::mem::take(&mut self.field_buf));
                         return Some(Ok(row));
                     } else {
                         self.field_buf.push(c);
@@ -189,7 +191,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
             // If we finish the line and we are NOT in quotes, it means the line
             // ended without a trailing newline character (EOF reached without newline).
             if !in_quotes {
-                row.push(self.field_buf.clone());
+                row.push(std::mem::take(&mut self.field_buf));
                 self.eof = true;
                 return Some(Ok(row));
             }
