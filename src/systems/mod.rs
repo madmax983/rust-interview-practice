@@ -28,3 +28,4 @@ pub mod uuid;
 pub mod vector_clock;
 pub mod wal;
 pub mod write_strategies;
+pub mod vdom;
