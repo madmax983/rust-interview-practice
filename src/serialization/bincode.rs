@@ -58,7 +58,9 @@ impl fmt::Display for DecodeError {
         match self {
             Self::UnexpectedEof => write!(f, "Unexpected end of file/buffer"),
             Self::InvalidUtf8 => write!(f, "Invalid UTF-8 sequence"),
-            Self::CapacityOverflow => write!(f, "Requested capacity exceeds limits or is corrupted"),
+            Self::CapacityOverflow => {
+                write!(f, "Requested capacity exceeds limits or is corrupted")
+            }
         }
     }
 }
