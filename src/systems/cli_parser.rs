@@ -128,9 +128,8 @@ impl CliParser {
                 continue;
             }
 
-            if arg.starts_with("--") {
+            if let Some(kv) = arg.strip_prefix("--") {
                 // Long Option
-                let kv = &arg[2..];
                 if kv.is_empty() {
                     return Err("Invalid argument: '--'".to_string());
                 }

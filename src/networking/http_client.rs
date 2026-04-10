@@ -204,7 +204,7 @@ impl HttpClient for SyncHttpClient {
             s.set_write_timeout(Some(timeout))?;
             s
         } else {
-            TcpStream::connect(&socket_addr)?
+            TcpStream::connect(socket_addr)?
         };
 
         // Serialize request
@@ -225,15 +225,14 @@ impl HttpClient for SyncHttpClient {
         }
 
         // Handle body headers
-        if let Some(body) = &req.body {
-            if !req
+        if let Some(body) = &req.body
+            && !req
                 .headers
                 .keys()
                 .any(|k| k.eq_ignore_ascii_case("content-length"))
             {
                 write!(&mut request_bytes, "Content-Length: {}\r\n", body.len())?;
             }
-        }
 
         write!(&mut request_bytes, "Connection: close\r\n\r\n")?;
 

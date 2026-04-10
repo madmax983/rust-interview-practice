@@ -136,11 +136,10 @@ pub fn min_window_optimized(s: String, t: String) -> String {
         let c = s_bytes[right];
         *window_counts.entry(c).or_insert(0) += 1;
 
-        if let Some(&target_count) = target_counts.get(&c) {
-            if window_counts[&c] == target_count {
+        if let Some(&target_count) = target_counts.get(&c)
+            && window_counts[&c] == target_count {
                 formed += 1;
             }
-        }
 
         while left <= right && formed == required {
             let window_len = right - left + 1;
@@ -152,11 +151,10 @@ pub fn min_window_optimized(s: String, t: String) -> String {
             let left_char = s_bytes[left];
             if let Some(count) = window_counts.get_mut(&left_char) {
                 *count -= 1;
-                if let Some(&target_count) = target_counts.get(&left_char) {
-                    if *count < target_count {
+                if let Some(&target_count) = target_counts.get(&left_char)
+                    && *count < target_count {
                         formed -= 1;
                     }
-                }
             }
             left += 1;
         }

@@ -108,6 +108,12 @@ pub struct EventBus {
     receiver: mpsc::Receiver<Event>,
 }
 
+impl Default for EventBus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EventBus {
     pub fn new() -> Self {
         let (sender, receiver) = mpsc::channel();

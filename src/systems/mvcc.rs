@@ -214,8 +214,8 @@ impl<'a, K: std::cmp::Eq + std::hash::Hash + Clone, V: Clone> MvccTransactionApi
         // 2. It was committed by a transaction that started BEFORE us, but was still active
         //    (uncommitted) when we started (`start_active_txs.contains(tx_id)`).
         for key in self.write_buffer.keys() {
-            if let Some(versions) = data.get(key) {
-                if let Some(latest_version) = versions.last() {
+            if let Some(versions) = data.get(key)
+                && let Some(latest_version) = versions.last() {
                     // Conflict if the latest version is from a transaction that started after us,
                     // OR from a transaction that was active when we started.
                     if latest_version.tx_id > self.snapshot_id
@@ -224,12 +224,11 @@ impl<'a, K: std::cmp::Eq + std::hash::Hash + Clone, V: Clone> MvccTransactionApi
                         return Err("Write-Write Conflict detected. Transaction aborted.");
                     }
                 }
-            }
         }
 
         // No conflicts detected. Apply all buffered writes.
         for (key, value) in self.write_buffer.drain() {
-            data.entry(key).or_insert_with(Vec::new).push(Version {
+            data.entry(key).or_default().push(Version {
                 tx_id: self.tx_id,
                 value,
             });

@@ -170,7 +170,7 @@ where
         let mut chars = input.chars();
         let mut matched_len = 0;
 
-        while let Some(c) = chars.next() {
+        for c in chars {
             if predicate(c) {
                 matched_len += c.len_utf8();
             } else {

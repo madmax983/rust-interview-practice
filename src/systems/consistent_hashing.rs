@@ -54,6 +54,8 @@ pub struct ConsistentHashRing {
     ring: BTreeMap<u64, String>,
     /// Number of virtual nodes (replicas) per physical node.
     virtual_nodes: usize,
+    /// Number of unique physical nodes currently in the ring.
+    physical_node_count: usize,
 }
 
 impl ConsistentHashRing {
@@ -67,15 +69,25 @@ impl ConsistentHashRing {
         Self {
             ring: BTreeMap::new(),
             virtual_nodes,
+            physical_node_count: 0,
         }
     }
 
     /// Adds a physical node to the ring.
     pub fn add_node(&mut self, node_id: &str) {
+        let mut newly_added = false;
         for i in 0..self.virtual_nodes {
             let key = format!("{}:{}", node_id, i);
             let hash = self.hash_key(&key);
-            self.ring.insert(hash, node_id.to_string());
+            if self.ring.insert(hash, node_id.to_string()).is_none() {
+                newly_added = true;
+            }
+        }
+
+        // ⚡ BOLT OPTIMIZATION: Track physical nodes explicitly to make `node_count` O(1)
+        // instead of O(N*V) and to eliminate intermediate `HashSet` allocation.
+        if newly_added {
+            self.physical_node_count += 1;
         }
     }
 
@@ -85,6 +97,7 @@ impl ConsistentHashRing {
         // Removing items from a BTreeMap while iterating is tricky.
         // We collect keys to remove first.
         // Alternatively, we could construct the keys we know we added.
+        let mut newly_removed = false;
         for i in 0..self.virtual_nodes {
             let key = format!("{}:{}", node_id, i);
             let hash = self.hash_key(&key);
@@ -94,7 +107,12 @@ impl ConsistentHashRing {
 
             if should_remove {
                 self.ring.remove(&hash);
+                newly_removed = true;
             }
+        }
+
+        if newly_removed {
+            self.physical_node_count = self.physical_node_count.saturating_sub(1);
         }
     }
 
@@ -125,15 +143,11 @@ impl ConsistentHashRing {
         hasher.finish()
     }
 
-    /// Returns the number of physical nodes (calculated).
-    /// Note: This is O(N*V), used mainly for testing/introspection.
-    pub fn node_count(&self) -> usize {
-        // Collect unique values
-        let mut nodes = std::collections::HashSet::new();
-        for node in self.ring.values() {
-            nodes.insert(node);
-        }
-        nodes.len()
+    /// Returns the number of physical nodes.
+    /// Note: ⚡ BOLT OPTIMIZATION: Explicitly tracking `physical_node_count`
+    /// changes this operation from `O(N*V)` to `O(1)` and eliminates a `HashSet` allocation.
+    pub const fn node_count(&self) -> usize {
+        self.physical_node_count
     }
 }
 
