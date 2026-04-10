@@ -26,3 +26,4 @@ pub mod sparse_set;
 pub mod spsc_ring_buffer;
 pub mod type_map;
 pub mod union_find;
+pub mod crdt;

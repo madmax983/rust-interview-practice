@@ -5,3 +5,4 @@ pub mod ini;
 pub mod json;
 pub mod toml;
 pub mod varint;
+pub mod serde_framework;
