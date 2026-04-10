@@ -160,7 +160,7 @@ pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
             }
             // Pad remaining spaces
             if line.len() < max_width {
-                line.extend(std::iter::repeat(' ').take(max_width - line.len()));
+                line.extend(std::iter::repeat_n(' ', max_width - line.len()));
             }
         } else {
             // Distribute spaces evenly
@@ -170,7 +170,7 @@ pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
             for k in i..j {
                 line.push_str(&words[k]);
                 if k < j - 1 {
-                    line.extend(std::iter::repeat(' ').take(spaces_between));
+                    line.extend(std::iter::repeat_n(' ', spaces_between));
                     if extra_spaces > 0 {
                         line.push(' ');
                         extra_spaces -= 1;

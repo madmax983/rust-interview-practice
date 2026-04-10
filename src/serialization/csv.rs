@@ -147,14 +147,13 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                 if in_quotes {
                     if c == self.config.quote {
                         // Lookahead to check for escaped quote (`""`)
-                        if let Some(&next_c) = chars.peek() {
-                            if next_c == self.config.quote {
+                        if let Some(&next_c) = chars.peek()
+                            && next_c == self.config.quote {
                                 // Escaped quote
                                 self.field_buf.push(self.config.quote);
                                 chars.next(); // Consume the second quote
                                 continue;
                             }
-                        }
                         // End of quoted section
                         in_quotes = false;
                     } else {
@@ -173,11 +172,10 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                     } else if c == '\r' || c == '\n' {
                         // End of line.
                         // If it's `\r`, check if next is `\n`
-                        if c == '\r' {
-                            if let Some(&'\n') = chars.peek() {
+                        if c == '\r'
+                            && let Some(&'\n') = chars.peek() {
                                 chars.next();
                             }
-                        }
 
                         // We finish the row
                         row.push(std::mem::take(&mut self.field_buf));
