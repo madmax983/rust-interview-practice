@@ -1,3 +1,3 @@
 pub mod jwt;
-pub mod sha256;
 pub mod rand;
+pub mod sha256;
