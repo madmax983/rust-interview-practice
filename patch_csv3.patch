@@ -1,0 +1,28 @@
+<<<<<<< SEARCH
+            if bytes_read == 0 {
+                self.eof = true;
+                // If we hit EOF but we have accumulated a field, push it.
+                // Or if we have a completely empty file, return None.
+                if !row.is_empty() || !self.field_buf.is_empty() || in_quotes {
+                    // Even if in quotes, we reached EOF, so we close the field.
+                    // This handles malformed CSVs with missing closing quotes gracefully.
+                    row.push(self.field_buf.clone());
+                    return Some(Ok(row));
+                }
+                return None;
+            }
+=======
+            if bytes_read == 0 {
+                self.eof = true;
+                // If we hit EOF but we have accumulated a field, push it.
+                // Or if we have a completely empty file, return None.
+                if !row.is_empty() || !self.field_buf.is_empty() || in_quotes {
+                    // Even if in quotes, we reached EOF, so we close the field.
+                    // This handles malformed CSVs with missing closing quotes gracefully.
+                    // ⚡ BOLT OPTIMIZATION: Use `std::mem::take` to avoid cloning `field_buf` here.
+                    row.push(std::mem::take(&mut self.field_buf));
+                    return Some(Ok(row));
+                }
+                return None;
+            }
+>>>>>>> REPLACE

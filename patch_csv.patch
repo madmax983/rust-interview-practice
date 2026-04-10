@@ -1,0 +1,16 @@
+<<<<<<< SEARCH
+                        // End of field
+                        // PRODUCTION NOTE: We use `clone` here to avoid lifetime issues
+                        // with yielding references to an internal buffer. A true zero-copy
+                        // parser would yield a `&str` or a custom `ByteRecord`.
+                        row.push(self.field_buf.clone());
+                        self.field_buf.clear();
+=======
+                        // End of field
+                        // ⚡ BOLT OPTIMIZATION: We use `std::mem::take` to move the contents of `field_buf`
+                        // into the `row` without allocating a new String and copying the bytes.
+                        // This leaves an empty String in `field_buf` for the next field.
+                        // While a true zero-copy parser would yield a `&str` or a custom `ByteRecord`,
+                        // this avoids O(N) allocation and copying overhead on each iteration.
+                        row.push(std::mem::take(&mut self.field_buf));
+>>>>>>> REPLACE

@@ -1,0 +1,9 @@
+<<<<<<< SEARCH
+    for i in 0..slice.len() {
+        _sum += slice[i]; // Bounds check on each access
+    }
+=======
+    for &item in slice {
+        _sum += item; // Bounds check eliminated via iterator implicitly
+    }
+>>>>>>> REPLACE

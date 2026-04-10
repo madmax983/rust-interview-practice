@@ -1,0 +1,11 @@
+<<<<<<< SEARCH
+    let mut sum = 0;
+    for i in 0..slice.len() {
+        sum += slice[i]; // Bounds check on each access
+    }
+=======
+    let mut _sum = 0;
+    for i in 0..slice.len() {
+        _sum += slice[i]; // Bounds check on each access
+    }
+>>>>>>> REPLACE

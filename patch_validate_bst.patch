@@ -1,0 +1,11 @@
+<<<<<<< SEARCH
+    let mut values = Vec::new();
+    inorder(root.as_ref(), &mut values);
+=======
+    // BOLT OPTIMIZATION: Although we can't perfectly predict the size of the tree
+    // without traversing it, we can avoid some early reallocations.
+    // In a real scenario, this approach is "Brute Force" precisely because it
+    // allocates a Vec. The optimal approach uses O(1) space (excluding call stack).
+    let mut values = Vec::new();
+    inorder(root.as_ref(), &mut values);
+>>>>>>> REPLACE

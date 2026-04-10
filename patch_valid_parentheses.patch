@@ -1,0 +1,9 @@
+<<<<<<< SEARCH
+    // We fold over the bytes. State is our `Vec<u8>` stack.
+    let result = s.as_bytes().iter().try_fold(Vec::new(), |mut stack, &b| {
+=======
+    // We fold over the bytes. State is our `Vec<u8>` stack.
+    // ⚡ BOLT OPTIMIZATION: Pre-allocate stack capacity to avoid reallocations.
+    // The maximum depth of the stack is the length of the string.
+    let result = s.as_bytes().iter().try_fold(Vec::with_capacity(s.len()), |mut stack, &b| {
+>>>>>>> REPLACE

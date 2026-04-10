@@ -1,0 +1,19 @@
+<<<<<<< SEARCH
+        let mut row = Vec::new();
+        let mut in_quotes = false;
+
+        // We use a state machine to parse the CSV properly.
+        // Instead of reading one char at a time from I/O (which is slow),
+        // we read line by line and process the characters in memory.
+
+        self.field_buf.clear();
+=======
+        let mut row = Vec::new();
+        let mut in_quotes = false;
+
+        // We use a state machine to parse the CSV properly.
+        // Instead of reading one char at a time from I/O (which is slow),
+        // we read line by line and process the characters in memory.
+
+        self.field_buf.clear();
+>>>>>>> REPLACE

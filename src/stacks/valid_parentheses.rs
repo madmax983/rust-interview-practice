@@ -116,21 +116,26 @@ pub fn is_valid_optimal(s: String) -> bool {
 #[must_use]
 pub fn is_valid_functional(s: String) -> bool {
     // We fold over the bytes. State is our `Vec<u8>` stack.
-    let result = s.as_bytes().iter().try_fold(Vec::new(), |mut stack, &b| {
-        match b {
-            b'(' => stack.push(b')'),
-            b'{' => stack.push(b'}'),
-            b'[' => stack.push(b']'),
-            _ => {
-                // If a mismatch occurs, we return Err to short-circuit the fold.
-                if stack.pop() != Some(b) {
-                    return Err(());
+    // ⚡ BOLT OPTIMIZATION: Pre-allocate stack capacity to avoid reallocations.
+    // The maximum depth of the stack is the length of the string.
+    let result = s
+        .as_bytes()
+        .iter()
+        .try_fold(Vec::with_capacity(s.len()), |mut stack, &b| {
+            match b {
+                b'(' => stack.push(b')'),
+                b'{' => stack.push(b'}'),
+                b'[' => stack.push(b']'),
+                _ => {
+                    // If a mismatch occurs, we return Err to short-circuit the fold.
+                    if stack.pop() != Some(b) {
+                        return Err(());
+                    }
                 }
             }
-        }
-        // Return Ok with the updated stack to continue folding.
-        Ok(stack)
-    });
+            // Return Ok with the updated stack to continue folding.
+            Ok(stack)
+        });
 
     // Valid if the iteration completed successfully (`Ok`) AND the final stack is empty.
     matches!(result, Ok(stack) if stack.is_empty())
