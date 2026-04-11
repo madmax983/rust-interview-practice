@@ -25,7 +25,7 @@ pub mod template_engine;
 pub mod tracing;
 pub mod ttl_cache;
 pub mod uuid;
+pub mod vdom;
 pub mod vector_clock;
 pub mod wal;
 pub mod write_strategies;
-pub mod vdom;

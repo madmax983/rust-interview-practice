@@ -263,14 +263,14 @@ mod tests {
         let old = VNode::Element(
             el("div")
                 .with_attr("id", "app")
-                .with_attr("class", "container")
+                .with_attr("class", "container"),
         );
         let new = VNode::Element(
             el("div")
                 .with_attr("id", "app") // Unchanged
                 .with_attr("class", "wrapper") // Updated
-                .with_attr("data-test", "true") // Added
-                // "class" removed (implicitly, if it wasn't here, but we updated it)
+                .with_attr("data-test", "true"), // Added
+                                                 // "class" removed (implicitly, if it wasn't here, but we updated it)
         );
 
         let old_rem = VNode::Element(el("div").with_attr("removed", "true"));
@@ -289,13 +289,13 @@ mod tests {
         let old = VNode::Element(
             el("ul")
                 .with_child(text("Item 1"))
-                .with_child(text("Item 2"))
+                .with_child(text("Item 2")),
         );
         let new = VNode::Element(
             el("ul")
                 .with_child(text("Item 1 (Updated)"))
                 .with_child(text("Item 2"))
-                .with_child(text("Item 3"))
+                .with_child(text("Item 3")),
         );
 
         let patches = diff(&old, &new);

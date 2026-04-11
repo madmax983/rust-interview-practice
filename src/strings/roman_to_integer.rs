@@ -142,12 +142,13 @@ pub fn roman_to_int_peekable(s: String) -> i32 {
         // RUST INSIGHT: `.peek()` borrows the next item without consuming it.
         // We can check if the next symbol is larger (a subtraction case) and handle it.
         if let Some(next) = iter.peek()
-            && current_val < next.value() {
-                // We consume the next element since we're using it in this step
-                total += next.value() - current_val;
-                iter.next(); // Consume next
-                continue;
-            }
+            && current_val < next.value()
+        {
+            // We consume the next element since we're using it in this step
+            total += next.value() - current_val;
+            iter.next(); // Consume next
+            continue;
+        }
 
         total += current_val;
     }

@@ -215,15 +215,16 @@ impl<'a, K: std::cmp::Eq + std::hash::Hash + Clone, V: Clone> MvccTransactionApi
         //    (uncommitted) when we started (`start_active_txs.contains(tx_id)`).
         for key in self.write_buffer.keys() {
             if let Some(versions) = data.get(key)
-                && let Some(latest_version) = versions.last() {
-                    // Conflict if the latest version is from a transaction that started after us,
-                    // OR from a transaction that was active when we started.
-                    if latest_version.tx_id > self.snapshot_id
-                        || self.start_active_txs.contains(&latest_version.tx_id)
-                    {
-                        return Err("Write-Write Conflict detected. Transaction aborted.");
-                    }
+                && let Some(latest_version) = versions.last()
+            {
+                // Conflict if the latest version is from a transaction that started after us,
+                // OR from a transaction that was active when we started.
+                if latest_version.tx_id > self.snapshot_id
+                    || self.start_active_txs.contains(&latest_version.tx_id)
+                {
+                    return Err("Write-Write Conflict detected. Transaction aborted.");
                 }
+            }
         }
 
         // No conflicts detected. Apply all buffered writes.
