@@ -114,10 +114,18 @@ pub trait Deserializer<'de>: Sized {
     type Error: Into<Error>;
 
     /// The deserializer inspects the format and decides which `Visitor` method to call.
-    fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> where V::Error: From<Error>;
-    fn deserialize_i32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> where V::Error: From<Error>;
-    fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> where V::Error: From<Error>;
-    fn deserialize_bool<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> where V::Error: From<Error>;
+    fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V::Error: From<Error>;
+    fn deserialize_i32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V::Error: From<Error>;
+    fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V::Error: From<Error>;
+    fn deserialize_bool<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
+    where
+        V::Error: From<Error>;
 }
 
 /// A visitor that constructs a type by inspecting the primitive types provided by a Deserializer.
@@ -327,17 +335,20 @@ mod tests {
         let mut output = String::new();
 
         let num: i32 = 42;
-        num.serialize(SimpleStringSerializer::new(&mut output)).unwrap();
+        num.serialize(SimpleStringSerializer::new(&mut output))
+            .unwrap();
         assert_eq!(output, "42");
 
         output.clear();
         let text = String::from("hello");
-        text.serialize(SimpleStringSerializer::new(&mut output)).unwrap();
+        text.serialize(SimpleStringSerializer::new(&mut output))
+            .unwrap();
         assert_eq!(output, "hello");
 
         output.clear();
         let b = true;
-        b.serialize(SimpleStringSerializer::new(&mut output)).unwrap();
+        b.serialize(SimpleStringSerializer::new(&mut output))
+            .unwrap();
         assert_eq!(output, "true");
     }
 

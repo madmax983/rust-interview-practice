@@ -230,9 +230,9 @@ impl HttpClient for SyncHttpClient {
                 .headers
                 .keys()
                 .any(|k| k.eq_ignore_ascii_case("content-length"))
-            {
-                write!(&mut request_bytes, "Content-Length: {}\r\n", body.len())?;
-            }
+        {
+            write!(&mut request_bytes, "Content-Length: {}\r\n", body.len())?;
+        }
 
         write!(&mut request_bytes, "Connection: close\r\n\r\n")?;
 
