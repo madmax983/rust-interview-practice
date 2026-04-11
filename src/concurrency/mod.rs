@@ -8,6 +8,7 @@ pub mod dining_philosophers;
 pub mod event_loop;
 pub mod mutex;
 pub mod once_cell;
+pub mod parking_lot;
 pub mod promise;
 pub mod read_write_lock;
 pub mod semaphore;
