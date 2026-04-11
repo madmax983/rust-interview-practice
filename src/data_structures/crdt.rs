@@ -163,18 +163,12 @@ impl<T: Clone + Eq + Hash> Crdt for OrSet<T> {
     fn merge(&mut self, other: Self) {
         // Merge additions
         for (element, tags) in other.adds {
-            self.adds
-                .entry(element)
-                .or_default()
-                .extend(tags);
+            self.adds.entry(element).or_default().extend(tags);
         }
 
         // Merge removals
         for (element, tags) in other.removes {
-            self.removes
-                .entry(element)
-                .or_default()
-                .extend(tags);
+            self.removes.entry(element).or_default().extend(tags);
         }
     }
 }
