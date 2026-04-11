@@ -1,0 +1,13 @@
+<<<<<<< SEARCH
+        // Store any remaining bytes
+        if !data.is_empty() {
+            self.data.extend_from_slice(data);
+        }
+    }
+=======
+        // Store any remaining bytes
+        if !data.is_empty() {
+            self.data.extend_from_slice(data);
+        }
+    }
+>>>>>>> REPLACE

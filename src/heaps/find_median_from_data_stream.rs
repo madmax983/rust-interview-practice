@@ -156,9 +156,10 @@ impl MedianFinderOptimal {
 
         // Maintain the invariant: `low` can have at most 1 more element than `high`
         if self.low.len() < self.high.len()
-            && let Some(Reverse(min_from_high)) = self.high.pop() {
-                self.low.push(min_from_high);
-            }
+            && let Some(Reverse(min_from_high)) = self.high.pop()
+        {
+            self.low.push(min_from_high);
+        }
     }
 
     #[must_use]
