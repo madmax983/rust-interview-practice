@@ -120,7 +120,14 @@ pub enum Patch<'a> {
 /// For simplicity, we just collect patches for the current node and its children.
 pub fn diff<'a>(old: &'a VNode, new: &'a VNode) -> Vec<Patch<'a>> {
     let mut patches = Vec::new();
+    diff_into(old, new, &mut patches);
+    patches
+}
 
+/// Recursively diffs two Virtual DOM nodes, pushing patches into the provided vector.
+/// ⚡ BOLT OPTIMIZATION: Passing `&mut Vec<Patch<'a>>` prevents intermediate O(P) allocations
+/// from bubbling up the recursive call tree, acting as a zero-cost abstraction for tree traversals.
+pub fn diff_into<'a>(old: &'a VNode, new: &'a VNode, patches: &mut Vec<Patch<'a>>) {
     match (old, new) {
         // If both are text, check if the text changed.
         (VNode::Text(old_txt), VNode::Text(new_txt)) => {
@@ -131,8 +138,8 @@ pub fn diff<'a>(old: &'a VNode, new: &'a VNode) -> Vec<Patch<'a>> {
 
         // If both are elements of the same tag, diff attributes and children.
         (VNode::Element(old_el), VNode::Element(new_el)) if old_el.tag == new_el.tag => {
-            diff_attributes(old_el, new_el, &mut patches);
-            diff_children(old_el, new_el, &mut patches);
+            diff_attributes(old_el, new_el, patches);
+            diff_children(old_el, new_el, patches);
         }
 
         // Different node types entirely (Text vs Element, or different tags). Replace completely.
@@ -140,8 +147,6 @@ pub fn diff<'a>(old: &'a VNode, new: &'a VNode) -> Vec<Patch<'a>> {
             patches.push(Patch::Replace(new));
         }
     }
-
-    patches
 }
 
 fn diff_attributes<'a>(old_el: &'a VElement, new_el: &'a VElement, patches: &mut Vec<Patch<'a>>) {
@@ -167,11 +172,10 @@ fn diff_children<'a>(old_el: &'a VElement, new_el: &'a VElement, patches: &mut V
     // Diff existing children
     let min_len = std::cmp::min(old_len, new_len);
     for i in 0..min_len {
-        let child_patches = diff(&old_el.children[i], &new_el.children[i]);
         // RUST INSIGHT:
         // In a real framework, we'd need a way to associate these `child_patches` with the specific child index `i`.
         // We extend the flat list here for simplicity, but a structured patch tree is required for actual DOM updates.
-        patches.extend(child_patches);
+        diff_into(&old_el.children[i], &new_el.children[i], patches);
     }
 
     // New children were added
