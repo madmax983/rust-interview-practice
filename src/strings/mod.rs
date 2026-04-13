@@ -14,4 +14,5 @@ pub mod string_to_integer_atoi;
 pub mod text_justification;
 pub mod valid_anagram;
 pub mod valid_number;
+pub mod semver;
 pub mod valid_palindrome;
