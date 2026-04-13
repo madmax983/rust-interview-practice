@@ -210,16 +210,15 @@ impl Template {
 
     /// Helper to resolve dot notation (e.g., "user.name")
     fn resolve_value<'a>(path: &str, context: &'a Context) -> Option<&'a Value> {
-        let parts: Vec<&str> = path.split('.').collect();
-        if parts.is_empty() {
-            return None;
-        }
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<&str>>()` allocation.
+        // We evaluate the path iteratively to eliminate heap allocations per variable lookup.
+        let mut parts = path.split('.');
 
-        let mut current = context.get(parts[0])?;
+        let mut current = context.get(parts.next()?)?;
 
-        for part in &parts[1..] {
+        for part in parts {
             if let Value::Map(map) = current {
-                current = map.get(*part)?;
+                current = map.get(part)?;
             } else {
                 return None;
             }

@@ -145,7 +145,9 @@ impl PartialOrd for Version {
 impl Ord for Version {
     fn cmp(&self, other: &Self) -> Ordering {
         // Compare major, then minor, then patch
-        let core_cmp = self.major.cmp(&other.major)
+        let core_cmp = self
+            .major
+            .cmp(&other.major)
             .then_with(|| self.minor.cmp(&other.minor))
             .then_with(|| self.patch.cmp(&other.patch));
 
@@ -246,7 +248,13 @@ impl FromStr for Version {
             return Err(SemVerError::InvalidCharacters); // Too many dot-separated components
         }
 
-        Ok(Version { major, minor, patch, pre, build })
+        Ok(Version {
+            major,
+            minor,
+            patch,
+            pre,
+            build,
+        })
     }
 }
 
@@ -289,7 +297,9 @@ fn parse_pre(s: &str) -> Result<Vec<Identifier>, SemVerError> {
             if part.len() > 1 && part.starts_with('0') {
                 return Err(SemVerError::LeadingZero);
             }
-            let n = part.parse::<u64>().map_err(|_| SemVerError::NumberOverflow)?;
+            let n = part
+                .parse::<u64>()
+                .map_err(|_| SemVerError::NumberOverflow)?;
             identifiers.push(Identifier::Numeric(n));
         } else {
             identifiers.push(Identifier::Alphanumeric(part.to_string()));
@@ -361,7 +371,13 @@ mod tests {
         assert_eq!(v.major, 10);
         assert_eq!(v.minor, 20);
         assert_eq!(v.patch, 30);
-        assert_eq!(v.pre, vec![Identifier::Alphanumeric("rc".to_string()), Identifier::Numeric(1)]);
+        assert_eq!(
+            v.pre,
+            vec![
+                Identifier::Alphanumeric("rc".to_string()),
+                Identifier::Numeric(1)
+            ]
+        );
         assert_eq!(v.build, vec!["build".to_string(), "123".to_string()]);
     }
 
@@ -370,15 +386,30 @@ mod tests {
         assert_eq!("".parse::<Version>(), Err(SemVerError::EmptyString));
         assert_eq!("1".parse::<Version>(), Err(SemVerError::MissingMinor));
         assert_eq!("1.2".parse::<Version>(), Err(SemVerError::MissingPatch));
-        assert_eq!("1.2.3.4".parse::<Version>(), Err(SemVerError::InvalidCharacters));
+        assert_eq!(
+            "1.2.3.4".parse::<Version>(),
+            Err(SemVerError::InvalidCharacters)
+        );
         assert_eq!("01.2.3".parse::<Version>(), Err(SemVerError::LeadingZero));
         assert_eq!("1.02.3".parse::<Version>(), Err(SemVerError::LeadingZero));
         assert_eq!("1.2.03".parse::<Version>(), Err(SemVerError::LeadingZero));
-        assert_eq!("1.2.3-".parse::<Version>(), Err(SemVerError::EmptyIdentifier));
-        assert_eq!("1.2.3-a..b".parse::<Version>(), Err(SemVerError::EmptyIdentifier));
-        assert_eq!("1.2.3+a..b".parse::<Version>(), Err(SemVerError::EmptyIdentifier));
+        assert_eq!(
+            "1.2.3-".parse::<Version>(),
+            Err(SemVerError::EmptyIdentifier)
+        );
+        assert_eq!(
+            "1.2.3-a..b".parse::<Version>(),
+            Err(SemVerError::EmptyIdentifier)
+        );
+        assert_eq!(
+            "1.2.3+a..b".parse::<Version>(),
+            Err(SemVerError::EmptyIdentifier)
+        );
         assert_eq!("1.2.3-01".parse::<Version>(), Err(SemVerError::LeadingZero));
-        assert_eq!("1.2.3-a$b".parse::<Version>(), Err(SemVerError::InvalidCharacters));
+        assert_eq!(
+            "1.2.3-a$b".parse::<Version>(),
+            Err(SemVerError::InvalidCharacters)
+        );
     }
 
     #[test]
