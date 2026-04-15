@@ -1,7 +1,3 @@
-**[Parking Lot Mutex Implementation]\n**Learning:** Implementing a parking lot mutex from scratch revealed that when wrapping  in a loop, spurious wakeups can cause a thread to repeatedly push itself into the waiting queue, leading to lost wakeups/deadlocks when the unparker consumes multiple entries for the same thread. \n**Action:** When implementing custom wait queues using , always ensure deduplication in the queue (e.g., checking thread ID) or use a loop-local state that bypasses the enqueue step on spurious wakeups.
-**[Parking Lot Mutex Implementation]
-**Learning:** Implementing a parking lot mutex from scratch revealed that when wrapping thread::park() in a loop, spurious wakeups can cause a thread to repeatedly push itself into the waiting queue, leading to lost wakeups/deadlocks when the unparker consumes multiple entries for the same thread.
-**Action:** When implementing custom wait queues using thread::park(), always ensure deduplication in the queue (e.g., checking thread ID) or use a loop-local state that bypasses the enqueue step on spurious wakeups.
-**Zero-Allocation Chunking in Cryptography**
-**Learning:** `Vec::drain(..64).collect::<Vec<u8>>()` inside a hot hashing loop like SHA-256 causes massive heap allocation overhead. Iterating over slices via `.chunks_exact()` entirely avoids these intermediate heap allocations and can result in significant performance gains.
-**Action:** When operating on raw bytes in a loop, avoid `Vec::new()`, `drain()`, and `collect()`. Instead, prefer slice adapters and iterating over memory boundaries (`.chunks()`, `.split_at()`). Pre-fill any intermediate buffers directly from slice references to perform zero-cost copying.
+**Zero-allocation string processing in Word Search**
+**Learning:** `word.chars().collect::<Vec<char>>()` introduces an O(L) heap allocation that can be completely eliminated if the problem guarantees ASCII inputs.
+**Action:** Use `word.as_bytes()` and cast characters `as u8` for O(1) comparison in hot recursive loops like DFS to avoid intermediate allocations and UTF-8 decoding overhead.

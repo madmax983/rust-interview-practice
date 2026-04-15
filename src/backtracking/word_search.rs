@@ -62,12 +62,14 @@ pub fn exist_brute_force(board: Vec<Vec<char>>, word: String) -> bool {
         return false;
     }
 
-    let word_chars: Vec<char> = word.chars().collect();
+    // BOLT OPTIMIZATION: Avoid O(L) heap allocation by operating directly on bytes.
+    // Safe because LeetCode constraints guarantee ASCII inputs.
+    let word_bytes = word.as_bytes();
     let mut visited = HashSet::new();
 
     for i in 0..rows {
         for j in 0..cols {
-            if dfs_hashset(&board, &word_chars, i, j, 0, &mut visited) {
+            if dfs_hashset(&board, word_bytes, i, j, 0, &mut visited) {
                 return true;
             }
         }
@@ -77,7 +79,7 @@ pub fn exist_brute_force(board: Vec<Vec<char>>, word: String) -> bool {
 
 fn dfs_hashset(
     board: &[Vec<char>],
-    word: &[char],
+    word: &[u8],
     i: usize,
     j: usize,
     k: usize,
@@ -90,7 +92,7 @@ fn dfs_hashset(
     // Bounds check, char match, and visited check
     if i >= board.len()
         || j >= board[0].len()
-        || board[i][j] != word[k]
+        || board[i][j] as u8 != word[k]
         || visited.contains(&(i, j))
     {
         return false;
@@ -128,13 +130,15 @@ pub fn exist_optimized(board: Vec<Vec<char>>, word: String) -> bool {
         return false;
     }
 
-    let word_chars: Vec<char> = word.chars().collect();
+    // BOLT OPTIMIZATION: Avoid O(L) heap allocation by operating directly on bytes.
+    // Safe because LeetCode constraints guarantee ASCII inputs.
+    let word_bytes = word.as_bytes();
     // Allocate visited matrix once
     let mut visited = vec![vec![false; cols]; rows];
 
     for i in 0..rows {
         for j in 0..cols {
-            if dfs_matrix(&board, &word_chars, i, j, 0, &mut visited) {
+            if dfs_matrix(&board, word_bytes, i, j, 0, &mut visited) {
                 return true;
             }
         }
@@ -144,7 +148,7 @@ pub fn exist_optimized(board: Vec<Vec<char>>, word: String) -> bool {
 
 fn dfs_matrix(
     board: &[Vec<char>],
-    word: &[char],
+    word: &[u8],
     i: usize,
     j: usize,
     k: usize,
@@ -154,7 +158,7 @@ fn dfs_matrix(
         return true;
     }
 
-    if i >= board.len() || j >= board[0].len() || board[i][j] != word[k] || visited[i][j] {
+    if i >= board.len() || j >= board[0].len() || board[i][j] as u8 != word[k] || visited[i][j] {
         return false;
     }
 
@@ -191,11 +195,13 @@ pub fn exist_optimal(mut board: Vec<Vec<char>>, word: String) -> bool {
         return false;
     }
 
-    let word_chars: Vec<char> = word.chars().collect();
+    // BOLT OPTIMIZATION: Avoid O(L) heap allocation by operating directly on bytes.
+    // Safe because LeetCode constraints guarantee ASCII inputs.
+    let word_bytes = word.as_bytes();
 
     for i in 0..rows {
         for j in 0..cols {
-            if dfs_inplace(&mut board, &word_chars, i, j, 0) {
+            if dfs_inplace(&mut board, word_bytes, i, j, 0) {
                 return true;
             }
         }
@@ -203,14 +209,14 @@ pub fn exist_optimal(mut board: Vec<Vec<char>>, word: String) -> bool {
     false
 }
 
-fn dfs_inplace(board: &mut Vec<Vec<char>>, word: &[char], i: usize, j: usize, k: usize) -> bool {
+fn dfs_inplace(board: &mut Vec<Vec<char>>, word: &[u8], i: usize, j: usize, k: usize) -> bool {
     if k == word.len() {
         return true;
     }
 
     // Check bounds and character match
     // Note: We check `i >= board.len()` to handle `i + 1` overflow safely
-    if i >= board.len() || j >= board[0].len() || board[i][j] != word[k] {
+    if i >= board.len() || j >= board[0].len() || board[i][j] as u8 != word[k] {
         return false;
     }
 
