@@ -100,6 +100,31 @@ impl From<HashMap<String, Value>> for Value {
 /// The context holds all variables available to the template.
 pub type Context = HashMap<String, Value>;
 
+/// A zero-allocation scoped context for evaluating variables.
+enum RenderContext<'a> {
+    Root(&'a Context),
+    Scoped {
+        parent: &'a RenderContext<'a>,
+        key: &'a str,
+        value: &'a Value,
+    },
+}
+
+impl<'a> RenderContext<'a> {
+    fn get(&self, search_key: &str) -> Option<&'a Value> {
+        match self {
+            RenderContext::Root(context) => context.get(search_key),
+            RenderContext::Scoped { parent, key, value } => {
+                if *key == search_key {
+                    Some(*value)
+                } else {
+                    parent.get(search_key)
+                }
+            }
+        }
+    }
+}
+
 /// An Abstract Syntax Tree (AST) node for the template.
 #[derive(Debug, Clone, PartialEq)]
 enum Node {
@@ -145,16 +170,17 @@ impl Engine for Template {
     fn render(&self, context: &Context) -> Result<String, TemplateError> {
         // BOLT OPTIMIZATION: Pre-allocate a reasonable capacity to avoid small reallocations.
         let mut output = String::with_capacity(1024);
-        self.render_nodes(&self.nodes, context, &mut output)?;
+        let root_context = RenderContext::Root(context);
+        self.render_nodes(&self.nodes, &root_context, &mut output)?;
         Ok(output)
     }
 }
 
 impl Template {
-    fn render_nodes(
+    fn render_nodes<'a>(
         &self,
         nodes: &[Node],
-        context: &Context,
+        context: &RenderContext<'a>,
         output: &mut String,
     ) -> Result<(), TemplateError> {
         for node in nodes {
@@ -194,11 +220,14 @@ impl Template {
                 Node::For(iterator_name, list_name, body) => {
                     if let Some(Value::List(list)) = Self::resolve_value(list_name, context) {
                         for item in list {
-                            // Create a new context scope
-                            // GOTCHA: Modifying the main context directly pollutes the scope.
-                            // We must create a shadowed scope for loop variables.
-                            let mut scoped_context = context.clone();
-                            scoped_context.insert(iterator_name.clone(), item.clone());
+                            // ⚡ BOLT OPTIMIZATION: Zero-allocation context scopes.
+                            // We construct a linked list of scoped bindings without cloning
+                            // the underlying parent HashMaps.
+                            let scoped_context = RenderContext::Scoped {
+                                parent: context,
+                                key: iterator_name,
+                                value: item,
+                            };
                             self.render_nodes(body, &scoped_context, output)?;
                         }
                     }
@@ -209,7 +238,7 @@ impl Template {
     }
 
     /// Helper to resolve dot notation (e.g., "user.name")
-    fn resolve_value<'a>(path: &str, context: &'a Context) -> Option<&'a Value> {
+    fn resolve_value<'a>(path: &str, context: &'a RenderContext<'a>) -> Option<&'a Value> {
         // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<&str>>()` allocation.
         // We evaluate the path iteratively to eliminate heap allocations per variable lookup.
         let mut parts = path.split('.');
