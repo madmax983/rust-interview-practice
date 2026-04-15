@@ -7,6 +7,7 @@ pub mod longest_consecutive_sequence;
 pub mod maximum_subarray;
 pub mod merge_intervals;
 pub mod product_except_self;
+pub mod search_a_2d_matrix;
 pub mod search_in_rotated_sorted_array;
 pub mod sliding_window_maximum;
 pub mod sort_colors;

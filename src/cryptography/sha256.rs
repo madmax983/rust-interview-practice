@@ -1,39 +1,75 @@
-//! # SHA-256 (Simplified)
+//! # SHA-256 (Secure Hash Algorithm)
 //!
-//! # Header
+//! Implements the SHA-256 cryptographic hashing algorithm from scratch.
+//! This implementation processes input streams in 64-byte blocks and produces a 256-bit (32-byte) digest.
 //!
-//! *   **Problem Name**: SHA-256 Hashing Algorithm
-//! *   **Difficulty**: Hard (Bitwise Arithmetic)
-//! *   **Link**: <https://en.wikipedia.org/wiki/SHA-2>
-//! *   **Why this matters in Rust**: Understanding hash functions is crucial for cryptography, data integrity, and blockchain.
+//! **Replaces Crates:** `sha2`, `ring`, `crypto-hash`
 //!
-//! # Architecture
+//! **Real-world Usage:**
+//! - Digital signatures (TLS, SSL, SSH)
+//! - Blockchain verification (Bitcoin proof-of-work)
+//! - Password hashing (though bcrypt/Argon2 are preferred, PBKDF2-HMAC-SHA256 is common)
+//! - Data integrity verification (checksums for file downloads)
 //!
-//! SHA-256 (Secure Hash Algorithm 256-bit) operates on 512-bit message blocks.
+//! **Why build it yourself?**
+//! Implementing SHA-256 demystifies how cryptographic primitives work under the hood.
+//! It teaches you about bitwise operations (rotations, XORs), wrapping arithmetic in Rust,
+//! padding rules, and how data can be securely compressed into a fixed-length digest.
+//! You learn the mechanics of the Merkle-Damgård construction.
 //!
-//! **Structure:**
-//! 1.  **Padding**: Append `1` bit, then `0` bits, then the 64-bit message length (in bits) to make the total length a multiple of 512 bits.
-//! 2.  **Message Schedule (W)**: Expand the 16 words (32-bit) of the block into 64 words.
-//! 3.  **Compression Function**: Update the 8 state variables (a-h) using bitwise operations (Ch, Maj, Sigma, sigma) over 64 rounds.
-//! 4.  **Final Hash**: Concatenate the final state variables.
+//! // =========================================================================================
+//! // Architecture
+//! // =========================================================================================
 //!
-//! **Complexity:**
+//! Data Structure / Flow:
 //!
-//! | Operation | Time | Space |
-//! | :--- | :--- | :--- |
-//! | Hash | O(N) | O(1) |
+//!      [Input Message]
+//!             │
+//!             ▼
+//!      [Padding (1 bit, 0s, length)]
+//!             │
+//!             ▼
+//!      [512-bit Blocks (64 bytes)]
+//!             │
+//!             ▼
+//!    ┌──────────────────────────┐
+//!    │ Message Schedule W (64)  │
+//!    └──────────────────────────┘
+//!             │
+//!             ▼
+//!    ┌──────────────────────────┐     ┌────────────────┐
+//!    │ Compression Function     │◄────┤ Previous State │
+//!    │ (64 rounds of bit math)  │     │ (a,b,c,d,e,f,g)│
+//!    └──────────────────────────┘     └────────────────┘
+//!             │
+//!             ▼
+//!      [Final 256-bit Digest]
 //!
-//! where N is the message length in blocks. Space is constant (state variables).
+//! Invariants:
+//! 1. The input message must be padded such that its length is a multiple of 64 bytes.
+//! 2. The padding always includes a `1` bit (0x80) followed by `0` bits, ending with a 64-bit integer representing the original message length in bits.
+//! 3. The state variables (`a` through `h`) are initialized to standard constants (fractional parts of square roots of prime numbers).
 //!
-//! # Educational Note
+//! Complexity:
+//! ┌───────────────┬─────────────┬─────────────┐
+//! │ Operation     │ Time        │ Space       │
+//! ├───────────────┼─────────────┼─────────────┤
+//! │ update        │ O(N)        │ O(1)        │
+//! │ finalize      │ O(1)        │ O(1)        │
+//! └───────────────┴─────────────┴─────────────┘
+//! N = length of the input data block being processed. Space is strictly bounded to the 64-byte buffer and 8 state variables.
 //!
-//! **WARNING**: This is an educational implementation. It is **not constant-time** and **not side-channel resistant**.
-//! For production, use the `sha2` crate which uses SIMD optimizations and hardware instructions (SHA-NI).
+//! Design Decisions:
+//! - **Buffer Strategy**: A fixed `[u8; 64]` buffer is used to batch input bytes, avoiding dynamic `Vec` allocations during streaming updates.
+//!   - *Tradeoff*: Requires manual tracking of `buffer_len`.
+//!   - *Alternative*: Allocating a `Vec` and processing it, which introduces O(N) heap allocations and copies.
+//! - **Wrapping Arithmetic**: Extensively uses `.wrapping_add()` to prevent Rust from panicking on debug builds when `u32` overflows.
 
 /// Educational SHA-256 Hasher
 pub struct Sha256 {
     state: [u32; 8],
-    data: Vec<u8>,
+    buffer: [u8; 64],
+    buffer_len: usize,
     len: u64,
 }
 
@@ -62,45 +98,77 @@ impl Sha256 {
     pub fn new() -> Self {
         Self {
             state: Self::H0,
-            data: Vec::new(),
+            buffer: [0; 64],
+            buffer_len: 0,
             len: 0,
         }
     }
 
     /// Update the hash with new data.
-    pub fn update(&mut self, data: &[u8]) {
-        self.data.extend_from_slice(data);
+    pub fn update(&mut self, mut data: &[u8]) {
         self.len += data.len() as u64;
 
-        // Process full 64-byte blocks
-        while self.data.len() >= 64 {
-            let block: Vec<u8> = self.data.drain(..64).collect();
-            self.process_block(&block);
+        // If we have data in the buffer, try to fill it
+        if self.buffer_len > 0 {
+            let space = 64 - self.buffer_len;
+            if data.len() >= space {
+                // Buffer will be filled
+                self.buffer[self.buffer_len..64].copy_from_slice(&data[..space]);
+
+                // Rust requires block to live long enough, but here we can just pass a copy or array reference.
+                // However, process_block takes &mut self, so we need to copy the buffer out.
+                let block = self.buffer;
+                self.process_block(&block);
+
+                data = &data[space..];
+                self.buffer_len = 0;
+            } else {
+                // Buffer won't be filled, just append and return
+                self.buffer[self.buffer_len..self.buffer_len + data.len()].copy_from_slice(data);
+                self.buffer_len += data.len();
+                return;
+            }
+        }
+
+        // Process full 64-byte blocks directly from the input slice
+        while data.len() >= 64 {
+            let (block, rest) = data.split_at(64);
+            self.process_block(block);
+            data = rest;
+        }
+
+        // Store any remaining bytes in the buffer
+        if !data.is_empty() {
+            self.buffer[..data.len()].copy_from_slice(data);
+            self.buffer_len = data.len();
         }
     }
 
     /// Finalize the hash and return the 32-byte digest.
     pub fn finalize(mut self) -> [u8; 32] {
-        // Padding
         let bit_len = self.len * 8;
 
         // Append '1' bit (0x80 byte)
-        self.data.push(0x80);
+        self.buffer[self.buffer_len] = 0x80;
+        self.buffer_len += 1;
 
-        // Append '0' bits until length % 64 == 56
-        while (self.data.len() % 64) != 56 {
-            self.data.push(0x00);
+        // If not enough room for the 8-byte length, pad and process block
+        if self.buffer_len > 56 {
+            self.buffer[self.buffer_len..64].fill(0x00);
+            let block = self.buffer;
+            self.process_block(&block);
+            self.buffer_len = 0;
         }
+
+        // Pad with '0' bits up to the last 8 bytes
+        self.buffer[self.buffer_len..56].fill(0x00);
 
         // Append length as 64-bit big-endian integer
-        self.data.extend_from_slice(&bit_len.to_be_bytes());
+        self.buffer[56..64].copy_from_slice(&bit_len.to_be_bytes());
 
-        // Process final block(s)
-        // Since we padded to multiple of 64, we can process normally
-        while !self.data.is_empty() {
-            let block: Vec<u8> = self.data.drain(..64).collect();
-            self.process_block(&block);
-        }
+        // Process final block
+        let block = self.buffer;
+        self.process_block(&block);
 
         // Convert state to bytes (big-endian)
         let mut result = [0u8; 32];
@@ -186,6 +254,21 @@ impl Default for Sha256 {
         Self::new()
     }
 }
+
+// =========================================================================================
+// Footer
+// =========================================================================================
+//
+// Comparison to Canonical Crates:
+// - `sha2`: The standard rust implementation. It utilizes highly optimized architecture-specific assembly instructions (like Intel SHA-NI or ARM Cryptography Extensions) when available, gracefully falling back to standard SIMD or scalar routines.
+//
+// Missing vs. Production:
+// - **Hardware Acceleration**: We only implement the scalar, software fallback version.
+// - **Constant-Time Execution**: Educational versions aren't typically scrutinized for side-channels or cache-timing attacks, though SHA-256 naturally avoids data-dependent branching.
+//
+// Next Steps:
+// 1. Explore implementing `portable_simd` (or `core::arch`) optimizations.
+// 2. Extend to SHA-512, which uses the same logical structure but with 64-bit words.
 
 #[cfg(test)]
 mod tests {
