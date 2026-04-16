@@ -12,6 +12,7 @@ pub mod search_in_rotated_sorted_array;
 pub mod sliding_window_maximum;
 pub mod sort_colors;
 pub mod spiral_matrix;
+pub mod subarray_sum_equals_k;
 pub mod three_sum;
 pub mod top_k_frequent_elements;
 pub mod trapping_rain_water;
