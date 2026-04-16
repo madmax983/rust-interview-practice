@@ -339,14 +339,15 @@ fn parse_nodes(
                     let body = parse_nodes(tokens, Some("endif"))?; // Recursively parse until BlockEnd
                     nodes.push(Node::If(cond.trim().to_string(), body));
                 } else if let Some(for_loop) = content.strip_prefix("for ") {
-                    let parts: Vec<&str> = for_loop.split(" in ").collect();
-                    if parts.len() != 2 {
-                        return Err(TemplateError::ParseError("Malformed for loop".to_string()));
-                    }
+                    // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<&str>>()` allocation.
+                    // By using `split_once`, we extract the two parts directly without heap allocation.
+                    let (var_name, iter_name) = for_loop.split_once(" in ").ok_or_else(|| {
+                        TemplateError::ParseError("Malformed for loop".to_string())
+                    })?;
                     let body = parse_nodes(tokens, Some("endfor"))?;
                     nodes.push(Node::For(
-                        parts[0].trim().to_string(),
-                        parts[1].trim().to_string(),
+                        var_name.trim().to_string(),
+                        iter_name.trim().to_string(),
                         body,
                     ));
                 } else {
