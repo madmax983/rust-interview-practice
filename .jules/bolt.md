@@ -4,3 +4,5 @@
 **Zero-allocation string processing in Word Search**
 **Learning:** `word.chars().collect::<Vec<char>>()` introduces an O(L) heap allocation that can be completely eliminated if the problem guarantees ASCII inputs.
 **Action:** Use `word.as_bytes()` and cast characters `as u8` for O(1) comparison in hot recursive loops like DFS to avoid intermediate allocations and UTF-8 decoding overhead.
+**Subarray Sum Equals K**\n**Learning:** The Prefix Sum + HashMap technique can be elegantly expressed functionally in Rust using , passing the HashMap and running states as the accumulator, eliminating all explicit mutable variables.\n**Action:** Consider using  to thread HashMap state in future prefix-sum or DP problems to increase code purity.
+**Subarray Sum Equals K**\n**Learning:** The Prefix Sum + HashMap technique can be elegantly expressed functionally in Rust using Iterator fold, passing the HashMap and running states as the accumulator, eliminating all explicit mutable variables.\n**Action:** Consider using fold to thread HashMap state in future prefix-sum or DP problems to increase code purity.
