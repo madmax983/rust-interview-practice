@@ -1,0 +1,48 @@
+<<<<<<< SEARCH
+    /// Hashes the key to 4 different positions.
+    fn hashes<K: Hash>(key: &K) -> [usize; 4] {
+        let mut hasher = DefaultHasher::new();
+        key.hash(&mut hasher);
+        let hash = hasher.finish();
+
+        // Split the 64-bit hash into four 16-bit indices
+        [
+            (hash & 0xFFFF) as usize,
+            ((hash >> 16) & 0xFFFF) as usize,
+            ((hash >> 32) & 0xFFFF) as usize,
+            ((hash >> 48) & 0xFFFF) as usize,
+        ]
+    }
+=======
+    /// Hashes the key to 4 different positions.
+    fn hashes<K: Hash>(key: &K) -> [usize; 4] {
+        // PRODUCTION NOTE: For a real cache, you would use a faster, non-cryptographic
+        // hasher like `ahash` or `xxhash`.
+        let mut hasher = DefaultHasher::new();
+        key.hash(&mut hasher);
+        let hash1 = hasher.finish();
+
+        // Perturb the hash to get a second independent hash
+        hasher.write_u64(0x9e3779b97f4a7c15);
+        let hash2 = hasher.finish();
+
+        // Generate 4 independent indices using linear combinations to cover full usize space
+        // hash_i = hash1 + i * hash2
+        [
+            hash1 as usize,
+            hash1.wrapping_add(hash2) as usize,
+            hash1.wrapping_add(hash2.wrapping_mul(2)) as usize,
+            hash1.wrapping_add(hash2.wrapping_mul(3)) as usize,
+        ]
+    }
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+// **Next Steps:**
+// - Implement a background thread that processes gets/puts via channels to make it concurrent.
+// - Add TTL tracking per entry.
+=======
+// **Next Steps:**
+// - Implement a background thread that processes gets/puts via channels to make it concurrent.
+// - Add TTL tracking per entry.
+// - Benchmarking: Use `criterion` to compare hit rates against a standard LRU cache under Zipfian distribution workloads.
+>>>>>>> REPLACE

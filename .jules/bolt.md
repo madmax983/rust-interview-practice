@@ -4,3 +4,6 @@
 **Zero-allocation string processing in Word Search**
 **Learning:** `word.chars().collect::<Vec<char>>()` introduces an O(L) heap allocation that can be completely eliminated if the problem guarantees ASCII inputs.
 **Action:** Use `word.as_bytes()` and cast characters `as u8` for O(1) comparison in hot recursive loops like DFS to avoid intermediate allocations and UTF-8 decoding overhead.
+**CountMinSketch Independent Hashing**
+**Learning:** Using a single hash value and splitting it (e.g. four 16-bit integers from a 64-bit hash) drastically restricts the usable index space (max 65,535). For large cache capacities, this causes massive collisions and degrades frequency estimation accuracy.
+**Action:** When implementing hashing for structures like CountMinSketch or Bloom filters, use at least two independent hashes (or perturb a single hash to simulate a second) and use linear combinations (`hash1 + i * hash2`) to generate multiple indices that cover the full `usize` range.
