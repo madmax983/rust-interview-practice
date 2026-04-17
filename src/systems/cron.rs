@@ -81,14 +81,7 @@ impl fmt::Display for CronError {
 
 /// Represents an optimized Cron Schedule.
 pub trait Schedule {
-    fn matches(
-        &self,
-        minute: u8,
-        hour: u8,
-        day_of_month: u8,
-        month: u8,
-        day_of_week: u8,
-    ) -> bool;
+    fn matches(&self, minute: u8, hour: u8, day_of_month: u8, month: u8, day_of_week: u8) -> bool;
 }
 
 /// Represents an optimized Cron Schedule.
@@ -112,14 +105,7 @@ impl Schedule for CronSchedule {
     ///
     /// Takes simple 0-indexed primitives (except DOM/Month which are 1-indexed by convention).
 
-    fn matches(
-        &self,
-        minute: u8,
-        hour: u8,
-        day_of_month: u8,
-        month: u8,
-        day_of_week: u8,
-    ) -> bool {
+    fn matches(&self, minute: u8, hour: u8, day_of_month: u8, month: u8, day_of_week: u8) -> bool {
         let min_match = (self.minutes & (1 << minute)) != 0;
         let hr_match = (self.hours & (1 << hour)) != 0;
         let mo_match = (self.months & (1 << month)) != 0;
