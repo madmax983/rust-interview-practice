@@ -6,6 +6,9 @@
 **Action:** Use `word.as_bytes()` and cast characters `as u8` for O(1) comparison in hot recursive loops like DFS to avoid intermediate allocations and UTF-8 decoding overhead.
 **Subarray Sum Equals K**\n**Learning:** The Prefix Sum + HashMap technique can be elegantly expressed functionally in Rust using , passing the HashMap and running states as the accumulator, eliminating all explicit mutable variables.\n**Action:** Consider using  to thread HashMap state in future prefix-sum or DP problems to increase code purity.
 **Subarray Sum Equals K**\n**Learning:** The Prefix Sum + HashMap technique can be elegantly expressed functionally in Rust using Iterator fold, passing the HashMap and running states as the accumulator, eliminating all explicit mutable variables.\n**Action:** Consider using fold to thread HashMap state in future prefix-sum or DP problems to increase code purity.
+**[Dynamic Error Handling Framework]
+**Learning:** Extending `Result` with an extension trait for context chaining requires handling Debug/Display trait bounds properly. The `ContextExt` trait implementation needs to enforce these bounds to satisfy `Error::msg()` requirements.
+**Action:** Always ensure that extension trait implementations match or exceed the trait bounds required by the underlying functions they wrap, especially when dealing with type-erased errors like `Box<dyn Error>`.
 **[First Missing Positive - Cyclic Sort]**
 **Learning:** The "First Missing Positive" problem (LeetCode #41) uses cyclic sorting where the array values map to indices `x - 1`. In Rust, we have to cast `(nums[i] - 1) as usize` to index into the array, which enforces explicit bounds checking.
 **Action:** When implementing in-place cyclic sorts or mapping values to indices, always ensure robust bounds checking before casting to `usize` to prevent panics and satisfy Rust's strict safety guarantees.
