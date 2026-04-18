@@ -105,7 +105,6 @@ pub struct WTinyLfuCache<K, V> {
     // Window:    head = 0, tail = 1
     // Probation: head = 2, tail = 3
     // Protected: head = 4, tail = 5
-
     window_cap: usize,
     window_len: usize,
 
