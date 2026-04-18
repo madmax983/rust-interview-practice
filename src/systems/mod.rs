@@ -10,6 +10,7 @@ pub mod cron;
 pub mod dependency_injection;
 pub mod design_twitter;
 pub mod ecs;
+pub mod error_framework;
 pub mod inverted_index;
 pub mod lfu_cache;
 pub mod log_structured_storage;
