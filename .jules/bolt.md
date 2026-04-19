@@ -12,3 +12,6 @@
 **[First Missing Positive - Cyclic Sort]**
 **Learning:** The "First Missing Positive" problem (LeetCode #41) uses cyclic sorting where the array values map to indices `x - 1`. In Rust, we have to cast `(nums[i] - 1) as usize` to index into the array, which enforces explicit bounds checking.
 **Action:** When implementing in-place cyclic sorts or mapping values to indices, always ensure robust bounds checking before casting to `usize` to prevent panics and satisfy Rust's strict safety guarantees.
+**[String iteration optimization]
+**Learning:** Calling `.chars().collect::<Vec<char>>()` on a string slice just to iterate with an index is an anti-pattern that creates an unnecessary O(N) heap allocation. Furthermore, reconstructing the remaining part of the string with `.iter().collect::<String>()` creates a second heap allocation.
+**Action:** Use `.char_indices()` to iterate over the string safely, yielding byte offsets and characters. We can then use these byte offsets alongside `char::len_utf8()` to slice the original string (e.g. `&s[idx + c.len_utf8()..]`) to get the remainder without any allocations.

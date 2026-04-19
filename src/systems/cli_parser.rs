@@ -169,9 +169,11 @@ impl CliParser {
                 }
             } else if arg.starts_with('-') && arg.len() > 1 {
                 // Short Option(s)
-                let chars: Vec<char> = arg[1..].chars().collect();
+                // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<char>>()` and `.collect::<String>()` allocations.
+                // We iterate over `char_indices` to process short options and efficiently slice `arg` for attached values.
+                let mut char_indices = arg[1..].char_indices();
 
-                for (i, &c) in chars.iter().enumerate() {
+                while let Some((idx, c)) = char_indices.next() {
                     let config_idx = self
                         .short_map
                         .get(&c)
@@ -185,10 +187,10 @@ impl CliParser {
                         ArgType::Option => {
                             // If it's an Option, it either takes the rest of this string as value
                             // (e.g., `-p8080`) OR the next argument.
-                            if i + 1 < chars.len() {
+                            let rest = &arg[1 + idx + c.len_utf8()..];
+                            if !rest.is_empty() {
                                 // Value is the rest of the string
-                                let val: String = chars[i + 1..].iter().collect();
-                                result.options.insert(config.key.clone(), val);
+                                result.options.insert(config.key.clone(), rest.to_string());
                                 break; // Consumed the rest of the characters
                             } else {
                                 // Value is the next argument
