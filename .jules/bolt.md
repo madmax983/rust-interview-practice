@@ -18,3 +18,6 @@
 **[String iteration optimization]
 **Learning:** Calling `.chars().collect::<Vec<char>>()` on a string slice just to iterate with an index is an anti-pattern that creates an unnecessary O(N) heap allocation. Furthermore, reconstructing the remaining part of the string with `.iter().collect::<String>()` creates a second heap allocation.
 **Action:** Use `.char_indices()` to iterate over the string safely, yielding byte offsets and characters. We can then use these byte offsets alongside `char::len_utf8()` to slice the original string (e.g. `&s[idx + c.len_utf8()..]`) to get the remainder without any allocations.
+**[Raft State Machine Implementation]
+**Learning:** Decoupling network IO from state machine logic allows for exhaustive, fast unit testing without the flakiness of actual networking or async runtime behavior. By modeling Raft strictly as `step(Message)` and `tick() -> OutputMessages`, you can perfectly simulate split brains, partition recovery, and term precedence.
+**Action:** Always favor pushing I/O and async behavior to the very edge of the system ("imperative shell, functional core") to maximize the test surface of the core logic.
