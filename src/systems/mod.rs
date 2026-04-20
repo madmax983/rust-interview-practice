@@ -20,6 +20,7 @@ pub mod lsm_tree;
 pub mod metrics_registry;
 pub mod mvcc;
 pub mod pub_sub;
+pub mod raft;
 pub mod rate_limiter;
 pub mod slab_allocator;
 pub mod snowflake;
