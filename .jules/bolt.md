@@ -21,3 +21,6 @@
 **[Raft State Machine Implementation]
 **Learning:** Decoupling network IO from state machine logic allows for exhaustive, fast unit testing without the flakiness of actual networking or async runtime behavior. By modeling Raft strictly as `step(Message)` and `tick() -> OutputMessages`, you can perfectly simulate split brains, partition recovery, and term precedence.
 **Action:** Always favor pushing I/O and async behavior to the very edge of the system ("imperative shell, functional core") to maximize the test surface of the core logic.
+**[Optimizing Combinations Capacity]
+**Learning:** Initializing `Vec::new()` for dynamically sized but mathematically determinable collections results in multiple heap reallocations.
+**Action:** Always consider pre-calculating the exact capacity (e.g. `C(n, k)` for combinations) and using `Vec::with_capacity(capacity)` to eliminate reallocation overhead entirely, turning array building into a zero-allocation operation during execution.
