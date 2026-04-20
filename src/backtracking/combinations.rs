@@ -35,9 +35,20 @@
 ///
 /// Uses a `&mut Vec<i32>` buffer to store the current combination. When the buffer reaches size `k`,
 /// we clone it and push it into the results.
+///
+/// ⚡ BOLT OPTIMIZATION: We pre-calculate the mathematical combinations `C(n, k)` to pre-allocate
+/// the exact capacity for the `results` vector, completely preventing dynamic heap reallocations.
 #[must_use]
 pub fn combine_straightforward(n: i32, k: i32) -> Vec<Vec<i32>> {
-    let mut results = Vec::new();
+    let capacity = {
+        let k_min = k.min(n - k);
+        let mut res = 1;
+        for i in 1..=k_min {
+            res = res * (n - k_min + i) as usize / i as usize;
+        }
+        res
+    };
+    let mut results = Vec::with_capacity(capacity);
     let mut current_path = Vec::with_capacity(k as usize);
 
     fn backtrack(start: i32, n: i32, k: i32, path: &mut Vec<i32>, results: &mut Vec<Vec<i32>>) {
@@ -68,9 +79,20 @@ pub fn combine_straightforward(n: i32, k: i32) -> Vec<Vec<i32>> {
 /// This version includes an early exit condition. If we are currently exploring a branch
 /// where the number of remaining elements is less than the number of elements we still need to pick,
 /// we stop iterating.
+///
+/// ⚡ BOLT OPTIMIZATION: We pre-calculate the mathematical combinations `C(n, k)` to pre-allocate
+/// the exact capacity for the `results` vector, completely preventing dynamic heap reallocations.
 #[must_use]
 pub fn combine_optimized(n: i32, k: i32) -> Vec<Vec<i32>> {
-    let mut results = Vec::new();
+    let capacity = {
+        let k_min = k.min(n - k);
+        let mut res = 1;
+        for i in 1..=k_min {
+            res = res * (n - k_min + i) as usize / i as usize;
+        }
+        res
+    };
+    let mut results = Vec::with_capacity(capacity);
     // Mathematically pre-allocate to eliminate dynamic reallocations of our active path
     let mut current_path = Vec::with_capacity(k as usize);
 
