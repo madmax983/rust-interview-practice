@@ -71,10 +71,18 @@ pub trait Trace {
 }
 
 // Basic types don't contain Gc references.
-impl Trace for i32 { fn trace(&self) {} }
-impl Trace for f64 { fn trace(&self) {} }
-impl Trace for String { fn trace(&self) {} }
-impl Trace for bool { fn trace(&self) {} }
+impl Trace for i32 {
+    fn trace(&self) {}
+}
+impl Trace for f64 {
+    fn trace(&self) {}
+}
+impl Trace for String {
+    fn trace(&self) {}
+}
+impl Trace for bool {
+    fn trace(&self) {}
+}
 
 impl<T: Trace> Trace for Option<T> {
     fn trace(&self) {
@@ -168,8 +176,8 @@ impl Collector {
     pub fn new() -> Self {
         Self {
             head: None,
-             _allocated_bytes: 0,
-             _threshold: 1024 * 1024, // 1MB initial threshold
+            _allocated_bytes: 0,
+            _threshold: 1024 * 1024, // 1MB initial threshold
         }
     }
 
@@ -342,8 +350,14 @@ mod tests {
         let mut gc = Collector::new();
 
         {
-            let node1 = gc.alloc(Node { val: 1, next: RefCell::new(None) });
-            let node2 = gc.alloc(Node { val: 2, next: RefCell::new(Some(node1.clone())) });
+            let node1 = gc.alloc(Node {
+                val: 1,
+                next: RefCell::new(None),
+            });
+            let node2 = gc.alloc(Node {
+                val: 2,
+                next: RefCell::new(Some(node1.clone())),
+            });
 
             // Create cycle
             *node1.next.borrow_mut() = Some(node2.clone());
