@@ -122,7 +122,8 @@ pub fn length_of_lis_optimized(nums: Vec<i32>) -> i32 {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn length_of_lis_optimal(nums: Vec<i32>) -> i32 {
-    let mut tails = Vec::new();
+    // ⚡ BOLT OPTIMIZATION: Pre-allocate capacity to eliminate dynamic heap reallocations.
+    let mut tails = Vec::with_capacity(nums.len());
 
     for x in nums {
         // RUST INSIGHT: `binary_search` return value
