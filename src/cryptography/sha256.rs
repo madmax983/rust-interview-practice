@@ -24,25 +24,25 @@
 //! Data Structure / Flow:
 //!
 //!      [Input Message]
-//!             │
-//!             ▼
+//!             |
+//!             v
 //!      [Padding (1 bit, 0s, length)]
-//!             │
-//!             ▼
+//!             |
+//!             v
 //!      [512-bit Blocks (64 bytes)]
-//!             │
-//!             ▼
-//!    ┌──────────────────────────┐
-//!    │ Message Schedule W (64)  │
-//!    └──────────────────────────┘
-//!             │
-//!             ▼
-//!    ┌──────────────────────────┐     ┌────────────────┐
-//!    │ Compression Function     │◄────┤ Previous State │
-//!    │ (64 rounds of bit math)  │     │ (a,b,c,d,e,f,g)│
-//!    └──────────────────────────┘     └────────────────┘
-//!             │
-//!             ▼
+//!             |
+//!             v
+//!    +--------------------------+
+//!    | Message Schedule W (64)  |
+//!    +--------------------------+
+//!             |
+//!             v
+//!    +--------------------------+     +----------------+
+//!    | Compression Function     |◄----┤ Previous State |
+//!    | (64 rounds of bit math)  |     | (a,b,c,d,e,f,g)|
+//!    +--------------------------+     +----------------+
+//!             |
+//!             v
 //!      [Final 256-bit Digest]
 //!
 //! Invariants:
@@ -51,12 +51,12 @@
 //! 3. The state variables (`a` through `h`) are initialized to standard constants (fractional parts of square roots of prime numbers).
 //!
 //! Complexity:
-//! ┌───────────────┬─────────────┬─────────────┐
-//! │ Operation     │ Time        │ Space       │
-//! ├───────────────┼─────────────┼─────────────┤
-//! │ update        │ O(N)        │ O(1)        │
-//! │ finalize      │ O(1)        │ O(1)        │
-//! └───────────────┴─────────────┴─────────────┘
+//! +---------------┬-------------┬-------------+
+//! | Operation     | Time        | Space       |
+//! ├---------------┼-------------┼-------------┤
+//! | update        | O(N)        | O(1)        |
+//! | finalize      | O(1)        | O(1)        |
+//! +---------------┴-------------┴-------------+
 //! N = length of the input data block being processed. Space is strictly bounded to the 64-byte buffer and 8 state variables.
 //!
 //! Design Decisions:
