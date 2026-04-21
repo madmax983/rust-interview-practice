@@ -24,3 +24,9 @@
 **[Optimizing Combinations Capacity]
 **Learning:** Initializing `Vec::new()` for dynamically sized but mathematically determinable collections results in multiple heap reallocations.
 **Action:** Always consider pre-calculating the exact capacity (e.g. `C(n, k)` for combinations) and using `Vec::with_capacity(capacity)` to eliminate reallocation overhead entirely, turning array building into a zero-allocation operation during execution.
+**Swap Nodes in Pairs**
+**Learning:** Implementing linked list node swapping requires careful use of  and re-borrowing () to manipulate nodes in-place iteratively without violating Rust's single-mutable-reference rule.
+**Action:** When iterating through an  chain, maintain a mutable reference to the *location* where the next node should be attached (), rather than trying to hold references to the nodes themselves simultaneously.
+**Swap Nodes in Pairs**
+**Learning:** Implementing linked list node swapping requires careful use of `Option::take()` and re-borrowing (`&mut`) to manipulate nodes in-place iteratively without violating Rust's single-mutable-reference rule.
+**Action:** When iterating through an `Option<Box<Node>>` chain, maintain a mutable reference to the *location* where the next node should be attached (`&mut Option<Box<Node>>`), rather than trying to hold references to the nodes themselves simultaneously.
