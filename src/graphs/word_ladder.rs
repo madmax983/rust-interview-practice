@@ -119,9 +119,7 @@ pub fn word_ladder_optimized(begin_word: String, end_word: String, word_list: Ve
                 // In-place mutation for zero-allocation checks
                 current_word_bytes[i] = b;
 
-                if word_set.contains(&current_word_bytes) {
-                    let next_word = current_word_bytes.clone();
-                    word_set.remove(&next_word);
+                if let Some(next_word) = word_set.take(&current_word_bytes) {
                     queue.push_back((next_word, level + 1));
                 }
             }
@@ -198,9 +196,8 @@ pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<
                         return level + 1;
                     }
 
-                    if word_set.contains(&current_word_bytes) {
-                        next_set.insert(current_word_bytes.clone());
-                        word_set.remove(&current_word_bytes);
+                    if let Some(next_word) = word_set.take(&current_word_bytes) {
+                        next_set.insert(next_word);
                     }
                 }
 
