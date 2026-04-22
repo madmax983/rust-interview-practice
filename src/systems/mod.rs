@@ -22,6 +22,7 @@ pub mod mvcc;
 pub mod pub_sub;
 pub mod raft;
 pub mod rate_limiter;
+pub mod reactive_signals;
 pub mod slab_allocator;
 pub mod snowflake;
 pub mod task_scheduler;

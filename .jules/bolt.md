@@ -30,3 +30,14 @@
 **Swap Nodes in Pairs**
 **Learning:** Implementing linked list node swapping requires careful use of `Option::take()` and re-borrowing (`&mut`) to manipulate nodes in-place iteratively without violating Rust's single-mutable-reference rule.
 **Action:** When iterating through an `Option<Box<Node>>` chain, maintain a mutable reference to the *location* where the next node should be attached (`&mut Option<Box<Node>>`), rather than trying to hold references to the nodes themselves simultaneously.
+**Reactive Signals: Deduplication and Exponential Blowups**
+**Learning:** Naive Push-based reactive systems that push to a `Vec` inside `Signal::get()` can cause exponential duplication if an Effect evaluates a signal multiple times (or in a loop). This blows up memory and triggers effects recursively.
+**Action:** When tracking subscribers, use a `HashMap` keyed by a unique identifier (like an AtomicUsize `EffectId`) to deduplicate subscriptions natively.
+
+**Reactive Signals: Memo Self-Subscription**
+**Learning:** If a `Memo` creates an `Effect` that updates its own `Signal`, calling the trait's tracked `get()` method inside that effect will subscribe the effect to its own output, leading to recursive evaluation loops that `RefCell` will catch as panics (or silently swallow if `try_borrow_mut` is used).
+**Action:** Within internal reactive primitives, bypass public tracking methods (`get()`) and access raw inner values directly (e.g., `borrow().value.clone()`) to prevent unwanted self-subscription.
+
+**Reactive Signals: Cloning Derived State**
+**Learning:** Derived state structures (like `Memo`) usually contain the `Effect` that drives them. Implementing `Clone` manually with `unimplemented!()` is an anti-pattern.
+**Action:** Wrap the internal `Effect` in an `Rc` so that the struct can implement `Clone` safely, allowing multiple handles to share the exact same background computation.
