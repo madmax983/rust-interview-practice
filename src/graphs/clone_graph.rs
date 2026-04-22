@@ -114,10 +114,10 @@ fn clone_dfs_brute(
     // RUST INSIGHT: We must drop the borrow of `node` before recursing if we were holding it.
     // However, here we only accessed `val` (Copy), so we don't hold a borrow across the loop.
     // Iterating `neighbors` requires borrowing `node`.
-    let neighbors = node.borrow().neighbors.clone(); // Clone the Vec of Rcs to iterate safely
+    // BOLT OPTIMIZATION: Avoid cloning the entire neighbors vector
 
-    for neighbor in neighbors {
-        let new_neighbor = clone_dfs_brute(&neighbor, visited);
+    for neighbor in &node.borrow().neighbors {
+        let new_neighbor = clone_dfs_brute(neighbor, visited);
         new_node.borrow_mut().neighbors.push(new_neighbor);
     }
 
