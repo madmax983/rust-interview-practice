@@ -7,6 +7,7 @@ pub mod concurrent_cache;
 pub mod connection_pool;
 pub mod consistent_hashing;
 pub mod cron;
+pub mod deflate;
 pub mod dependency_injection;
 pub mod design_twitter;
 pub mod ecs;
