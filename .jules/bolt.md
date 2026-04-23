@@ -48,3 +48,7 @@
 **[Replacing contains+clone+remove with take in HashSets]
 **Learning:** When needing to conditionally remove and consume a dynamically allocated type (like `Vec<u8>` or `String`) from a `HashSet`, using `.contains(&val)` followed by `.clone()` and `.remove(&val)` is extremely inefficient.
 **Action:** Use `if let Some(owned_val) = set.take(&val)` instead to extract the owned value in a single zero-allocation lookup.
+
+**Avoid intermediate allocations in char iterators**
+**Learning:** Found an inefficient pattern (`word.chars().filter(...).collect::<String>().to_lowercase()`) which collected characters into a heap-allocated string only to immediately allocate a brand new string for the lowercase version.
+**Action:** Used `flat_map(|c| c.to_lowercase())` directly within the iterator chain to compute casing character-by-character, avoiding the intermediate allocation entirely.
