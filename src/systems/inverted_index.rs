@@ -131,10 +131,11 @@ impl InvertedIndex {
         // We filter out punctuation, lowercase everything, and filter stop words.
         text.split_whitespace()
             .map(|word| {
+                // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<String>()` allocation by using `.flat_map(|c| c.to_lowercase())`.
                 word.chars()
                     .filter(|c| c.is_alphanumeric())
+                    .flat_map(|c| c.to_lowercase())
                     .collect::<String>()
-                    .to_lowercase()
             })
             .filter(|term| !term.is_empty() && !self.stop_words.contains(term))
             .collect()
