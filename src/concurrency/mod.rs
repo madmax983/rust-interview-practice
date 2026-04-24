@@ -6,6 +6,7 @@ pub mod barrier;
 pub mod channel;
 pub mod dining_philosophers;
 pub mod event_loop;
+pub mod lock_free_queue;
 pub mod mutex;
 pub mod once_cell;
 pub mod parking_lot;

@@ -90,21 +90,24 @@ pub fn can_jump_functional(nums: Vec<i32>) -> bool {
     let target = nums.len().saturating_sub(1);
 
     // We fold over the elements. The accumulator is `max_reachable`.
-    let result = nums.iter().enumerate().try_fold(0, |max_reachable, (i, &jump_len)| {
-        if i > max_reachable {
-            // We can't reach this index, short-circuit
-            std::ops::ControlFlow::Break(false)
-        } else {
-            let next_reach = cmp::max(max_reachable, i + jump_len as usize);
-            if next_reach >= target {
-                // We can reach the target, short-circuit with true
-                std::ops::ControlFlow::Break(true)
+    let result = nums
+        .iter()
+        .enumerate()
+        .try_fold(0, |max_reachable, (i, &jump_len)| {
+            if i > max_reachable {
+                // We can't reach this index, short-circuit
+                std::ops::ControlFlow::Break(false)
             } else {
-                // Continue with the new max_reachable
-                std::ops::ControlFlow::Continue(next_reach)
+                let next_reach = cmp::max(max_reachable, i + jump_len as usize);
+                if next_reach >= target {
+                    // We can reach the target, short-circuit with true
+                    std::ops::ControlFlow::Break(true)
+                } else {
+                    // Continue with the new max_reachable
+                    std::ops::ControlFlow::Continue(next_reach)
+                }
             }
-        }
-    });
+        });
 
     match result {
         std::ops::ControlFlow::Break(res) => res,
