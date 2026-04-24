@@ -269,41 +269,47 @@ impl Registry {
     pub fn export_prometheus(&self) -> String {
         let mut output = String::new();
 
+        use std::fmt::Write;
+
+        /// ⚡ BOLT OPTIMIZATION: Avoid intermediate string allocations during metrics export.
+        /// Replaced `output.push_str(&format!(...))` with `writeln!(output, ...)`.
+        /// `format!` creates an intermediate String on the heap, which is then copied into `output` and dropped.
+        /// `writeln!` writes directly into the `String` buffer, eliminating the intermediate allocation.
         // Export Counters
         let counters = self.counters.read().unwrap();
         for (name, counter) in counters.iter() {
-            output.push_str(&format!("# TYPE {} counter\n", name));
-            output.push_str(&format!("{} {}\n", name, counter.get()));
+            writeln!(output, "# TYPE {} counter", name).expect("writing to String cannot fail");
+            writeln!(output, "{} {}", name, counter.get()).expect("writing to String cannot fail");
         }
 
         // Export Gauges
         let gauges = self.gauges.read().unwrap();
         for (name, gauge) in gauges.iter() {
-            output.push_str(&format!("# TYPE {} gauge\n", name));
-            output.push_str(&format!("{} {}\n", name, gauge.get()));
+            writeln!(output, "# TYPE {} gauge", name).expect("writing to String cannot fail");
+            writeln!(output, "{} {}", name, gauge.get()).expect("writing to String cannot fail");
         }
 
         // Export Histograms
         let histograms = self.histograms.read().unwrap();
         for (name, hist) in histograms.iter() {
-            output.push_str(&format!("# TYPE {} histogram\n", name));
+            writeln!(output, "# TYPE {} histogram", name).expect("writing to String cannot fail");
 
             let bounds = hist.buckets();
             let counts = hist.bucket_counts();
 
             for (bound, count) in bounds.iter().zip(counts.iter()) {
-                let bound_str = if *bound == f64::INFINITY {
-                    "+Inf".to_string()
+                if *bound == f64::INFINITY {
+                    writeln!(output, "{}_bucket{{le=\"+Inf\"}} {}", name, count)
+                        .expect("writing to String cannot fail");
                 } else {
-                    bound.to_string()
-                };
-                output.push_str(&format!(
-                    "{}_bucket{{le=\"{}\"}} {}\n",
-                    name, bound_str, count
-                ));
+                    writeln!(output, "{}_bucket{{le=\"{}\"}} {}", name, bound, count)
+                        .expect("writing to String cannot fail");
+                }
             }
-            output.push_str(&format!("{}_sum {}\n", name, hist.total_sum()));
-            output.push_str(&format!("{}_count {}\n", name, hist.total_count()));
+            writeln!(output, "{}_sum {}", name, hist.total_sum())
+                .expect("writing to String cannot fail");
+            writeln!(output, "{}_count {}", name, hist.total_count())
+                .expect("writing to String cannot fail");
         }
 
         output

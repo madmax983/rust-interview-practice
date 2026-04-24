@@ -52,3 +52,6 @@
 **Avoid intermediate allocations in char iterators**
 **Learning:** Found an inefficient pattern (`word.chars().filter(...).collect::<String>().to_lowercase()`) which collected characters into a heap-allocated string only to immediately allocate a brand new string for the lowercase version.
 **Action:** Used `flat_map(|c| c.to_lowercase())` directly within the iterator chain to compute casing character-by-character, avoiding the intermediate allocation entirely.
+**[Metrics Registry Format Optimization]**
+**Learning:** `output.push_str(&format!(...))` is an anti-pattern that creates an intermediate heap-allocated `String` via `format!`, copies it, and then drops it.
+**Action:** Always prefer `use std::fmt::Write;` and `writeln!(output, ...)` when incrementally building up a large output string to avoid all intermediate allocations, appending formatted text directly into the target buffer.
