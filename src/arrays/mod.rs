@@ -9,6 +9,7 @@ pub mod longest_consecutive_sequence;
 pub mod majority_element;
 pub mod maximum_subarray;
 pub mod merge_intervals;
+pub mod move_zeroes;
 pub mod product_except_self;
 pub mod rotate_array;
 pub mod search_a_2d_matrix;
