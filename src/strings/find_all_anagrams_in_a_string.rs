@@ -48,18 +48,22 @@ pub fn find_anagrams_brute_force(s: String, p: String) -> Vec<i32> {
 
     let mut result = Vec::new();
 
-    // Sort p's characters once
-    let mut p_chars: Vec<char> = p.chars().collect();
-    p_chars.sort_unstable();
+    // BOLT OPTIMIZATION: Avoid `.chars().collect::<Vec<char>>()` O(N) allocation overhead.
+    // Sort p's bytes once
+    let mut p_bytes: Vec<u8> = p.into_bytes();
+    p_bytes.sort_unstable();
 
     // RUST INSIGHT: Collecting `.chars()` into a Vec allocates heap memory.
     // Doing this in a loop creates significant GC/allocator pressure.
+    let s_bytes = s.as_bytes();
     for i in 0..=s_len - p_len {
-        let window = &s[i..i + p_len];
-        let mut window_chars: Vec<char> = window.chars().collect();
-        window_chars.sort_unstable();
+        let window = &s_bytes[i..i + p_len];
+        let mut window_bytes = window.to_vec();
+        window_bytes.sort_unstable();
 
-        if window_chars == p_chars {
+        // If sorted window matches sorted p, we found an anagram
+        if window_bytes == p_bytes {
+            // Safe to cast to i32 per LeetCode constraints
             result.push(i as i32);
         }
     }
