@@ -3,6 +3,7 @@ pub mod container_with_most_water;
 pub mod contains_duplicate;
 pub mod find_minimum_in_rotated_sorted_array;
 pub mod first_missing_positive;
+pub mod gas_station;
 pub mod insert_interval;
 pub mod jump_game;
 pub mod longest_consecutive_sequence;

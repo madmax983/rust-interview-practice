@@ -22,6 +22,7 @@
 //! // =========================================================================================
 //!
 //! Data Structure / Flow:
+//! ```text
 //!
 //!      [Input Message]
 //!             |
@@ -44,6 +45,7 @@
 //!             |
 //!             v
 //!      [Final 256-bit Digest]
+//! ```
 //!
 //! Invariants:
 //! 1. The input message must be padded such that its length is a multiple of 64 bytes.
