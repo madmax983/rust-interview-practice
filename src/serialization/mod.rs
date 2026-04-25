@@ -3,6 +3,8 @@ pub mod bincode;
 pub mod csv;
 pub mod ini;
 pub mod json;
+pub mod protobuf;
+pub mod resp;
 pub mod serde_framework;
 pub mod toml;
 pub mod varint;
