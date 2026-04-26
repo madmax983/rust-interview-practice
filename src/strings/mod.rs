@@ -9,6 +9,7 @@ pub mod longest_substring_without_repeating;
 pub mod minimum_window_substring;
 pub mod parser_combinator;
 pub mod regex;
+pub mod reverse_words_in_a_string;
 pub mod roman_to_integer;
 pub mod semver;
 pub mod string_to_integer_atoi;
