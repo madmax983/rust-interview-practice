@@ -258,6 +258,8 @@ pub fn percent_decode(input: &str) -> Result<String, ParseError> {
     String::from_utf8(result).map_err(|_| ParseError::InvalidEncoding)
 }
 
+use std::fmt::Write;
+
 /// Percent-encodes a string.
 pub fn percent_encode(input: &str) -> String {
     // PRODUCTION NOTE: A production encoder uses a static lookup table (`[bool; 256]`)
@@ -273,7 +275,9 @@ pub fn percent_encode(input: &str) -> String {
         {
             result.push(byte as char);
         } else {
-            result.push_str(&format!("%{:02X}", byte));
+            // ⚡ BOLT OPTIMIZATION: Avoid intermediate string allocations during percent encoding.
+            // Replaced `result.push_str(&format!("%{:02X}", byte))` with `write!(result, ...)`.
+            let _ = write!(result, "%{:02X}", byte);
         }
     }
     result
