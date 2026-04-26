@@ -55,3 +55,7 @@
 **[Metrics Registry Format Optimization]**
 **Learning:** `output.push_str(&format!(...))` is an anti-pattern that creates an intermediate heap-allocated `String` via `format!`, copies it, and then drops it.
 **Action:** Always prefer `use std::fmt::Write;` and `writeln!(output, ...)` when incrementally building up a large output string to avoid all intermediate allocations, appending formatted text directly into the target buffer.
+
+**[Networking URL Percent Encoding Optimization]**
+**Learning:** `result.push_str(&format!("%{:02X}", byte));` inside a loop creates an intermediate heap-allocated `String` via `format!`, copies it, and then drops it for every single encoded byte.
+**Action:** Used `use std::fmt::Write;` and `let _ = write!(result, "%{:02X}", byte);` directly into the `String` buffer to eliminate all intermediate allocations during percent encoding.
