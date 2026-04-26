@@ -137,7 +137,6 @@ impl<T> ArrayQueue<T> {
             head: AtomicUsize::new(0),
         }
     }
-
 }
 
 impl<T> Queue<T> for ArrayQueue<T> {
