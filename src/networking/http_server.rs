@@ -224,8 +224,11 @@ impl HttpRequest {
         let version = parts[2].to_string();
 
         let mut headers = HashMap::new();
+        // ⚡ BOLT OPTIMIZATION: Hoist `String::new()` out of the loop and reuse the capacity
+        // via `line.clear()` to eliminate dynamic heap allocations per header line.
+        let mut line = String::new();
         loop {
-            let mut line = String::new();
+            line.clear();
             reader.read_line(&mut line)?;
 
             if line == "\r\n" || line == "\n" {
@@ -233,12 +236,12 @@ impl HttpRequest {
             }
 
             // Trim trailing newline and spaces
-            let line = line.trim_end();
-            if line.is_empty() {
+            let trimmed_line = line.trim_end();
+            if trimmed_line.is_empty() {
                 break;
             }
 
-            if let Some((key, value)) = line.split_once(':') {
+            if let Some((key, value)) = trimmed_line.split_once(':') {
                 headers.insert(key.trim().to_lowercase(), value.trim().to_string());
             }
         }
@@ -252,8 +255,11 @@ impl HttpRequest {
         if let Some(transfer_encoding) = headers.get("transfer-encoding") {
             if transfer_encoding.contains("chunked") {
                 // Basic chunked reader implementation
+                // ⚡ BOLT OPTIMIZATION: Hoist `String::new()` out of the loop and reuse the capacity
+                // via `size_line.clear()` to eliminate dynamic heap allocations per chunk.
+                let mut size_line = String::new();
                 loop {
-                    let mut size_line = String::new();
+                    size_line.clear();
                     let bytes_read = reader.read_line(&mut size_line)?;
                     if bytes_read == 0 {
                         break; // EOF
@@ -270,7 +276,8 @@ impl HttpRequest {
 
                     if size == 0 {
                         // Read trailing CRLF
-                        reader.read_line(&mut String::new())?;
+                        size_line.clear();
+                        reader.read_line(&mut size_line)?;
                         break;
                     }
 
@@ -279,7 +286,8 @@ impl HttpRequest {
                     body.extend(chunk);
 
                     // Read trailing CRLF after chunk
-                    reader.read_line(&mut String::new())?;
+                    size_line.clear();
+                    reader.read_line(&mut size_line)?;
                 }
             }
         } else if let Some(content_length) = headers.get("content-length")

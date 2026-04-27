@@ -282,20 +282,23 @@ impl Response {
 
         // Read headers
         let mut headers = HashMap::new();
+        // ⚡ BOLT OPTIMIZATION: Hoist `String::new()` out of the loop and reuse the capacity
+        // via `line.clear()` to eliminate dynamic heap allocations per header line.
+        let mut line = String::new();
         loop {
-            let mut line = String::new();
+            line.clear();
             reader.read_line(&mut line)?;
 
             if line == "\r\n" || line == "\n" {
                 break;
             }
 
-            let line = line.trim_end();
-            if line.is_empty() {
+            let trimmed_line = line.trim_end();
+            if trimmed_line.is_empty() {
                 break;
             }
 
-            if let Some((key, value)) = line.split_once(':') {
+            if let Some((key, value)) = trimmed_line.split_once(':') {
                 headers.insert(key.trim().to_lowercase(), value.trim().to_string());
             }
         }
@@ -308,8 +311,11 @@ impl Response {
         // GOTCHA: It is easy to mistakenly read `Content-Length` even when `chunked` encoding is used.
         if let Some(transfer_encoding) = headers.get("transfer-encoding") {
             if transfer_encoding.contains("chunked") {
+                // ⚡ BOLT OPTIMIZATION: Hoist `String::new()` out of the loop and reuse the capacity
+                // via `size_line.clear()` to eliminate dynamic heap allocations per chunk.
+                let mut size_line = String::new();
                 loop {
-                    let mut size_line = String::new();
+                    size_line.clear();
                     let bytes_read = reader.read_line(&mut size_line)?;
                     if bytes_read == 0 {
                         break; // EOF
