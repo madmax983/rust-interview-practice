@@ -288,7 +288,8 @@ impl<T: Clone> RaftNode<T> {
         let last_log_index = self.log.len() - 1;
         let last_log_term = self.log[last_log_index].term;
 
-        for peer in self.peers.clone() {
+        let peers = self.peers.clone();
+        for peer in peers {
             self.send(
                 peer,
                 Message::RequestVote {
@@ -305,7 +306,8 @@ impl<T: Clone> RaftNode<T> {
         self.role = Role::Leader;
         let last_log_index = self.log.len() - 1;
 
-        for peer in self.peers.clone() {
+        let peers = self.peers.clone();
+        for peer in peers {
             self.next_index.insert(peer, last_log_index + 1);
             self.match_index.insert(peer, 0);
         }
@@ -464,7 +466,8 @@ impl<T: Clone> RaftNode<T> {
             for n in (self.commit_index + 1..self.log.len()).rev() {
                 if self.log[n].term == self.current_term {
                     let mut count = 1; // Self
-                    for peer in self.peers.clone() {
+                    let peers = self.peers.clone();
+                    for peer in peers {
                         if self.match_index.get(&peer).copied().unwrap_or(0) >= n {
                             count += 1;
                         }
@@ -491,7 +494,8 @@ impl<T: Clone> RaftNode<T> {
     }
 
     fn bcast_append_entries(&mut self) {
-        for peer in self.peers.clone() {
+        let peers = self.peers.clone();
+        for peer in peers {
             self.send_append_entries(peer);
         }
     }
