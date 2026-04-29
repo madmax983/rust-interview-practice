@@ -335,7 +335,7 @@ mod tests {
                 RespValue::BulkString(Some(b"bar".to_vec())),
             ]))
         );
-        assert_eq!(read, 26);
+        assert_eq!(read, 22);
     }
 
     #[test]
