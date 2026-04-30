@@ -69,7 +69,10 @@ impl Header {
 
     // A very naive JSON serialization.
     fn to_json(&self) -> String {
-        format!(r#"{{"alg":"{}","typ":"{}"}}"#, self.alg, self.typ)
+        use std::fmt::Write;
+        let mut json = String::with_capacity(64);
+        let _ = write!(json, r#"{{"alg":"{}","typ":"{}"}}"#, self.alg, self.typ);
+        json
     }
 }
 
@@ -88,12 +91,14 @@ impl Claims {
     }
 
     fn to_json(&self) -> String {
-        let mut json = format!(r#"{{"sub":"{}" "#, self.sub);
+        use std::fmt::Write;
+        let mut json = String::with_capacity(128);
+        let _ = write!(json, r#"{{"sub":"{}""#, self.sub);
         if let Some(exp) = self.exp {
-            json.push_str(&format!(r#","exp":{}"#, exp));
+            let _ = write!(json, r#","exp":{}"#, exp);
         }
         if let Some(iat) = self.iat {
-            json.push_str(&format!(r#","iat":{}"#, iat));
+            let _ = write!(json, r#","iat":{}"#, iat);
         }
         json.push('}');
         json
@@ -239,11 +244,17 @@ impl JwtHandler for Hs256Jwt {
         let b64_header = base64url_encode(header.to_json().as_bytes());
         let b64_payload = base64url_encode(claims.to_json().as_bytes());
 
-        let message = format!("{}.{}", b64_header, b64_payload);
-        let signature = hmac_sha256(&self.secret, message.as_bytes());
+        let mut token = String::with_capacity(b64_header.len() + b64_payload.len() + 100);
+        token.push_str(&b64_header);
+        token.push('.');
+        token.push_str(&b64_payload);
+
+        let signature = hmac_sha256(&self.secret, token.as_bytes());
         let b64_signature = base64url_encode(&signature);
 
-        format!("{}.{}", message, b64_signature)
+        token.push('.');
+        token.push_str(&b64_signature);
+        token
     }
 
     /// Decodes and verifies a JWT.
@@ -258,7 +269,11 @@ impl JwtHandler for Hs256Jwt {
         let b64_signature = parts[2];
 
         // 1. Verify Signature
-        let message = format!("{}.{}", b64_header, b64_payload);
+        let mut message = String::with_capacity(b64_header.len() + b64_payload.len() + 1);
+        message.push_str(b64_header);
+        message.push('.');
+        message.push_str(b64_payload);
+
         let expected_sig = hmac_sha256(&self.secret, message.as_bytes());
         let expected_b64_sig = base64url_encode(&expected_sig);
 
