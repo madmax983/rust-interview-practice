@@ -15,6 +15,7 @@ pub mod ecs;
 pub mod error_framework;
 pub mod garbage_collector;
 pub mod inverted_index;
+pub mod job_queue;
 pub mod lfu_cache;
 pub mod log_structured_storage;
 pub mod lru_cache;
