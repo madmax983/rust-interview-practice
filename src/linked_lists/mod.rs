@@ -1,4 +1,5 @@
 pub mod add_two_numbers;
+pub mod linked_list_cycle;
 pub mod merge_k_sorted_lists;
 pub mod merge_two_sorted_lists;
 pub mod middle_of_the_linked_list;
