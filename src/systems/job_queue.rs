@@ -18,13 +18,13 @@
 //! signaling with condition variables, and how to safely isolate failing tasks so they don't
 //! crash the main event loop.
 
-use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::cmp::Ordering;
-use std::sync::{Arc, Mutex, Condvar};
-use std::thread;
-use std::time::{Duration, Instant, SystemTime};
+use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::error::Error;
 use std::fmt;
+use std::sync::{Arc, Condvar, Mutex};
+use std::thread;
+use std::time::{Duration, Instant, SystemTime};
 
 // =========================================================================================
 // Architecture
@@ -268,7 +268,8 @@ impl JobQueue {
                     let timeout = wake_at - now;
                     // RUST INSIGHT: `wait_timeout` releases the Mutex and puts the thread to sleep.
                     // It re-acquires the Mutex when awoken by a Condvar notification or timeout.
-                    let (new_state, _timeout_result) = self.cvar.wait_timeout(state, timeout).unwrap();
+                    let (new_state, _timeout_result) =
+                        self.cvar.wait_timeout(state, timeout).unwrap();
                     state = new_state;
                 }
             } else {
@@ -350,9 +351,10 @@ impl Worker {
                         // If we held the lock here, no other workers could dequeue jobs.
 
                         // Catch panics inside the job to prevent the worker thread from dying.
-                        let payload_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                            job.payload.run()
-                        }));
+                        let payload_result =
+                            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                job.payload.run()
+                            }));
 
                         let success = match payload_result {
                             Ok(Ok(())) => true,
