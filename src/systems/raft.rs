@@ -470,8 +470,8 @@ impl<T: Clone> RaftNode<T> {
             for n in (self.commit_index + 1..self.log.len()).rev() {
                 if self.log[n].term == self.current_term {
                     let mut count = 1; // Self
-                                       // ⚡ BOLT OPTIMIZATION: Iterate over indices to avoid cloning the `peers` Vec
-                                       // on hot paths like elections and heartbeats, eliminating O(N) heap allocations.
+                    // ⚡ BOLT OPTIMIZATION: Iterate over indices to avoid cloning the `peers` Vec
+                    // on hot paths like elections and heartbeats, eliminating O(N) heap allocations.
                     for i in 0..self.peers.len() {
                         let peer = self.peers[i];
                         if self.match_index.get(&peer).copied().unwrap_or(0) >= n {
