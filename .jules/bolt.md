@@ -63,3 +63,6 @@
 **Optimize intermediate String allocations in string formatting**
 **Learning:** `format!` inside string-building sequences allocates an intermediate string on the heap, which is immediately copied into the main string and dropped. This causes multiple heap allocations during token encoding (e.g., JSON serialization or string joining like JWT tokens).
 **Action:** Use `std::fmt::Write` macros directly onto a pre-allocated `String` with `String::with_capacity(...)` for complex formatting, or manually concatenate using `push_str()`/`push()` when the exact buffer size can be calculated ahead of time to achieve zero-allocation appending.
+**Avoid allocation on iterative mutations**
+**Learning:** When trying to avoid cloning a vector (like `self.peers.clone()`) in a loop that mutates `self`, using `for peer in &self.peers` causes a borrow checker conflict because the iterator borrows `self` immutably while the loop body needs mutable access.
+**Action:** Use an index-based loop `for i in 0..self.peers.len()` to cleanly bypass this, fetching elements individually and satisfying the borrow checker.
