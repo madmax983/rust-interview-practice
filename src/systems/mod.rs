@@ -38,3 +38,4 @@ pub mod vector_clock;
 pub mod w_tiny_lfu_cache;
 pub mod wal;
 pub mod write_strategies;
+pub mod buddy_allocator;
