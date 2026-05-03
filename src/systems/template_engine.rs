@@ -270,7 +270,8 @@ enum Token {
 
 /// Minimal lexer: splits the template string into text, variable, and block tokens.
 fn tokenize(input: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
+    // BOLT OPTIMIZATION: Pre-allocate capacity to avoid initial heap reallocations during tokenization.
+    let mut tokens = Vec::with_capacity(32);
     let mut rest = input;
 
     while !rest.is_empty() {
