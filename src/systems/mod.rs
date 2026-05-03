@@ -1,5 +1,6 @@
 pub mod arc_cache;
 pub mod bitcask;
+pub mod buddy_allocator;
 pub mod bump_allocator;
 pub mod circuit_breaker;
 pub mod cli_parser;
