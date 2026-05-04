@@ -27,16 +27,17 @@
 pub fn length_of_longest_substring_brute_force(s: String) -> i32 {
     use std::collections::HashSet;
 
-    // Convert string to vec for O(1) indexing
-    let chars: Vec<char> = s.chars().collect();
-    let n = chars.len();
+    // BOLT OPTIMIZATION: Use `as_bytes()` instead of `.chars().collect::<Vec<char>>()`
+    // This avoids an O(N) heap allocation since constraints guarantee ASCII (English letters, digits, symbols, spaces).
+    let bytes = s.as_bytes();
+    let n = bytes.len();
     let mut max_len = 0; // Track the longest unique substring found
 
     // Strategy: Check every possible substring
     for i in 0..n {
         // Try all substrings starting at position i
         for j in (i + 1)..=n {
-            let substring = &chars[i..j]; // Get substring from i to j
+            let substring = &bytes[i..j]; // Get substring from i to j
             let mut seen = HashSet::new(); // Track characters in this substring
             let mut is_unique = true;
 
@@ -69,24 +70,25 @@ pub fn length_of_longest_substring_brute_force(s: String) -> i32 {
 pub fn length_of_longest_substring_optimized(s: String) -> i32 {
     use std::collections::HashSet;
 
-    // Convert to vec for indexing
-    let chars: Vec<char> = s.chars().collect();
+    // BOLT OPTIMIZATION: Use `as_bytes()` instead of `.chars().collect::<Vec<char>>()`
+    // This avoids an O(N) heap allocation since constraints guarantee ASCII.
+    let bytes = s.as_bytes();
     let mut seen = HashSet::new(); // Track characters in current window
     let mut left = 0; // Left boundary of sliding window
     let mut max_len = 0; // Best result so far
 
     // Strategy: Sliding window - expand right, shrink left when needed
-    for right in 0..chars.len() {
+    for right in 0..bytes.len() {
         // Right pointer always moves forward
 
         // If current char creates a duplicate, shrink window from left
-        while seen.contains(&chars[right]) {
-            seen.remove(&chars[left]); // Remove leftmost character
+        while seen.contains(&bytes[right]) {
+            seen.remove(&bytes[left]); // Remove leftmost character
             left += 1; // Move left boundary right
         }
 
         // Now window [left..=right] has all unique characters
-        seen.insert(chars[right]); // Add current char to window
+        seen.insert(bytes[right]); // Add current char to window
 
         // Update max length seen (window size is right - left + 1)
         max_len = max_len.max(right - left + 1);
