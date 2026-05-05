@@ -40,7 +40,7 @@
 //! assert_eq!(pacific_atlantic(heights), expected);
 //! ```
 
-use std::collections::{VecDeque};
+use std::collections::VecDeque;
 
 // =========================================================================================
 // Brute Force Approach
@@ -207,14 +207,46 @@ pub fn pacific_atlantic_dfs(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 
     // Top and Bottom edges
     for c in 0..cols {
-        dfs(0, c, &mut pacific_reachable, heights[0][c], &heights, rows, cols);
-        dfs(rows - 1, c, &mut atlantic_reachable, heights[rows - 1][c], &heights, rows, cols);
+        dfs(
+            0,
+            c,
+            &mut pacific_reachable,
+            heights[0][c],
+            &heights,
+            rows,
+            cols,
+        );
+        dfs(
+            rows - 1,
+            c,
+            &mut atlantic_reachable,
+            heights[rows - 1][c],
+            &heights,
+            rows,
+            cols,
+        );
     }
 
     // Left and Right edges
     for r in 0..rows {
-        dfs(r, 0, &mut pacific_reachable, heights[r][0], &heights, rows, cols);
-        dfs(r, cols - 1, &mut atlantic_reachable, heights[r][cols - 1], &heights, rows, cols);
+        dfs(
+            r,
+            0,
+            &mut pacific_reachable,
+            heights[r][0],
+            &heights,
+            rows,
+            cols,
+        );
+        dfs(
+            r,
+            cols - 1,
+            &mut atlantic_reachable,
+            heights[r][cols - 1],
+            &heights,
+            rows,
+            cols,
+        );
     }
 
     // RUST INSIGHT: Here we use iterator combinators instead of nested manual loops to build the final result.
@@ -304,8 +336,20 @@ pub fn pacific_atlantic_bfs(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
         }
     }
 
-    bfs(&mut pacific_queue, &mut pacific_reachable, &heights, rows, cols);
-    bfs(&mut atlantic_queue, &mut atlantic_reachable, &heights, rows, cols);
+    bfs(
+        &mut pacific_queue,
+        &mut pacific_reachable,
+        &heights,
+        rows,
+        cols,
+    );
+    bfs(
+        &mut atlantic_queue,
+        &mut atlantic_reachable,
+        &heights,
+        rows,
+        cols,
+    );
 
     // RUST INSIGHT: Iterator combinators make the filtering logic declarative and concise.
     (0..rows)
@@ -340,8 +384,13 @@ mod tests {
             vec![5, 1, 1, 2, 4],
         ];
         let mut expected = vec![
-            vec![0, 4], vec![1, 3], vec![1, 4], vec![2, 2],
-            vec![3, 0], vec![3, 1], vec![4, 0]
+            vec![0, 4],
+            vec![1, 3],
+            vec![1, 4],
+            vec![2, 2],
+            vec![3, 0],
+            vec![3, 1],
+            vec![4, 0],
         ];
         let mut result = pacific_atlantic_brute_force(heights);
         expected.sort();
@@ -359,8 +408,13 @@ mod tests {
             vec![5, 1, 1, 2, 4],
         ];
         let mut expected = vec![
-            vec![0, 4], vec![1, 3], vec![1, 4], vec![2, 2],
-            vec![3, 0], vec![3, 1], vec![4, 0]
+            vec![0, 4],
+            vec![1, 3],
+            vec![1, 4],
+            vec![2, 2],
+            vec![3, 0],
+            vec![3, 1],
+            vec![4, 0],
         ];
         let mut result = pacific_atlantic_dfs(heights);
         expected.sort();
@@ -378,8 +432,13 @@ mod tests {
             vec![5, 1, 1, 2, 4],
         ];
         let mut expected = vec![
-            vec![0, 4], vec![1, 3], vec![1, 4], vec![2, 2],
-            vec![3, 0], vec![3, 1], vec![4, 0]
+            vec![0, 4],
+            vec![1, 3],
+            vec![1, 4],
+            vec![2, 2],
+            vec![3, 0],
+            vec![3, 1],
+            vec![4, 0],
         ];
         let mut result = pacific_atlantic_bfs(heights);
         expected.sort();
@@ -389,13 +448,8 @@ mod tests {
 
     #[test]
     fn test_all_1s() {
-        let heights = vec![
-            vec![1, 1],
-            vec![1, 1]
-        ];
-        let mut expected = vec![
-            vec![0, 0], vec![0, 1], vec![1, 0], vec![1, 1]
-        ];
+        let heights = vec![vec![1, 1], vec![1, 1]];
+        let mut expected = vec![vec![0, 0], vec![0, 1], vec![1, 0], vec![1, 1]];
         let mut result = pacific_atlantic(heights);
         expected.sort();
         result.sort();
