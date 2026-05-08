@@ -122,11 +122,15 @@ where
             // but `save` takes `&mut self.store`.
 
             // To satisfy borrow checker and logic:
-            // 1. Drain dirty set.
+            // 1. Drain the dirty set.
             // 2. For each key, get value from data, save to store.
 
-            let dirty_keys: Vec<K> = self.dirty.drain().collect();
-            for key in dirty_keys {
+            // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<K>>()` allocation.
+            // Modern Rust's borrow checker understands disjoint fields, allowing us to hold
+            // a mutable borrow on `self.dirty` via `drain()` while simultaneously accessing
+            // `self.data` and mutating `self.store` inside the loop. This preserves the
+            // allocated capacity of the `HashSet` while avoiding an intermediate vector allocation.
+            for key in self.dirty.drain() {
                 if let Some(val) = self.data.get(&key) {
                     self.store.save(key.clone(), val.clone());
                 }
