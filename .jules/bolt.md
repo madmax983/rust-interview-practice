@@ -66,3 +66,12 @@
 **Avoid allocation on iterative mutations**
 **Learning:** When trying to avoid cloning a vector (like `self.peers.clone()`) in a loop that mutates `self`, using `for peer in &self.peers` causes a borrow checker conflict because the iterator borrows `self` immutably while the loop body needs mutable access.
 **Action:** Use an index-based loop `for i in 0..self.peers.len()` to cleanly bypass this, fetching elements individually and satisfying the borrow checker.
+**[Pre-allocate WAL entry buffer in LogStructuredStorage]
+**Learning:** The  method in the LogStructuredStorage built a WAL entry by repeatedly appending to a `Vec` initialized with `Vec::new()`. This causes multiple heap re-allocations as the vector grows. Since the size is known exactly, pre-allocating the vector prevents this.
+**Action:** Use `Vec::with_capacity` when the final size of the vector is calculable ahead of time, especially in hot paths like database append operations to avoid reallocation overhead.
+**[Pre-allocate WAL entry buffer in LogStructuredStorage]**
+**Learning:** The `put` method in the LogStructuredStorage built a WAL entry by repeatedly appending to a `Vec` initialized with `Vec::new()`. This causes multiple heap re-allocations as the vector grows. Since the size is known exactly, pre-allocating the vector prevents this.
+**Action:** Use `Vec::with_capacity` when the final size of the vector is calculable ahead of time, especially in hot paths like database append operations to avoid reallocation overhead.
+**[Unused variables in examples/testing bounds checks]**
+**Learning:** Writing unused mutable variables for pedagogical reasons (like demonstrating bounds check limits in a for loop) triggers unused variable or assignment clippy warnings, breaking CI checks.
+**Action:** When creating placeholder mutable variables that are written to but never read to demonstrate concepts, prefix them with an underscore (e.g., `_sum`) to pacify the rust compiler.

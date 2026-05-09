@@ -329,11 +329,11 @@ fn slow_complex_processing(item: &str) -> String {
 /// Reducing bounds checks.
 #[allow(dead_code)]
 fn sum_slice(slice: &[i32]) -> i32 {
-    let mut sum = 0;
+    let mut _sum = 0;
 
     // Compiler can't eliminate bounds checks in regular loop
     for i in 0..slice.len() {
-        sum += slice[i]; // Bounds check on each access
+        _sum += slice[i]; // Bounds check on each access
     }
 
     // Iterator eliminates bounds checks
