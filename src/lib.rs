@@ -1,5 +1,6 @@
 pub mod arrays;
 pub mod backtracking;
+pub mod binary_search;
 pub mod concurrency;
 pub mod cryptography;
 pub mod data_structures;
