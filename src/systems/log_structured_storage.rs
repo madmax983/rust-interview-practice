@@ -176,7 +176,7 @@ impl LsmTree {
 
         // 1. Write to WAL
         // Format: [Key Len (8)] [Key Bytes] [Value Bytes]
-        let mut wal_entry = Vec::new();
+        let mut wal_entry = Vec::with_capacity(8 + key.len() + value.len());
         wal_entry.extend_from_slice(&(key.len() as u64).to_le_bytes());
         wal_entry.extend_from_slice(key.as_bytes());
         wal_entry.extend_from_slice(value.as_bytes());
