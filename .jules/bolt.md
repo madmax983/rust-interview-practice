@@ -66,6 +66,9 @@
 **Avoid allocation on iterative mutations**
 **Learning:** When trying to avoid cloning a vector (like `self.peers.clone()`) in a loop that mutates `self`, using `for peer in &self.peers` causes a borrow checker conflict because the iterator borrows `self` immutably while the loop body needs mutable access.
 **Action:** Use an index-based loop `for i in 0..self.peers.len()` to cleanly bypass this, fetching elements individually and satisfying the borrow checker.
+**[Optimize Write-Back Cache Flush]**
+**Learning:** Swapping out a `HashSet` using `std::mem::take` to avoid intermediate allocations circumvents the borrow checker but silently destroys the set's capacity, causing severe performance regressions on subsequent inserts due to rehashing. Modern Rust allows disjoint field borrowing, making `for key in self.dirty.drain()` safe while accessing `self.data` and `self.store` simultaneously.
+**Action:** Always prefer `.drain()` over `std::mem::take` for collections that are repeatedly reused in hot loops to preserve pre-allocated capacity, relying on disjoint field borrowing where possible.
 **[Percent Decoding and UTF-8 Validation]**
 **Learning:** Using `unsafe { String::from_utf8_unchecked(...) }` after percent-decoding bytes is Undefined Behavior because percent encoding can represent arbitrary bytes (like `%FF`) which are not valid UTF-8. Fast paths are safe, but bypassing standard library validation on parsed user input is dangerous.
 **Action:** Never skip `String::from_utf8` validation when decoding external encodings unless the input domain is strictly constrained and proven to be valid UTF-8.
