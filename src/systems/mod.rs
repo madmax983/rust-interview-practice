@@ -41,3 +41,4 @@ pub mod w_tiny_lfu_cache;
 pub mod wal;
 pub mod write_strategies;
 pub mod bloom_filter;
+pub mod sql_engine;
