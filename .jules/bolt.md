@@ -69,3 +69,7 @@
 **[Percent Decoding and UTF-8 Validation]**
 **Learning:** Using `unsafe { String::from_utf8_unchecked(...) }` after percent-decoding bytes is Undefined Behavior because percent encoding can represent arbitrary bytes (like `%FF`) which are not valid UTF-8. Fast paths are safe, but bypassing standard library validation on parsed user input is dangerous.
 **Action:** Never skip `String::from_utf8` validation when decoding external encodings unless the input domain is strictly constrained and proven to be valid UTF-8.
+
+**[HTTP Client DNS Resolution Optimization]**
+**Learning:** Formatting a string simply to resolve a host/port via `.to_socket_addrs()` uses an unnecessary heap allocation.
+**Action:** Use the tuple implementation `(&str, u16)` for `ToSocketAddrs` instead of formatting `"{}:{}"` string.
