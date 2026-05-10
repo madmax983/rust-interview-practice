@@ -3,6 +3,7 @@ pub mod bincode;
 pub mod csv;
 pub mod ini;
 pub mod json;
+pub mod msgpack;
 pub mod protobuf;
 pub mod resp;
 pub mod serde_framework;

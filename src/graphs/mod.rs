@@ -5,5 +5,6 @@ pub mod network_delay_time;
 pub mod number_of_islands;
 pub mod pacific_atlantic_water_flow;
 pub mod reconstruct_itinerary;
+pub mod redundant_connection;
 pub mod rotting_oranges;
 pub mod word_ladder;

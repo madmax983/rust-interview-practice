@@ -190,10 +190,9 @@ impl SyncHttpClient {
 impl HttpClient for SyncHttpClient {
     fn send(&self, req: Request) -> io::Result<Response> {
         let (host, port, path) = Self::parse_url(&req.url)?;
-        let addr = format!("{}:{}", host, port);
-
-        // Resolve DNS and connect
-        let mut addrs = addr.to_socket_addrs()?;
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate string allocation for DNS resolution.
+        // Replaced `format!("{}:{}", host, port).to_socket_addrs()` with tuple `(host.as_str(), port).to_socket_addrs()`.
+        let mut addrs = (host.as_str(), port).to_socket_addrs()?;
         let socket_addr = addrs
             .next()
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Could not resolve host"))?;

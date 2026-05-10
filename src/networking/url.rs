@@ -232,6 +232,11 @@ impl fmt::Display for Url {
 
 /// Decodes a percent-encoded string.
 pub fn percent_decode(input: &str) -> Result<String, ParseError> {
+    // ⚡ Bolt Optimization: Fast path to avoid parsing overhead when no decoding is necessary.
+    if !input.contains('%') {
+        return Ok(input.to_owned());
+    }
+
     let mut result = Vec::with_capacity(input.len());
     let bytes = input.as_bytes();
     let mut i = 0;

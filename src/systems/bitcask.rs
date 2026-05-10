@@ -37,6 +37,7 @@
 //! *   All keys must fit in RAM.
 //! *   Compaction (Merge) is required to reclaim space from updated/deleted keys.
 
+use crc32fast::Hasher;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
@@ -138,31 +139,48 @@ impl Bitcask {
             let mut key = vec![0u8; header.key_sz as usize];
             file.read_exact(&mut key)?;
 
+            let mut value = Vec::new();
             let entry_sz = if header.value_sz == TOMBSTONE_VALUE_SZ {
                 // Tombstone has no value payload
                 HEADER_SIZE as u64 + header.key_sz as u64
             } else {
-                // Read/Skip Value
-                file.seek(SeekFrom::Current(header.value_sz as i64))?;
+                // Read Value to verify CRC
+                value = vec![0u8; header.value_sz as usize];
+                file.read_exact(&mut value)?;
                 HEADER_SIZE as u64 + header.key_sz as u64 + header.value_sz as u64
             };
 
-            // BUG FIX: Check for Tombstone sentinel
-            if header.value_sz == TOMBSTONE_VALUE_SZ {
-                keydir.remove(&key);
-            } else {
-                // Value position is start + header + key
-                let value_pos = pos + HEADER_SIZE as u64 + header.key_sz as u64;
+            let mut hasher = Hasher::new();
+            hasher.update(&header.timestamp.to_be_bytes());
+            hasher.update(&header.key_sz.to_be_bytes());
+            hasher.update(&header.value_sz.to_be_bytes());
+            hasher.update(&key);
+            if header.value_sz != TOMBSTONE_VALUE_SZ {
+                hasher.update(&value);
+            }
+            let computed_crc = hasher.finalize();
 
-                keydir.insert(
-                    key,
-                    EntryLocation {
-                        file_id: self.current_file_id,
-                        value_sz: header.value_sz,
-                        value_pos,
-                        timestamp: header.timestamp,
-                    },
-                );
+            if computed_crc == header.crc {
+                // BUG FIX: Check for Tombstone sentinel
+                if header.value_sz == TOMBSTONE_VALUE_SZ {
+                    keydir.remove(&key);
+                } else {
+                    // Value position is start + header + key
+                    let value_pos = pos + HEADER_SIZE as u64 + header.key_sz as u64;
+
+                    keydir.insert(
+                        key,
+                        EntryLocation {
+                            file_id: self.current_file_id,
+                            value_sz: header.value_sz,
+                            value_pos,
+                            timestamp: header.timestamp,
+                        },
+                    );
+                }
+            } else {
+                // Optional: log CRC mismatch during recovery
+                // We just skip corrupt entries and proceed
             }
 
             pos += entry_sz;
@@ -178,8 +196,16 @@ impl Bitcask {
             .unwrap()
             .as_secs();
 
+        let mut hasher = Hasher::new();
+        hasher.update(&timestamp.to_be_bytes());
+        hasher.update(&(key.len() as u32).to_be_bytes());
+        hasher.update(&(value.len() as u32).to_be_bytes());
+        hasher.update(&key);
+        hasher.update(&value);
+        let crc = hasher.finalize();
+
         let header = EntryHeader {
-            crc: 0, // TODO: Implement CRC check
+            crc,
             timestamp,
             key_sz: key.len() as u32,
             value_sz: value.len() as u32,
@@ -221,10 +247,33 @@ impl Bitcask {
         let keydir = self.keydir.lock().unwrap();
         if let Some(loc) = keydir.get(key) {
             let mut file = self.active_file.lock().unwrap();
+
+            // Go to header position
+            file.seek(SeekFrom::Start(
+                loc.value_pos - key.len() as u64 - HEADER_SIZE as u64,
+            ))?;
+
+            let mut header_buf = [0u8; HEADER_SIZE];
+            file.read_exact(&mut header_buf)?;
+            let header = decode_header(&header_buf);
+
+            // Go to value position
             file.seek(SeekFrom::Start(loc.value_pos))?;
 
             let mut value = vec![0u8; loc.value_sz as usize];
             file.read_exact(&mut value)?;
+
+            let mut hasher = Hasher::new();
+            hasher.update(&header.timestamp.to_be_bytes());
+            hasher.update(&header.key_sz.to_be_bytes());
+            hasher.update(&header.value_sz.to_be_bytes());
+            hasher.update(key);
+            hasher.update(&value);
+            let computed_crc = hasher.finalize();
+
+            if computed_crc != header.crc {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "CRC mismatch"));
+            }
 
             Ok(Some(value))
         } else {
@@ -240,8 +289,15 @@ impl Bitcask {
             .unwrap()
             .as_secs();
 
+        let mut hasher = Hasher::new();
+        hasher.update(&timestamp.to_be_bytes());
+        hasher.update(&(key.len() as u32).to_be_bytes());
+        hasher.update(&TOMBSTONE_VALUE_SZ.to_be_bytes());
+        hasher.update(&key);
+        let crc = hasher.finalize();
+
         let header = EntryHeader {
-            crc: 0,
+            crc,
             timestamp,
             key_sz: key.len() as u32,
             value_sz: TOMBSTONE_VALUE_SZ, // Sentinel for deleted
@@ -290,7 +346,7 @@ fn decode_header(buf: &[u8; HEADER_SIZE]) -> EntryHeader {
 // - `sled`: A modern embedded DB in Rust, uses a more complex page-based LsM/bw-tree hybrid.
 //
 // Missing vs. Production:
-// - **CRC Checks**: We write 0 and ignore verification.
+// - **CRC Checks**: CRC32 checks are implemented, but recovery process does not fully handle partial records seamlessly (it skips and stops).
 // - **Compaction**: The critical "Merge" process that reclaims space is missing.
 // - **Multiple Files**: We force a single file. Real Bitcask rotates files when they reach size limit.
 // - **Tombstones**: Deletion handling during recovery is simplified.
