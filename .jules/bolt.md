@@ -66,3 +66,7 @@
 **Avoid allocation on iterative mutations**
 **Learning:** When trying to avoid cloning a vector (like `self.peers.clone()`) in a loop that mutates `self`, using `for peer in &self.peers` causes a borrow checker conflict because the iterator borrows `self` immutably while the loop body needs mutable access.
 **Action:** Use an index-based loop `for i in 0..self.peers.len()` to cleanly bypass this, fetching elements individually and satisfying the borrow checker.
+
+**[HTTP Client DNS Resolution Optimization]**
+**Learning:** Formatting a string simply to resolve a host/port via `.to_socket_addrs()` uses an unnecessary heap allocation.
+**Action:** Use the tuple implementation `(&str, u16)` for `ToSocketAddrs` instead of formatting `"{}:{}"` string.
