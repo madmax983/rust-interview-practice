@@ -216,16 +216,37 @@ impl<'a> Lexer<'a> {
         };
 
         match ch {
-            '(' => { self.advance_char(); Ok(Token::OpenParen) }
-            ')' => { self.advance_char(); Ok(Token::CloseParen) }
-            ',' => { self.advance_char(); Ok(Token::Comma) }
-            '*' => { self.advance_char(); Ok(Token::Asterisk) }
-            '=' => { self.advance_char(); Ok(Token::Equals) }
-            ';' => { self.advance_char(); Ok(Token::Semicolon) }
+            '(' => {
+                self.advance_char();
+                Ok(Token::OpenParen)
+            }
+            ')' => {
+                self.advance_char();
+                Ok(Token::CloseParen)
+            }
+            ',' => {
+                self.advance_char();
+                Ok(Token::Comma)
+            }
+            '*' => {
+                self.advance_char();
+                Ok(Token::Asterisk)
+            }
+            '=' => {
+                self.advance_char();
+                Ok(Token::Equals)
+            }
+            ';' => {
+                self.advance_char();
+                Ok(Token::Semicolon)
+            }
             '\'' => self.read_string_literal(),
             'a'..='z' | 'A'..='Z' | '_' => self.read_identifier_or_keyword(),
             '0'..='9' | '-' => self.read_integer_literal(),
-            _ => Err(SqlError::LexerError(format!("Unexpected character: {}", ch))),
+            _ => Err(SqlError::LexerError(format!(
+                "Unexpected character: {}",
+                ch
+            ))),
         }
     }
 
@@ -290,7 +311,8 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        let val = num_str.parse::<i64>()
+        let val = num_str
+            .parse::<i64>()
             .map_err(|_| SqlError::LexerError(format!("Invalid integer literal: {}", num_str)))?;
         Ok(Token::IntegerLiteral(val))
     }
@@ -375,8 +397,14 @@ impl Parser {
     fn consume(&mut self, expected: Token) -> Result<()> {
         match self.advance() {
             Some(t) if t == &expected => Ok(()),
-            Some(t) => Err(SqlError::ParserError(format!("Expected {:?}, found {:?}", expected, t))),
-            None => Err(SqlError::ParserError(format!("Expected {:?}, found EOF", expected))),
+            Some(t) => Err(SqlError::ParserError(format!(
+                "Expected {:?}, found {:?}",
+                expected, t
+            ))),
+            None => Err(SqlError::ParserError(format!(
+                "Expected {:?}, found EOF",
+                expected
+            ))),
         }
     }
 
@@ -397,7 +425,10 @@ impl Parser {
             Some(Token::Create) => self.parse_create_table(),
             Some(Token::Insert) => self.parse_insert(),
             Some(Token::Select) => self.parse_select(),
-            Some(t) => Err(SqlError::ParserError(format!("Unexpected statement start: {:?}", t))),
+            Some(t) => Err(SqlError::ParserError(format!(
+                "Unexpected statement start: {:?}",
+                t
+            ))),
             None => Err(SqlError::ParserError("Unexpected EOF".into())),
         }
     }
@@ -427,10 +458,15 @@ impl Parser {
                 _ => return Err(SqlError::ParserError("Expected column type".into())),
             };
 
-            columns.push(ColumnDef { name: col_name, data_type });
+            columns.push(ColumnDef {
+                name: col_name,
+                data_type,
+            });
 
             match self.peek() {
-                Some(Token::Comma) => { self.advance(); }
+                Some(Token::Comma) => {
+                    self.advance();
+                }
                 Some(Token::CloseParen) => break,
                 _ => return Err(SqlError::ParserError("Expected ',' or ')'".into())),
             }
@@ -438,7 +474,10 @@ impl Parser {
 
         self.consume(Token::CloseParen)?;
 
-        Ok(Statement::CreateTable { name: table_name, columns })
+        Ok(Statement::CreateTable {
+            name: table_name,
+            columns,
+        })
     }
 
     fn parse_insert(&mut self) -> Result<Statement> {
@@ -461,7 +500,9 @@ impl Parser {
                     _ => return Err(SqlError::ParserError("Expected column name".into())),
                 }
                 match self.peek() {
-                    Some(Token::Comma) => { self.advance(); }
+                    Some(Token::Comma) => {
+                        self.advance();
+                    }
                     Some(Token::CloseParen) => break,
                     _ => return Err(SqlError::ParserError("Expected ',' or ')'".into())),
                 }
@@ -477,14 +518,20 @@ impl Parser {
         loop {
             values.push(self.parse_expression()?);
             match self.peek() {
-                Some(Token::Comma) => { self.advance(); }
+                Some(Token::Comma) => {
+                    self.advance();
+                }
                 Some(Token::CloseParen) => break,
                 _ => return Err(SqlError::ParserError("Expected ',' or ')'".into())),
             }
         }
         self.consume(Token::CloseParen)?;
 
-        Ok(Statement::Insert { table_name, columns, values })
+        Ok(Statement::Insert {
+            table_name,
+            columns,
+            values,
+        })
     }
 
     fn parse_select(&mut self) -> Result<Statement> {
@@ -520,7 +567,11 @@ impl Parser {
             where_clause = Some(self.parse_expression()?);
         }
 
-        Ok(Statement::Select { table_name, columns, where_clause })
+        Ok(Statement::Select {
+            table_name,
+            columns,
+            where_clause,
+        })
     }
 
     fn parse_expression(&mut self) -> Result<Expr> {
@@ -586,7 +637,10 @@ impl InMemoryStorage {
 impl StorageEngine for InMemoryStorage {
     fn create_table(&mut self, name: &str, schema: TableSchema) -> Result<()> {
         if self.schemas.contains_key(name) {
-            return Err(SqlError::StorageError(format!("Table '{}' already exists", name)));
+            return Err(SqlError::StorageError(format!(
+                "Table '{}' already exists",
+                name
+            )));
         }
         self.schemas.insert(name.to_string(), schema);
         self.tables.insert(name.to_string(), Vec::new());
@@ -594,7 +648,9 @@ impl StorageEngine for InMemoryStorage {
     }
 
     fn get_schema(&self, table_name: &str) -> Result<TableSchema> {
-        self.schemas.get(table_name).cloned()
+        self.schemas
+            .get(table_name)
+            .cloned()
             .ok_or_else(|| SqlError::StorageError(format!("Table '{}' not found", table_name)))
     }
 
@@ -603,12 +659,17 @@ impl StorageEngine for InMemoryStorage {
             table.push(row);
             Ok(())
         } else {
-            Err(SqlError::StorageError(format!("Table '{}' not found", table_name)))
+            Err(SqlError::StorageError(format!(
+                "Table '{}' not found",
+                table_name
+            )))
         }
     }
 
     fn scan_table(&self, table_name: &str) -> Result<Vec<Row>> {
-        self.tables.get(table_name).cloned()
+        self.tables
+            .get(table_name)
+            .cloned()
             .ok_or_else(|| SqlError::StorageError(format!("Table '{}' not found", table_name)))
     }
 }
@@ -650,18 +711,25 @@ impl<S: StorageEngine> SqlEngine<S> {
                 self.storage.create_table(&name, TableSchema { columns })?;
                 Ok(Vec::new())
             }
-            Statement::Insert { table_name, columns, values } => {
+            Statement::Insert {
+                table_name,
+                columns,
+                values,
+            } => {
                 let schema = self.storage.get_schema(&table_name)?;
 
                 // Currently only supporting implicit full column inserts for simplicity
                 if columns.is_some() {
-                    return Err(SqlError::ExecutionError("Named column inserts not yet supported".into()));
+                    return Err(SqlError::ExecutionError(
+                        "Named column inserts not yet supported".into(),
+                    ));
                 }
 
                 if values.len() != schema.columns.len() {
                     return Err(SqlError::ExecutionError(format!(
                         "Column count mismatch. Expected {}, got {}",
-                        schema.columns.len(), values.len()
+                        schema.columns.len(),
+                        values.len()
                     )));
                 }
 
@@ -669,7 +737,11 @@ impl<S: StorageEngine> SqlEngine<S> {
                 for (i, expr) in values.into_iter().enumerate() {
                     let val = match expr {
                         Expr::Literal(v) => v,
-                        _ => return Err(SqlError::ExecutionError("Only literals supported in INSERT VALUES".into())),
+                        _ => {
+                            return Err(SqlError::ExecutionError(
+                                "Only literals supported in INSERT VALUES".into(),
+                            ));
+                        }
                     };
 
                     // Type checking
@@ -692,10 +764,15 @@ impl<S: StorageEngine> SqlEngine<S> {
                     row_values.push(val);
                 }
 
-                self.storage.insert_row(&table_name, Row { values: row_values })?;
+                self.storage
+                    .insert_row(&table_name, Row { values: row_values })?;
                 Ok(Vec::new())
             }
-            Statement::Select { table_name, columns, where_clause } => {
+            Statement::Select {
+                table_name,
+                columns,
+                where_clause,
+            } => {
                 let schema = self.storage.get_schema(&table_name)?;
                 let rows = self.storage.scan_table(&table_name)?;
 
@@ -706,8 +783,13 @@ impl<S: StorageEngine> SqlEngine<S> {
                     projection_indices = (0..schema.columns.len()).collect();
                 } else {
                     for col_name in &columns {
-                        let idx = schema.columns.iter().position(|c| c.name == *col_name)
-                            .ok_or_else(|| SqlError::ExecutionError(format!("Column '{}' not found", col_name)))?;
+                        let idx = schema
+                            .columns
+                            .iter()
+                            .position(|c| c.name == *col_name)
+                            .ok_or_else(|| {
+                                SqlError::ExecutionError(format!("Column '{}' not found", col_name))
+                            })?;
                         projection_indices.push(idx);
                     }
                 }
@@ -720,10 +802,13 @@ impl<S: StorageEngine> SqlEngine<S> {
                         }
                     }
 
-                    let projected_values = projection_indices.iter()
+                    let projected_values = projection_indices
+                        .iter()
                         .map(|&idx| row.values[idx].clone())
                         .collect();
-                    result_rows.push(Row { values: projected_values });
+                    result_rows.push(Row {
+                        values: projected_values,
+                    });
                 }
 
                 Ok(result_rows)
@@ -735,7 +820,9 @@ impl<S: StorageEngine> SqlEngine<S> {
         match expr {
             Expr::BinaryOp { left, op, right } => {
                 if *op != Token::Equals {
-                    return Err(SqlError::ExecutionError("Only '=' operator supported in WHERE".into()));
+                    return Err(SqlError::ExecutionError(
+                        "Only '=' operator supported in WHERE".into(),
+                    ));
                 }
 
                 let left_val = self.evaluate_expr(left, row, schema)?;
@@ -743,7 +830,9 @@ impl<S: StorageEngine> SqlEngine<S> {
 
                 Ok(left_val == right_val)
             }
-            _ => Err(SqlError::ExecutionError("WHERE clause must be a boolean expression".into())),
+            _ => Err(SqlError::ExecutionError(
+                "WHERE clause must be a boolean expression".into(),
+            )),
         }
     }
 
@@ -751,11 +840,21 @@ impl<S: StorageEngine> SqlEngine<S> {
         match expr {
             Expr::Literal(val) => Ok(val.clone()),
             Expr::Ident(col_name) => {
-                let idx = schema.columns.iter().position(|c| c.name == *col_name)
-                    .ok_or_else(|| SqlError::ExecutionError(format!("Column '{}' not found in WHERE clause", col_name)))?;
+                let idx = schema
+                    .columns
+                    .iter()
+                    .position(|c| c.name == *col_name)
+                    .ok_or_else(|| {
+                        SqlError::ExecutionError(format!(
+                            "Column '{}' not found in WHERE clause",
+                            col_name
+                        ))
+                    })?;
                 Ok(row.values[idx].clone())
             }
-            Expr::BinaryOp { .. } => Err(SqlError::ExecutionError("Nested binary operations not supported".into())),
+            Expr::BinaryOp { .. } => Err(SqlError::ExecutionError(
+                "Nested binary operations not supported".into(),
+            )),
         }
     }
 }
@@ -774,21 +873,24 @@ mod tests {
         let lexer = Lexer::new(sql);
         let tokens = lexer.tokenize().unwrap();
 
-        assert_eq!(tokens, vec![
-            Token::Select,
-            Token::Identifier("id".into()),
-            Token::Comma,
-            Token::StringLiteral("bob".into()),
-            Token::Comma,
-            Token::IntegerLiteral(123),
-            Token::From,
-            Token::Identifier("users".into()),
-            Token::Where,
-            Token::Identifier("id".into()),
-            Token::Equals,
-            Token::IntegerLiteral(1),
-            Token::Semicolon,
-        ]);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Select,
+                Token::Identifier("id".into()),
+                Token::Comma,
+                Token::StringLiteral("bob".into()),
+                Token::Comma,
+                Token::IntegerLiteral(123),
+                Token::From,
+                Token::Identifier("users".into()),
+                Token::Where,
+                Token::Identifier("id".into()),
+                Token::Equals,
+                Token::IntegerLiteral(1),
+                Token::Semicolon,
+            ]
+        );
     }
 
     #[test]
@@ -797,13 +899,21 @@ mod tests {
         let mut engine = SqlEngine::new(storage);
 
         // Create table
-        let res = engine.execute("CREATE TABLE users (id INT, name TEXT, is_active BOOL);").unwrap();
+        let res = engine
+            .execute("CREATE TABLE users (id INT, name TEXT, is_active BOOL);")
+            .unwrap();
         assert!(res.is_empty());
 
         // Insert rows
-        engine.execute("INSERT INTO users VALUES (1, 'Alice', TRUE);").unwrap();
-        engine.execute("INSERT INTO users VALUES (2, 'Bob', FALSE);").unwrap();
-        engine.execute("INSERT INTO users VALUES (3, 'Charlie', TRUE);").unwrap();
+        engine
+            .execute("INSERT INTO users VALUES (1, 'Alice', TRUE);")
+            .unwrap();
+        engine
+            .execute("INSERT INTO users VALUES (2, 'Bob', FALSE);")
+            .unwrap();
+        engine
+            .execute("INSERT INTO users VALUES (3, 'Charlie', TRUE);")
+            .unwrap();
 
         // Select all
         let res = engine.execute("SELECT * FROM users;").unwrap();
@@ -811,14 +921,18 @@ mod tests {
         assert_eq!(res[0].values[1], Value::Text("Alice".into()));
 
         // Select with projection and where clause
-        let res = engine.execute("SELECT name FROM users WHERE is_active = TRUE;").unwrap();
+        let res = engine
+            .execute("SELECT name FROM users WHERE is_active = TRUE;")
+            .unwrap();
         assert_eq!(res.len(), 2);
         assert_eq!(res[0].values.len(), 1);
         assert_eq!(res[0].values[0], Value::Text("Alice".into()));
         assert_eq!(res[1].values[0], Value::Text("Charlie".into()));
 
         // Select with identifier = identifier should fail but literal works
-        let res = engine.execute("SELECT name FROM users WHERE id = 2;").unwrap();
+        let res = engine
+            .execute("SELECT name FROM users WHERE id = 2;")
+            .unwrap();
         assert_eq!(res.len(), 1);
         assert_eq!(res[0].values[0], Value::Text("Bob".into()));
     }
@@ -831,7 +945,9 @@ mod tests {
         engine.execute("CREATE TABLE users (id INT);").unwrap();
 
         // Should fail because 'abc' is text, but column is INT
-        let err = engine.execute("INSERT INTO users VALUES ('abc');").unwrap_err();
+        let err = engine
+            .execute("INSERT INTO users VALUES ('abc');")
+            .unwrap_err();
         assert!(matches!(err, SqlError::ExecutionError(_)));
     }
 
