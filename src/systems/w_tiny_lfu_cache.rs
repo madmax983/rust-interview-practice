@@ -353,16 +353,16 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
         // Enforce Window capacity
         if self.window_len > self.window_cap {
             if let Some(window_victim_idx) = self.pop_tail(Region::Window) {
-                let window_victim_key = self.nodes[window_victim_idx].key.as_ref().unwrap().clone();
-
+                // ⚡ BOLT OPTIMIZATION: Avoid `.clone()` allocation overhead.
+                // We pass only the `window_victim_idx` to `admit_to_probation` and look up the key by reference inside the method.
                 // Attempt to admit Window Victim to Probation (Main Cache)
-                self.admit_to_probation(window_victim_idx, window_victim_key);
+                self.admit_to_probation(window_victim_idx);
             }
         }
     }
 
     /// Admission Policy: Compares the Window Victim against the Probation Victim using Sketch frequencies.
-    fn admit_to_probation(&mut self, window_victim_idx: usize, window_victim_key: K) {
+    fn admit_to_probation(&mut self, window_victim_idx: usize) {
         // If Main cache (Probation + Protected) is not full, just add it to Probation
         if self.probation_len + self.protected_len < self.probation_cap + self.protected_cap {
             self.add_node_to_head(window_victim_idx, Region::Probation);
@@ -387,11 +387,13 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
             return;
         }
 
-        let probation_victim_key = self.nodes[probation_victim_idx].key.as_ref().unwrap();
-
         // Retrieve estimated frequencies
-        let freq_w = self.sketch.estimate(&window_victim_key);
-        let freq_p = self.sketch.estimate(probation_victim_key);
+        let freq_w = self
+            .sketch
+            .estimate(self.nodes[window_victim_idx].key.as_ref().unwrap());
+        let freq_p = self
+            .sketch
+            .estimate(self.nodes[probation_victim_idx].key.as_ref().unwrap());
 
         if freq_w > freq_p {
             // W is hotter than P. Evict P, Admit W.
