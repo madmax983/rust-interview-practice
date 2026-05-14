@@ -9,3 +9,4 @@ pub mod resp;
 pub mod serde_framework;
 pub mod toml;
 pub mod varint;
+pub mod bencode;
