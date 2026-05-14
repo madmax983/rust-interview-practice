@@ -321,7 +321,9 @@ impl Deflate {}
 impl Deflate {
     /// Naive LZ77 sliding window compression.
     fn lz77_compress(data: &[u8]) -> Vec<Lz77Token> {
-        let mut tokens = Vec::new();
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate reallocations by pre-allocating tokens based on typical compression ratios.
+        // Even a conservative estimate (e.g. data.len() / 4) reduces reallocations significantly on large inputs.
+        let mut tokens = Vec::with_capacity(data.len() / 4);
         let mut i = 0;
 
         while i < data.len() {
