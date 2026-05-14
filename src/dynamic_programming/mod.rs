@@ -6,5 +6,6 @@ pub mod longest_common_subsequence;
 pub mod longest_increasing_subsequence;
 pub mod maximum_product_subarray;
 pub mod maximum_subarray;
+pub mod partition_equal_subset_sum;
 pub mod unique_paths;
 pub mod word_break;
