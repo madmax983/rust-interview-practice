@@ -1,3 +1,0 @@
-sed -i 's/\/\/ GOTCHA: The Cron Day-of-Month/\/\/ GOTCHA: The Cron Day-of-Month/' src/systems/cron.rs
-sed -i 's/\/\/ Detect restrictions by checking/\/\/ PRODUCTION NOTE: In standard production cron daemons, they keep the raw string to serialize back later. We discard it for memory efficiency.\n        \/\/ Detect restrictions by checking/' src/systems/cron.rs
-sed -i 's/\/\/ Benchmarking Note:/\/\/ Benchmarking Note:\n\/\/ Use `criterion` to benchmark `matches()`. Wrap the arguments in `std::hint::black_box()`\n\/\/ to prevent the compiler from optimizing away the bitwise checks entirely, as they are\n\/\/ so fast that LLVM might evaluate them at compile time in simple benchmark loops./' src/systems/cron.rs
