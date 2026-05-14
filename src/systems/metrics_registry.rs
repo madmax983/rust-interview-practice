@@ -267,7 +267,9 @@ impl Registry {
 
     /// Exports all registered metrics in the Prometheus text format.
     pub fn export_prometheus(&self) -> String {
-        let mut output = String::new();
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate the String buffer to avoid reallocations during metrics export.
+        // A capacity of 1024 bytes is a reasonable starting point for a small number of metrics.
+        let mut output = String::with_capacity(1024);
 
         use std::fmt::Write;
 
