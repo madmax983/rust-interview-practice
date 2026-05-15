@@ -1,0 +1,312 @@
+//! # Markdown Parser and HTML Compiler
+//!
+//! Implements a minimal Markdown parser and HTML renderer using a pull-based
+//! event stream approach.
+//!
+//! **Replaces Crates:** `pulldown-cmark`, `comrak`
+//!
+//! **Real-world Usage:**
+//! - Rendering user comments or descriptions on web platforms (GitHub, Reddit).
+//! - Static site generators (Hugo, Zola).
+//! - Documentation engines.
+//!
+//! **Why build it yourself?**
+//! Parsing Markdown appears simple until you confront its nested nature and contextual rules
+//! (e.g., inline emphasis inside block lists). This implementation teaches state machines,
+//! stream processing (yielding `Event`s), and tree-building. You'll understand how tools like
+//! `pulldown-cmark` work under the hood without needing to hold the entire AST in memory.
+
+use std::iter::Peekable;
+use std::str::Lines;
+
+// =========================================================================================
+// Architecture
+// =========================================================================================
+//
+// Components:
+// 1. `Event`: An enum representing the start/end of tags, or text content.
+// 2. `Tag`: The HTML tag equivalents (Header, Paragraph, List, Bold).
+// 3. `Parser`: Takes a raw string and yields an iterator of `Event`s.
+// 4. `Renderer`: Consumes the `Event` stream and outputs an HTML String.
+//
+// Time Complexity: O(N) where N is the length of the string, doing a linear scan.
+// Space Complexity: O(D) where D is the maximum depth of nested elements, for the parsing stack.
+
+// =========================================================================================
+// Core Types
+// =========================================================================================
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Event<'a> {
+    Start(Tag),
+    End(Tag),
+    Text(&'a str),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Tag {
+    Paragraph,
+    Header(u8), // Level 1-6
+    Strong,
+    Emphasis,
+}
+
+// =========================================================================================
+// Parser
+// =========================================================================================
+
+/// A simple pull parser for a subset of Markdown.
+pub struct Parser<'a> {
+    lines: Peekable<Lines<'a>>,
+    /// Events buffered from the current line
+    event_buffer: Vec<Event<'a>>,
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            lines: input.lines().peekable(),
+            event_buffer: Vec::new(),
+        }
+    }
+
+    /// Pulls the next event from the parser.
+    pub fn next_event(&mut self) -> Option<Event<'a>> {
+        if !self.event_buffer.is_empty() {
+            return Some(self.event_buffer.remove(0));
+        }
+
+        while let Some(line) = self.lines.next() {
+            let line = line.trim_end();
+            if line.is_empty() {
+                continue;
+            }
+
+            self.parse_block(line);
+
+            if !self.event_buffer.is_empty() {
+                return Some(self.event_buffer.remove(0));
+            }
+        }
+
+        None
+    }
+
+    fn parse_block(&mut self, line: &'a str) {
+        // Check for headers
+        let mut header_level = 0;
+        for c in line.chars() {
+            if c == '#' {
+                header_level += 1;
+            } else {
+                break;
+            }
+        }
+
+        if header_level > 0 && header_level <= 6 && line[header_level as usize..].starts_with(' ') {
+            self.event_buffer.push(Event::Start(Tag::Header(header_level)));
+            let content = &line[header_level as usize + 1..];
+            self.parse_inline(content);
+            self.event_buffer.push(Event::End(Tag::Header(header_level)));
+            return;
+        }
+
+        // Default to paragraph
+        self.event_buffer.push(Event::Start(Tag::Paragraph));
+        self.parse_inline(line);
+        self.event_buffer.push(Event::End(Tag::Paragraph));
+    }
+
+    fn parse_inline(&mut self, text: &'a str) {
+        // A very naive inline parser for **strong** and *emphasis*.
+        // A production parser uses a state machine over chars.
+
+        let mut i = 0;
+        let bytes = text.as_bytes();
+        let mut last_text_start = 0;
+
+        while i < bytes.len() {
+            if bytes[i] == b'*' {
+                // Push accumulated text
+                if i > last_text_start {
+                    self.event_buffer.push(Event::Text(&text[last_text_start..i]));
+                }
+
+                if i + 1 < bytes.len() && bytes[i + 1] == b'*' {
+                    // Strong
+                    self.event_buffer.push(Event::Start(Tag::Strong));
+                    i += 2;
+                    let inner_start = i;
+                    while i + 1 < bytes.len() && !(bytes[i] == b'*' && bytes[i + 1] == b'*') {
+                        i += 1;
+                    }
+                    if i + 1 < bytes.len() {
+                        self.parse_inline(&text[inner_start..i]);
+                        self.event_buffer.push(Event::End(Tag::Strong));
+                        i += 2; // Skip closing **
+                        last_text_start = i;
+                    } else {
+                        // Unclosed, treat as text
+                        self.event_buffer.push(Event::Text(&text[inner_start - 2..]));
+                        return;
+                    }
+                } else {
+                    // Emphasis
+                    self.event_buffer.push(Event::Start(Tag::Emphasis));
+                    i += 1;
+                    let inner_start = i;
+                    while i < bytes.len() && bytes[i] != b'*' {
+                        i += 1;
+                    }
+                    if i < bytes.len() {
+                        self.parse_inline(&text[inner_start..i]);
+                        self.event_buffer.push(Event::End(Tag::Emphasis));
+                        i += 1; // Skip closing *
+                        last_text_start = i;
+                    } else {
+                        // Unclosed
+                        self.event_buffer.push(Event::Text(&text[inner_start - 1..]));
+                        return;
+                    }
+                }
+            } else {
+                i += 1;
+            }
+        }
+
+        if last_text_start < text.len() {
+            self.event_buffer.push(Event::Text(&text[last_text_start..]));
+        }
+    }
+}
+
+impl<'a> Iterator for Parser<'a> {
+    type Item = Event<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_event()
+    }
+}
+
+// =========================================================================================
+// HTML Renderer
+// =========================================================================================
+
+/// Compiles an Iterator of Markdown `Event`s into an HTML String.
+pub fn render_html<'a, I>(events: I) -> String
+where
+    I: Iterator<Item = Event<'a>>,
+{
+    let mut output = String::with_capacity(1024);
+
+    for event in events {
+        match event {
+            Event::Start(tag) => match tag {
+                Tag::Paragraph => output.push_str("<p>"),
+                Tag::Header(level) => {
+                    use std::fmt::Write;
+                    write!(&mut output, "<h{}>", level).unwrap();
+                }
+                Tag::Strong => output.push_str("<strong>"),
+                Tag::Emphasis => output.push_str("<em>"),
+            },
+            Event::End(tag) => match tag {
+                Tag::Paragraph => output.push_str("</p>\n"),
+                Tag::Header(level) => {
+                    use std::fmt::Write;
+                    write!(&mut output, "</h{}>\n", level).unwrap();
+                }
+                Tag::Strong => output.push_str("</strong>"),
+                Tag::Emphasis => output.push_str("</em>"),
+            },
+            Event::Text(text) => {
+                // RUST INSIGHT: A production renderer must properly escape HTML entities
+                // (e.g., `<` to `&lt;`). We skip that here for brevity.
+                output.push_str(text);
+            }
+        }
+    }
+
+    output
+}
+
+// =========================================================================================
+// Tests
+// =========================================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_paragraph() {
+        let input = "Hello world";
+        let mut parser = Parser::new(input);
+
+        assert_eq!(parser.next(), Some(Event::Start(Tag::Paragraph)));
+        assert_eq!(parser.next(), Some(Event::Text("Hello world")));
+        assert_eq!(parser.next(), Some(Event::End(Tag::Paragraph)));
+        assert_eq!(parser.next(), None);
+    }
+
+    #[test]
+    fn test_parse_header() {
+        let input = "## Subtitle";
+        let mut parser = Parser::new(input);
+
+        assert_eq!(parser.next(), Some(Event::Start(Tag::Header(2))));
+        assert_eq!(parser.next(), Some(Event::Text("Subtitle")));
+        assert_eq!(parser.next(), Some(Event::End(Tag::Header(2))));
+    }
+
+    #[test]
+    fn test_parse_inline_formatting() {
+        let input = "This is **bold** and *italic* text";
+        let mut parser = Parser::new(input);
+
+        assert_eq!(parser.next(), Some(Event::Start(Tag::Paragraph)));
+        assert_eq!(parser.next(), Some(Event::Text("This is ")));
+        assert_eq!(parser.next(), Some(Event::Start(Tag::Strong)));
+        assert_eq!(parser.next(), Some(Event::Text("bold")));
+        assert_eq!(parser.next(), Some(Event::End(Tag::Strong)));
+        assert_eq!(parser.next(), Some(Event::Text(" and ")));
+        assert_eq!(parser.next(), Some(Event::Start(Tag::Emphasis)));
+        assert_eq!(parser.next(), Some(Event::Text("italic")));
+        assert_eq!(parser.next(), Some(Event::End(Tag::Emphasis)));
+        assert_eq!(parser.next(), Some(Event::Text(" text")));
+        assert_eq!(parser.next(), Some(Event::End(Tag::Paragraph)));
+    }
+
+    #[test]
+    fn test_render_html() {
+        let input = "# Hello\n\nThis is **Markdown**.";
+        let parser = Parser::new(input);
+        let html = render_html(parser);
+
+        assert_eq!(html, "<h1>Hello</h1>\n<p>This is <strong>Markdown</strong>.</p>\n");
+    }
+}
+
+// =========================================================================================
+// Footer
+// =========================================================================================
+//
+// **Canonical Comparisons:**
+// - `pulldown-cmark`: A robust, CommonMark-compliant pull parser. It utilizes an internal stack
+//   and complex state machines to handle edge cases like nested lists, lazy continuation lines,
+//   and blockquotes.
+// - `comrak`: Based on the C-library `cmark`, it builds a full AST in memory rather than a pure
+//   event stream, making it easier to mutate the document tree before rendering.
+//
+// **What's missing vs. production:**
+// - Full CommonMark Compliance: The current implementation lacks support for lists, blockquotes,
+//   code blocks, links, images, and HTML entities.
+// - Robust Inline Parsing: The naive inline parser cannot handle nested emphasis `***bold-italic***`
+//   or unescaped asterisks correctly.
+// - Contextual Awareness: It does not handle lazy continuations (where a paragraph spans multiple lines
+//   inside a blockquote).
+//
+// **Suggested next steps:**
+// - Implement a state machine for block-level elements that tracks indentation.
+// - Add an `Escape` pass to encode HTML entities (`<` to `&lt;`) in raw text.
+// - Add support for lists (`Ul` and `Ol` tags) by tracking depth on the parser stack.
