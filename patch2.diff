@@ -1,0 +1,18 @@
+--- src/strings/markdown.rs
++++ src/strings/markdown.rs
+@@ -48,6 +48,7 @@
+ // =========================================================================================
+ // Parser
+ // =========================================================================================
++// GOTCHA: Ensure the parser correctly manages nested emphasis state.
+
+ /// A simple pull parser for a subset of Markdown.
+ pub struct Parser<'a> {
+@@ -102,6 +103,7 @@
+     fn parse_inline(&mut self, text: &'a str) {
+         // A very naive inline parser for **strong** and *emphasis*.
+         // A production parser uses a state machine over chars.
++        // PRODUCTION NOTE: Use `comrak` or `pulldown-cmark` for a compliant state machine.
+
+         let mut i = 0;
+         let bytes = text.as_bytes();

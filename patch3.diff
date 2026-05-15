@@ -1,0 +1,10 @@
+--- src/systems/graphql.rs
++++ src/systems/graphql.rs
+@@ -103,6 +103,7 @@
+         let mut operation_type = OperationType::Query;
+         let mut name = None;
+
++        // GOTCHA: A full GraphQL parser needs an explicit robust scanner to avoid arbitrary lookaheads.
+         if let Some(&c) = self.chars.peek() {
+             if c != '{' {
+                 let op_type_str = self.parse_name()?;

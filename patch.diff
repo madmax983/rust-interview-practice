@@ -1,0 +1,11 @@
+--- src/systems/graphql.rs
++++ src/systems/graphql.rs
+@@ -280,6 +280,9 @@
+                         result_map.insert(key, Value::Null);
+                     }
+                 }
++                Selection::FragmentSpread(_) => {
++                    // FUTURE: Resolve fragment and merge fields
++                }
+             }
+         }
