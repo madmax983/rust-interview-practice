@@ -278,7 +278,16 @@ mod tests {
 
     // Helper to convert bytes to hex string
     fn bytes_to_hex(bytes: &[u8]) -> String {
-        bytes.iter().map(|b| format!("{:02x}", b)).collect()
+        use std::fmt::Write;
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate string allocations during hex conversion.
+        // `format!` creates an intermediate String on the heap for every byte, which is then
+        // collected and joined. By pre-allocating the final buffer and using `write!`,
+        // we eliminate N heap allocations.
+        let mut result = String::with_capacity(bytes.len() * 2);
+        for byte in bytes {
+            write!(result, "{:02x}", byte).expect("writing to String cannot fail");
+        }
+        result
     }
 
     #[test]
