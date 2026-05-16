@@ -5,6 +5,7 @@ pub mod group_anagrams;
 pub mod longest_common_prefix;
 pub mod longest_palindromic_substring;
 pub mod longest_repeating_character_replacement;
+pub mod markdown;
 pub mod longest_substring_without_repeating;
 pub mod mini_parser;
 pub mod minimum_window_substring;
