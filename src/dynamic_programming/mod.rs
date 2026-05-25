@@ -9,3 +9,4 @@ pub mod maximum_subarray;
 pub mod partition_equal_subset_sum;
 pub mod unique_paths;
 pub mod word_break;
+pub mod decode_ways;
