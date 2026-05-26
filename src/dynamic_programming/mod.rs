@@ -1,5 +1,6 @@
 pub mod climbing_stairs;
 pub mod coin_change;
+pub mod decode_ways;
 pub mod edit_distance;
 pub mod house_robber;
 pub mod longest_common_subsequence;
