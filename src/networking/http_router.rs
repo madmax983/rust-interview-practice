@@ -78,10 +78,11 @@ impl Router {
     /// - `/users/:id`
     /// - `/users/:id/profile`
     pub fn add_route<H: Handler>(&mut self, method: &str, path: &str, handler: H) {
-        let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<&str>>()` allocation.
+        // Direct lazy iteration over `Split` iterator eliminates an O(N) heap allocation during route registration.
         let mut current = &mut self.root;
 
-        for part in parts {
+        for part in path.split('/').filter(|p| !p.is_empty()) {
             if part.starts_with(':') {
                 // Dynamic segment
                 let param_name = part[1..].to_string();
@@ -130,11 +131,12 @@ impl Router {
         method: &str,
         path: &str,
     ) -> Option<(Arc<dyn Handler>, HashMap<String, String>)> {
-        let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<&str>>()` allocation.
+        // Direct lazy iteration over `Split` iterator eliminates an O(N) heap allocation per request on the hot path.
         let mut current = &self.root;
         let mut params = HashMap::new();
 
-        for part in parts {
+        for part in path.split('/').filter(|p| !p.is_empty()) {
             if let Some(child) = current.children.get(part) {
                 current = child;
             } else if let Some((param_name, child_node)) = &current.dynamic_child {
