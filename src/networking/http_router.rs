@@ -78,7 +78,10 @@ impl Router {
     /// - `/users/:id`
     /// - `/users/:id/profile`
     pub fn add_route<H: Handler>(&mut self, method: &str, path: &str, handler: H) {
-        let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate string slice allocations.
+        // Replaced `.collect::<Vec<&str>>()` with direct lazy iteration,
+        // eliminating an O(N) heap allocation during route registration.
+        let parts = path.split('/').filter(|p| !p.is_empty());
         let mut current = &mut self.root;
 
         for part in parts {
@@ -130,7 +133,10 @@ impl Router {
         method: &str,
         path: &str,
     ) -> Option<(Arc<dyn Handler>, HashMap<String, String>)> {
-        let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate string slice allocations.
+        // Replaced `.collect::<Vec<&str>>()` with direct lazy iteration,
+        // eliminating an O(N) heap allocation per request during route matching.
+        let parts = path.split('/').filter(|p| !p.is_empty());
         let mut current = &self.root;
         let mut params = HashMap::new();
 
