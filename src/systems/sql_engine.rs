@@ -21,19 +21,21 @@
 //!
 //! **Flow:**
 //!
+//! ```text
 //!      SQL String ("SELECT id FROM users")
-//!             │
-//!             ▼
-//!      [ Lexer ]  ────►  Vec<Token>
-//!             │
-//!             ▼
-//!      [ Parser ] ────►  AST (Statement::Select { .. })
-//!             │
-//!             ▼
-//!      [ Executor ] ◄──► [ Storage Engine (Trait) ]
-//!             │
-//!             ▼
+//!             |
+//!             v
+//!      [ Lexer ]  ---->  Vec<Token>
+//!             |
+//!             v
+//!      [ Parser ] ---->  AST (Statement::Select { .. })
+//!             |
+//!             v
+//!      [ Executor ] <--> [ Storage Engine (Trait) ]
+//!             |
+//!             v
 //!      ResultSet (Vec<Row>)
+//! ```
 //!
 //! **Invariants:**
 //! 1. All strings are assumed to be UTF-8 valid (Rust's `String` guarantees this).
@@ -252,29 +254,31 @@ impl<'a> Lexer<'a> {
 
     fn read_string_literal(&mut self) -> Result<Token> {
         self.advance_char(); // skip opening quote
-        let mut string = String::new();
+        // ⚡ BOLT OPTIMIZATION: Eliminate intermediate String allocation by slicing directly from the input.
+        let start_pos = self.pos;
         while let Some(ch) = self.peek_char() {
             if ch == '\'' {
+                let string = self.input[start_pos..self.pos].to_string();
                 self.advance_char(); // skip closing quote
                 return Ok(Token::StringLiteral(string));
             }
-            string.push(ch);
             self.advance_char();
         }
         Err(SqlError::LexerError("Unterminated string literal".into()))
     }
 
     fn read_identifier_or_keyword(&mut self) -> Result<Token> {
-        let mut ident = String::new();
+        // ⚡ BOLT OPTIMIZATION: Avoid String allocation and char pushing; use string slicing instead.
+        let start_pos = self.pos;
         while let Some(ch) = self.peek_char() {
             if ch.is_ascii_alphanumeric() || ch == '_' {
-                ident.push(ch);
                 self.advance_char();
             } else {
                 break;
             }
         }
 
+        let ident = &self.input[start_pos..self.pos];
         let upper = ident.to_uppercase();
         Ok(match upper.as_str() {
             "CREATE" => Token::Create,
@@ -291,26 +295,26 @@ impl<'a> Lexer<'a> {
             "BOOL" | "BOOLEAN" => Token::BoolType,
             "TRUE" => Token::BooleanLiteral(true),
             "FALSE" => Token::BooleanLiteral(false),
-            _ => Token::Identifier(ident), // Keep original case for identifiers
+            _ => Token::Identifier(ident.to_string()), // Keep original case for identifiers
         })
     }
 
     fn read_integer_literal(&mut self) -> Result<Token> {
-        let mut num_str = String::new();
+        // ⚡ BOLT OPTIMIZATION: Avoid String allocation and char pushing; use string slicing instead.
+        let start_pos = self.pos;
         if self.peek_char() == Some('-') {
-            num_str.push('-');
             self.advance_char();
         }
 
         while let Some(ch) = self.peek_char() {
             if ch.is_ascii_digit() {
-                num_str.push(ch);
                 self.advance_char();
             } else {
                 break;
             }
         }
 
+        let num_str = &self.input[start_pos..self.pos];
         let val = num_str
             .parse::<i64>()
             .map_err(|_| SqlError::LexerError(format!("Invalid integer literal: {}", num_str)))?;
