@@ -116,22 +116,25 @@ impl RpcRequest {
 
     /// Parses a request from a buffered reader.
     fn parse<R: Read>(reader: &mut BufReader<R>) -> io::Result<Option<Self>> {
-        let mut id_str = String::new();
-        if reader.read_line(&mut id_str)? == 0 {
+        // ⚡ BOLT OPTIMIZATION: Reusing a single `String` buffer prevents redundant
+        // heap allocations for each line parsed in the request.
+        let mut buf = String::new();
+
+        if reader.read_line(&mut buf)? == 0 {
             return Ok(None); // EOF
         }
-        let id = id_str
+        let id = buf
             .trim()
             .parse::<u64>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid ID"))?;
 
-        let mut method = String::new();
-        reader.read_line(&mut method)?;
-        let method = method.trim().to_string();
+        buf.clear();
+        reader.read_line(&mut buf)?;
+        let method = buf.trim().to_string();
 
-        let mut len_str = String::new();
-        reader.read_line(&mut len_str)?;
-        let len = len_str
+        buf.clear();
+        reader.read_line(&mut buf)?;
+        let len = buf
             .trim()
             .parse::<usize>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid Length"))?;
@@ -167,22 +170,25 @@ impl RpcResponse {
 
     /// Parses a response from a buffered reader.
     fn parse<R: Read>(reader: &mut BufReader<R>) -> io::Result<Option<Self>> {
-        let mut id_str = String::new();
-        if reader.read_line(&mut id_str)? == 0 {
+        // ⚡ BOLT OPTIMIZATION: Reusing a single `String` buffer prevents redundant
+        // heap allocations for each line parsed in the response.
+        let mut buf = String::new();
+
+        if reader.read_line(&mut buf)? == 0 {
             return Ok(None); // EOF
         }
-        let id = id_str
+        let id = buf
             .trim()
             .parse::<u64>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid ID"))?;
 
-        let mut err_str = String::new();
-        reader.read_line(&mut err_str)?;
-        let is_error = err_str.trim() == "1";
+        buf.clear();
+        reader.read_line(&mut buf)?;
+        let is_error = buf.trim() == "1";
 
-        let mut len_str = String::new();
-        reader.read_line(&mut len_str)?;
-        let len = len_str
+        buf.clear();
+        reader.read_line(&mut buf)?;
+        let len = buf
             .trim()
             .parse::<usize>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid Length"))?;
