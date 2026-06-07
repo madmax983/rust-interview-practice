@@ -130,18 +130,26 @@ impl FromStr for CronSchedule {
     type Err = CronError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split_whitespace().collect();
-        if parts.len() != 5 {
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<&str>>()` allocation.
+        let mut parts = s.split_whitespace();
+
+        let p0 = parts.next().ok_or(CronError::InvalidFormat)?;
+        let p1 = parts.next().ok_or(CronError::InvalidFormat)?;
+        let p2 = parts.next().ok_or(CronError::InvalidFormat)?;
+        let p3 = parts.next().ok_or(CronError::InvalidFormat)?;
+        let p4 = parts.next().ok_or(CronError::InvalidFormat)?;
+
+        if parts.next().is_some() {
             return Err(CronError::InvalidFormat);
         }
 
-        let minutes = parse_field(parts[0], 0, 59)?;
-        let hours = parse_field(parts[1], 0, 23)?;
-        let days_of_month = parse_field(parts[2], 1, 31)?;
-        let months = parse_field(parts[3], 1, 12)?;
+        let minutes = parse_field(p0, 0, 59)?;
+        let hours = parse_field(p1, 0, 23)?;
+        let days_of_month = parse_field(p2, 1, 31)?;
+        let months = parse_field(p3, 1, 12)?;
 
         // DOW parsing is slightly special because 7 normalizes to 0 (Sunday)
-        let raw_dow = parse_field(parts[4], 0, 7)?;
+        let raw_dow = parse_field(p4, 0, 7)?;
         let mut days_of_week = (raw_dow & 0x7F) as u8; // Keep 0-6
         if (raw_dow & (1 << 7)) != 0 {
             days_of_week |= 1 << 0; // 7 -> 0
@@ -150,8 +158,8 @@ impl FromStr for CronSchedule {
         // PRODUCTION NOTE: In standard production cron daemons, they keep the raw string to serialize back later. We discard it for memory efficiency.
         // Detect restrictions by checking if the original string was strictly `*`
         // (A string like `1-31` is technically restricted even if it covers all bits).
-        let dom_restricted = parts[2] != "*";
-        let dow_restricted = parts[4] != "*";
+        let dom_restricted = p2 != "*";
+        let dow_restricted = p4 != "*";
 
         Ok(Self {
             minutes,
