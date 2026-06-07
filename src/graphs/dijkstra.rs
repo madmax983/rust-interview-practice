@@ -84,12 +84,13 @@ where
 
     while let Some(State { cost, node }) = heap.pop() {
         if &node == goal {
-            // Reconstruct path
+            // ⚡ BOLT OPTIMIZATION: Reconstruct path by consuming the `came_from` map
+            // instead of calling `.get()` and `.clone()`. Since we are returning the path,
+            // we can take ownership of the nodes directly from the map, completely eliminating
+            // two O(1) heap allocations/clones per node in the shortest path.
             let mut path = vec![goal.clone()];
-            let mut current = goal.clone();
-            while let Some(prev) = came_from.get(&current) {
-                path.push(prev.clone());
-                current = prev.clone();
+            while let Some(prev) = came_from.remove(path.last().unwrap()) {
+                path.push(prev);
             }
             path.reverse();
             return Some((path, cost));
