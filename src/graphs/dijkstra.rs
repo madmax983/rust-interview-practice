@@ -85,11 +85,13 @@ where
     while let Some(State { cost, node }) = heap.pop() {
         if &node == goal {
             // Reconstruct path
+            // ⚡ BOLT OPTIMIZATION: Avoid redundant `.clone()` allocations per node.
+            // By using `came_from.remove(path.last().unwrap())` we consume the hash map
+            // and transfer ownership of the node directly into the path vector,
+            // eliminating two clone allocations per step in the reconstruction.
             let mut path = vec![goal.clone()];
-            let mut current = goal.clone();
-            while let Some(prev) = came_from.get(&current) {
-                path.push(prev.clone());
-                current = prev.clone();
+            while let Some(prev) = came_from.remove(path.last().unwrap()) {
+                path.push(prev);
             }
             path.reverse();
             return Some((path, cost));
