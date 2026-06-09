@@ -1,0 +1,48 @@
+<<<<<<< SEARCH
+//! | Parser       | O(N)                  | O(N) for AST           |
+//! | Executor     | O(N) over AST         | O(M) for Response JSON |
+//!
+//! **Design Decisions:**
+=======
+//! | Parser       | O(N)                  | O(N) for AST           |
+//! | Executor     | O(N) over AST         | O(M) for Response JSON |
+//!
+//! **Invariants:**
+//! - The AST structure (`Document<'a>`) is strictly bound to the lifetime of the input query string, enforcing zero-copy parsing.
+//! - Multibyte characters must be lexed without causing out-of-bounds byte slicing panics.
+//!
+//! **Design Decisions:**
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        match c {
+            '{' | '}' | '(' | ')' | ':' | ',' => {
+                self.pos += c.len_utf8();
+                Some(Token::Punct(c))
+            }
+=======
+        match c {
+            '{' | '}' | '(' | ')' | ':' | ',' => {
+                // PRODUCTION NOTE:
+                // A real-world lexer would likely use a robust token generator and emit full source spans (line, column)
+                // for accurate error reporting to the user. We omit span tracking here for simplicity.
+                self.pos += c.len_utf8();
+                Some(Token::Punct(c))
+            }
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+// Suggested next steps / extensions:
+// 1. Add `Fragment` support to the Parser and Executor.
+// 2. Introduce a `Schema` struct to perform query validation before execution.
+
+#[cfg(test)]
+=======
+// Suggested next steps / extensions:
+// 1. Add `Fragment` support to the Parser and Executor.
+// 2. Introduce a `Schema` struct to perform query validation before execution.
+//
+// Benchmarking Note:
+// To benchmark this lexer/parser, use `criterion::Criterion` to measure parsing throughput
+// on large, nested query strings, comparing it directly against `async-graphql`'s parser.
+
+#[cfg(test)]
+>>>>>>> REPLACE
