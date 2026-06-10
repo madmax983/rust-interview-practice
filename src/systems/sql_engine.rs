@@ -318,7 +318,9 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn tokenize(mut self) -> Result<Vec<Token>> {
-        let mut tokens = Vec::new();
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate reallocations during tokenization.
+        // Pre-allocating tokens based on a conservative estimate of tokens per byte.
+        let mut tokens = Vec::with_capacity(self.input.len() / 4);
         loop {
             let t = self.next_token()?;
             if t == Token::Eof {
