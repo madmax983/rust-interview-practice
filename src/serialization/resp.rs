@@ -1,3 +1,4 @@
+// use std::io::Write;
 //! # RESP (REdis Serialization Protocol) Parser
 //!
 //! Implements a parser and serializer for RESP2/RESP3, the underlying protocol used by Redis.
@@ -51,6 +52,7 @@
 //   data and try again, standard for non-blocking I/O.
 
 use std::str;
+use std::io::Write;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RespValue {
@@ -69,6 +71,9 @@ pub enum RespError {
 
 impl RespValue {
     /// Serializes the value into a RESP byte stream.
+    ///
+    /// ⚡ BOLT OPTIMIZATION: Avoid intermediate `.to_string().as_bytes()` allocations
+    /// by using `std::io::Write::write_fmt(buf, format_args!("{}", ...))` directly into the `Vec<u8>` buffer.
     pub fn serialize(&self, buf: &mut Vec<u8>) {
         // RUST INSIGHT: Matching over enums is exhaustive and fast.
         // We match recursively here to serialize complex structures like Arrays.
@@ -85,12 +90,12 @@ impl RespValue {
             }
             RespValue::Integer(i) => {
                 buf.push(b':');
-                buf.extend_from_slice(i.to_string().as_bytes());
+                write!(buf, "{}", i).unwrap();
                 buf.extend_from_slice(b"\r\n");
             }
             RespValue::BulkString(Some(data)) => {
                 buf.push(b'$');
-                buf.extend_from_slice(data.len().to_string().as_bytes());
+                write!(buf, "{}", data.len()).unwrap();
                 buf.extend_from_slice(b"\r\n");
                 buf.extend_from_slice(data);
                 buf.extend_from_slice(b"\r\n");
@@ -100,7 +105,7 @@ impl RespValue {
             }
             RespValue::Array(Some(arr)) => {
                 buf.push(b'*');
-                buf.extend_from_slice(arr.len().to_string().as_bytes());
+                write!(buf, "{}", arr.len()).unwrap();
                 buf.extend_from_slice(b"\r\n");
                 for item in arr {
                     item.serialize(buf);
