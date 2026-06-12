@@ -200,7 +200,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_string(&mut self, start_span: Span) -> Result<TokenKind, ParseError> {
-        let mut s = String::new();
+        let mut s = String::with_capacity(64); // ⚡ BOLT OPTIMIZATION: Pre-allocate capacity for string literals
         loop {
             match self.advance() {
                 Some('"') => break, // End of string
@@ -212,7 +212,8 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_number(&mut self, first: char, start_span: Span) -> Result<TokenKind, ParseError> {
-        let mut s = String::new();
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate capacity for numbers
+        let mut s = String::with_capacity(16);
         s.push(first);
 
         while let Some(&c) = self.peek() {
@@ -231,7 +232,8 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_ident(&mut self, first: char) -> TokenKind {
-        let mut s = String::new();
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate capacity for identifiers
+        let mut s = String::with_capacity(32);
         s.push(first);
 
         while let Some(&c) = self.peek() {
