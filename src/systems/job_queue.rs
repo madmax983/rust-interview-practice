@@ -24,7 +24,7 @@ use std::error::Error;
 use std::fmt;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 // =========================================================================================
 // Architecture

@@ -325,7 +325,7 @@ mod tests {
             producers.push(thread::spawn(move || {
                 for i in 0..items_per_thread {
                     // Spin until successful push
-                    while let Err(PushError::Full(item)) = q.push(i) {
+                    while let Err(PushError::Full(_item)) = q.push(i) {
                         std::thread::yield_now();
                     }
                 }
