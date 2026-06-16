@@ -21,19 +21,11 @@
 //!
 //! **Flow:**
 //!
-//!      SQL String ("SELECT id FROM users")
-//!             │
-//!             ▼
-//!      [ Lexer ]  ────►  Vec<Token>
-//!             │
-//!             ▼
-//!      [ Parser ] ────►  AST (Statement::Select { .. })
-//!             │
-//!             ▼
-//!      [ Executor ] ◄──► [ Storage Engine (Trait) ]
-//!             │
-//!             ▼
-//!      ResultSet (Vec<Row>)
+//! **Flow:**
+//!
+//! ```text
+//! SQL String -> Lexer -> Vec<Token> -> Parser -> AST -> Executor <-> Storage Engine -> ResultSet
+//! ```
 //!
 //! **Invariants:**
 //! 1. All strings are assumed to be UTF-8 valid (Rust's `String` guarantees this).
@@ -43,12 +35,12 @@
 //!
 //! **Complexity:**
 //! ┌───────────────┬────────────┬─────────────┐
-//! │ Operation     │ Time       │ Space       │
+//! | Operation     | Time       | Space       |
 //! ├───────────────┼────────────┼─────────────┤
-//! │ Lexing        │ O(N)       │ O(N)        │
-//! │ Parsing       │ O(T)       │ O(T)        │
-//! │ Insert        │ O(1)*      │ O(R)        │
-//! │ Select (Seq)  │ O(R)       │ O(R)        │
+//! | Lexing        | O(N)       | O(N)        |
+//! | Parsing       | O(T)       | O(T)        |
+//! | Insert        | O(1)*      | O(R)        |
+//! | Select (Seq)  | O(R)       | O(R)        |
 //! └───────────────┴────────────┴─────────────┘
 //! * N = query string length, T = num tokens, R = num rows.
 //! * Insert is O(1) assuming no indexes and sequential append.
@@ -777,10 +769,12 @@ impl<S: StorageEngine> SqlEngine<S> {
                 let rows = self.storage.scan_table(&table_name)?;
 
                 // Map column names to indices
-                let mut projection_indices = Vec::new();
+                // ⚡ BOLT OPTIMIZATION: Use `Vec::with_capacity` to prevent reallocation overhead.
+                // ⚡ BOLT OPTIMIZATION: Replace `.collect()` with `.extend()` to avoid intermediate allocation.
+                let mut projection_indices = Vec::with_capacity(schema.columns.len());
                 if columns.is_empty() {
                     // SELECT *
-                    projection_indices = (0..schema.columns.len()).collect();
+                    projection_indices.extend(0..schema.columns.len());
                 } else {
                     for col_name in &columns {
                         let idx = schema
@@ -794,7 +788,8 @@ impl<S: StorageEngine> SqlEngine<S> {
                     }
                 }
 
-                let mut result_rows = Vec::new();
+                // ⚡ BOLT OPTIMIZATION: Pre-allocate `result_rows` capacity to prevent growth overhead during iteration.
+                let mut result_rows = Vec::with_capacity(rows.len());
                 for row in rows {
                     if let Some(ref expr) = where_clause {
                         if !self.evaluate_boolean_expr(expr, &row, &schema)? {
