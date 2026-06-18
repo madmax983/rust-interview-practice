@@ -370,8 +370,8 @@ pub enum Statement {
 }
 
 pub struct Parser {
-    tokens: Vec<Token>,
-    pos: usize,
+    tokens: std::vec::IntoIter<Token>,
+    peeked: Option<Token>,
 }
 
 // GOTCHA:
@@ -379,24 +379,27 @@ pub struct Parser {
 // expressions. Production parsers often use Pratt parsing or iterative approaches for expressions.
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, pos: 0 }
+        let mut iter = tokens.into_iter();
+        let peeked = iter.next();
+        Self {
+            tokens: iter,
+            peeked,
+        }
     }
 
     fn peek(&self) -> Option<&Token> {
-        self.tokens.get(self.pos)
+        self.peeked.as_ref()
     }
 
-    fn advance(&mut self) -> Option<&Token> {
-        let t = self.tokens.get(self.pos);
-        if t.is_some() {
-            self.pos += 1;
-        }
-        t
+    fn advance(&mut self) -> Option<Token> {
+        let current = self.peeked.take();
+        self.peeked = self.tokens.next();
+        current
     }
 
     fn consume(&mut self, expected: Token) -> Result<()> {
         match self.advance() {
-            Some(t) if t == &expected => Ok(()),
+            Some(t) if t == expected => Ok(()),
             Some(t) => Err(SqlError::ParserError(format!(
                 "Expected {:?}, found {:?}",
                 expected, t
@@ -438,7 +441,7 @@ impl Parser {
         self.consume(Token::Table)?;
 
         let table_name = match self.advance() {
-            Some(Token::Identifier(id)) => id.clone(),
+            Some(Token::Identifier(id)) => id,
             _ => return Err(SqlError::ParserError("Expected table name".into())),
         };
 
@@ -447,7 +450,7 @@ impl Parser {
 
         loop {
             let col_name = match self.advance() {
-                Some(Token::Identifier(id)) => id.clone(),
+                Some(Token::Identifier(id)) => id,
                 _ => return Err(SqlError::ParserError("Expected column name".into())),
             };
 
@@ -485,7 +488,7 @@ impl Parser {
         self.consume(Token::Into)?;
 
         let table_name = match self.advance() {
-            Some(Token::Identifier(id)) => id.clone(),
+            Some(Token::Identifier(id)) => id,
             _ => return Err(SqlError::ParserError("Expected table name".into())),
         };
 
@@ -496,7 +499,7 @@ impl Parser {
             let mut cols = Vec::new();
             loop {
                 match self.advance() {
-                    Some(Token::Identifier(id)) => cols.push(id.clone()),
+                    Some(Token::Identifier(id)) => cols.push(id),
                     _ => return Err(SqlError::ParserError("Expected column name".into())),
                 }
                 match self.peek() {
@@ -543,7 +546,7 @@ impl Parser {
         } else {
             loop {
                 match self.advance() {
-                    Some(Token::Identifier(id)) => columns.push(id.clone()),
+                    Some(Token::Identifier(id)) => columns.push(id),
                     _ => return Err(SqlError::ParserError("Expected column name or '*'".into())),
                 }
                 if let Some(Token::Comma) = self.peek() {
@@ -557,7 +560,7 @@ impl Parser {
         self.consume(Token::From)?;
 
         let table_name = match self.advance() {
-            Some(Token::Identifier(id)) => id.clone(),
+            Some(Token::Identifier(id)) => id,
             _ => return Err(SqlError::ParserError("Expected table name".into())),
         };
 
@@ -577,16 +580,16 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<Expr> {
         // Parse left operand
         let left = match self.advance() {
-            Some(Token::Identifier(id)) => Expr::Ident(id.clone()),
-            Some(Token::StringLiteral(s)) => Expr::Literal(Value::Text(s.clone())),
-            Some(Token::IntegerLiteral(i)) => Expr::Literal(Value::Integer(*i)),
-            Some(Token::BooleanLiteral(b)) => Expr::Literal(Value::Boolean(*b)),
+            Some(Token::Identifier(id)) => Expr::Ident(id),
+            Some(Token::StringLiteral(s)) => Expr::Literal(Value::Text(s)),
+            Some(Token::IntegerLiteral(i)) => Expr::Literal(Value::Integer(i)),
+            Some(Token::BooleanLiteral(b)) => Expr::Literal(Value::Boolean(b)),
             _ => return Err(SqlError::ParserError("Expected expression".into())),
         };
 
         // Check for binary operator (only '=' supported for now)
         if let Some(Token::Equals) = self.peek() {
-            let op = self.advance().unwrap().clone();
+            let op = self.advance().unwrap();
             let right = self.parse_expression()?;
             Ok(Expr::BinaryOp {
                 left: Box::new(left),
