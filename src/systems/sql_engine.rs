@@ -252,7 +252,7 @@ impl<'a> Lexer<'a> {
 
     fn read_string_literal(&mut self) -> Result<Token> {
         self.advance_char(); // skip opening quote
-        let mut string = String::new();
+        let mut string = String::with_capacity(32); // ⚡ BOLT OPTIMIZATION: Avoid intermediate heap reallocations
         while let Some(ch) = self.peek_char() {
             if ch == '\'' {
                 self.advance_char(); // skip closing quote
@@ -265,7 +265,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_identifier_or_keyword(&mut self) -> Result<Token> {
-        let mut ident = String::new();
+        let mut ident = String::with_capacity(16); // ⚡ BOLT OPTIMIZATION: Avoid intermediate heap reallocations
         while let Some(ch) = self.peek_char() {
             if ch.is_ascii_alphanumeric() || ch == '_' {
                 ident.push(ch);
@@ -296,7 +296,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_integer_literal(&mut self) -> Result<Token> {
-        let mut num_str = String::new();
+        let mut num_str = String::with_capacity(16); // ⚡ BOLT OPTIMIZATION: Avoid intermediate heap reallocations
         if self.peek_char() == Some('-') {
             num_str.push('-');
             self.advance_char();
@@ -318,7 +318,7 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn tokenize(mut self) -> Result<Vec<Token>> {
-        let mut tokens = Vec::new();
+        let mut tokens = Vec::with_capacity(self.input.len() / 4); // ⚡ BOLT OPTIMIZATION: Minimize dynamic array growth overhead
         loop {
             let t = self.next_token()?;
             if t == Token::Eof {
