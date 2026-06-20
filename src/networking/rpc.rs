@@ -115,23 +115,23 @@ impl RpcRequest {
     }
 
     /// Parses a request from a buffered reader.
-    fn parse<R: Read>(reader: &mut BufReader<R>) -> io::Result<Option<Self>> {
-        let mut id_str = String::new();
-        if reader.read_line(&mut id_str)? == 0 {
+    fn parse<R: Read>(reader: &mut BufReader<R>, buf: &mut String) -> io::Result<Option<Self>> {
+        buf.clear();
+        if reader.read_line(buf)? == 0 {
             return Ok(None); // EOF
         }
-        let id = id_str
+        let id = buf
             .trim()
             .parse::<u64>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid ID"))?;
 
-        let mut method = String::new();
-        reader.read_line(&mut method)?;
-        let method = method.trim().to_string();
+        buf.clear();
+        reader.read_line(buf)?;
+        let method = buf.trim().to_string();
 
-        let mut len_str = String::new();
-        reader.read_line(&mut len_str)?;
-        let len = len_str
+        buf.clear();
+        reader.read_line(buf)?;
+        let len = buf
             .trim()
             .parse::<usize>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid Length"))?;
@@ -166,23 +166,23 @@ impl RpcResponse {
     }
 
     /// Parses a response from a buffered reader.
-    fn parse<R: Read>(reader: &mut BufReader<R>) -> io::Result<Option<Self>> {
-        let mut id_str = String::new();
-        if reader.read_line(&mut id_str)? == 0 {
+    fn parse<R: Read>(reader: &mut BufReader<R>, buf: &mut String) -> io::Result<Option<Self>> {
+        buf.clear();
+        if reader.read_line(buf)? == 0 {
             return Ok(None); // EOF
         }
-        let id = id_str
+        let id = buf
             .trim()
             .parse::<u64>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid ID"))?;
 
-        let mut err_str = String::new();
-        reader.read_line(&mut err_str)?;
-        let is_error = err_str.trim() == "1";
+        buf.clear();
+        reader.read_line(buf)?;
+        let is_error = buf.trim() == "1";
 
-        let mut len_str = String::new();
-        reader.read_line(&mut len_str)?;
-        let len = len_str
+        buf.clear();
+        reader.read_line(buf)?;
+        let len = buf
             .trim()
             .parse::<usize>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid Length"))?;
@@ -262,8 +262,11 @@ impl RpcServer {
     ) -> io::Result<()> {
         let mut reader = BufReader::new(stream.try_clone()?);
 
+        // ⚡ BOLT OPTIMIZATION: Hoist String allocation out of the loop
+        let mut buf = String::new();
+
         loop {
-            let request = match RpcRequest::parse(&mut reader) {
+            let request = match RpcRequest::parse(&mut reader, &mut buf) {
                 Ok(Some(req)) => req,
                 Ok(None) => return Ok(()), // Clean disconnect
                 Err(e) => return Err(e),
@@ -330,8 +333,12 @@ impl RpcClient {
         let callbacks_clone = Arc::clone(&callbacks);
         thread::spawn(move || {
             let mut reader = BufReader::new(read_stream);
+
+            // ⚡ BOLT OPTIMIZATION: Hoist String allocation out of the loop
+            let mut buf = String::new();
+
             loop {
-                match RpcResponse::parse(&mut reader) {
+                match RpcResponse::parse(&mut reader, &mut buf) {
                     Ok(Some(response)) => {
                         let mut map = callbacks_clone.lock().unwrap();
                         if let Some(sender) = map.remove(&response.id) {
@@ -427,7 +434,8 @@ mod tests {
         let bytes = req.serialize();
 
         let mut reader = BufReader::new(bytes.as_slice());
-        let parsed = RpcRequest::parse(&mut reader).unwrap().unwrap();
+        let mut buf = String::new();
+        let parsed = RpcRequest::parse(&mut reader, &mut buf).unwrap().unwrap();
 
         assert_eq!(req, parsed);
     }
@@ -442,7 +450,8 @@ mod tests {
         let bytes = resp.serialize();
 
         let mut reader = BufReader::new(bytes.as_slice());
-        let parsed = RpcResponse::parse(&mut reader).unwrap().unwrap();
+        let mut buf = String::new();
+        let parsed = RpcResponse::parse(&mut reader, &mut buf).unwrap().unwrap();
 
         assert_eq!(resp, parsed);
     }
