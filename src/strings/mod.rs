@@ -18,3 +18,4 @@ pub mod text_justification;
 pub mod valid_anagram;
 pub mod valid_number;
 pub mod valid_palindrome;
+pub mod markdown;
