@@ -78,6 +78,8 @@ pub struct CsvReader<R: BufRead> {
     field_buf: String,
     // Track if we reached EOF
     eof: bool,
+    /// BOLT OPTIMIZATION: Track the expected number of fields to pre-allocate the row vector.
+    expected_fields: usize,
 }
 
 impl<R: BufRead> CsvReader<R> {
@@ -94,6 +96,7 @@ impl<R: BufRead> CsvReader<R> {
             line_buf: String::new(),
             field_buf: String::new(),
             eof: false,
+            expected_fields: 0,
         }
     }
 }
@@ -109,7 +112,10 @@ impl<R: BufRead> Iterator for CsvReader<R> {
             return None;
         }
 
-        let mut row = Vec::new();
+        /// ⚡ BOLT OPTIMIZATION: Pre-allocate the row vector based on the previous row's length.
+        /// In CSVs, rows almost always have the same number of fields. This avoids multiple
+        /// reallocation steps as the row grows.
+        let mut row = Vec::with_capacity(self.expected_fields);
         let mut in_quotes = false;
 
         // We use a state machine to parse the CSV properly.
@@ -136,6 +142,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                     // Using `std::mem::take` directly moves the string buffer into the row, leaving an empty string
                     // behind and saving us a heap allocation per field. This prevents String reallocation when `field_buf.push(c)` runs later.
                     row.push(std::mem::take(&mut self.field_buf));
+                    self.expected_fields = row.len();
                     return Some(Ok(row));
                 }
                 return None;
@@ -181,6 +188,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
 
                         // We finish the row
                         row.push(std::mem::take(&mut self.field_buf));
+                        self.expected_fields = row.len();
                         return Some(Ok(row));
                     } else {
                         self.field_buf.push(c);
@@ -192,6 +200,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
             // ended without a trailing newline character (EOF reached without newline).
             if !in_quotes {
                 row.push(std::mem::take(&mut self.field_buf));
+                self.expected_fields = row.len();
                 self.eof = true;
                 return Some(Ok(row));
             }
