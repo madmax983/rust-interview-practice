@@ -16,9 +16,7 @@
 //! was designed to avoid, and demonstrates how to safely implement self-referential or
 //! cyclical data structures using unsafe code responsibly.
 
-use std::any::Any;
 use std::cell::RefCell;
-use std::collections::HashSet;
 use std::ptr::NonNull;
 
 // =========================================================================================

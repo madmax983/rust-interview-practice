@@ -169,12 +169,11 @@ fn parse_list(iter: &mut Peekable<Chars>) -> NestedInteger {
     let mut list = Vec::new();
 
     // Check for empty list '[]'
-    if let Some(&c) = iter.peek() {
-        if c == ']' {
+    if let Some(&c) = iter.peek()
+        && c == ']' {
             iter.next(); // Consume ']'
             return NestedInteger::List(list);
         }
-    }
 
     loop {
         // Parse the next element (either a number or a nested list)

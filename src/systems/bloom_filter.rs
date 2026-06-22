@@ -92,7 +92,7 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
     pub fn new(m: usize, k: u32) -> Self {
         // Calculate the number of u64 blocks needed.
         // We use (m + 63) / 64 to round up.
-        let num_blocks = (m + 63) / 64;
+        let num_blocks = m.div_ceil(64);
 
         // RUST INSIGHT:
         // By pre-allocating the vector with `vec![0; num_blocks]`, we ensure continuous memory

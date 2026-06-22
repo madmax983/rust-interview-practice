@@ -116,8 +116,6 @@ impl BencodeDecode for String {
     }
 }
 
-
-
 impl BencodeValue {
     /// Encodes the BencodeValue into a raw byte vector.
     pub fn encode(&self) -> Vec<u8> {
@@ -197,7 +195,10 @@ fn decode_internal(bytes: &[u8], depth: usize) -> Result<(BencodeValue, &[u8]), 
 
 fn decode_integer(bytes: &[u8]) -> Result<(BencodeValue, &[u8]), String> {
     // Expected format: i<number>e
-    let e_pos = bytes.iter().position(|&b| b == b'e').ok_or("Unterminated integer")?;
+    let e_pos = bytes
+        .iter()
+        .position(|&b| b == b'e')
+        .ok_or("Unterminated integer")?;
 
     // Extract the bytes between 'i' and 'e'
     let num_bytes = &bytes[1..e_pos];
@@ -215,18 +216,23 @@ fn decode_integer(bytes: &[u8]) -> Result<(BencodeValue, &[u8]), String> {
         return Err("Leading zeros are not allowed".to_string());
     }
     if num_bytes.len() > 2 && num_bytes[0] == b'-' && num_bytes[1] == b'0' {
-         return Err("Leading zeros are not allowed".to_string());
+        return Err("Leading zeros are not allowed".to_string());
     }
 
     let num_str = std::str::from_utf8(num_bytes).map_err(|_| "Invalid UTF-8 in integer")?;
-    let num = num_str.parse::<i64>().map_err(|_| "Invalid integer format")?;
+    let num = num_str
+        .parse::<i64>()
+        .map_err(|_| "Invalid integer format")?;
 
     Ok((BencodeValue::Integer(num), &bytes[e_pos + 1..]))
 }
 
 fn decode_byte_string(bytes: &[u8]) -> Result<(BencodeValue, &[u8]), String> {
     // Expected format: <length>:<raw bytes>
-    let colon_pos = bytes.iter().position(|&b| b == b':').ok_or("Missing colon for byte string")?;
+    let colon_pos = bytes
+        .iter()
+        .position(|&b| b == b':')
+        .ok_or("Missing colon for byte string")?;
 
     let len_bytes = &bytes[..colon_pos];
     if len_bytes.is_empty() {
@@ -234,10 +240,14 @@ fn decode_byte_string(bytes: &[u8]) -> Result<(BencodeValue, &[u8]), String> {
     }
 
     let len_str = std::str::from_utf8(len_bytes).map_err(|_| "Invalid UTF-8 in string length")?;
-    let len = len_str.parse::<usize>().map_err(|_| "Invalid string length format")?;
+    let len = len_str
+        .parse::<usize>()
+        .map_err(|_| "Invalid string length format")?;
 
     let string_start = colon_pos + 1;
-    let end_pos = string_start.checked_add(len).ok_or("String length causes integer overflow")?;
+    let end_pos = string_start
+        .checked_add(len)
+        .ok_or("String length causes integer overflow")?;
 
     if bytes.len() < end_pos {
         return Err("String length exceeds available bytes".to_string());
@@ -284,14 +294,14 @@ fn decode_dictionary(mut bytes: &[u8], depth: usize) -> Result<(BencodeValue, &[
         };
 
         // Bencode spec: keys must be sorted lexicographically
-        if let Some(ref last) = last_key {
-            if &key_bytes <= last {
+        if let Some(ref last) = last_key
+            && &key_bytes <= last {
                 return Err("Dictionary keys must be strictly sorted lexicographically".to_string());
             }
-        }
         last_key = Some(key_bytes.clone());
 
-        let key_str = String::from_utf8(key_bytes).map_err(|_| "Dictionary keys must be valid UTF-8 for this implementation")?;
+        let key_str = String::from_utf8(key_bytes)
+            .map_err(|_| "Dictionary keys must be valid UTF-8 for this implementation")?;
 
         let (val, remaining2) = decode_internal(remaining1, depth + 1)?;
         dict.insert(key_str, val);
@@ -351,7 +361,10 @@ mod tests {
 
     #[test]
     fn test_encode_byte_string() {
-        assert_eq!(BencodeValue::ByteString(b"spam".to_vec()).encode(), b"4:spam");
+        assert_eq!(
+            BencodeValue::ByteString(b"spam".to_vec()).encode(),
+            b"4:spam"
+        );
         assert_eq!(BencodeValue::ByteString(b"".to_vec()).encode(), b"0:");
     }
 
@@ -367,7 +380,10 @@ mod tests {
     #[test]
     fn test_encode_dictionary() {
         let mut map = BTreeMap::new();
-        map.insert("bar".to_string(), BencodeValue::ByteString(b"spam".to_vec()));
+        map.insert(
+            "bar".to_string(),
+            BencodeValue::ByteString(b"spam".to_vec()),
+        );
         map.insert("foo".to_string(), BencodeValue::Integer(42));
 
         let dict = BencodeValue::Dictionary(map);
@@ -388,8 +404,14 @@ mod tests {
 
     #[test]
     fn test_decode_byte_string() {
-        assert_eq!(decode(b"4:spam").unwrap().0, BencodeValue::ByteString(b"spam".to_vec()));
-        assert_eq!(decode(b"0:").unwrap().0, BencodeValue::ByteString(b"".to_vec()));
+        assert_eq!(
+            decode(b"4:spam").unwrap().0,
+            BencodeValue::ByteString(b"spam".to_vec())
+        );
+        assert_eq!(
+            decode(b"0:").unwrap().0,
+            BencodeValue::ByteString(b"".to_vec())
+        );
 
         assert!(decode(b"4:spa").is_err()); // Too short
     }
@@ -397,10 +419,13 @@ mod tests {
     #[test]
     fn test_decode_list() {
         let list = decode(b"l4:spami42ee").unwrap().0;
-        assert_eq!(list, BencodeValue::List(vec![
-            BencodeValue::ByteString(b"spam".to_vec()),
-            BencodeValue::Integer(42),
-        ]));
+        assert_eq!(
+            list,
+            BencodeValue::List(vec![
+                BencodeValue::ByteString(b"spam".to_vec()),
+                BencodeValue::Integer(42),
+            ])
+        );
     }
 
     #[test]
@@ -408,7 +433,10 @@ mod tests {
         let dict = decode(b"d3:bar4:spam3:fooi42ee").unwrap().0;
 
         let mut map = BTreeMap::new();
-        map.insert("bar".to_string(), BencodeValue::ByteString(b"spam".to_vec()));
+        map.insert(
+            "bar".to_string(),
+            BencodeValue::ByteString(b"spam".to_vec()),
+        );
         map.insert("foo".to_string(), BencodeValue::Integer(42));
 
         assert_eq!(dict, BencodeValue::Dictionary(map));

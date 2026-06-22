@@ -169,12 +169,11 @@ impl<T: Copy + Ord, V> IntervalMap<T, V> for IntervalTree<T, V> {
             // If the left child exists and its `max` is >= the query's `low`,
             // then there *might* be an overlapping interval in the left subtree.
             // Otherwise, we can safely skip the entire left subtree and search the right.
-            if let Some(ref left) = node.left {
-                if left.max >= query.low {
+            if let Some(ref left) = node.left
+                && left.max >= query.low {
                     current = node.left.as_ref();
                     continue;
                 }
-            }
 
             // If we didn't go left, go right.
             current = node.right.as_ref();
@@ -247,11 +246,10 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
         }
 
         // Check if left subtree might contain overlaps
-        if let Some(ref left) = node.left {
-            if left.max >= query.low {
+        if let Some(ref left) = node.left
+            && left.max >= query.low {
                 Self::find_all_overlapping_recursive(left, query, results);
             }
-        }
 
         // Check the current node
         if node.interval.overlaps(query) {
@@ -261,13 +259,11 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
         // Check right subtree. We only need to visit the right subtree
         // if the query's high is >= the current node's low, because nodes in
         // the right subtree all have `low` >= `node.interval.low`.
-        if query.high >= node.interval.low {
-            if let Some(ref right) = node.right {
-                if right.max >= query.low {
+        if query.high >= node.interval.low
+            && let Some(ref right) = node.right
+                && right.max >= query.low {
                     Self::find_all_overlapping_recursive(right, query, results);
                 }
-            }
-        }
     }
 }
 

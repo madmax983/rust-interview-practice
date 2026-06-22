@@ -167,7 +167,7 @@ where
     P: Fn(char) -> bool,
 {
     move |input: &'a str| {
-        let mut chars = input.chars();
+        let chars = input.chars();
         let mut matched_len = 0;
 
         for c in chars {

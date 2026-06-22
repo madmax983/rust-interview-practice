@@ -171,9 +171,9 @@ impl CliParser {
                 // Short Option(s)
                 // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<char>>()` and `.collect::<String>()` allocations.
                 // We iterate over `char_indices` to process short options and efficiently slice `arg` for attached values.
-                let mut char_indices = arg[1..].char_indices();
+                let char_indices = arg[1..].char_indices();
 
-                while let Some((idx, c)) = char_indices.next() {
+                for (idx, c) in char_indices {
                     let config_idx = self
                         .short_map
                         .get(&c)
