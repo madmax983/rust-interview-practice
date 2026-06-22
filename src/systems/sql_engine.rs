@@ -21,16 +21,16 @@
 //!
 //! **Flow:**
 //!
-//!      SQL String ("SELECT id FROM users")
+//!         SQL String ("SELECT id FROM users")
 //!             │
 //!             ▼
-//!      [ Lexer ]  ────►  Vec<Token>
+//!      [ Lexer ]  ----►  Vec<Token>
 //!             │
 //!             ▼
-//!      [ Parser ] ────►  AST (Statement::Select { .. })
+//!      [ Parser ] ----►  AST (Statement::Select { .. })
 //!             │
 //!             ▼
-//!      [ Executor ] ◄──► [ Storage Engine (Trait) ]
+//!      [ Executor ] ◄--► [ Storage Engine (Trait) ]
 //!             │
 //!             ▼
 //!      ResultSet (Vec<Row>)
