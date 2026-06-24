@@ -6,4 +6,5 @@ pub mod flatten_nested_list_iterator;
 pub mod largest_rectangle_in_histogram;
 pub mod min_stack;
 pub mod simplify_path;
+pub mod car_fleet;
 pub mod valid_parentheses;
