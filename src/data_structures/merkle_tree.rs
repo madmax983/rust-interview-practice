@@ -66,7 +66,9 @@ impl<T: Hash + Clone> MerkleTree<T> {
         let mut layers = vec![current_layer.clone()];
 
         while current_layer.len() > 1 {
-            let mut next_layer = Vec::new();
+            // ⚡ BOLT OPTIMIZATION: Use `Vec::with_capacity` to eliminate intermediate heap allocations
+            // when building the next layer, saving O(N) reallocations where N is the current layer size.
+            let mut next_layer = Vec::with_capacity((current_layer.len() + 1) / 2);
             for chunk in current_layer.chunks(2) {
                 let left = chunk[0];
                 let right = if chunk.len() > 1 { chunk[1] } else { chunk[0] }; // Duplicate if odd
@@ -91,7 +93,9 @@ impl<T: Hash + Clone> MerkleTree<T> {
             return None;
         }
 
-        let mut proof = Vec::new();
+        // ⚡ BOLT OPTIMIZATION: Use `Vec::with_capacity` to eliminate intermediate heap allocations
+        // when generating the Merkle proof, saving `layers.len() - 1` potential reallocations.
+        let mut proof = Vec::with_capacity(self.layers.len().saturating_sub(1));
         let mut current_index = index;
 
         // Iterate through all layers except the root (which is the last layer)
