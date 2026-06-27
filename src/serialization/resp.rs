@@ -85,12 +85,16 @@ impl RespValue {
             }
             RespValue::Integer(i) => {
                 buf.push(b':');
-                buf.extend_from_slice(i.to_string().as_bytes());
+                // ⚡ BOLT OPTIMIZATION: Use `write!` directly to `Vec<u8>` to avoid intermediate `String` allocation overhead.
+                use std::io::Write;
+                write!(buf, "{}", i).unwrap();
                 buf.extend_from_slice(b"\r\n");
             }
             RespValue::BulkString(Some(data)) => {
                 buf.push(b'$');
-                buf.extend_from_slice(data.len().to_string().as_bytes());
+                // ⚡ BOLT OPTIMIZATION: Use `write!` directly to `Vec<u8>` to avoid intermediate `String` allocation overhead.
+                use std::io::Write;
+                write!(buf, "{}", data.len()).unwrap();
                 buf.extend_from_slice(b"\r\n");
                 buf.extend_from_slice(data);
                 buf.extend_from_slice(b"\r\n");
@@ -100,7 +104,9 @@ impl RespValue {
             }
             RespValue::Array(Some(arr)) => {
                 buf.push(b'*');
-                buf.extend_from_slice(arr.len().to_string().as_bytes());
+                // ⚡ BOLT OPTIMIZATION: Use `write!` directly to `Vec<u8>` to avoid intermediate `String` allocation overhead.
+                use std::io::Write;
+                write!(buf, "{}", arr.len()).unwrap();
                 buf.extend_from_slice(b"\r\n");
                 for item in arr {
                     item.serialize(buf);
