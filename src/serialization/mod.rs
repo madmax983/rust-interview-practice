@@ -1,4 +1,5 @@
 pub mod base64;
+pub mod bencode;
 pub mod bincode;
 pub mod csv;
 pub mod ini;
@@ -9,4 +10,3 @@ pub mod resp;
 pub mod serde_framework;
 pub mod toml;
 pub mod varint;
-pub mod bencode;
