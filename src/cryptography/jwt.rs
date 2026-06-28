@@ -259,14 +259,18 @@ impl JwtHandler for Hs256Jwt {
 
     /// Decodes and verifies a JWT.
     fn decode(&self, token: &str) -> Result<Claims, &'static str> {
-        let parts: Vec<&str> = token.split('.').collect();
-        if parts.len() != 3 {
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<&str>>()` allocation.
+        // We evaluate the parts iteratively to eliminate heap allocations during token splitting.
+        let mut parts = token.split('.');
+
+        let b64_header = parts.next().ok_or("Invalid token format")?;
+        let b64_payload = parts.next().ok_or("Invalid token format")?;
+        let b64_signature = parts.next().ok_or("Invalid token format")?;
+
+        // Ensure there are no extra parts
+        if parts.next().is_some() {
             return Err("Invalid token format");
         }
-
-        let b64_header = parts[0];
-        let b64_payload = parts[1];
-        let b64_signature = parts[2];
 
         // 1. Verify Signature
         let mut message = String::with_capacity(b64_header.len() + b64_payload.len() + 1);
