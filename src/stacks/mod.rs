@@ -7,3 +7,5 @@ pub mod largest_rectangle_in_histogram;
 pub mod min_stack;
 pub mod simplify_path;
 pub mod valid_parentheses;
+pub mod car_fleet;
+pub mod online_stock_span;
