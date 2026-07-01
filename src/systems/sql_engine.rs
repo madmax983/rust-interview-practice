@@ -21,6 +21,7 @@
 //!
 //! **Flow:**
 //!
+//! ```text
 //!      SQL String ("SELECT id FROM users")
 //!             │
 //!             ▼
@@ -34,6 +35,7 @@
 //!             │
 //!             ▼
 //!      ResultSet (Vec<Row>)
+//! ```
 //!
 //! **Invariants:**
 //! 1. All strings are assumed to be UTF-8 valid (Rust's `String` guarantees this).
@@ -252,7 +254,8 @@ impl<'a> Lexer<'a> {
 
     fn read_string_literal(&mut self) -> Result<Token> {
         self.advance_char(); // skip opening quote
-        let mut string = String::new();
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate String to prevent multiple reallocations while building literals
+        let mut string = String::with_capacity(16);
         while let Some(ch) = self.peek_char() {
             if ch == '\'' {
                 self.advance_char(); // skip closing quote
@@ -265,7 +268,8 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_identifier_or_keyword(&mut self) -> Result<Token> {
-        let mut ident = String::new();
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate String to prevent multiple reallocations while building identifiers
+        let mut ident = String::with_capacity(16);
         while let Some(ch) = self.peek_char() {
             if ch.is_ascii_alphanumeric() || ch == '_' {
                 ident.push(ch);
@@ -296,7 +300,8 @@ impl<'a> Lexer<'a> {
     }
 
     fn read_integer_literal(&mut self) -> Result<Token> {
-        let mut num_str = String::new();
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate String to prevent multiple reallocations while building numbers
+        let mut num_str = String::with_capacity(16);
         if self.peek_char() == Some('-') {
             num_str.push('-');
             self.advance_char();
@@ -318,7 +323,8 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn tokenize(mut self) -> Result<Vec<Token>> {
-        let mut tokens = Vec::new();
+        // ⚡ BOLT OPTIMIZATION: Pre-allocate Vector based on input size heuristic to minimize dynamic resizing overhead
+        let mut tokens = Vec::with_capacity(self.input.len() / 4);
         loop {
             let t = self.next_token()?;
             if t == Token::Eof {
