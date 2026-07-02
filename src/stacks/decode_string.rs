@@ -158,16 +158,14 @@ impl Expr {
         match self {
             Self::Literal(s) => out.push_str(s),
             Self::Repeat(k, exprs) => {
-                // Evaluate the inner block into a temporary buffer
-                // This minimizes repeated allocations by only allocating once per depth
-                let mut inner = String::new();
-                for expr in exprs {
-                    expr.evaluate(&mut inner);
-                }
-
-                // Append the repeated block to the output
+                // ⚡ BOLT OPTIMIZATION: Instead of allocating an intermediate `String`
+                // and pushing it `k` times, we directly evaluate the AST nodes into `out`
+                // `k` times. Since AST traversal is fast, this eliminates the intermediate
+                // heap allocation entirely, achieving a true zero-allocation evaluation phase.
                 for _ in 0..*k {
-                    out.push_str(&inner);
+                    for expr in exprs {
+                        expr.evaluate(out);
+                    }
                 }
             }
         }
