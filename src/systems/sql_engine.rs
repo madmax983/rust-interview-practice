@@ -318,7 +318,10 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn tokenize(mut self) -> Result<Vec<Token>> {
-        let mut tokens = Vec::new();
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate reallocations by pre-allocating
+        // vector capacity. A good heuristic is that the number of tokens is roughly
+        // 1/4th the number of characters in the query.
+        let mut tokens = Vec::with_capacity(self.input.len() / 4);
         loop {
             let t = self.next_token()?;
             if t == Token::Eof {
@@ -958,6 +961,24 @@ mod tests {
 
         let err = engine.execute("SELECT * FROM missing_table;").unwrap_err();
         assert!(matches!(err, SqlError::StorageError(_)));
+    }
+
+    #[test]
+    fn test_bolt_lexer_capacity_optimization() {
+        // Red Phase: We want to ensure the vector is pre-allocated based on string length,
+        // rather than relying on default dynamic resizing (0, 4, 8, 16).
+        // A single long string literal will parse as 1 token (plus EOF), but has a long string length.
+        let query = "SELECT 'this_is_a_very_long_string_literal_designed_to_inflate_input_length_without_adding_many_tokens';";
+        let lexer = Lexer::new(query);
+        let expected_capacity = query.len() / 4;
+        let tokens = lexer.tokenize().unwrap();
+
+        assert!(
+            tokens.capacity() >= expected_capacity,
+            "Lexer should pre-allocate tokens vector to at least input.len() / 4 to avoid intermediate reallocations. Expected >= {}, found {}",
+            expected_capacity,
+            tokens.capacity()
+        );
     }
 
     #[test]

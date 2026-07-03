@@ -1,3 +1,6 @@
 **[Composite Pattern - Avoiding string allocation]**
 **Learning:** Using `write!` directly to a pre-allocated `String` instead of creating intermediate `format!` strings and pushing them is more efficient.
 **Action:** Replace `let mut out = format!("[Window: {}]\n", self.title);` with `let mut out = String::with_capacity(...); let _ = write!(out, ...);`
+**Avoid Dynamic Resizing Overhead via Capacity Pre-allocation**
+**Learning:** `Vec::new()` starts with 0 capacity and reallocates dynamically (4, 8, 16...). For tokenizers or parsers where the expected output length roughly correlates with the input length, dynamic resizing introduces unnecessary O(N) allocation and copying overhead. In this optimization, using a simple heuristic like `input.len() / 4` provides an excellent estimate for SQL tokens while avoiding massive overallocation.
+**Action:** When constructing vectors dynamically inside a loop based on an input stream (like in lexers, parsers, or deserializers), always consider pre-allocating capacity using `Vec::with_capacity()` based on a reasonable heuristic of the input size to minimize intermediate heap allocations. Ensure tests for this optimization use edge cases (like a single long string literal) to verify the capacity was actually derived from the heuristic rather than dynamic resizing.
