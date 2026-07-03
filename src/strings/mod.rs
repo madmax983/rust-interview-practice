@@ -4,6 +4,7 @@ pub mod find_all_anagrams_in_a_string;
 pub mod group_anagrams;
 pub mod longest_common_prefix;
 pub mod longest_palindromic_substring;
+pub mod markdown;
 pub mod longest_repeating_character_replacement;
 pub mod longest_substring_without_repeating;
 pub mod mini_parser;
