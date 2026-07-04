@@ -377,6 +377,7 @@ fn with_branch_hints(x: i32) -> i32 {
 // ============================================================================
 
 use std::collections::HashSet;
+use std::fmt::Write;
 
 /// Simple string interner for deduplication.
 #[allow(dead_code)]
@@ -701,7 +702,7 @@ fn demonstrate_pitfalls() {
 
     let mut good_str = String::with_capacity(300);
     for i in 0..100 {
-        good_str.push_str(&i.to_string());
+        write!(good_str, "{}", i).expect("write failed");
     }
 
     let _ = (bad, good, good_vec, good_str);
