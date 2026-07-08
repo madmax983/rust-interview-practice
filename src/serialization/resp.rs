@@ -50,6 +50,7 @@
 // - **Incomplete Data**: We return a custom error `Incomplete` to allow the network loop to read more
 //   data and try again, standard for non-blocking I/O.
 
+use std::io::Write;
 use std::str;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -85,12 +86,12 @@ impl RespValue {
             }
             RespValue::Integer(i) => {
                 buf.push(b':');
-                buf.extend_from_slice(i.to_string().as_bytes());
+                let _ = write!(buf, "{}", i);
                 buf.extend_from_slice(b"\r\n");
             }
             RespValue::BulkString(Some(data)) => {
                 buf.push(b'$');
-                buf.extend_from_slice(data.len().to_string().as_bytes());
+                let _ = write!(buf, "{}", data.len());
                 buf.extend_from_slice(b"\r\n");
                 buf.extend_from_slice(data);
                 buf.extend_from_slice(b"\r\n");
@@ -100,7 +101,7 @@ impl RespValue {
             }
             RespValue::Array(Some(arr)) => {
                 buf.push(b'*');
-                buf.extend_from_slice(arr.len().to_string().as_bytes());
+                let _ = write!(buf, "{}", arr.len());
                 buf.extend_from_slice(b"\r\n");
                 for item in arr {
                     item.serialize(buf);
