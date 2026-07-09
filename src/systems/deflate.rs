@@ -17,7 +17,6 @@
 //! Huffman coding eliminates redundancy over symbol frequency. It also forces you to handle
 //! bit-level IO operations in Rust, crossing standard byte boundaries.
 
-use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 
 // =========================================================================================

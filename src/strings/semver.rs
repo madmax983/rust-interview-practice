@@ -426,7 +426,7 @@ mod tests {
     #[test]
     fn test_precedence_ordering() {
         // Spec precedence example
-        let ordered = vec![
+        let ordered = [
             "1.0.0-alpha",
             "1.0.0-alpha.1",
             "1.0.0-alpha.beta",

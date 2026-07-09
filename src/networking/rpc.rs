@@ -243,10 +243,10 @@ impl RpcServer {
                     // GOTCHA: Unbounded thread spawning can lead to exhaustion.
                     // PRODUCTION NOTE: A production RPC server uses a bounded thread pool or async tasks.
                     thread::spawn(move || {
-                        if let Err(e) = Self::handle_client(stream, handlers) {
-                            if e.kind() != io::ErrorKind::UnexpectedEof {
-                                // Ignore standard disconnects, log others
-                            }
+                        if let Err(e) = Self::handle_client(stream, handlers)
+                            && e.kind() != io::ErrorKind::UnexpectedEof
+                        {
+                            // Ignore standard disconnects, log others
                         }
                     });
                 }

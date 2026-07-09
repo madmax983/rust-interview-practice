@@ -625,6 +625,12 @@ pub struct InMemoryStorage {
     tables: HashMap<String, Vec<Row>>,
 }
 
+impl Default for InMemoryStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InMemoryStorage {
     pub fn new() -> Self {
         Self {
@@ -796,10 +802,10 @@ impl<S: StorageEngine> SqlEngine<S> {
 
                 let mut result_rows = Vec::new();
                 for row in rows {
-                    if let Some(ref expr) = where_clause {
-                        if !self.evaluate_boolean_expr(expr, &row, &schema)? {
-                            continue;
-                        }
+                    if let Some(ref expr) = where_clause
+                        && !self.evaluate_boolean_expr(expr, &row, &schema)?
+                    {
+                        continue;
                     }
 
                     let projected_values = projection_indices

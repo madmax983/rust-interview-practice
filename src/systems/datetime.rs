@@ -73,7 +73,7 @@ impl DateTime {
     /// Creates a new DateTime, validating the inputs.
     #[must_use]
     pub fn new(year: i32, month: u8, day: u8, hour: u8, minute: u8, second: u8) -> Option<Self> {
-        if month < 1 || month > 12 {
+        if !(1..=12).contains(&month) {
             return None;
         }
         if day < 1 || day > Self::days_in_month(year, month) {

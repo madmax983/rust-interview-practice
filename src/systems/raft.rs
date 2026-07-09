@@ -280,7 +280,7 @@ impl<T: Clone> RaftNode<T> {
         self.votes_received.insert(self.id);
         self.election_elapsed = 0;
 
-        if self.votes_received.len() >= (self.peers.len() + 1) / 2 + 1 {
+        if self.votes_received.len() > self.peers.len().div_ceil(2) {
             self.become_leader();
             return;
         }
@@ -365,7 +365,7 @@ impl<T: Clone> RaftNode<T> {
         if vote_granted {
             self.votes_received.insert(from);
             // Majority requires self + strictly greater than half peers
-            let majority = (self.peers.len() + 1) / 2 + 1;
+            let majority = self.peers.len().div_ceil(2) + 1;
             if self.votes_received.len() >= majority {
                 self.become_leader();
             }
@@ -479,7 +479,7 @@ impl<T: Clone> RaftNode<T> {
                         }
                     }
 
-                    let majority = (self.peers.len() + 1) / 2 + 1;
+                    let majority = self.peers.len().div_ceil(2) + 1;
                     if count >= majority {
                         self.commit_index = n;
                         // Once we update commit_index, broadcast AppendEntries to update followers
