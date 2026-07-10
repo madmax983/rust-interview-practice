@@ -85,6 +85,8 @@ impl Node {
 /// but for large N, the O(V) lookup kills performance.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// Signature must match the three-implementation convention (Option in / Option out).
+#[allow(clippy::single_option_map)]
 pub fn clone_graph_brute_force(node: Option<Rc<RefCell<Node>>>) -> Option<Rc<RefCell<Node>>> {
     node.map(|start_node| {
         // Track visited: (original_val, cloned_node)
@@ -141,6 +143,8 @@ fn clone_dfs_brute(
 /// - We use `i32` keys instead of `Rc` keys to avoid pointer hashing complexity.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// Signature must match the three-implementation convention (Option in / Option out).
+#[allow(clippy::single_option_map)]
 pub fn clone_graph_optimized(node: Option<Rc<RefCell<Node>>>) -> Option<Rc<RefCell<Node>>> {
     node.map(|start_node| {
         let mut visited = HashMap::new();

@@ -58,7 +58,16 @@ impl PartialOrd for State {
 ///
 /// Time: O(V * E) - `V - 1` passes, each relaxing all `E` edges.
 /// Space: O(V) - just the distance vector (edges are read directly from `times`).
+///
+/// # Panics
+/// Panics if `n < 1`, since the distance vector would be empty and the final `max()` unwrap fails.
+/// The problem constraints guarantee `n >= 1`.
 #[must_use]
+// Standard graph notation (u, v, w for edges; n, k for params); node/edge labels fit usize.
+#[allow(clippy::many_single_char_names)]
+#[allow(clippy::cast_sign_loss)]
+// LeetCode signature: three implementations share `times: Vec<Vec<i32>>` by value.
+#[allow(clippy::needless_pass_by_value)]
 pub fn network_delay_time_brute_force(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
     let n = n as usize;
     let mut dist = vec![i32::MAX; n];
@@ -106,7 +115,14 @@ pub fn network_delay_time_brute_force(times: Vec<Vec<i32>>, n: i32, k: i32) -> i
 ///    b. If we found a shorter path to this node before, skip.
 ///    c. Iterate through neighbors. If `new_cost < old_cost`, update `dist` and push to queue.
 /// 5. After the loop, find the maximum value in `dist`. If it's `i32::MAX`, return -1 (unreachable nodes exist).
+///
+/// # Panics
+/// Panics if `n < 1`, since the distance vector would be empty and the final `max()` unwrap fails.
+/// The problem constraints guarantee `n >= 1`.
 #[must_use]
+// Standard graph notation (u, v, w for edges; n, k for params); node/edge labels fit usize.
+#[allow(clippy::many_single_char_names)]
+#[allow(clippy::cast_sign_loss)]
 pub fn network_delay_time_optimal(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
     let n = n as usize;
     // GOTCHA: The problem uses 1-based indexing for nodes (1 to n).

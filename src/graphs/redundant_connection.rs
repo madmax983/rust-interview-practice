@@ -55,6 +55,8 @@
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_possible_wrap)]
+// Node labels are 1..=n, so edge[i] i32->usize casts are non-negative and in range.
+#[allow(clippy::cast_sign_loss)]
 pub fn find_redundant_connection_brute_force(edges: Vec<Vec<i32>>) -> Vec<i32> {
     let n = edges.len();
     // Using an adjacency list. Vertices are 1-indexed.
@@ -97,6 +99,14 @@ fn dfs(adj: &[Vec<usize>], source: usize, target: usize, visited: &mut [bool]) -
 // Approach 2: Optimized (Union-Find without Rank / Path Compression)
 // =========================================================================================
 
+/// Walks parent pointers up to the set root of `i` (no path compression).
+fn find_root(parent: &[usize], mut i: usize) -> usize {
+    while parent[i] != i {
+        i = parent[i];
+    }
+    i
+}
+
 /// Optimized approach: Basic Union-Find
 ///
 /// We use a parent array to keep track of disjoint sets.
@@ -109,24 +119,18 @@ fn dfs(adj: &[Vec<usize>], source: usize, target: usize, visited: &mut [bool]) -
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_possible_wrap)]
+// Node labels are 1..=n, so edge[i] i32->usize casts are non-negative and in range.
+#[allow(clippy::cast_sign_loss)]
 pub fn find_redundant_connection_optimized(edges: Vec<Vec<i32>>) -> Vec<i32> {
     let n = edges.len();
     let mut parent: Vec<usize> = (0..=n).collect(); // 1-indexed
-
-    // Helper for finding root
-    fn find(parent: &[usize], mut i: usize) -> usize {
-        while parent[i] != i {
-            i = parent[i];
-        }
-        i
-    }
 
     for edge in edges {
         let u = edge[0] as usize;
         let v = edge[1] as usize;
 
-        let root_u = find(&parent, u);
-        let root_v = find(&parent, v);
+        let root_u = find_root(&parent, u);
+        let root_v = find_root(&parent, v);
 
         if root_u == root_v {
             return edge;
@@ -208,6 +212,8 @@ impl UnionFind {
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_possible_wrap)]
+// Node labels are 1..=n, so edge[i] i32->usize casts are non-negative and in range.
+#[allow(clippy::cast_sign_loss)]
 pub fn find_redundant_connection_optimal(edges: Vec<Vec<i32>>) -> Vec<i32> {
     let n = edges.len();
     let mut uf = UnionFind::new(n);

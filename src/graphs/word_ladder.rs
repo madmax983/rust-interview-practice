@@ -22,6 +22,8 @@ use std::collections::{HashSet, VecDeque};
 /// one by one, allocating a new `String` every time. It uses `.chars()` and `.collect()`, which
 /// are safe but slow due to repeated heap allocations and UTF-8 validation overhead.
 #[must_use]
+// LeetCode signature: three implementations share (String, String, Vec<String>) by value.
+#[allow(clippy::needless_pass_by_value)]
 pub fn word_ladder_brute_force(
     begin_word: String,
     end_word: String,

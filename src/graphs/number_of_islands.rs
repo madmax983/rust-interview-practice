@@ -102,7 +102,7 @@ fn dfs(grid: &mut Vec<Vec<char>>, r: usize, c: usize) {
 ///
 /// Time: O(M * N)
 /// Space: O(min(M, N)) - worst case queue size is proportional to the smaller dimension (diagonal traversal).
-pub fn num_islands_optimized(grid: &mut Vec<Vec<char>>) -> i32 {
+pub fn num_islands_optimized(grid: &mut [Vec<char>]) -> i32 {
     if grid.is_empty() {
         return 0;
     }
@@ -123,7 +123,12 @@ pub fn num_islands_optimized(grid: &mut Vec<Vec<char>>) -> i32 {
     count
 }
 
-fn bfs(grid: &mut Vec<Vec<char>>, start_r: usize, start_c: usize) {
+// Grid indices are bounded by rows/cols and stay non-negative after the guard, so isize<->usize
+// casts are in range; `nr_isize`/`nc_isize` are the standard new-row/new-col names.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::similar_names)]
+fn bfs(grid: &mut [Vec<char>], start_r: usize, start_c: usize) {
     let rows = grid.len();
     let cols = grid[0].len();
 
