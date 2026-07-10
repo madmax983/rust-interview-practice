@@ -680,9 +680,7 @@ fn interview_patterns() {
 
     // Pattern 3: Option to Result conversion
     fn get_config(key: &str) -> Result<String, String> {
-        std::env::var(key)
-            .ok()
-            .ok_or_else(|| format!("Missing config: {key}"))
+        std::env::var(key).map_err(|_| format!("Missing config: {key}"))
     }
 
     let _ = process();

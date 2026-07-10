@@ -3,7 +3,9 @@
 //! Common design patterns adapted for Rust's ownership system and type system.
 //! Learn idiomatic Rust patterns for production code.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 // ============================================================================
 // Builder Pattern
@@ -194,7 +196,7 @@ fn demonstrate_newtype() {
 }
 
 /// Newtype with Deref for convenience.
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug)]
 struct Email(String);
@@ -359,6 +361,12 @@ impl<'a, T> Deref for MutexGuard<'a, T> {
     }
 }
 
+impl<'a, T> DerefMut for MutexGuard<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.data
+    }
+}
+
 // ============================================================================
 // Visitor Pattern
 // ============================================================================
@@ -480,66 +488,92 @@ fn compress_with<S: CompressionStrategy>(strategy: &S, data: &[u8]) -> Vec<u8> {
 // ============================================================================
 
 /// Command pattern for undo/redo.
+///
+/// The key idea: a command holds a *shared* handle to the receiver it mutates
+/// (`Rc<RefCell<T>>`), not a private copy. `execute()` applies a change to the
+/// shared state and `undo()` reverses it, so the effect is observable to anyone
+/// else holding a clone of the same `Rc<RefCell<T>>`.
 trait Command {
     fn execute(&mut self);
     fn undo(&mut self);
 }
 
+/// Shared, mutable receiver observed by both the commands and external code.
+type SharedValue = Rc<RefCell<i32>>;
+
 struct AddCommand {
     value: i32,
-    target: i32,
+    target: SharedValue,
+}
+
+impl AddCommand {
+    fn new(target: SharedValue, value: i32) -> Self {
+        AddCommand { value, target }
+    }
 }
 
 impl Command for AddCommand {
     fn execute(&mut self) {
-        self.target += self.value;
-        println!("Added {}, target now: {}", self.value, self.target);
+        *self.target.borrow_mut() += self.value;
+        println!("Added {}, target now: {}", self.value, self.target.borrow());
     }
 
     fn undo(&mut self) {
-        self.target -= self.value;
-        println!("Undid add, target now: {}", self.target);
+        *self.target.borrow_mut() -= self.value;
+        println!("Undid add, target now: {}", self.target.borrow());
     }
 }
 
 struct CommandHistory {
-    commands: Vec<Box<dyn Command>>,
+    done: Vec<Box<dyn Command>>,
+    undone: Vec<Box<dyn Command>>,
 }
 
 impl CommandHistory {
     fn new() -> Self {
         CommandHistory {
-            commands: Vec::new(),
+            done: Vec::new(),
+            undone: Vec::new(),
         }
     }
 
     fn execute(&mut self, mut command: Box<dyn Command>) {
         command.execute();
-        self.commands.push(command);
+        self.done.push(command);
+        // A fresh action invalidates the redo stack.
+        self.undone.clear();
     }
 
     fn undo(&mut self) {
-        if let Some(mut command) = self.commands.pop() {
+        if let Some(mut command) = self.done.pop() {
             command.undo();
+            self.undone.push(command);
+        }
+    }
+
+    fn redo(&mut self) {
+        if let Some(mut command) = self.undone.pop() {
+            command.execute();
+            self.done.push(command);
         }
     }
 }
 
 #[allow(dead_code)]
 fn demonstrate_command() {
+    // External code holds its own clone of the shared state.
+    let value: SharedValue = Rc::new(RefCell::new(0));
+
     let mut history = CommandHistory::new();
-
-    history.execute(Box::new(AddCommand {
-        value: 5,
-        target: 0,
-    }));
-    history.execute(Box::new(AddCommand {
-        value: 3,
-        target: 5,
-    }));
+    history.execute(Box::new(AddCommand::new(Rc::clone(&value), 5)));
+    history.execute(Box::new(AddCommand::new(Rc::clone(&value), 3)));
+    println!("After commands: {}", value.borrow()); // 8
 
     history.undo();
-    history.undo();
+    println!("After undo: {}", value.borrow()); // 5
+
+    history.redo();
+    println!("After redo: {}", value.borrow()); // 8
 }
 
 // ============================================================================
@@ -795,3 +829,66 @@ fn demonstrate_plugin_system() {
 /// - Type safety guarantees needed
 #[allow(dead_code)]
 const PATTERN_GUIDE: &str = "See module docs";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn command_execute_undo_redo_affect_shared_state() {
+        // Shared receiver observed by both the commands and this test.
+        let value: SharedValue = Rc::new(RefCell::new(0));
+
+        let mut history = CommandHistory::new();
+        history.execute(Box::new(AddCommand::new(Rc::clone(&value), 5)));
+        history.execute(Box::new(AddCommand::new(Rc::clone(&value), 3)));
+
+        // Commands mutated the shared state, visible externally.
+        assert_eq!(*value.borrow(), 8);
+
+        // Undo reverses the most recent command.
+        history.undo();
+        assert_eq!(*value.borrow(), 5);
+
+        history.undo();
+        assert_eq!(*value.borrow(), 0);
+
+        // Redo re-applies undone commands in order.
+        history.redo();
+        assert_eq!(*value.borrow(), 5);
+
+        history.redo();
+        assert_eq!(*value.borrow(), 8);
+    }
+
+    #[test]
+    fn command_new_action_clears_redo_stack() {
+        let value: SharedValue = Rc::new(RefCell::new(0));
+        let mut history = CommandHistory::new();
+
+        history.execute(Box::new(AddCommand::new(Rc::clone(&value), 5)));
+        history.undo();
+        assert_eq!(*value.borrow(), 0);
+
+        // A fresh action invalidates the redo stack; redo becomes a no-op.
+        history.execute(Box::new(AddCommand::new(Rc::clone(&value), 2)));
+        assert_eq!(*value.borrow(), 2);
+        history.redo();
+        assert_eq!(*value.borrow(), 2);
+    }
+
+    #[test]
+    fn mutex_guard_derefs_and_mutates_through_deref_mut() {
+        let mut data = 10i32;
+        {
+            let mut guard = MutexGuard { data: &mut data };
+            // Read through Deref.
+            assert_eq!(*guard, 10);
+            // Mutate through DerefMut.
+            *guard += 5;
+            assert_eq!(*guard, 15);
+        }
+        // The mutation is reflected in the underlying value.
+        assert_eq!(data, 15);
+    }
+}

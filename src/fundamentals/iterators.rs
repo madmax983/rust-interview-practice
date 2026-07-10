@@ -63,9 +63,11 @@ pub fn chain_example(nums1: Vec<i32>, nums2: Vec<i32>) -> Vec<i32> {
 }
 
 /// Pattern: fold for custom accumulation
+/// fold takes an initial accumulator and a closure combining acc with each item.
 #[must_use]
+#[allow(clippy::unnecessary_fold)] // Demonstrating fold explicitly; sum() would also work
 pub fn fold_example(nums: Vec<i32>) -> i32 {
-    nums.iter().sum::<i32>()
+    nums.iter().fold(0, |acc, &x| acc + x)
 }
 
 /// Pattern: sum/product for simple aggregation
@@ -78,6 +80,12 @@ pub fn sum_example(nums: Vec<i32>) -> i32 {
 #[must_use]
 pub fn max_example(nums: Vec<i32>) -> Option<i32> {
     nums.iter().copied().max()
+}
+
+/// Pattern: min for finding the smallest element
+#[must_use]
+pub fn min_example(nums: Vec<i32>) -> Option<i32> {
+    nums.iter().copied().min()
 }
 
 /// Pattern: any/all for boolean checks
@@ -165,6 +173,12 @@ mod tests {
     fn test_max() {
         assert_eq!(max_example(vec![1, 5, 3, 2]), Some(5));
         assert_eq!(max_example(vec![]), None);
+    }
+
+    #[test]
+    fn test_min() {
+        assert_eq!(min_example(vec![1, 5, 3, 2]), Some(1));
+        assert_eq!(min_example(vec![]), None);
     }
 
     #[test]

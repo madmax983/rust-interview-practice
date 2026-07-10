@@ -104,28 +104,38 @@ pub fn stack_example(nums: Vec<i32>) -> Vec<i32> {
     result
 }
 
-/// Pattern: VecDeque - sliding window
+/// Pattern: `VecDeque` as a monotonic deque - sliding window maximum
+///
+/// Keeps a deque of *indices* whose corresponding values are in strictly
+/// decreasing order, so the front is always the current window's maximum.
+///
+/// Time: O(n) - each index is pushed and popped at most once
+/// Space: O(k) - the deque holds at most `k` indices
 #[must_use]
 pub fn sliding_window_max(nums: Vec<i32>, k: usize) -> Vec<i32> {
     if nums.is_empty() || k == 0 {
         return vec![];
     }
 
-    let mut result = Vec::new();
-    let mut window = VecDeque::new();
+    let mut result = Vec::with_capacity(nums.len() + 1 - k.min(nums.len()));
+    let mut window: VecDeque<usize> = VecDeque::new();
 
-    for i in 0..nums.len() {
-        // Add to window
-        window.push_back(nums[i]);
-
-        // Remove from window if too large
-        if window.len() > k {
+    for (i, &val) in nums.iter().enumerate() {
+        // Drop the front index once it slides out of the window's left edge.
+        if window.front().is_some_and(|&front| front + k <= i) {
             window.pop_front();
         }
 
-        // Compute max if window is full
-        if window.len() == k {
-            result.push(*window.iter().max().unwrap_or(&0));
+        // Maintain decreasing values: pop indices whose value is <= the new one.
+        while window.back().is_some_and(|&back| nums[back] <= val) {
+            window.pop_back();
+        }
+
+        window.push_back(i);
+
+        // Once the first full window is formed, the front holds its maximum.
+        if let Some(&max_idx) = window.front().filter(|_| i + 1 >= k) {
+            result.push(nums[max_idx]);
         }
     }
 
@@ -213,6 +223,22 @@ mod tests {
     #[test]
     fn test_sliding_window_max() {
         assert_eq!(sliding_window_max(vec![1, 3, 2, 5, 4], 3), vec![3, 5, 5]);
+    }
+
+    #[test]
+    fn test_sliding_window_max_leetcode_example() {
+        assert_eq!(
+            sliding_window_max(vec![1, 3, -1, -3, 5, 3, 6, 7], 3),
+            vec![3, 3, 5, 5, 6, 7]
+        );
+    }
+
+    #[test]
+    fn test_sliding_window_max_edge_cases() {
+        assert_eq!(sliding_window_max(vec![], 3), vec![] as Vec<i32>);
+        assert_eq!(sliding_window_max(vec![1, 2, 3], 0), vec![] as Vec<i32>);
+        assert_eq!(sliding_window_max(vec![4, 2, 1], 1), vec![4, 2, 1]);
+        assert_eq!(sliding_window_max(vec![9, 8, 7], 3), vec![9]);
     }
 
     #[test]
