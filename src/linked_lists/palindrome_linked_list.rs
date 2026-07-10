@@ -128,8 +128,13 @@ pub fn is_palindrome_brute_force(head: Option<Box<ListNode>>) -> bool {
 /// # Gotcha
 /// Be careful with odd vs even lengths. If length is odd (e.g., 5), we skip the middle
 /// element (index 2) and compare `[0, 1]` with `reverse([3, 4])`.
+///
+/// # Panics
+///
+/// Does not panic in practice: the `unwrap` calls walk only `split_idx < len` nodes,
+/// so every node reached is guaranteed to exist.
 #[must_use]
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn is_palindrome_optimal(head: Option<Box<ListNode>>) -> bool {
     if head.is_none() {
         return true;

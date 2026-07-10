@@ -38,7 +38,7 @@ pub struct ListNode {
 
 impl ListNode {
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub const fn new(val: i32) -> Self {
         Self { next: None, val }
     }
@@ -59,6 +59,11 @@ impl ListNode {
 /// **Rust Insight:**
 /// While easy to write, this approach fundamentally subverts the linked list by turning it into
 /// an array, incurring an O(N) heap allocation overhead.
+///
+/// # Panics
+///
+/// Does not panic in practice: each `current.next` is set to `Some(..)` immediately
+/// before the `unwrap` reborrow, so a node is always present.
 #[must_use]
 pub fn middle_node_brute_force(mut head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     let mut nodes = Vec::new();
@@ -110,6 +115,7 @@ pub fn middle_node_brute_force(mut head: Option<Box<ListNode>>) -> Option<Box<Li
 /// returning an owned `Option<Box<ListNode>>`, we use `.clone()` on the `slow` reference at the end.
 #[must_use]
 #[allow(clippy::missing_panics_doc)] // Unwrap is safe due to loop invariants
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn middle_node_optimal(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     // RUST INSIGHT: We take immutable references to the Option wrapper itself.
     // This allows both `slow` and `fast` to safely inspect the linked list simultaneously.

@@ -30,7 +30,8 @@
 /// bounds or intentionally cast to `isize` for the boundary logic. Here, we use `isize`
 /// to safely represent boundaries that might cross over each other and go below zero.
 #[must_use]
-#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
+#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn spiral_order_brute_force(matrix: Vec<Vec<i32>>) -> Vec<i32> {
     if matrix.is_empty() || matrix[0].is_empty() {
         return vec![];

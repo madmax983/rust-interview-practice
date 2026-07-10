@@ -29,6 +29,7 @@ use std::collections::HashMap;
 /// Space: O(1) - no extra space needed
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn two_sum_brute_force(nums: Vec<i32>, target: i32) -> Vec<i32> {
     let n = nums.len();
 
@@ -50,6 +51,7 @@ pub fn two_sum_brute_force(nums: Vec<i32>, target: i32) -> Vec<i32> {
 /// Space: O(n) - hash map stores all elements
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn two_sum_optimized(nums: Vec<i32>, target: i32) -> Vec<i32> {
     let mut map = HashMap::with_capacity(nums.len()); // Maps value -> index
 

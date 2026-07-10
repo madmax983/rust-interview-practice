@@ -78,6 +78,7 @@ pub fn insert_brute_force(intervals: Vec<Vec<i32>>, new_interval: Vec<i32>) -> V
 /// 2. Merge all overlapping intervals with `new_interval`.
 /// 3. Add all remaining intervals.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn insert_optimized(intervals: Vec<Vec<i32>>, new_interval: Vec<i32>) -> Vec<Vec<i32>> {
     let mut result = Vec::with_capacity(intervals.len() + 1);
     let mut i = 0;
@@ -118,6 +119,11 @@ pub fn insert_optimized(intervals: Vec<Vec<i32>>, new_interval: Vec<i32>) -> Vec
 ///
 /// This approach is idiomatic Rust, unlike Python or Java where you might rely on index manipulation. We consume the `intervals` vector via `into_iter()`,
 /// which takes ownership of each `Vec<i32>` and avoids any `.clone()` calls.
+///
+/// # Panics
+///
+/// Does not panic in practice: the internal `unwrap` runs only inside a matching
+/// `Some(_)` branch, so the `Option` is guaranteed to hold a value at that point.
 #[must_use]
 pub fn insert_optimal(intervals: Vec<Vec<i32>>, new_interval: Vec<i32>) -> Vec<Vec<i32>> {
     // We pre-allocate capacity to avoid dynamic heap reallocations during push.

@@ -49,7 +49,7 @@
 /// and `None` to `-1` using `map_or`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
 pub fn search_brute_force(nums: Vec<i32>, target: i32) -> i32 {
     nums.iter()
         .position(|&x| x == target)
@@ -65,7 +65,7 @@ pub fn search_brute_force(nums: Vec<i32>, target: i32) -> i32 {
 /// perform a standard binary search on either the left or right sorted half.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
 pub fn search_optimized(nums: Vec<i32>, target: i32) -> i32 {
     if nums.is_empty() {
         return -1;
@@ -113,15 +113,15 @@ pub fn search_optimized(nums: Vec<i32>, target: i32) -> i32 {
     // 3. Standard binary search
     while left <= right {
         let mid = left + (right - left) / 2;
-        if nums[mid] == target {
-            return mid as i32;
-        } else if nums[mid] < target {
-            left = mid + 1;
-        } else {
-            if mid == 0 {
-                break; // Prevent underflow on `right = mid - 1`
+        match nums[mid].cmp(&target) {
+            std::cmp::Ordering::Equal => return mid as i32,
+            std::cmp::Ordering::Less => left = mid + 1,
+            std::cmp::Ordering::Greater => {
+                if mid == 0 {
+                    break; // Prevent underflow on `right = mid - 1`
+                }
+                right = mid - 1;
             }
-            right = mid - 1;
         }
     }
 
@@ -142,7 +142,7 @@ pub fn search_optimized(nums: Vec<i32>, target: i32) -> i32 {
 /// or adjust logic to avoid `0usize - 1`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
 pub fn search_optimal(nums: Vec<i32>, target: i32) -> i32 {
     if nums.is_empty() {
         return -1;

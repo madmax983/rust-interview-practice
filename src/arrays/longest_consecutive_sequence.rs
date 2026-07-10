@@ -52,7 +52,6 @@ pub fn longest_consecutive_brute_force(mut nums: Vec<i32>) -> i32 {
     for window in nums.windows(2) {
         if window[0] == window[1] {
             // Skip duplicates
-            continue;
         } else if window[0] + 1 == window[1] {
             // Consecutive elements
             current_len += 1;
@@ -74,6 +73,8 @@ pub fn longest_consecutive_brute_force(mut nums: Vec<i32>) -> i32 {
 /// Space: O(n) - The `HashSet` stores at most `n` unique elements.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+// `take_while` bounds the open-ended `(num..)` range, so iteration is finite.
+#[allow(clippy::maybe_infinite_iter)]
 pub fn longest_consecutive_optimal(nums: Vec<i32>) -> i32 {
     // Collect elements into a HashSet for O(1) lookups.
     // RUST INSIGHT: We use `into_iter()` to consume the vector and move the `i32`s

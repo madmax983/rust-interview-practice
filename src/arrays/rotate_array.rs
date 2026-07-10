@@ -29,6 +29,7 @@
 /// This approach simply calculates the new index for each element,
 /// writes to a temporary vector, and then clones the result back.
 #[allow(clippy::ptr_arg)]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn rotate_brute_force(nums: &mut Vec<i32>, k: i32) {
     if nums.is_empty() {
         return;
@@ -60,6 +61,7 @@ pub fn rotate_brute_force(nums: &mut Vec<i32>, k: i32) {
 /// 2. Reverse the first `k` elements.
 /// 3. Reverse the rest of the array `n-k` elements.
 #[allow(clippy::ptr_arg)]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn rotate_optimized(nums: &mut Vec<i32>, k: i32) {
     if nums.is_empty() {
         return;
@@ -94,6 +96,7 @@ pub fn rotate_optimized(nums: &mut Vec<i32>, k: i32) {
 /// Under the hood, this uses highly optimized algorithms (often GCD-based or block swaps)
 /// depending on the size of the slice and architecture.
 #[allow(clippy::ptr_arg)]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn rotate_optimal(nums: &mut Vec<i32>, k: i32) {
     if nums.is_empty() {
         return;

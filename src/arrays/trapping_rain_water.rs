@@ -39,16 +39,10 @@ pub fn trap_brute_force(height: Vec<i32>) -> i32 {
         // Skip first and last (can't trap water at edges)
 
         // Find maximum height to the left
-        let mut max_left = 0;
-        for j in 0..i {
-            max_left = max_left.max(height[j]);
-        }
+        let max_left = height[..i].iter().copied().max().unwrap_or(0);
 
         // Find maximum height to the right
-        let mut max_right = 0;
-        for j in (i + 1)..height.len() {
-            max_right = max_right.max(height[j]);
-        }
+        let max_right = height[i + 1..].iter().copied().max().unwrap_or(0);
 
         // Water level at this position is bounded by the smaller of max_left and max_right
         let water_level = max_left.min(max_right);

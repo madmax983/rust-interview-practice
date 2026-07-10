@@ -105,6 +105,7 @@ pub fn first_missing_positive_optimized(nums: Vec<i32>) -> i32 {
 /// can lead to panics. However, by strictly checking bounds and casting (`x as usize`), we can safely
 /// execute the algorithm. Rust's `swap` method makes exchanging elements clean and safe.
 #[must_use]
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn first_missing_positive_optimal(mut nums: Vec<i32>) -> i32 {
     let n = nums.len();
 

@@ -24,7 +24,8 @@ use std::collections::VecDeque;
 /// # RUST INSIGHT
 /// The `windows` iterator makes this implementation trivial one-liners. However, `max()` is O(K),
 /// leading to quadratic behavior in the worst case (e.g., sorted array).
-#[must_use] 
+#[must_use]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee k >= 0
 pub fn max_sliding_window_brute_force(nums: &[i32], k: i32) -> Vec<i32> {
     if nums.is_empty() || k == 0 {
         return vec![];
@@ -53,7 +54,8 @@ pub fn max_sliding_window_brute_force(nums: &[i32], k: i32) -> Vec<i32> {
 ///
 /// - **Time Complexity**: O(N). Each element is added to the deque once and removed at most once.
 /// - **Space Complexity**: O(K). The deque stores at most `k` indices.
-#[must_use] 
+#[must_use]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee k >= 0
 pub fn max_sliding_window_optimal(nums: &[i32], k: i32) -> Vec<i32> {
     if nums.is_empty() || k == 0 {
         return vec![];
@@ -100,7 +102,8 @@ pub fn max_sliding_window_optimal(nums: &[i32], k: i32) -> Vec<i32> {
 }
 
 /// Entry point that defaults to the optimal solution.
-#[must_use] 
+#[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn max_sliding_window(nums: Vec<i32>, k: i32) -> Vec<i32> {
     max_sliding_window_optimal(&nums, k)
 }

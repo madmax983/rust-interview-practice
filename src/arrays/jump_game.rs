@@ -45,7 +45,7 @@ use std::cmp;
 /// A `Vec<bool>` is a compact, cache-friendly way to memoize reachability without a `HashMap`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn can_jump_brute_force(nums: Vec<i32>) -> bool {
     let n = nums.len();
     if n == 0 {
@@ -87,7 +87,7 @@ pub fn can_jump_brute_force(nums: Vec<i32>) -> bool {
 /// `Continue(acc)` keeps folding, while `Break(res)` breaks it immediately.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn can_jump_optimized(nums: Vec<i32>) -> bool {
     let target = nums.len().saturating_sub(1);
 
@@ -136,7 +136,7 @@ pub fn can_jump_optimized(nums: Vec<i32>) -> bool {
 /// risking manual out-of-bounds array indexing or maintaining separate counter variables.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn can_jump_optimal(nums: Vec<i32>) -> bool {
     let mut max_reachable = 0;
 

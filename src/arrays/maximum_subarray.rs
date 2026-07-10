@@ -44,8 +44,8 @@ pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
 
     for i in 0..n {
         let mut current_sum = 0;
-        for j in i..n {
-            current_sum += nums[j];
+        for &val in &nums[i..] {
+            current_sum += val;
             max_sum = cmp::max(max_sum, current_sum);
         }
     }
@@ -64,10 +64,6 @@ pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn max_sub_array_optimized(nums: Vec<i32>) -> i32 {
-    if nums.is_empty() {
-        return 0;
-    }
-
     fn helper(nums: &[i32], lo: usize, hi: usize) -> i32 {
         if lo == hi {
             return nums[lo];
@@ -95,6 +91,10 @@ pub fn max_sub_array_optimized(nums: Vec<i32>) -> i32 {
 
         let cross_best = cross_left + cross_right;
         cmp::max(cmp::max(left_best, right_best), cross_best)
+    }
+
+    if nums.is_empty() {
+        return 0;
     }
 
     let n = nums.len();

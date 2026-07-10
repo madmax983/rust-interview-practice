@@ -48,6 +48,8 @@ use std::collections::HashSet;
 /// to track seen digits.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+// Row/column/box validation is inherently index-based (column-major access).
+#[allow(clippy::needless_range_loop)]
 pub fn is_valid_sudoku_brute_force(board: Vec<Vec<char>>) -> bool {
     // Check rows
     for r in 0..9 {
@@ -153,10 +155,14 @@ pub fn is_valid_sudoku_optimal(board: Vec<Vec<char>>) -> bool {
                 continue;
             }
 
-            // Map '1'-'9' to 0-8 for bit shifting
-            // We know it's a valid digit from constraints, so unwrap is safe, but
-            // using `to_digit` safely handles any char.
-            let digit = val.to_digit(10).unwrap() as u16 - 1;
+            // Map '1'-'9' to 0-8 for bit shifting. Non-digit cells never appear
+            // per constraints, but `let ... else` skips them without panicking.
+            let Some(digit_val) = val.to_digit(10) else {
+                continue;
+            };
+            // LeetCode constraints guarantee digits 1-9, so this fits in a u16.
+            #[allow(clippy::cast_possible_truncation)]
+            let digit = digit_val as u16 - 1;
 
             // Create a bitmask for this digit (e.g., '3' -> 0b000000100)
             let mask = 1 << digit;

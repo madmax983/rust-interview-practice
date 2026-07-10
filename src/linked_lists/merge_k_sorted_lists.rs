@@ -136,9 +136,11 @@ pub fn merge_k_lists_brute_force(lists: Vec<Option<Box<ListNode>>>) -> Option<Bo
 }
 
 /// Optimal approach: Min-Heap (Priority Queue)
+///
 /// Time: O(N log k) where k is the number of linked lists.
 /// - The heap size is at most k.
 /// - Every node is pushed and popped exactly once.
+///
 /// Space: O(k)
 /// - The heap stores at most k nodes at any time.
 /// - The result list simply relinks existing nodes (plus a dummy head).
@@ -147,8 +149,13 @@ pub fn merge_k_lists_brute_force(lists: Vec<Option<Box<ListNode>>>) -> Option<Bo
 /// - `BinaryHeap` for efficient minimum retrieval.
 /// - `Option<Box<T>>` manipulation with `take()`.
 /// - Wrapper struct (`HeapNode`) to bypass the orphan rule or implement custom trait behavior locally.
+///
+/// # Panics
+///
+/// Does not panic in practice: `tail.next` is set to `Some(node)` immediately before
+/// the `unwrap`, so the reborrow always finds a node.
 #[must_use]
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn merge_k_lists_optimal(lists: Vec<Option<Box<ListNode>>>) -> Option<Box<ListNode>> {
     let mut min_heap = BinaryHeap::new();
 

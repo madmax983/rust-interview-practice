@@ -70,7 +70,7 @@ pub struct ListNode {
 
 impl ListNode {
     #[inline]
-    #[must_use] 
+    #[must_use]
     pub const fn new(val: i32) -> Self {
         Self { val, next: None }
     }
@@ -101,8 +101,8 @@ pub fn has_cycle_brute_force(head: Option<Rc<RefCell<ListNode>>>) -> bool {
         if !visited.insert(Rc::as_ptr(&node)) {
             return true;
         }
-        // Clone the `Option<Rc<..>>` for the next node (cheap: bumps the refcount).
-        current = node.borrow().next.clone();
+        // Advance to the next node (cheap: bumps the refcount).
+        current = node.borrow().next.as_ref().map(Rc::clone);
     }
 
     false
@@ -113,7 +113,13 @@ pub fn has_cycle_brute_force(head: Option<Rc<RefCell<ListNode>>>) -> bool {
 // =========================================================================================
 
 /// Optimal approach: fast and slow pointers (Floyd's cycle-finding), O(1) memory.
+///
+/// # Panics
+///
+/// Does not panic in practice: the `unwrap` on `slow`'s `next` runs only after the
+/// fast pointer has already proven a further node exists, so a successor is guaranteed.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn has_cycle_optimal(head: Option<Rc<RefCell<ListNode>>>) -> bool {
     // GOTCHA: We must handle the empty list case gracefully.
     let Some(ref head_node) = head else {
