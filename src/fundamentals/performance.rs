@@ -80,10 +80,13 @@ fn demonstrate_allocation_optimization() {
     }
 
     // Pattern 3: String building
-    // Bad: creates many intermediate strings
-    let _bad = "Hello".to_string() + " " + "World";
+    // `String + &str` appends in place: the left `String` is consumed and its
+    // buffer reused, so this is a single growing allocation, not many
+    // intermediate strings. (Calling `format!` repeatedly in a loop, by
+    // contrast, allocates a fresh String on every iteration.)
+    let _concat = "Hello".to_string() + " " + "World";
 
-    // Good: pre-allocate
+    // Even better: pre-allocate the exact capacity up front
     let mut good = String::with_capacity(11);
     good.push_str("Hello");
     good.push(' ');
@@ -392,10 +395,13 @@ impl StringInterner {
     }
 
     fn intern(&mut self, s: &str) -> &str {
+        // Allocate an owned copy only the first time `s` is seen; every later
+        // call reuses the stored `String`. `HashSet` has no stable `entry`
+        // API (the set-equivalent `get_or_insert_with` is still nightly), so
+        // a single `contains` guard is what keeps the hot path allocation-free.
         if !self.strings.contains(s) {
             self.strings.insert(s.to_string());
         }
-        // SAFETY: We just inserted it if it wasn't there
         self.strings.get(s).unwrap()
     }
 }

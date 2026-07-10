@@ -137,6 +137,11 @@ fn demonstrate_repetition() {
     // Trailing comma support
     let v2 = my_vec![1, 2, 3,];
     println!("Vec with trailing comma: {v2:?}");
+
+    // Generate a struct definition from a field list.
+    create_struct!(Point { x: i32, y: i32 });
+    let p = Point { x: 1, y: 2 };
+    println!("Point: ({}, {})", p.x, p.y);
 }
 
 // ============================================================================
@@ -202,6 +207,12 @@ fn demonstrate_multiple_branches() {
 
     let s = "hello";
     println!("Type: {}", type_of!(s));
+
+    // Generate a function (with and without a return type).
+    create_function!(add(a: i32, b: i32) -> i32 { a + b });
+    create_function!(greet(name: &str) { println!("Hello, {name}!"); });
+    println!("add(2, 3) = {}", add(2, 3));
+    greet("world");
 }
 
 // ============================================================================
@@ -285,6 +296,16 @@ fn demonstrate_practical_macros() {
     // Time measurement
     let result = time_it!("Computing sum", { (0..1000).sum::<i32>() });
     println!("Result: {result}");
+
+    // Enum with generated string conversion.
+    string_enum!(Direction {
+        North,
+        East,
+        South,
+        West,
+    });
+    println!("First direction: {}", Direction::North.as_str());
+    println!("All directions: {:?}", Direction::variants());
 }
 
 // ============================================================================
@@ -344,6 +365,10 @@ fn demonstrate_dsl_macros() {
 
     // SQL-like DSL
     query!(SELECT id, name FROM users WHERE age > 18);
+
+    // HTML-like DSL
+    let markup = html!(div { "hello" });
+    println!("HTML: {markup}");
 }
 
 // ============================================================================
@@ -351,26 +376,32 @@ fn demonstrate_dsl_macros() {
 // ============================================================================
 
 /// Recursive macro for reversing arguments.
+///
+/// Recurse on the tail first, then `push` the head so it lands at the back.
+/// (Using `insert(0, $x)` instead would rebuild the original order, not reverse it.)
 macro_rules! reverse {
     // Base case: single element
     ($x:expr) => { vec![$x] };
 
-    // Recursive case: take last element, recurse on rest
+    // Recursive case: reverse the rest, then append the head at the end.
     ($x:expr, $($rest:expr),+) => {{
         let mut v = reverse!($($rest),+);
-        v.insert(0, $x);
+        v.push($x);
         v
     }};
 }
 
-/// Recursive macro for compile-time computation.
+/// Factorial macro.
+///
+/// A naive recursive version like `($n:expr) => { $n * factorial!($n - 1) }`
+/// never terminates: `$n - 1` is an *expression*, so it never matches the
+/// literal `0` base-case arm and the macro expands forever. Instead, expand
+/// to a runtime expression that folds the range `1..=n`.
 macro_rules! factorial {
-    (0) => {
-        1
-    };
-    ($n:expr) => {
-        $n * factorial!($n - 1)
-    };
+    ($n:expr) => {{
+        let n: u64 = $n;
+        (1..=n).product::<u64>()
+    }};
 }
 
 /// Tree-like recursion in macros.
@@ -388,8 +419,25 @@ macro_rules! tree {
 
 #[allow(dead_code)]
 fn demonstrate_recursive_macros() {
+    // Tree-building DSL. `tree!` expands to `Node::Leaf` / `Node::Branch`,
+    // so a `Node` type must be in scope.
+    #[derive(Debug)]
+    enum Node {
+        Leaf(i32),
+        Branch { value: i32, children: Vec<Node> },
+    }
+
     let reversed = reverse!(1, 2, 3, 4, 5);
     println!("Reversed: {reversed:?}");
+
+    // Compile-then-run factorial.
+    let f = factorial!(5);
+    println!("5! = {f}");
+
+    let leaf = tree!(9);
+    let branch = tree!(1 => { tree!(2), tree!(3) });
+    println!("Tree leaf: {leaf:?}");
+    println!("Tree branch: {branch:?}");
 }
 
 // ============================================================================
@@ -407,8 +455,9 @@ macro_rules! hygienic_macro {
 /// Break hygiene intentionally with $crate.
 macro_rules! use_crate_item {
     () => {
-        // $crate refers to the crate where macro is defined
-        $crate::demonstrate_basic_macros()
+        // $crate refers to the crate where the macro is defined, so this
+        // resolves no matter which module (or downstream crate) invokes it.
+        $crate::fundamentals::macros::demonstrate_basic_macros()
     };
 }
 
@@ -417,6 +466,9 @@ fn demonstrate_hygiene() {
     let temp = 5;
     let result = hygienic_macro!(10); // Uses internal temp, not outer
     println!("temp: {temp}, result: {result}");
+
+    // Invoke an item through the `$crate` path.
+    use_crate_item!();
 }
 
 // ============================================================================
@@ -622,8 +674,146 @@ macro_rules! test_cases {
 
 #[allow(dead_code)]
 fn demonstrate_interview_patterns() {
+    // Generate a Display impl from a field list.
+    #[derive(Debug)]
+    struct Pair {
+        a: i32,
+        b: i32,
+    }
+    impl_display_for_struct!(Pair { a, b });
+
     let x = 5;
     let y = 10;
     assert_all!(x > 0, y > 0, x < y);
     println!("All assertions passed!");
+
+    println!("Pair display: {}", Pair { a: 1, b: 2 });
+}
+
+// `test_cases!` generates `#[test]` functions from a table of inputs/outputs.
+#[allow(dead_code)]
+fn square_for_demo(x: i32) -> i32 {
+    x * x
+}
+
+test_cases!(square_for_demo:
+    demo_square_of_two => 2 => 4,
+    demo_square_of_three => 3 => 9,
+);
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    // Recursive / computation macros
+    #[test]
+    fn reverse_reverses_order() {
+        assert_eq!(reverse!(1, 2, 3), vec![3, 2, 1]);
+        assert_eq!(reverse!(1, 2, 3, 4, 5), vec![5, 4, 3, 2, 1]);
+        // Single-element base case.
+        assert_eq!(reverse!(42), vec![42]);
+    }
+
+    #[test]
+    fn factorial_computes_and_terminates() {
+        assert_eq!(factorial!(0), 1);
+        assert_eq!(factorial!(1), 1);
+        assert_eq!(factorial!(5), 120);
+        assert_eq!(factorial!(10), 3_628_800);
+    }
+
+    // `create_struct!` generates a struct definition.
+    #[test]
+    fn create_struct_defines_fields() {
+        create_struct!(Point { x: i32, y: i32 });
+
+        let p = Point { x: 3, y: 4 };
+        assert_eq!(p.x, 3);
+        assert_eq!(p.y, 4);
+    }
+
+    // `create_function!` generates functions, with and without a return type.
+    #[test]
+    fn create_function_generates_functions() {
+        create_function!(add(a: i32, b: i32) -> i32 { a + b });
+        create_function!(store(value: i32, into: &mut i32) { *into = value; });
+
+        assert_eq!(add(2, 3), 5);
+
+        let mut slot = 0;
+        store(9, &mut slot);
+        assert_eq!(slot, 9);
+    }
+
+    // `string_enum!` generates an enum plus `as_str`/`variants` helpers.
+    #[test]
+    fn string_enum_generates_conversions() {
+        string_enum!(Color { Red, Green, Blue });
+
+        assert_eq!(Color::Red.as_str(), "Red");
+        assert_eq!(Color::Green.as_str(), "Green");
+        assert_eq!(Color::variants(), &[Color::Red, Color::Green, Color::Blue]);
+        assert_eq!(Color::variants().len(), 3);
+    }
+
+    // `html!` builds a nested HTML string.
+    #[test]
+    fn html_builds_markup() {
+        assert_eq!(html!(div { "hello" }), "<div>hello</div>");
+        assert_eq!(html!(div { span { "x" } }), "<div><span>x</span></div>");
+    }
+
+    // `tree!` builds a recursive node structure.
+    #[test]
+    fn tree_builds_nodes() {
+        #[derive(Debug, PartialEq)]
+        enum Node {
+            Leaf(i32),
+            Branch { value: i32, children: Vec<Node> },
+        }
+
+        let leaf = tree!(7);
+        assert_eq!(leaf, Node::Leaf(7));
+
+        let branch = tree!(1 => { tree!(2), tree!(3) });
+        assert_eq!(
+            branch,
+            Node::Branch {
+                value: 1,
+                children: vec![Node::Leaf(2), Node::Leaf(3)],
+            }
+        );
+    }
+
+    // `use_crate_item!` exercises the `$crate` path (just runs without panicking).
+    #[test]
+    fn use_crate_item_runs() {
+        use_crate_item!();
+    }
+
+    // `impl_display_for_struct!` generates a `Display` implementation.
+    #[test]
+    fn impl_display_for_struct_formats() {
+        struct Pair {
+            a: i32,
+            b: i32,
+        }
+        impl_display_for_struct!(Pair { a, b });
+
+        let pair = Pair { a: 1, b: 2 };
+        assert_eq!(format!("{pair}"), "Pair { a: 1, b: 2, }");
+    }
+
+    // `test_cases!` generates `#[test]` functions from a table.
+    fn square(x: i32) -> i32 {
+        x * x
+    }
+
+    test_cases!(square:
+        square_of_two => 2 => 4,
+        square_of_three => 3 => 9,
+        square_of_negative => -4 => 16,
+    );
 }
