@@ -20,11 +20,12 @@
 //! manipulate path components efficiently without manual index tracking or
 //! complicated state machines, leveraging zero-allocation slicing (`&str`) where possible.
 
-/// Stack-based approach: Process components sequentially
+/// Optimal approach: Stack-based, process components sequentially
 /// Time: O(n) - Single pass through the string
 /// Space: O(n) - Stack stores path components
 ///
-/// We split the input string by `/`, iterate over the components, and manage a stack:
+/// Technique: imperative stack. We split the input string by `/`, iterate over the components,
+/// and manage a stack:
 /// - `.` or empty string: Ignore (current directory or redundant slash).
 /// - `..`: Pop from the stack (go up one level) if not empty.
 /// - Any other name: Push onto the stack.
@@ -32,7 +33,7 @@
 ///
 /// This approach is idiomatic Rust because it uses the iterator `split` combined with
 /// pattern matching, avoiding C-style manual character scanning.
-pub fn simplify_path(path: &str) -> String {
+pub fn simplify_path_optimal(path: &str) -> String {
     // RUST INSIGHT: `Vec` is the idiomatic stack in Rust.
     // It has O(1) amortized push/pop and contiguous memory layout.
     // Here we store `&str` slices, which are references into the original `path` string.
@@ -76,15 +77,15 @@ pub fn simplify_path(path: &str) -> String {
     result
 }
 
-/// Alternative functional approach: `fold`
+/// Brute force approach: Functional `fold`
 /// Time: O(n)
 /// Space: O(n)
 ///
-/// This implementation uses `fold` to build the stack in a single expression.
-/// While more "functional", it can be slightly harder to read for those new to combinators
-/// due to the `mut` accumulator.
-#[allow(dead_code)]
-pub fn simplify_path_functional(path: &str) -> String {
+/// Technique: functional `fold`. This implementation builds the stack in a single expression.
+/// It is labelled `_brute_force` per the repo's naming convention as the alternative implementation;
+/// its complexity is identical to the optimal loop. While more "functional", it can be slightly harder
+/// to read for those new to combinators due to the `mut` accumulator.
+pub fn simplify_path_brute_force(path: &str) -> String {
     let stack = path.split('/').fold(
         Vec::with_capacity(path.len() / 2),
         |mut stack, component| {
@@ -112,9 +113,15 @@ pub fn simplify_path_functional(path: &str) -> String {
     result
 }
 
+/// Main entry point - uses optimal solution
+#[must_use]
+pub fn simplify_path(path: &str) -> String {
+    simplify_path_optimal(path)
+}
+
 /*
     Alternative approaches:
-    1. Functional `fold`: As shown in `simplify_path_functional`, this is more concise but
+    1. Functional `fold`: As shown in `simplify_path_brute_force`, this is more concise but
        requires understanding `fold` with a mutable accumulator (or `reduce`).
     2. `std::path::PathBuf`: In real-world applications, always use the standard library's
        `Path` and `PathBuf` types. They handle platform-specific separators (`\` vs `/`).
@@ -146,8 +153,25 @@ mod tests {
     }
 
     #[test]
-    fn test_functional_approach() {
-        assert_eq!(simplify_path_functional("/a/./b/../../c/"), "/c");
+    fn test_brute_force_approach() {
+        assert_eq!(simplify_path_brute_force("/a/./b/../../c/"), "/c");
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        let cases = [
+            "/home/",
+            "/home//foo/",
+            "/../",
+            "/home/..",
+            "/",
+            "/a/./b/../../c/",
+            "/a//b////c/d//././/..",
+        ];
+        for path in cases {
+            assert_eq!(simplify_path_brute_force(path), simplify_path_optimal(path));
+            assert_eq!(simplify_path(path), simplify_path_optimal(path));
+        }
     }
 
     #[test]

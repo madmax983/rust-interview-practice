@@ -24,6 +24,8 @@
 //!
 //! In Python or Java, you might be tempted to use linked lists or custom node classes. In Rust,
 //! `Vec` provides exactly what we need with excellent performance due to contiguous memory allocation.
+//!
+//! Note: design problem with two idiomatic variants (`MinStack`, `MinStackOptimized`); the brute/optimized/optimal progression does not apply here.
 
 /// A Min Stack using a single `Vec` storing `(value, current_min)` tuples.
 #[derive(Default, Debug)]

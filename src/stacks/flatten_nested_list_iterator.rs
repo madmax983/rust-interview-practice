@@ -38,6 +38,8 @@
 //!
 //! Time Complexity: O(N) total for iterating through all N integers. Each integer and list is pushed and popped exactly once.
 //! Space Complexity: O(D), where D is the maximum depth of nesting (stack size).
+//!
+//! Note: single canonical (design) implementation of a custom iterator; the brute/optimized/optimal progression does not apply here.
 
 /// Represents a nested integer, which can be a single integer or a list of NestedIntegers.
 #[derive(Debug, PartialEq, Eq, Clone)]

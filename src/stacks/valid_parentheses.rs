@@ -27,16 +27,23 @@
 //! At the end, if the stack is empty, the string is valid.
 //!
 //! We provide three implementations:
-//! 1. **Iterative (`is_valid_iterative`)**: A standard loop over `chars()`, useful for understanding the core logic.
-//! 2. **Optimal (`is_valid_optimal`)**: Working on `as_bytes()` to skip UTF-8 overhead, giving C-like performance with Rust safety.
-//! 3. **Functional (`is_valid_functional`)**: Using `try_fold` to solve the problem immutably using iterator adapters.
+//! 1. **Brute force / iterative (`is_valid_brute_force`)**: A standard loop over `chars()`, which pays UTF-8
+//!    decoding overhead. Useful for understanding the core logic.
+//! 2. **Optimized / functional (`is_valid_optimized`)**: Using `try_fold` over `as_bytes()` to solve the problem
+//!    immutably with iterator adapters, skipping UTF-8 decoding.
+//! 3. **Optimal (`is_valid_optimal`)**: An imperative loop over `as_bytes()` to skip UTF-8 overhead, giving
+//!    C-like performance with Rust safety.
 
-/// Iterative Approach
+/// Brute force approach: Iterative loop over `chars()`
+///
+/// Technique: the simplest correct approach — decode the string into `char`s and match each one.
+/// It is the "brute force" of this file because it pays UTF-8 decoding overhead that the byte-based
+/// variants avoid, even though the asymptotic complexity is identical.
 ///
 /// Time: O(N) - Iterates through each character in the string once.
 /// Space: O(N) - In the worst case (e.g., all opening brackets), the stack will hold all characters.
 #[must_use]
-pub fn is_valid_iterative(s: String) -> bool {
+pub fn is_valid_brute_force(s: String) -> bool {
     let mut stack = Vec::new();
 
     // RUST INSIGHT: `chars()` handles proper UTF-8 decoding, which isn't strictly
@@ -106,15 +113,16 @@ pub fn is_valid_optimal(s: String) -> bool {
     stack.is_empty()
 }
 
-/// Functional Approach: Using `try_fold`
+/// Optimized approach: Functional `try_fold` over bytes
+///
+/// Technique: a functional style that avoids manual looping. `try_fold` allows short-circuiting
+/// on the first mismatched bracket by returning `Err`. It operates on `as_bytes()`, so it skips the
+/// UTF-8 decoding that the brute-force `chars()` variant performs.
 ///
 /// Time: O(N)
 /// Space: O(N)
-///
-/// A functional style that avoids manual looping. `try_fold` allows short-circuiting
-/// on the first mismatched bracket by returning `Err`.
 #[must_use]
-pub fn is_valid_functional(s: String) -> bool {
+pub fn is_valid_optimized(s: String) -> bool {
     // We fold over the bytes. State is our `Vec<u8>` stack.
     let result = s.as_bytes().iter().try_fold(Vec::new(), |mut stack, &b| {
         match b {
@@ -159,59 +167,59 @@ mod tests {
     // Happy Path Tests
     #[test]
     fn test_valid_parentheses_simple() {
-        assert!(is_valid_iterative("()".to_string()));
+        assert!(is_valid_brute_force("()".to_string()));
         assert!(is_valid_optimal("()".to_string()));
-        assert!(is_valid_functional("()".to_string()));
+        assert!(is_valid_optimized("()".to_string()));
     }
 
     #[test]
     fn test_valid_parentheses_multiple() {
-        assert!(is_valid_iterative("()[]{}".to_string()));
+        assert!(is_valid_brute_force("()[]{}".to_string()));
         assert!(is_valid_optimal("()[]{}".to_string()));
-        assert!(is_valid_functional("()[]{}".to_string()));
+        assert!(is_valid_optimized("()[]{}".to_string()));
     }
 
     #[test]
     fn test_valid_parentheses_nested() {
-        assert!(is_valid_iterative("({[]})".to_string()));
+        assert!(is_valid_brute_force("({[]})".to_string()));
         assert!(is_valid_optimal("({[]})".to_string()));
-        assert!(is_valid_functional("({[]})".to_string()));
+        assert!(is_valid_optimized("({[]})".to_string()));
     }
 
     // Edge Case Tests
     #[test]
     fn test_invalid_mismatched() {
-        assert!(!is_valid_iterative("(]".to_string()));
+        assert!(!is_valid_brute_force("(]".to_string()));
         assert!(!is_valid_optimal("(]".to_string()));
-        assert!(!is_valid_functional("(]".to_string()));
+        assert!(!is_valid_optimized("(]".to_string()));
     }
 
     #[test]
     fn test_invalid_wrong_order() {
-        assert!(!is_valid_iterative("([)]".to_string()));
+        assert!(!is_valid_brute_force("([)]".to_string()));
         assert!(!is_valid_optimal("([)]".to_string()));
-        assert!(!is_valid_functional("([)]".to_string()));
+        assert!(!is_valid_optimized("([)]".to_string()));
     }
 
     #[test]
     fn test_invalid_only_opening() {
-        assert!(!is_valid_iterative("(((".to_string()));
+        assert!(!is_valid_brute_force("(((".to_string()));
         assert!(!is_valid_optimal("(((".to_string()));
-        assert!(!is_valid_functional("(((".to_string()));
+        assert!(!is_valid_optimized("(((".to_string()));
     }
 
     #[test]
     fn test_invalid_only_closing() {
-        assert!(!is_valid_iterative(")))".to_string()));
+        assert!(!is_valid_brute_force(")))".to_string()));
         assert!(!is_valid_optimal(")))".to_string()));
-        assert!(!is_valid_functional(")))".to_string()));
+        assert!(!is_valid_optimized(")))".to_string()));
     }
 
     #[test]
     fn test_empty_string() {
-        assert!(is_valid_iterative("".to_string()));
+        assert!(is_valid_brute_force("".to_string()));
         assert!(is_valid_optimal("".to_string()));
-        assert!(is_valid_functional("".to_string()));
+        assert!(is_valid_optimized("".to_string()));
     }
 
     // Stress/Boundary Tests
@@ -225,8 +233,8 @@ mod tests {
         for _ in 0..depth {
             s.push_str("}])");
         }
-        assert!(is_valid_iterative(s.clone()));
+        assert!(is_valid_brute_force(s.clone()));
         assert!(is_valid_optimal(s.clone()));
-        assert!(is_valid_functional(s));
+        assert!(is_valid_optimized(s));
     }
 }
