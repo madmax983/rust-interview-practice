@@ -107,7 +107,7 @@ pub fn is_palindrome_brute_force(head: Option<Box<ListNode>>) -> bool {
     true
 }
 
-/// Optimized Approach: Reverse Second Half In-Place
+/// Optimal Approach: Reverse Second Half In-Place
 ///
 /// Time: O(N) - Count length (N), advance to middle (N/2), reverse (N/2), compare (N/2).
 /// Space: O(1) - Constant extra space (ignoring recursion stack if recursive reverse is used, but we use iterative).

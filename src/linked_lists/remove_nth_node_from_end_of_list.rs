@@ -99,7 +99,7 @@ pub fn remove_nth_from_end_brute_force(
     ListNode::from_vec(vec)
 }
 
-/// Optimal Iterative approach: Two passes (Calculate length, then traverse)
+/// Optimal approach: iterative two passes (calculate length, then traverse)
 /// Time: O(N) - Two passes (one to count, one to remove)
 /// Space: O(1) - Constant extra space
 ///
@@ -111,7 +111,7 @@ pub fn remove_nth_from_end_brute_force(
 #[must_use]
 #[allow(clippy::cast_sign_loss)] // n is guaranteed positive
 #[allow(clippy::missing_panics_doc)] // Unwraps are safe due to loop invariants
-pub fn remove_nth_from_end_iterative(head: Option<Box<ListNode>>, n: i32) -> Option<Box<ListNode>> {
+pub fn remove_nth_from_end_optimal(head: Option<Box<ListNode>>, n: i32) -> Option<Box<ListNode>> {
     // Pass 1: Calculate length
     let mut len = 0;
     let mut current = &head;
@@ -143,7 +143,7 @@ pub fn remove_nth_from_end_iterative(head: Option<Box<ListNode>>, n: i32) -> Opt
     dummy.next
 }
 
-/// Recursive approach (One Pass)
+/// Optimized approach: recursive one pass
 /// Time: O(N) - Visit each node once
 /// Space: O(N) - Stack recursion depth
 ///
@@ -154,7 +154,7 @@ pub fn remove_nth_from_end_iterative(head: Option<Box<ListNode>>, n: i32) -> Opt
 /// at the cost of stack space.
 #[must_use]
 #[allow(clippy::option_if_let_else)] // Explicit match is cleaner for recursion here
-pub fn remove_nth_from_end_recursive(head: Option<Box<ListNode>>, n: i32) -> Option<Box<ListNode>> {
+pub fn remove_nth_from_end_optimized(head: Option<Box<ListNode>>, n: i32) -> Option<Box<ListNode>> {
     fn helper(node: Option<Box<ListNode>>, n: i32) -> (Option<Box<ListNode>>, i32) {
         if let Some(mut boxed_node) = node {
             let (next_node, index) = helper(boxed_node.next.take(), n);
@@ -174,10 +174,10 @@ pub fn remove_nth_from_end_recursive(head: Option<Box<ListNode>>, n: i32) -> Opt
     helper(head, n).0
 }
 
-/// Main entry point - uses iterative two-pass solution as it is O(1) space (more robust than recursion)
+/// Main entry point - uses the optimal iterative two-pass solution (O(1) space, more robust than recursion).
 #[must_use]
 pub fn remove_nth_from_end(head: Option<Box<ListNode>>, n: i32) -> Option<Box<ListNode>> {
-    remove_nth_from_end_iterative(head, n)
+    remove_nth_from_end_optimal(head, n)
 }
 
 #[cfg(test)]
@@ -192,16 +192,16 @@ mod tests {
     }
 
     #[test]
-    fn test_iterative_example_1() {
+    fn test_optimal_example_1() {
         let list = ListNode::from_vec(vec![1, 2, 3, 4, 5]);
-        let result = remove_nth_from_end_iterative(list, 2);
+        let result = remove_nth_from_end_optimal(list, 2);
         assert_eq!(result.unwrap().to_vec(), vec![1, 2, 3, 5]);
     }
 
     #[test]
-    fn test_recursive_example_1() {
+    fn test_optimized_example_1() {
         let list = ListNode::from_vec(vec![1, 2, 3, 4, 5]);
-        let result = remove_nth_from_end_recursive(list, 2);
+        let result = remove_nth_from_end_optimized(list, 2);
         assert_eq!(result.unwrap().to_vec(), vec![1, 2, 3, 5]);
     }
 
@@ -232,8 +232,8 @@ mod tests {
         let n = 3;
 
         let res1 = remove_nth_from_end_brute_force(ListNode::from_vec(v.clone()), n);
-        let res2 = remove_nth_from_end_iterative(ListNode::from_vec(v.clone()), n);
-        let res3 = remove_nth_from_end_recursive(ListNode::from_vec(v.clone()), n);
+        let res2 = remove_nth_from_end_optimized(ListNode::from_vec(v.clone()), n);
+        let res3 = remove_nth_from_end_optimal(ListNode::from_vec(v.clone()), n);
 
         assert_eq!(res1, res2);
         assert_eq!(res2, res3);

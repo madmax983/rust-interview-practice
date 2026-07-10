@@ -87,16 +87,16 @@ pub fn reverse_list_brute_force(head: Option<Box<ListNode>>) -> Option<Box<ListN
     ListNode::from_vec(vec)
 }
 
-/// Recursive approach: Tail recursive helper
+/// Optimized approach: recursive with a tail-recursive helper
 /// Time: O(N) - Visit each node once
-/// Space: O(N) - Stack frames for recursion
+/// Space: O(N) - Stack frames for recursion (one frame per node)
 ///
 /// This uses a helper function to accumulate the reversed list.
 ///
 /// RUST INSIGHT: Tail call optimization is not guaranteed in Rust yet,
 /// so this could stack overflow for very large lists (though N=5000 might be fine).
 #[must_use]
-pub fn reverse_list_recursive(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+pub fn reverse_list_optimized(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     fn helper(head: Option<Box<ListNode>>, prev: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
         match head {
             None => prev,
@@ -155,9 +155,9 @@ mod tests {
     }
 
     #[test]
-    fn test_recursive_example_1() {
+    fn test_optimized_example_1() {
         let list = ListNode::from_vec(vec![1, 2, 3, 4, 5]);
-        let result = reverse_list_recursive(list);
+        let result = reverse_list_optimized(list);
         assert_eq!(result.unwrap().to_vec(), vec![5, 4, 3, 2, 1]);
     }
 
@@ -196,7 +196,7 @@ mod tests {
         let l3 = ListNode::from_vec(v.clone());
 
         let res1 = reverse_list_brute_force(l1);
-        let res2 = reverse_list_recursive(l2);
+        let res2 = reverse_list_optimized(l2);
         let res3 = reverse_list_optimal(l3);
 
         assert_eq!(res1, res2);
