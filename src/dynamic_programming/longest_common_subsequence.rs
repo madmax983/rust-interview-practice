@@ -61,9 +61,6 @@ use std::cmp;
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn longest_common_subsequence_brute_force(text1: String, text2: String) -> i32 {
-    let t1 = text1.as_bytes();
-    let t2 = text2.as_bytes();
-
     fn solve(t1: &[u8], t2: &[u8], i: usize, j: usize) -> i32 {
         // Base case: one prefix is empty, so no common subsequence remains.
         if i == 0 || j == 0 {
@@ -79,6 +76,8 @@ pub fn longest_common_subsequence_brute_force(text1: String, text2: String) -> i
         }
     }
 
+    let t1 = text1.as_bytes();
+    let t2 = text2.as_bytes();
     solve(t1, t2, t1.len(), t2.len())
 }
 

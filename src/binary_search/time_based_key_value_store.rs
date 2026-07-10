@@ -15,6 +15,7 @@ use std::collections::{BTreeMap, HashMap};
 /// Time Complexity:
 ///   - `set`: O(log N) for `BTreeMap` insertion.
 ///   - `get`: O(log N) for `BTreeMap` range query.
+///
 /// Space Complexity: O(K * N) where K is number of keys and N is number of timestamps.
 ///
 /// Why this is idiomatic Rust:
@@ -63,6 +64,7 @@ impl TimeMapBTree {
 /// Time Complexity:
 ///   - `set`: O(1) amortized, since timestamps are strictly increasing per `LeetCode` constraints.
 ///   - `get`: O(log N) using binary search (`partition_point`).
+///
 /// Space Complexity: O(K * N)
 ///
 /// Why prefer this over `BTreeMap`?

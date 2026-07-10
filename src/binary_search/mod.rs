@@ -1,3 +1,5 @@
+// The `binary_search` problem file matches its category name by design; renaming would break the public path.
+#[allow(clippy::module_inception)]
 pub mod binary_search;
 pub mod find_minimum_in_rotated_sorted_array;
 pub mod koko_eating_bananas;

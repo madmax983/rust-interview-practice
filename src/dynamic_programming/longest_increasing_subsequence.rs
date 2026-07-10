@@ -40,12 +40,8 @@
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn length_of_lis_brute_force(nums: Vec<i32>) -> i32 {
-    let n = nums.len();
-    // Memoization table initialized with -1 (indicating uncomputed).
-    // `memo[prev_index + 1][curr_index]` stores the result.
-    // We offset prev_index by 1 because it can be -1 (initial state).
-    let mut memo = vec![vec![-1; n]; n + 1];
-
+    // `prev_index + 1` is always >= 0 and `curr_index` fits an isize for LeetCode sizes.
+    #[allow(clippy::cast_sign_loss, clippy::cast_possible_wrap)]
     fn helper(nums: &[i32], prev_index: isize, curr_index: usize, memo: &mut Vec<Vec<i32>>) -> i32 {
         if curr_index == nums.len() {
             return 0;
@@ -72,6 +68,12 @@ pub fn length_of_lis_brute_force(nums: Vec<i32>) -> i32 {
         memo[memo_prev_idx][curr_index] = result;
         result
     }
+
+    let n = nums.len();
+    // Memoization table initialized with -1 (indicating uncomputed).
+    // `memo[prev_index + 1][curr_index]` stores the result.
+    // We offset prev_index by 1 because it can be -1 (initial state).
+    let mut memo = vec![vec![-1; n]; n + 1];
 
     helper(&nums, -1, 0, &mut memo)
 }
@@ -121,6 +123,8 @@ pub fn length_of_lis_optimized(nums: Vec<i32>) -> i32 {
 /// Space: O(N) - For the `tails` vector.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// LeetCode constraints (nums.len() <= 2500) guarantee this cast fits.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub fn length_of_lis_optimal(nums: Vec<i32>) -> i32 {
     // ⚡ BOLT OPTIMIZATION: Pre-allocate capacity to eliminate dynamic heap reallocations.
     let mut tails = Vec::with_capacity(nums.len());

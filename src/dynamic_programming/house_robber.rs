@@ -36,7 +36,7 @@ use std::cmp::max;
 /// Recursion in Rust is straightforward but lacks tail-call optimization (TCO) generally.
 /// Deep recursion can overflow the stack, though for `n=100` (problem constraint), it is safe.
 #[allow(clippy::needless_pass_by_value)]
-#[must_use] 
+#[must_use]
 pub fn rob_brute_force(nums: Vec<i32>) -> i32 {
     fn solve(nums: &[i32], i: usize) -> i32 {
         if i >= nums.len() {
@@ -69,11 +69,8 @@ pub fn rob_brute_force(nums: Vec<i32>) -> i32 {
 /// # GOTCHA
 /// Be careful with `usize` indices. `nums.len()` returns `usize`.
 #[allow(clippy::needless_pass_by_value)]
-#[must_use] 
+#[must_use]
 pub fn rob_optimized(nums: Vec<i32>) -> i32 {
-    let n = nums.len();
-    let mut memo = vec![None; n];
-
     fn solve(nums: &[i32], i: usize, memo: &mut [Option<i32>]) -> i32 {
         if i >= nums.len() {
             return 0;
@@ -92,6 +89,8 @@ pub fn rob_optimized(nums: Vec<i32>) -> i32 {
         res
     }
 
+    let n = nums.len();
+    let mut memo = vec![None; n];
     solve(&nums, 0, &mut memo)
 }
 
@@ -111,7 +110,7 @@ pub fn rob_optimized(nums: Vec<i32>) -> i32 {
 /// Handling indices `i-1` and `i-2` requires care.
 /// We pad the `dp` array or handle base cases explicitly to avoid underflow/panic.
 #[allow(clippy::needless_pass_by_value)]
-#[must_use] 
+#[must_use]
 pub fn rob_tabulation(nums: Vec<i32>) -> i32 {
     if nums.is_empty() {
         return 0;

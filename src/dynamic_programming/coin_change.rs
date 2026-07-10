@@ -37,7 +37,7 @@ use std::collections::HashMap;
 /// In Rust, strict type checking prevents us from accidentally using `amount` (i32) as an index.
 /// While beneficial, it requires frequent `as` casting when working with array-based DP.
 #[allow(clippy::needless_pass_by_value)]
-#[must_use] 
+#[must_use]
 pub fn coin_change_brute_force(coins: &[i32], amount: i32) -> i32 {
     if amount == 0 {
         return 0;
@@ -66,7 +66,7 @@ pub fn coin_change_brute_force(coins: &[i32], amount: i32) -> i32 {
 ///
 /// - **Time Complexity**: O(S * n). Each state (amount) is computed once, and for each state, we iterate through `n` coins.
 /// - **Space Complexity**: O(S). The `HashMap` stores `S` entries, and recursion depth is at most `S`.
-#[must_use] 
+#[must_use]
 pub fn coin_change_optimized(coins: &[i32], amount: i32) -> i32 {
     let mut memo = HashMap::new();
     coin_change_memo(coins, amount, &mut memo)
@@ -118,7 +118,7 @@ fn coin_change_memo(coins: &[i32], amount: i32, memo: &mut HashMap<i32, i32>) ->
 /// Note: We assume `amount` is small enough that `amount + 1` does not overflow `i32`.
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_sign_loss)]
-#[must_use] 
+#[must_use]
 pub fn coin_change_optimal(coins: &[i32], amount: i32) -> i32 {
     if amount < 0 {
         return -1;
@@ -154,7 +154,8 @@ pub fn coin_change_optimal(coins: &[i32], amount: i32) -> i32 {
 }
 
 /// Main entry point
-#[must_use] 
+#[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn coin_change(coins: Vec<i32>, amount: i32) -> i32 {
     coin_change_optimal(&coins, amount)
 }

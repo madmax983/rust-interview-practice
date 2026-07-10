@@ -39,10 +39,6 @@ use std::collections::{HashMap, HashSet};
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn word_break_brute_force(s: String, word_dict: Vec<String>) -> bool {
-    // RUST INSIGHT: We convert the Vec<String> into a HashSet<&str> to get O(1) lookups.
-    // We only borrow the strings inside the dict, avoiding any allocations.
-    let dict: HashSet<&str> = word_dict.iter().map(String::as_str).collect();
-
     fn solve(s: &str, dict: &HashSet<&str>) -> bool {
         if s.is_empty() {
             return true;
@@ -59,6 +55,10 @@ pub fn word_break_brute_force(s: String, word_dict: Vec<String>) -> bool {
         false
     }
 
+    // RUST INSIGHT: We convert the Vec<String> into a HashSet<&str> to get O(1) lookups.
+    // We only borrow the strings inside the dict, avoiding any allocations.
+    let dict: HashSet<&str> = word_dict.iter().map(String::as_str).collect();
+
     solve(&s, &dict)
 }
 
@@ -73,9 +73,6 @@ pub fn word_break_brute_force(s: String, word_dict: Vec<String>) -> bool {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn word_break_optimized(s: String, word_dict: Vec<String>) -> bool {
-    let dict: HashSet<&str> = word_dict.iter().map(String::as_str).collect();
-    let mut memo: HashMap<usize, bool> = HashMap::new();
-
     fn solve(start: usize, s: &str, dict: &HashSet<&str>, memo: &mut HashMap<usize, bool>) -> bool {
         if start == s.len() {
             return true;
@@ -96,6 +93,9 @@ pub fn word_break_optimized(s: String, word_dict: Vec<String>) -> bool {
         memo.insert(start, false);
         false
     }
+
+    let dict: HashSet<&str> = word_dict.iter().map(String::as_str).collect();
+    let mut memo: HashMap<usize, bool> = HashMap::new();
 
     solve(0, &s, &dict, &mut memo)
 }

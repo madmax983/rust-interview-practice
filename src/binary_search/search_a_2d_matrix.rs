@@ -9,6 +9,8 @@
 //!
 //! Note: single canonical implementation; the brute/optimized/optimal progression does not apply here.
 
+use std::cmp::Ordering;
+
 /// Approach: 1D Binary Search
 ///
 /// Time Complexity: O(log(M * N))
@@ -44,15 +46,15 @@ impl Solution {
 
             let mid_val = matrix[row][col];
 
-            if mid_val == target {
-                return true;
-            } else if mid_val < target {
-                left = mid + 1;
-            } else {
-                if mid == 0 {
-                    break;
+            match mid_val.cmp(&target) {
+                Ordering::Equal => return true,
+                Ordering::Less => left = mid + 1,
+                Ordering::Greater => {
+                    if mid == 0 {
+                        break;
+                    }
+                    right = mid - 1;
                 }
-                right = mid - 1;
             }
         }
 

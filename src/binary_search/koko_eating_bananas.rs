@@ -22,6 +22,9 @@
 pub struct Solution;
 
 impl Solution {
+    /// # Panics
+    ///
+    /// Panics if `piles` is empty (the `LeetCode` constraints guarantee `piles.len() >= 1`).
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     #[allow(clippy::cast_possible_truncation)]

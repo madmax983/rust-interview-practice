@@ -42,6 +42,7 @@
 /// At each element in the input array, we have two choices:
 /// 1. Include the element in the current subset.
 /// 2. Exclude the element from the current subset.
+///
 /// We use recursion to explore both branches. To avoid allocating a new `Vec` for every step,
 /// we maintain a single `current` path and push/pop elements as we recurse and backtrack.
 ///

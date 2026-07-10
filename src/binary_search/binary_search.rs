@@ -84,16 +84,16 @@ pub fn search_optimized(nums: Vec<i32>, target: i32) -> i32 {
         // Using `left + (right - left) / 2` avoids integer overflow that can occur with `(left + right) / 2`.
         let mid = left + (right - left) / 2;
 
-        if nums[mid] == target {
-            return mid as i32;
-        } else if nums[mid] < target {
-            left = mid + 1;
-        } else {
-            // Check to avoid underflow
-            if mid == 0 {
-                break;
+        match nums[mid].cmp(&target) {
+            Ordering::Equal => return mid as i32,
+            Ordering::Less => left = mid + 1,
+            Ordering::Greater => {
+                // Check to avoid underflow
+                if mid == 0 {
+                    break;
+                }
+                right = mid - 1;
             }
-            right = mid - 1;
         }
     }
 
@@ -139,6 +139,9 @@ pub fn search_optimal(nums: Vec<i32>, target: i32) -> i32 {
 /// Rust provides a built-in `binary_search` for slices.
 /// In a real-world scenario, you would just use `nums.binary_search(&target)`.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)]
 pub fn search_std(nums: Vec<i32>, target: i32) -> i32 {
     // RUST INSIGHT:
     // `binary_search` returns `Result<usize, usize>`.

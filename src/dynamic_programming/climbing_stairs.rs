@@ -45,6 +45,8 @@ pub fn climb_stairs_brute_force(n: i32) -> i32 {
 /// We build a 1D DP table from the bottom up. `dp[i]` stores the number of ways
 /// to reach step `i`. This eliminates the redundant calculations of the brute force method.
 #[must_use]
+// LeetCode constraints (1 <= n <= 45) guarantee these casts fit.
+#[allow(clippy::cast_sign_loss)]
 pub fn climb_stairs_optimized(n: i32) -> i32 {
     if n <= 2 {
         return n;

@@ -86,6 +86,7 @@ pub fn partition_brute_force(s: String) -> Vec<Vec<String>> {
 }
 
 /// Optimized approach: Backtracking with zero-cost string slices (`&str`)
+///
 /// Time: O(N * 2^N) - generating partitions
 /// Space: O(N) - recursion depth and path slice tracker, plus O(N * 2^N) for the final result
 ///
@@ -147,6 +148,7 @@ pub fn partition_optimized(s: String) -> Vec<Vec<String>> {
 }
 
 /// Optimal approach: Backtracking with pre-computed DP for palindromes
+///
 /// Time: O(N * 2^N) worst case, but significantly faster on average by avoiding
 ///       repeated palindrome checks.
 /// Space: O(N^2) for DP table, plus recursion depth O(N).
@@ -156,27 +158,6 @@ pub fn partition_optimized(s: String) -> Vec<Vec<String>> {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn partition_optimal(s: String) -> Vec<Vec<String>> {
-    let n = s.len();
-    if n == 0 {
-        return vec![];
-    }
-
-    let bytes = s.as_bytes();
-
-    // DP table: dp[i][j] is true if s[i..=j] is a palindrome
-    // RUST INSIGHT: Flat 1D vector acting as a 2D array is often more cache-friendly
-    // than Vec<Vec<bool>>, avoiding double pointer indirection.
-    let mut dp = vec![false; n * n];
-
-    // Fill the DP table
-    for i in (0..n).rev() {
-        for j in i..n {
-            if bytes[i] == bytes[j] && (j - i <= 2 || dp[(i + 1) * n + (j - 1)]) {
-                dp[i * n + j] = true;
-            }
-        }
-    }
-
     fn backtrack<'a>(
         s_bytes: &'a [u8],
         start: usize,
@@ -196,6 +177,27 @@ pub fn partition_optimal(s: String) -> Vec<Vec<String>> {
                 path.push(str_slice);
                 backtrack(s_bytes, end + 1, n, dp, path, result);
                 path.pop();
+            }
+        }
+    }
+
+    let n = s.len();
+    if n == 0 {
+        return vec![];
+    }
+
+    let bytes = s.as_bytes();
+
+    // DP table: dp[i][j] is true if s[i..=j] is a palindrome
+    // RUST INSIGHT: Flat 1D vector acting as a 2D array is often more cache-friendly
+    // than Vec<Vec<bool>>, avoiding double pointer indirection.
+    let mut dp = vec![false; n * n];
+
+    // Fill the DP table
+    for i in (0..n).rev() {
+        for j in i..n {
+            if bytes[i] == bytes[j] && (j - i <= 2 || dp[(i + 1) * n + (j - 1)]) {
+                dp[i * n + j] = true;
             }
         }
     }

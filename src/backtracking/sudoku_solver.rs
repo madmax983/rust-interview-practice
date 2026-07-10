@@ -138,6 +138,8 @@ pub fn solve_sudoku_optimized(board: &mut Vec<Vec<char>>) {
     solve_optimized(board, &mut rows, &mut cols, &mut boxes);
 }
 
+// Digit `d` is always in 1..=9, so this cast is guaranteed safe.
+#[allow(clippy::cast_possible_truncation)]
 fn solve_optimized(
     board: &mut Vec<Vec<char>>,
     rows: &mut [[bool; 10]; 9],
@@ -215,6 +217,8 @@ pub fn solve_sudoku_optimal(board: &mut Vec<Vec<char>>) {
     solve_bitmask(board, &mut rows, &mut cols, &mut boxes);
 }
 
+// Digit `d` is always in 1..=9, so this cast is guaranteed safe.
+#[allow(clippy::cast_sign_loss)]
 fn solve_bitmask(
     board: &mut Vec<Vec<char>>,
     rows: &mut [u16; 9],

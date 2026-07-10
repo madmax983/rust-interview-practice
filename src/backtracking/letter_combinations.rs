@@ -106,6 +106,8 @@ pub fn letter_combinations_brute_force(digits: String) -> Vec<String> {
 /// `String` buffer and pass a mutable reference down the recursive call stack.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// LeetCode constraints (0 <= digits.len() <= 4) guarantee this cast fits.
+#[allow(clippy::cast_possible_truncation)]
 pub fn letter_combinations_optimal(digits: String) -> Vec<String> {
     if digits.is_empty() {
         return vec![];

@@ -46,8 +46,8 @@ pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
 
     for i in 0..n {
         let mut current_sum = 0;
-        for j in i..n {
-            current_sum += nums[j];
+        for &val in &nums[i..] {
+            current_sum += val;
             max_sum = cmp::max(max_sum, current_sum);
         }
     }

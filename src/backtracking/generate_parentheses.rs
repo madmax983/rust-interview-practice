@@ -48,6 +48,8 @@
 /// It completely ignores the rules of well-formed parentheses until the very end,
 /// resulting in massive amounts of wasted work.
 #[must_use]
+// LeetCode constraints (1 <= n <= 8) guarantee this cast fits.
+#[allow(clippy::cast_sign_loss)]
 pub fn generate_parenthesis_brute_force(n: i32) -> Vec<String> {
     let mut result = Vec::new();
     // RUST INSIGHT: Pre-allocating capacity avoids reallocations as the string grows.
@@ -56,6 +58,8 @@ pub fn generate_parenthesis_brute_force(n: i32) -> Vec<String> {
     result
 }
 
+// LeetCode constraints (length <= 16) guarantee this cast fits.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 fn generate_all(current: &mut String, length: i32, result: &mut Vec<String>) {
     if current.len() as i32 == length {
         if is_valid(current) {
@@ -102,6 +106,8 @@ fn is_valid(s: &str) -> bool {
 /// Instead of generating all sequences blindly, we only add `(` or `)` if we know
 /// it will lead to a valid sequence. We track the count of `open` and `close` parentheses.
 #[must_use]
+// LeetCode constraints (1 <= n <= 8) guarantee this cast fits.
+#[allow(clippy::cast_sign_loss)]
 pub fn generate_parenthesis_optimized(n: i32) -> Vec<String> {
     let mut result = Vec::new();
     let mut current = String::with_capacity((n * 2) as usize);
@@ -109,6 +115,8 @@ pub fn generate_parenthesis_optimized(n: i32) -> Vec<String> {
     result
 }
 
+// LeetCode constraints (max * 2 <= 16) guarantee this cast fits.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 fn backtrack_optimized(
     current: &mut String,
     open: i32,
@@ -151,11 +159,9 @@ fn backtrack_optimized(
 /// Furthermore, we use a `Vec<u8>` (byte array) as the buffer instead of `String` since we
 /// are exclusively working with ASCII characters `(` and `)`. This avoids UTF-8 boundary checks.
 #[must_use]
+// LeetCode constraints (1 <= n <= 8) guarantee this cast fits.
+#[allow(clippy::cast_sign_loss)]
 pub fn generate_parenthesis_optimal(n: i32) -> Vec<String> {
-    let mut result = Vec::new();
-    // Use a byte buffer for zero-overhead ASCII manipulation.
-    let mut current = Vec::with_capacity((n * 2) as usize);
-
     // RUST INSIGHT: By defining a recursive closure (using a separate fn or capturing env),
     // we can avoid passing `max` and `result` around. However, Rust closures cannot
     // easily call themselves recursively if they capture mutable state due to borrowing rules.
@@ -183,6 +189,9 @@ pub fn generate_parenthesis_optimal(n: i32) -> Vec<String> {
         }
     }
 
+    let mut result = Vec::new();
+    // Use a byte buffer for zero-overhead ASCII manipulation.
+    let mut current = Vec::with_capacity((n * 2) as usize);
     backtrack(&mut current, 0, 0, n, &mut result);
     result
 }
