@@ -66,10 +66,25 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
     /// * `epsilon` - Acceptable error rate (e.g., 0.01). Error is within `epsilon * N`.
     /// * `delta` - Probability of error exceeding the bound (e.g., 0.01).
     pub fn new(epsilon: f64, delta: f64) -> Self {
-        let width = (2.0 / epsilon).ceil() as usize;
+        // Guard against degenerate / non-finite parameters. epsilon and delta
+        // must live in the open interval (0, 1); clamp anything else (including
+        // NaN, which fails the range checks) to a sane bound so we never derive
+        // a zero-sized dimension (mod-by-zero) or an astronomically huge alloc.
+        let epsilon = if epsilon.is_finite() && epsilon > 0.0 && epsilon < 1.0 {
+            epsilon
+        } else {
+            0.01
+        };
+        let delta = if delta.is_finite() && delta > 0.0 && delta < 1.0 {
+            delta
+        } else {
+            0.01
+        };
+
+        let width = ((2.0 / epsilon).ceil() as usize).max(1);
         // P(error) <= 1/2 per row. To get P(error) <= delta, we need (1/2)^d <= delta.
         // d >= log2(1/delta).
-        let depth = (1.0 / delta).log2().ceil() as usize;
+        let depth = ((1.0 / delta).log2().ceil() as usize).max(1);
 
         Self {
             table: vec![vec![0; width]; depth],
@@ -227,5 +242,33 @@ mod tests {
         cms.add("a", 10);
         cms.add("b", 20);
         assert_eq!(cms.total_count(), 30);
+    }
+
+    #[test]
+    fn test_degenerate_params_do_not_panic() {
+        // Regression: epsilon == 0.0 previously yielded width = usize::MAX
+        // (huge alloc panic), and delta >= 1.0 yielded depth = 0 so estimate()
+        // never looped and silently returned u64::MAX. Both must be guarded.
+
+        // epsilon = 0.0 (degenerate), delta = 0.5 (valid).
+        let mut cms = CountMinSketch::<str>::new(0.0, 0.5);
+        cms.add("x", 5);
+        let est = cms.estimate("x");
+        assert!(est >= 5);
+        assert!(est < u64::MAX);
+        // A never-added item must not return u64::MAX (i.e. depth >= 1).
+        assert!(cms.estimate("never") < u64::MAX);
+
+        // epsilon = 0.001 (valid), delta = 1.5 (degenerate) — no mod-by-zero.
+        let mut cms2 = CountMinSketch::<str>::new(0.001, 1.5);
+        cms2.add("y", 3);
+        let est2 = cms2.estimate("y");
+        assert!(est2 >= 3);
+        assert!(est2 < u64::MAX);
+
+        // Fully degenerate (non-finite) params still construct and work.
+        let mut cms3 = CountMinSketch::<str>::new(f64::NAN, f64::INFINITY);
+        cms3.add("z", 1);
+        assert!(cms3.estimate("z") < u64::MAX);
     }
 }

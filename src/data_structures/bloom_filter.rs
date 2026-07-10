@@ -70,7 +70,15 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
         // Optimal k = (m / n) * ln(2)
 
         let n = expected_items as f64;
-        let p = false_positive_rate;
+        // Guard the false positive rate into the open interval (0, 1). A rate of
+        // 0.0 would make p.ln() == -inf (=> m == inf => bit_count == u64::MAX =>
+        // huge alloc panic); a rate >= 1.0 (or non-finite) is meaningless. Clamp
+        // to a small positive minimum / just below 1 so m stays finite.
+        let p = if false_positive_rate.is_finite() && false_positive_rate > 0.0 {
+            false_positive_rate.min(1.0 - f64::EPSILON)
+        } else {
+            f64::MIN_POSITIVE
+        };
         let ln2 = std::f64::consts::LN_2;
 
         let m = -(n * p.ln()) / (ln2 * ln2);
@@ -312,6 +320,25 @@ mod tests {
         let mut bf = BloomFilter::new(1, 0.5);
         bf.add("a");
         assert!(bf.contains("a"));
+    }
+
+    #[test]
+    fn test_degenerate_fpr_does_not_panic() {
+        // Regression: false_positive_rate == 0.0 previously made m == inf
+        // and bit_count == u64::MAX, causing a huge allocation panic.
+        let mut bf = BloomFilter::new(1000, 0.0);
+        bf.add("hello");
+        assert!(bf.contains("hello"));
+        assert!(!bf.contains("definitely-absent-xyz"));
+
+        // A rate of 1.0 (and non-finite values) must also be handled.
+        let mut bf2 = BloomFilter::new(1000, 1.0);
+        bf2.add("world");
+        assert!(bf2.contains("world"));
+
+        let mut bf3 = BloomFilter::new(1000, f64::NAN);
+        bf3.add("nan");
+        assert!(bf3.contains("nan"));
     }
 
     #[test]

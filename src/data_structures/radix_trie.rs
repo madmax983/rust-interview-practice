@@ -155,12 +155,18 @@ impl<V> RadixTrie<V> {
         }
     }
 
-    // Helper to calculate common prefix length
+    // Helper to calculate the byte length of the common prefix.
+    // Returns a BYTE offset (not a char count) so it can be used directly
+    // for string slicing without splitting a multi-byte UTF-8 char.
     fn common_prefix_len(s1: &str, s2: &str) -> usize {
-        s1.chars()
-            .zip(s2.chars())
-            .take_while(|(c1, c2)| c1 == c2)
-            .count()
+        let mut common_len = 0;
+        for ((i, c1), c2) in s1.char_indices().zip(s2.chars()) {
+            if c1 != c2 {
+                return i;
+            }
+            common_len = i + c1.len_utf8();
+        }
+        common_len
     }
 
     /// Get a value by key.
@@ -232,6 +238,24 @@ mod tests {
 
         assert_eq!(trie.get("app"), Some(&1));
         assert_eq!(trie.get("apple"), Some(&2));
+    }
+
+    #[test]
+    fn test_multibyte_utf8_shared_prefix() {
+        // Regression: multi-byte UTF-8 keys sharing a prefix must not panic
+        // on a non-char-boundary byte index during the split.
+        let mut trie = RadixTrie::new();
+        trie.insert("é1", 1);
+        trie.insert("é2", 2);
+
+        assert_eq!(trie.get("é1"), Some(&1));
+        assert_eq!(trie.get("é2"), Some(&2));
+
+        // Also exercise a longer shared multi-byte prefix.
+        trie.insert("日本語A", 10);
+        trie.insert("日本語B", 20);
+        assert_eq!(trie.get("日本語A"), Some(&10));
+        assert_eq!(trie.get("日本語B"), Some(&20));
     }
 
     #[test]
