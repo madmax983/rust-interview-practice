@@ -27,20 +27,48 @@
 
 use std::collections::HashSet;
 
-/// # Approach: Hash Set
+/// Brute force approach: Sort then scan.
+///
+/// **Time Complexity:** O(N log N) - dominated by the sort.
+/// **Space Complexity:** O(1) auxiliary space (sorting in place with `sort_unstable`).
+///
+/// Sort the array, then walk it in order tracking the smallest positive integer we still
+/// expect to see. Non-positives and duplicates are skipped; the first gap is the answer.
+/// This fails the required O(N) time constraint, but it is the most obvious correct approach.
+#[must_use]
+#[allow(clippy::needless_pass_by_value)]
+pub fn first_missing_positive_brute_force(mut nums: Vec<i32>) -> i32 {
+    nums.sort_unstable();
+
+    let mut expected = 1;
+    for &num in &nums {
+        if num == expected {
+            // Found the next expected positive; advance the target.
+            expected += 1;
+        } else if num > expected {
+            // A gap: `expected` was never seen.
+            break;
+        }
+        // num < expected (non-positive or duplicate): skip.
+    }
+
+    expected
+}
+
+/// Optimized approach: Hash Set
 ///
 /// **Time Complexity:** O(N)
 /// **Space Complexity:** O(N) auxiliary space.
 ///
-/// This is the straightforward approach. We insert all elements into a `HashSet`,
-/// and then iterate from `1` upwards, checking if the number exists in the set.
-/// While this achieves O(N) time complexity, it fails the O(1) space constraint of the problem.
+/// We insert all elements into a `HashSet`, and then iterate from `1` upwards, checking if
+/// the number exists in the set. While this achieves O(N) time complexity, it fails the
+/// O(1) space constraint of the problem.
 ///
 /// **Idiomatic Rust:** We can use iterator adapters to filter out non-positive numbers
 /// and collect the rest into a `HashSet`. Then, we simply search from 1 upwards.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn first_missing_positive_hashset(nums: Vec<i32>) -> i32 {
+pub fn first_missing_positive_optimized(nums: Vec<i32>) -> i32 {
     // RUST INSIGHT: `.into_iter()` consumes the vector, moving ownership of its elements.
     // `.filter()` allows us to only keep positive numbers, avoiding unnecessary insertions.
     // `.collect()` is a powerful, zero-cost abstraction that knows how to build a HashSet.
@@ -172,9 +200,44 @@ mod tests {
     }
 
     #[test]
-    fn test_hashset_implementation() {
-        assert_eq!(first_missing_positive_hashset(vec![1, 2, 0]), 3);
-        assert_eq!(first_missing_positive_hashset(vec![3, 4, -1, 1]), 2);
-        assert_eq!(first_missing_positive_hashset(vec![7, 8, 9, 11, 12]), 1);
+    fn test_brute_force_implementation() {
+        assert_eq!(first_missing_positive_brute_force(vec![1, 2, 0]), 3);
+        assert_eq!(first_missing_positive_brute_force(vec![3, 4, -1, 1]), 2);
+        assert_eq!(first_missing_positive_brute_force(vec![7, 8, 9, 11, 12]), 1);
+    }
+
+    #[test]
+    fn test_optimized_implementation() {
+        assert_eq!(first_missing_positive_optimized(vec![1, 2, 0]), 3);
+        assert_eq!(first_missing_positive_optimized(vec![3, 4, -1, 1]), 2);
+        assert_eq!(first_missing_positive_optimized(vec![7, 8, 9, 11, 12]), 1);
+    }
+
+    #[test]
+    fn test_optimal_implementation() {
+        assert_eq!(first_missing_positive_optimal(vec![1, 2, 0]), 3);
+        assert_eq!(first_missing_positive_optimal(vec![3, 4, -1, 1]), 2);
+        assert_eq!(first_missing_positive_optimal(vec![7, 8, 9, 11, 12]), 1);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        let cases = vec![
+            vec![1, 2, 0],
+            vec![3, 4, -1, 1],
+            vec![7, 8, 9, 11, 12],
+            vec![],
+            vec![1],
+            vec![5],
+            vec![-1, -2, -3],
+            vec![1, 1],
+            vec![2, 2],
+            vec![1, 2, 3, 4, 5],
+        ];
+        for case in cases {
+            let expected = first_missing_positive_brute_force(case.clone());
+            assert_eq!(first_missing_positive_optimized(case.clone()), expected);
+            assert_eq!(first_missing_positive_optimal(case.clone()), expected);
+        }
     }
 }

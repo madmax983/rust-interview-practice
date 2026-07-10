@@ -221,4 +221,30 @@ mod tests {
         sort_colors_optimal(&mut nums);
         assert_eq!(nums, expected);
     }
+
+    // Cross-implementation agreement test
+    #[test]
+    fn test_all_approaches_agreement() {
+        let cases: Vec<Vec<i32>> = vec![
+            vec![2, 0, 2, 1, 1, 0],
+            vec![],
+            vec![0],
+            vec![2],
+            vec![1, 1, 1, 1],
+            vec![0, 0, 1, 1, 2, 2],
+            vec![2, 2, 1, 1, 0, 0],
+            vec![2, 0, 1, 2, 0, 1, 0, 2, 1],
+        ];
+
+        for nums in cases {
+            let mut a = nums.clone();
+            let mut b = nums.clone();
+            let mut c = nums.clone();
+            sort_colors_brute_force(&mut a);
+            sort_colors_optimized(&mut b);
+            sort_colors_optimal(&mut c);
+            assert_eq!(a, b, "brute vs optimized mismatch for {nums:?}");
+            assert_eq!(b, c, "optimized vs optimal mismatch for {nums:?}");
+        }
+    }
 }

@@ -255,4 +255,34 @@ mod tests {
         assert_eq!(search(nums.clone(), -1), -1);
         assert_eq!(search(nums.clone(), 5000), -1);
     }
+
+    // Cross-implementation agreement test
+    #[test]
+    fn test_all_approaches_agreement() {
+        let arrays: Vec<Vec<i32>> = vec![
+            vec![4, 5, 6, 7, 0, 1, 2],
+            vec![1],
+            vec![1, 3],
+            vec![3, 1],
+            vec![5, 1, 3],
+            vec![1, 2, 3, 4, 5, 6],
+            vec![6, 7, 8, 1, 2, 3, 4, 5],
+        ];
+
+        for nums in arrays {
+            for target in -2..=10 {
+                let brute = search_brute_force(nums.clone(), target);
+                let optimized = search_optimized(nums.clone(), target);
+                let optimal = search_optimal(nums.clone(), target);
+                assert_eq!(
+                    brute, optimized,
+                    "brute vs optimized mismatch for {nums:?}, target={target}"
+                );
+                assert_eq!(
+                    optimized, optimal,
+                    "optimized vs optimal mismatch for {nums:?}, target={target}"
+                );
+            }
+        }
+    }
 }

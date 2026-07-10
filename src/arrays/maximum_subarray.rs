@@ -53,6 +53,53 @@ pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
     max_sum
 }
 
+/// Optimized approach: Divide and Conquer.
+/// Time: O(n log n) - The array is split in half at each level (log n levels), and each level
+///       does O(n) total work computing the maximum crossing sum.
+/// Space: O(log n) - Recursion stack depth.
+///
+/// The maximum subarray either lies entirely in the left half, entirely in the right half, or
+/// crosses the midpoint. We recurse on the halves and compute the best crossing sum directly.
+#[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+pub fn max_sub_array_optimized(nums: Vec<i32>) -> i32 {
+    if nums.is_empty() {
+        return 0;
+    }
+
+    fn helper(nums: &[i32], lo: usize, hi: usize) -> i32 {
+        if lo == hi {
+            return nums[lo];
+        }
+
+        let mid = lo + (hi - lo) / 2;
+        let left_best = helper(nums, lo, mid);
+        let right_best = helper(nums, mid + 1, hi);
+
+        // Best sum ending at mid, extending leftward.
+        let mut sum = 0;
+        let mut cross_left = i32::MIN;
+        for &val in nums[lo..=mid].iter().rev() {
+            sum += val;
+            cross_left = cmp::max(cross_left, sum);
+        }
+
+        // Best sum starting at mid+1, extending rightward.
+        sum = 0;
+        let mut cross_right = i32::MIN;
+        for &val in &nums[mid + 1..=hi] {
+            sum += val;
+            cross_right = cmp::max(cross_right, sum);
+        }
+
+        let cross_best = cross_left + cross_right;
+        cmp::max(cmp::max(left_best, right_best), cross_best)
+    }
+
+    let n = nums.len();
+    helper(&nums, 0, n - 1)
+}
+
 /// Custom struct to model the state in our functional approach.
 ///
 /// By using a struct, our `fold` accumulator gains semantic meaning instead of
@@ -126,6 +173,7 @@ mod tests {
     fn test_happy_path() {
         let nums = vec![-2, 1, -3, 4, -1, 2, 1, -5, 4];
         assert_eq!(max_sub_array_brute_force(nums.clone()), 6);
+        assert_eq!(max_sub_array_optimized(nums.clone()), 6);
         assert_eq!(max_sub_array_optimal(nums), 6);
     }
 
@@ -134,6 +182,7 @@ mod tests {
     fn test_single_element() {
         let nums = vec![1];
         assert_eq!(max_sub_array_brute_force(nums.clone()), 1);
+        assert_eq!(max_sub_array_optimized(nums.clone()), 1);
         assert_eq!(max_sub_array_optimal(nums), 1);
     }
 
@@ -142,6 +191,7 @@ mod tests {
     fn test_all_negative() {
         let nums = vec![-5, -2, -9, -1, -3];
         assert_eq!(max_sub_array_brute_force(nums.clone()), -1);
+        assert_eq!(max_sub_array_optimized(nums.clone()), -1);
         assert_eq!(max_sub_array_optimal(nums), -1);
     }
 
@@ -150,6 +200,26 @@ mod tests {
     fn test_all_positive() {
         let nums = vec![5, 4, 1, 7, 8];
         assert_eq!(max_sub_array_brute_force(nums.clone()), 25);
+        assert_eq!(max_sub_array_optimized(nums.clone()), 25);
         assert_eq!(max_sub_array_optimal(nums), 25);
+    }
+
+    // Cross-implementation agreement across shared inputs
+    #[test]
+    fn test_all_approaches_agree() {
+        let cases = vec![
+            vec![-2, 1, -3, 4, -1, 2, 1, -5, 4],
+            vec![1],
+            vec![5, 4, -1, 7, 8],
+            vec![-5, -2, -9, -1, -3],
+            vec![0],
+            vec![-1, -2],
+            vec![3, -2, 5, -1],
+        ];
+        for case in cases {
+            let expected = max_sub_array_brute_force(case.clone());
+            assert_eq!(max_sub_array_optimized(case.clone()), expected);
+            assert_eq!(max_sub_array_optimal(case.clone()), expected);
+        }
     }
 }
