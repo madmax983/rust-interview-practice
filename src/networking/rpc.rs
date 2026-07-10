@@ -17,9 +17,14 @@
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock, mpsc};
 use std::thread;
+
+/// Maximum accepted payload length for a single RPC frame (64 MB). The length
+/// prefix is attacker-controlled; bounding it before `vec![0; len]` prevents a
+/// huge value from panicking (capacity overflow) or aborting (OOM).
+const MAX_FRAME_SIZE: usize = 64 * 1024 * 1024;
 
 // =========================================================================================
 // Architecture
@@ -136,6 +141,14 @@ impl RpcRequest {
             .parse::<usize>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid Length"))?;
 
+        // SECURITY: Bound the untrusted length prefix before allocating.
+        if len > MAX_FRAME_SIZE {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Frame payload too large",
+            ));
+        }
+
         let mut payload = vec![0; len];
         reader.read_exact(&mut payload)?;
 
@@ -186,6 +199,14 @@ impl RpcResponse {
             .trim()
             .parse::<usize>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid Length"))?;
+
+        // SECURITY: Bound the untrusted length prefix before allocating.
+        if len > MAX_FRAME_SIZE {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Frame payload too large",
+            ));
+        }
 
         let mut payload = vec![0; len];
         reader.read_exact(&mut payload)?;
@@ -316,6 +337,9 @@ pub struct RpcClient {
     next_id: AtomicU64,
     write_stream: Mutex<TcpStream>,
     callbacks: CallbackMap,
+    /// Set to true by the background reader thread when it exits (EOF or error),
+    /// so `call()` can fail fast instead of blocking forever on a dead connection.
+    closed: Arc<AtomicBool>,
 }
 
 impl RpcClient {
@@ -326,8 +350,11 @@ impl RpcClient {
         let write_stream = Mutex::new(stream);
         let callbacks = Arc::new(Mutex::new(HashMap::<u64, mpsc::Sender<RpcResponse>>::new()));
 
+        let closed = Arc::new(AtomicBool::new(false));
+
         // Spawn background reader thread to demultiplex responses
         let callbacks_clone = Arc::clone(&callbacks);
+        let closed_clone = Arc::clone(&closed);
         thread::spawn(move || {
             let mut reader = BufReader::new(read_stream);
             loop {
@@ -342,17 +369,32 @@ impl RpcClient {
                     Err(_) => break,   // Connection error
                 }
             }
+
+            // BUGFIX: The reader thread is exiting (connection closed or errored).
+            // Mark the client closed and drop every pending sender by draining the
+            // callbacks map. Dropping the `Sender`s makes any blocked `rx.recv()`
+            // in `call()` return `Err` immediately instead of hanging forever, and
+            // the `closed` flag lets subsequent calls fail fast.
+            closed_clone.store(true, Ordering::Release);
+            let mut map = callbacks_clone.lock().unwrap();
+            map.clear(); // drops all Senders -> wakes all blocked receivers with Err
         });
 
         Ok(Self {
             next_id: AtomicU64::new(1),
             write_stream,
             callbacks,
+            closed,
         })
     }
 
     /// Calls a remote method synchronously.
     pub fn call(&self, method: &str, payload: &[u8]) -> Result<Vec<u8>, String> {
+        // Fail fast if the reader thread has already observed a closed connection.
+        if self.closed.load(Ordering::Acquire) {
+            return Err("Connection closed".to_string());
+        }
+
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let request = RpcRequest {
             id,
@@ -366,6 +408,14 @@ impl RpcClient {
         {
             let mut map = self.callbacks.lock().unwrap();
             map.insert(id, tx);
+        }
+
+        // Re-check after inserting: the reader thread may have drained the map
+        // (dropping our sender) in the window between our first check and the
+        // insert. Without this, such a call would block on `recv()` forever.
+        if self.closed.load(Ordering::Acquire) {
+            self.callbacks.lock().unwrap().remove(&id);
+            return Err("Connection closed".to_string());
         }
 
         // Send request over the wire
@@ -445,6 +495,53 @@ mod tests {
         let parsed = RpcResponse::parse(&mut reader).unwrap().unwrap();
 
         assert_eq!(resp, parsed);
+    }
+
+    #[test]
+    fn test_parse_rejects_huge_length_prefix() {
+        // A malicious peer claims a payload of usize::MAX bytes. Before the fix
+        // this hit `vec![0; usize::MAX]` -> capacity-overflow panic. Now both
+        // request and response parsers must reject it without allocating.
+        let req_frame = b"1\nfoo\n18446744073709551615\n";
+        let mut reader = BufReader::new(req_frame.as_slice());
+        let err = RpcRequest::parse(&mut reader).expect_err("huge len must error");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+
+        let resp_frame = b"1\n0\n18446744073709551615\n";
+        let mut reader = BufReader::new(resp_frame.as_slice());
+        let err = RpcResponse::parse(&mut reader).expect_err("huge len must error");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn test_call_errors_when_connection_closed() {
+        // Regression: when the background reader thread exits (server closed the
+        // connection), a blocked/subsequent `call()` must return Err promptly
+        // instead of hanging forever on `rx.recv()`.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        // Server accepts one connection then immediately closes it (EOF to client).
+        let server = thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            drop(stream);
+        });
+
+        let client = RpcClient::connect(addr).expect("Failed to connect");
+        server.join().unwrap();
+
+        // Run call() on a worker thread and use recv_timeout as a safety net so a
+        // regression (unbounded hang) fails the test rather than hanging the suite.
+        let (done_tx, done_rx) = mpsc::channel();
+        thread::spawn(move || {
+            let result = client.call("echo", b"hi");
+            let _ = done_tx.send(result);
+        });
+
+        match done_rx.recv_timeout(Duration::from_secs(5)) {
+            Ok(result) => assert!(result.is_err(), "call() must error on a closed connection"),
+            Err(_) => panic!("call() hung: reader exit did not wake the blocked caller"),
+        }
     }
 
     #[test]

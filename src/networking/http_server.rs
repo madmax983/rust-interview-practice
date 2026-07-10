@@ -24,6 +24,11 @@ use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 use std::sync::Arc;
 
+/// Hard cap on the accepted request body size (100 MB). Bounding allocations
+/// against this before `vec![0; n]` prevents an attacker-controlled Content-Length
+/// or chunked size line from panicking/aborting (and thus draining) a pool worker.
+const MAX_BODY_SIZE: usize = 100 * 1024 * 1024;
+
 // =========================================================================================
 // Architecture
 // =========================================================================================
@@ -281,6 +286,18 @@ impl HttpRequest {
                         break;
                     }
 
+                    // SECURITY: Bound per-chunk and cumulative body size before
+                    // allocating. A malicious client can send a hex size line like
+                    // `ffffffffffffffff` (usize::MAX); `vec![0; size]` would then
+                    // panic/abort, killing this pool worker (the pool does not
+                    // catch_unwind, so repeated requests drain the pool -> DoS).
+                    if size > MAX_BODY_SIZE || body.len().saturating_add(size) > MAX_BODY_SIZE {
+                        return Err(io::Error::new(
+                            io::ErrorKind::InvalidData,
+                            "Request body too large",
+                        ));
+                    }
+
                     let mut chunk = vec![0; size];
                     reader.read_exact(&mut chunk)?;
                     body.extend(chunk);
@@ -294,6 +311,15 @@ impl HttpRequest {
             && let Ok(len) = content_length.parse::<usize>()
             && len > 0
         {
+            // SECURITY: Bound the declared body size before allocating. Without
+            // this, `Content-Length: 9223372036854775807` (or usize::MAX) makes
+            // `vec![0; len]` panic/abort and kill a pool worker.
+            if len > MAX_BODY_SIZE {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Request body too large",
+                ));
+            }
             let mut buffer = vec![0; len];
             reader.read_exact(&mut buffer)?;
             body = buffer;
@@ -421,6 +447,25 @@ mod tests {
 
         assert_eq!(req.method, "POST");
         assert_eq!(req.body, b"Hello World");
+    }
+
+    #[test]
+    fn test_parse_rejects_huge_content_length() {
+        // i64::MAX Content-Length. Before the fix `vec![0; len]` panicked/aborted,
+        // killing a pool worker. Now parse must return an error (-> 400).
+        let input = b"POST / HTTP/1.1\r\nContent-Length: 9223372036854775807\r\n\r\n";
+        let mut reader = BufReader::new(Cursor::new(input));
+        let err = HttpRequest::parse(&mut reader).expect_err("huge content-length must error");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn test_parse_rejects_oversized_chunk_size() {
+        // usize::MAX chunk-size line. Before the fix `vec![0; size]` panicked.
+        let input = b"POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\nffffffffffffffff\r\n";
+        let mut reader = BufReader::new(Cursor::new(input));
+        let err = HttpRequest::parse(&mut reader).expect_err("oversized chunk must error");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
     }
 
     #[test]

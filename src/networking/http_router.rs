@@ -131,24 +131,49 @@ impl Router {
         path: &str,
     ) -> Option<(Arc<dyn Handler>, HashMap<String, String>)> {
         let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
-        let mut current = &self.root;
+        let method_upper = method.to_uppercase();
         let mut params = HashMap::new();
+        // BUGFIX: Match with backtracking. A greedy walk that commits to a static
+        // child can dead-end (e.g. `/users/me` when `/users/me/settings` created a
+        // static "me" node with no handler) and return a false 404, shadowing a
+        // valid `/users/:id` dynamic route. We now recurse, trying the static
+        // branch first (precedence) and falling back to the dynamic child.
+        let handler = self.root.match_node(&parts, &method_upper, &mut params)?;
+        Some((handler, params))
+    }
+}
 
-        for part in parts {
-            if let Some(child) = current.children.get(part) {
-                current = child;
-            } else if let Some((param_name, child_node)) = &current.dynamic_child {
-                params.insert(param_name.clone(), part.to_string());
-                current = child_node;
-            } else {
-                return None;
-            }
+impl Node {
+    /// Recursively matches the remaining path segments against this subtree.
+    /// Static children take precedence; if the static branch fails to yield a
+    /// handler for the full remaining path, we backtrack to the dynamic child.
+    fn match_node(
+        &self,
+        parts: &[&str],
+        method: &str,
+        params: &mut HashMap<String, String>,
+    ) -> Option<Arc<dyn Handler>> {
+        let Some((first, rest)) = parts.split_first() else {
+            // No more segments: this node is the target. Look up the handler.
+            return self.handlers.get(method).map(Arc::clone);
+        };
+
+        // Try the static child first (higher precedence than dynamic).
+        if let Some(child) = self.children.get(*first)
+            && let Some(handler) = child.match_node(rest, method, params)
+        {
+            return Some(handler);
         }
 
-        current
-            .handlers
-            .get(&method.to_uppercase())
-            .map(|h| (Arc::clone(h), params))
+        // Backtrack: the static branch dead-ended, try the dynamic child.
+        if let Some((param_name, child_node)) = &self.dynamic_child
+            && let Some(handler) = child_node.match_node(rest, method, params)
+        {
+            params.insert(param_name.clone(), (*first).to_string());
+            return Some(handler);
+        }
+
+        None
     }
 }
 
@@ -354,5 +379,45 @@ mod tests {
         let body = String::from_utf8(resp.body.unwrap()).unwrap();
         assert!(body.contains("Handler: User"));
         assert!(body.contains("\"id\": \"bob\""));
+    }
+
+    #[test]
+    fn test_dynamic_backtracking_past_static_deadend() {
+        // A deeper static route creates a static "me" node with NO handler.
+        // Requesting `/users/me` must backtrack to `/users/:id` (id="me")
+        // instead of dead-ending on the handler-less static node -> false 404.
+        let mut router = Router::new();
+        router.add_route(
+            "GET",
+            "/users/:id",
+            MockHandler {
+                name: "User".into(),
+            },
+        );
+        router.add_route(
+            "GET",
+            "/users/me/settings",
+            MockHandler {
+                name: "Settings".into(),
+            },
+        );
+
+        // /users/me should match the dynamic route with id = "me".
+        let req = make_req("GET", "/users/me");
+        let resp = router.handle(req);
+        assert_eq!(resp.status_code, 200);
+        let body = String::from_utf8(resp.body.unwrap()).unwrap();
+        assert!(body.contains("Handler: User"));
+        assert!(body.contains("\"id\": \"me\""));
+
+        // The deeper exact static route still resolves to its own handler.
+        let req = make_req("GET", "/users/me/settings");
+        let resp = router.handle(req);
+        assert_eq!(resp.status_code, 200);
+        assert!(
+            String::from_utf8(resp.body.unwrap())
+                .unwrap()
+                .contains("Handler: Settings")
+        );
     }
 }
