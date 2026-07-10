@@ -1,6 +1,7 @@
 //! # Garbage Collector (Mark-and-Sweep) Implementation
 //!
-//! Implements a basic Mark-and-Sweep Garbage Collector in Rust.
+//! Implements a basic Mark-and-Sweep Garbage Collector in Rust behind a
+//! **sound, rooting-based safe API**.
 //!
 //! **Replaces Crates:** `gc`, `rust-gc`, `boehm-gc`
 //!
@@ -9,68 +10,122 @@
 //! - Managing cyclic object graphs where simple reference counting (`Rc`/`Arc`) would leak memory.
 //! - Game engines and scripting language integrations (e.g., Lua).
 //!
+//! # Why the API is shaped the way it is (soundness)
+//!
+//! An earlier version of this module handed out references through
+//! `impl Deref for Gc<T>` and asked callers to list the live roots by hand when
+//! calling `collect`. That was **unsound**: `Gc<T>: Deref` promised a valid
+//! `&T`, but nothing stopped the collector from sweeping the object out from
+//! under a live handle. The safety of `deref` rested on an invariant ("only
+//! dereference reachable objects") that the *safe* API did not enforce, so
+//! ordinary safe code could trigger use-after-free:
+//!
+//! ```text
+//! let handle = gc.alloc(42);        // old Gc<i32>: Copy, derefs to &i32
+//! gc.collect(std::iter::empty());   // caller "forgot" to list `handle`
+//! let n = *handle;                  // UAF, in SAFE code
+//! ```
+//!
+//! The redesign closes the hole:
+//!
+//! 1. **`Gc<T>` is no longer dereferenceable.** It is an opaque, `Copy` heap
+//!    edge you can store inside other GC objects to build the object graph, but
+//!    you cannot read through it directly (see the `compile_fail` demo below).
+//! 2. **Reading a value requires a [`Root`] guard.** [`Collector::alloc`]
+//!    returns `Root<'gc, T>`, and [`Collector::root`] turns a live [`Gc`] handle
+//!    back into one. A `Root` registers its object as a GC root for as long as
+//!    the guard lives and unregisters it on `Drop`. `Root` is the *only* thing
+//!    that derefs to `&T`, and a rooted object is never swept, so the reference
+//!    can never dangle. Dropping the root is the very same act as giving up the
+//!    ability to read the value, so the old footgun (drop the root, then
+//!    dereference) cannot even be written.
+//! 3. **`collect` takes no manual root list.** Roots register themselves, so you
+//!    can no longer forget to root something you are still using — the only way
+//!    to *use* it is through a `Root`.
+//! 4. **Resurrecting a handle is checked.** [`Collector::root`] returns
+//!    `Option<Root>`: every allocation gets a unique, never-reused id, and
+//!    `root` only succeeds if a live object with that id is still in the arena.
+//!    This makes reviving a stale handle safe (you get `None`) and defeats ABA
+//!    address reuse and type confusion by construction.
+//!
+//! ```
+//! use rust_interview_practice::systems::garbage_collector::Collector;
+//!
+//! let gc = Collector::new();
+//! let a = gc.alloc(10);      // Root<'_, i32>, rooted + alive
+//! {
+//!     let _b = gc.alloc(20); // rooted only inside this block
+//! } // `_b` dropped here -> its object is now unrooted
+//! gc.collect();              // sweeps the `20`, keeps the `10`
+//! assert_eq!(*a, 10);        // `a` is still rooted, still valid
+//! ```
+//!
+//! The bare-handle footgun is rejected at compile time — `Gc<T>` has no `Deref`:
+//!
+//! ```compile_fail
+//! use rust_interview_practice::systems::garbage_collector::{Collector, Gc};
+//!
+//! let gc = Collector::new();
+//! let root = gc.alloc(42_i32);
+//! let handle: Gc<i32> = root.to_gc(); // opaque edge, no Deref
+//! drop(root);                         // object may now be swept
+//! let _ = *handle;                    // ERROR: `Gc<T>` cannot be dereferenced
+//! ```
+//!
 //! **Why build it yourself?**
-//! Building a garbage collector teaches you the fundamentals of dynamic memory management,
-//! how object reachability is determined through tracing, and the complexities of managing
-//! raw memory in a systems language. It highlights the exact problem Rust's ownership system
-//! was designed to avoid, and demonstrates how to safely implement self-referential or
-//! cyclical data structures using unsafe code responsibly.
+//! Building a garbage collector teaches you the fundamentals of dynamic memory
+//! management, how object reachability is determined through tracing, and the
+//! complexities of managing raw memory in a systems language. It highlights the
+//! exact problem Rust's ownership system was designed to avoid, and shows how to
+//! wrap inherently `unsafe` machinery in an API that is sound to use from safe
+//! code.
 
-use std::any::Any;
-use std::cell::RefCell;
-use std::collections::HashSet;
+use std::cell::{Cell, RefCell};
+use std::marker::PhantomData;
+use std::ops::Deref;
 use std::ptr::NonNull;
 
 // =========================================================================================
 // Architecture
 // =========================================================================================
 //
-// Data Structure:
-//
-//      Roots (Stack/Registers)
-//         │
-//         ▼
-//      ┌──────┐    ┌──────┐
-//      │ Gc<T>├───►│ Gc<U>│ (Heap Objects)
-//      └──────┘    └──────┘
-//         ▲           │
-//         └───────────┘ (Cyclic Reference)
-//
-// Allocation: Objects are allocated on the heap, and a raw pointer is stored in an Arena.
-// Mark Phase: Starting from known "roots", traverse all reachable objects and set a `marked` flag.
-// Sweep Phase: Iterate over all allocated objects. Free the ones that are not marked, and clear the flag for the rest.
+// Allocation: Objects are boxed on the heap and threaded onto an intrusive
+// singly linked list (the arena) owned by the `Collector`.
+// Mark Phase:  Starting from every directly-rooted object (root count > 0),
+//              trace all reachable objects and set their `marked` flag.
+// Sweep Phase: Walk the arena; drop+free objects that are not marked, and clear
+//              the flag on the survivors.
 //
 // Invariants:
-// 1. All live objects are reachable from a root.
-// 2. The collector accurately traces all references within an object via the `Trace` trait.
-// 3. Unreachable objects are safely dropped and deallocated exactly once.
+// 1. A `Root<'gc, T>` keeps its object's root count >= 1, so the object is
+//    always marked and never swept while the guard is alive. This is what makes
+//    `Root: Deref -> &T` sound.
+// 2. `Gc<T>` is an opaque edge with no safe way to read through it; the only
+//    way to obtain `&T` is a `Root`, which guarantees liveness.
+// 3. Every object carries a unique, monotonically-increasing id, so a stale
+//    handle can be detected (`Collector::root` -> `None`) instead of being
+//    dereferenced.
 //
 // Complexity:
 // ┌───────────┬──────────────┬─────────────┐
 // │ Operation │ Time         │ Space       │
 // ├───────────┼──────────────┼─────────────┤
-// │ Allocate  │ O(1)*        │ O(1)        │
-// │ Mark      │ O(L)         │ O(D)        │
+// │ Allocate  │ O(1)         │ O(1)        │
+// │ Mark      │ O(N + L)     │ O(D)        │
 // │ Sweep     │ O(N)         │ O(1)        │
+// │ root()    │ O(N)         │ O(1)        │
 // └───────────┴──────────────┴─────────────┘
-// L = Live objects, D = Max depth of object graph, N = Total allocated objects
-// * Allocation might trigger O(L + N) collection.
-//
-// Design Decisions:
-// - **Tracing Trait**: Uses a `Trace` trait to traverse object fields.
-//   - *Tradeoff*: Requires manual `Trace` implementation for all GC-managed types.
-//   - *Alternative*: Conservative GC (scanning stack/heap for pointer-like values), which is error-prone and can leak.
-// - **Single-threaded**: Thread-local collector.
-//   - *Tradeoff*: Simpler, avoids locking overhead. Cannot share `Gc` references across threads.
-//   - *Alternative*: Concurrent/Parallel GC, significantly more complex.
+// N = total allocated objects, L = live objects, D = max object-graph depth.
+// (`root()` scans the arena for the id; a production GC would use a slot table
+// for O(1) — see the footer.)
 
 /// A trait for objects managed by the Garbage Collector to trace their references.
 pub trait Trace {
-    /// Traces all `Gc` references held by this object.
+    /// Traces all `Gc` references held by this object, marking them reachable.
     fn trace(&self);
 }
 
-// Basic types don't contain Gc references.
+// Leaf types hold no `Gc` references.
 impl Trace for i32 {
     fn trace(&self) {}
 }
@@ -107,55 +162,66 @@ impl<T: Trace> Trace for RefCell<T> {
 }
 
 /// Metadata header for all GC-managed objects.
+///
+/// The header fields come before `value` so their offsets are identical for
+/// every `T`, which is what lets the collector read `marked`/`roots`/`id`/`next`
+/// through a `&GcBox<dyn Trace>` fat pointer.
 struct GcBox<T: ?Sized> {
-    marked: RefCell<bool>,
+    marked: Cell<bool>,
+    /// Number of live `Root`s pointing at this object. Non-zero => a GC root.
+    roots: Cell<usize>,
+    /// Unique, never-reused allocation id (used for safe handle resurrection).
+    id: u64,
     next: Option<NonNull<GcBox<dyn Trace>>>,
     value: T,
 }
 
 impl<T: ?Sized> GcBox<T> {
     fn is_marked(&self) -> bool {
-        *self.marked.borrow()
+        self.marked.get()
     }
-
     fn mark(&self) {
-        *self.marked.borrow_mut() = true;
+        self.marked.set(true);
     }
-
     fn unmark(&self) {
-        *self.marked.borrow_mut() = false;
+        self.marked.set(false);
+    }
+    fn is_rooted(&self) -> bool {
+        self.roots.get() > 0
+    }
+    fn add_root(&self) {
+        self.roots.set(self.roots.get() + 1);
+    }
+    fn remove_root(&self) {
+        self.roots.set(self.roots.get() - 1);
     }
 }
 
-/// A Garbage-Collected smart pointer.
-pub struct Gc<T: ?Sized + 'static> {
+/// An opaque, `Copy` handle to a garbage-collected object — a heap *edge*.
+///
+/// Store a `Gc<T>` inside other GC-managed objects to build the object graph.
+/// It deliberately does **not** implement `Deref`: a bare handle can outlive the
+/// object it points at, so reading through it directly would be unsound. To read
+/// the value, revive the handle into a [`Root`] with [`Collector::root`].
+pub struct Gc<T: Trace + 'static> {
     ptr: NonNull<GcBox<T>>,
+    id: u64,
 }
 
-// RUST INSIGHT: `Gc<T>` implements `Clone` to create multiple references to the same object.
-// Unlike `Rc<T>`, it doesn't increment a reference count, avoiding cyclic leaks.
-impl<T: ?Sized> Clone for Gc<T> {
+// Only the pointer + id are copied, never the underlying object (tracing GC, not
+// reference counting), so `Gc<T>` is freely `Copy`.
+impl<T: Trace + 'static> Clone for Gc<T> {
     fn clone(&self) -> Self {
-        // GOTCHA: We must only copy the pointer, never deep-copy the underlying object
-        // or increment a ref-count (since we rely on tracing, not ref-counting).
-        Self { ptr: self.ptr }
+        *self
     }
 }
-
-// UNSAFE JUSTIFICATION:
-// Gc pointers are safe to dereference as long as the Garbage Collector ensures
-// they are not swept while still reachable. We restrict `Gc` creation to the thread-local
-// Collector to prevent data races.
-impl<T: ?Sized> std::ops::Deref for Gc<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { &self.ptr.as_ref().value }
-    }
-}
+impl<T: Trace + 'static> Copy for Gc<T> {}
 
 impl<T: Trace + 'static> Trace for Gc<T> {
     fn trace(&self) {
+        // SAFETY: a `Gc` only exists while the arena that owns its `GcBox` is
+        // alive; tracing takes a shared reference and recurses at most once per
+        // object thanks to the `marked` guard.
         let gc_box = unsafe { self.ptr.as_ref() };
         if !gc_box.is_marked() {
             gc_box.mark();
@@ -164,104 +230,200 @@ impl<T: Trace + 'static> Trace for Gc<T> {
     }
 }
 
-/// The Garbage Collector that tracks allocations and performs mark-and-sweep.
+/// A stack root: a guard that keeps its object alive and grants `&T` access.
+///
+/// While a `Root<'gc, T>` exists the object it points to has a non-zero root
+/// count, so [`Collector::collect`] always marks it and never sweeps it. That is
+/// what makes `Root`'s [`Deref`] sound: the `&T` it yields is bounded by `&self`,
+/// so it cannot outlive the guard, and the object cannot be freed while the
+/// guard lives. The `'gc` lifetime ties the root to its [`Collector`], so a root
+/// can never outlive the arena that backs it.
+pub struct Root<'gc, T: Trace + 'static> {
+    gc: Gc<T>,
+    _marker: PhantomData<&'gc Collector>,
+}
+
+impl<'gc, T: Trace + 'static> Root<'gc, T> {
+    fn new(gc: Gc<T>) -> Self {
+        // SAFETY: `gc` was produced from a live object owned by the collector
+        // this root borrows for `'gc`; registering a root only reads/writes the
+        // `Cell<usize>` root counter through a shared reference.
+        unsafe { gc.ptr.as_ref().add_root() };
+        Self {
+            gc,
+            _marker: PhantomData,
+        }
+    }
+
+    /// Returns the opaque, `Copy` heap edge for this object.
+    ///
+    /// Store the returned [`Gc`] inside other GC-managed objects to build the
+    /// graph. It does **not** keep the object alive and cannot be dereferenced;
+    /// revive it with [`Collector::root`] to read it again.
+    #[must_use]
+    pub fn to_gc(&self) -> Gc<T> {
+        self.gc
+    }
+}
+
+impl<T: Trace + 'static> Deref for Root<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        // SAFETY: this `Root` holds a root-count on the object, so the collector
+        // cannot have swept it, and this GC never moves objects (no compaction),
+        // so the pointer stays valid. The returned `&T` is bounded by `&self`, so
+        // it cannot outlive the root that guarantees the object's liveness.
+        unsafe { &self.gc.ptr.as_ref().value }
+    }
+}
+
+// Cloning a root adds another registration, so both guards keep the object alive.
+impl<T: Trace + 'static> Clone for Root<'_, T> {
+    fn clone(&self) -> Self {
+        Self::new(self.gc)
+    }
+}
+
+impl<T: Trace + 'static> Drop for Root<'_, T> {
+    fn drop(&mut self) {
+        // SAFETY: the object outlives this root (`'gc`), so the pointer is valid;
+        // we drop this root's contribution to the object's root count.
+        unsafe { self.gc.ptr.as_ref().remove_root() };
+    }
+}
+
+/// The Garbage Collector: owns the arena and performs mark-and-sweep.
 pub struct Collector {
-    head: Option<NonNull<GcBox<dyn Trace>>>,
-    _allocated_bytes: usize,
-    _threshold: usize,
+    head: Cell<Option<NonNull<GcBox<dyn Trace>>>>,
+    next_id: Cell<u64>,
+    allocated_bytes: Cell<usize>,
+}
+
+impl Default for Collector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Collector {
-    /// Creates a new Collector instance.
+    /// Creates a new, empty `Collector`.
+    #[must_use]
     pub fn new() -> Self {
         Self {
-            head: None,
-            _allocated_bytes: 0,
-            _threshold: 1024 * 1024, // 1MB initial threshold
+            head: Cell::new(None),
+            next_id: Cell::new(0),
+            allocated_bytes: Cell::new(0),
         }
     }
 
-    /// Allocates an object on the GC heap.
-    /// In a real system, this would also check `allocated_bytes > threshold`
-    /// and automatically trigger a collection, passing in roots.
-    // PRODUCTION NOTE: A real GC uses a `Finalize` trait to safely drop cyclic objects.
-    // If a cycle is swept and A drops before B, B's Drop method could access A (Use-After-Free).
-    // Our implementation assumes T does not implement a custom Drop that accesses Gc pointers.
-    pub fn alloc<T: Trace + 'static>(&mut self, value: T) -> Gc<T> {
+    /// Total bytes of `GcBox` headers+values ever allocated (never decremented;
+    /// illustrative only — a real GC would track live bytes to trigger collection).
+    #[must_use]
+    pub fn allocated_bytes(&self) -> usize {
+        self.allocated_bytes.get()
+    }
+
+    /// Allocates `value` on the GC heap and returns a [`Root`] keeping it alive.
+    pub fn alloc<T: Trace + 'static>(&self, value: T) -> Root<'_, T> {
         let size = std::mem::size_of::<GcBox<T>>();
+        let id = self.next_id.get();
+        self.next_id.set(id + 1);
 
         let gc_box = Box::new(GcBox {
-            marked: RefCell::new(false),
-            next: self.head,
+            marked: Cell::new(false),
+            roots: Cell::new(0),
+            id,
+            next: self.head.get(),
             value,
         });
 
-        // UNSAFE JUSTIFICATION:
-        // We leak the Box to raw pointer and take ownership in the Collector.
-        // It will only be freed during the `sweep` phase.
+        // SAFETY: `Box::into_raw` never returns null; the collector now owns the
+        // allocation and only frees it during `sweep`.
         let ptr = unsafe { NonNull::new_unchecked(Box::into_raw(gc_box)) };
-
-        // Coerce to a trait object pointer for the list
         let dyn_ptr: NonNull<GcBox<dyn Trace>> = ptr;
-        self.head = Some(dyn_ptr);
-        self._allocated_bytes += size;
+        self.head.set(Some(dyn_ptr));
+        self.allocated_bytes.set(self.allocated_bytes.get() + size);
 
-        Gc { ptr }
+        Root::new(Gc { ptr, id })
     }
 
-    /// Performs a garbage collection cycle.
-    /// `roots` is an iterator of starting points (e.g., variables on the stack).
-    pub fn collect<'a, I>(&mut self, roots: I)
-    where
-        I: IntoIterator<Item = &'a dyn Trace>,
-    {
-        // 1. Mark Phase
-        for root in roots {
-            root.trace();
+    /// Revives a handle into a [`Root`], if the object is still live.
+    ///
+    /// Returns `None` if the object was already swept. This is the *safe*
+    /// resurrection path: we scan the arena for a box whose unique id matches the
+    /// handle's. Because ids are never reused, a match proves this exact
+    /// allocation is still alive (and is genuinely a `GcBox<T>`), so the pointer
+    /// is valid to root. It also defeats ABA: if the address was recycled by a
+    /// later allocation, that new box carries a different id and will not match.
+    #[must_use]
+    pub fn root<T: Trace + 'static>(&self, handle: Gc<T>) -> Option<Root<'_, T>> {
+        let mut current = self.head.get();
+        while let Some(node_ptr) = current {
+            // SAFETY: every node on the arena list is a live, collector-owned
+            // `GcBox`; we only read its `id`/`next` through a shared reference.
+            let node = unsafe { node_ptr.as_ref() };
+            if node.id == handle.id {
+                return Some(Root::new(handle));
+            }
+            current = node.next;
+        }
+        None
+    }
+
+    /// Performs a mark-and-sweep collection using the registered roots.
+    pub fn collect(&self) {
+        // 1. Mark: from every directly-rooted object, mark all reachable objects.
+        let mut current = self.head.get();
+        while let Some(node_ptr) = current {
+            // SAFETY: shared read of a live, collector-owned node.
+            let node = unsafe { node_ptr.as_ref() };
+            if node.is_rooted() && !node.is_marked() {
+                node.mark();
+                node.value.trace();
+            }
+            current = node.next;
         }
 
-        // 2. Sweep Phase
-        let mut current = self.head;
+        // 2. Sweep: free unmarked objects, unmark survivors.
+        let mut current = self.head.get();
         let mut prev_ptr: Option<NonNull<GcBox<dyn Trace>>> = None;
 
         while let Some(node_ptr) = current {
-            // SAFETY: `node_ptr` was produced by `Box::into_raw` in `alloc` and is still
-            // owned by this single-threaded, thread-local Collector, so it is valid and
-            // uniquely owned. We take only a SHARED reference (`as_ref`) here. This is
-            // crucial: a `&mut GcBox` would cover the whole box (including `value`) and
-            // would alias the `&T` handed out by the safe `Gc::deref`, which is
-            // Stacked-Borrows/Miri UB reachable from safe code. Reads of `next`/`marked`
-            // and the `unmark` write (via `RefCell` interior mutability) all go through a
-            // shared reference, so no such aliasing `&mut` is ever formed.
+            // SAFETY: `node_ptr` was produced by `Box::into_raw` in `alloc` and is
+            // still owned by this single-threaded collector, so it is valid. We
+            // take only a SHARED reference here. This is crucial: a `&mut GcBox`
+            // would cover the whole box (including `value`) and could alias a `&T`
+            // handed out by `Root::deref`, which is Stacked-Borrows/Miri UB. Reads
+            // of `next`/`marked` and the `unmark` write (via `Cell`) all go through
+            // a shared reference, so no such aliasing `&mut` is ever formed.
             let node = unsafe { node_ptr.as_ref() };
             let next_ptr = node.next;
 
             if node.is_marked() {
-                // Keep the object, just unmark it for the next cycle. `unmark` mutates
-                // through `RefCell`, so a shared `&GcBox` suffices — no `&mut` needed.
                 node.unmark();
                 prev_ptr = Some(node_ptr);
             } else {
-                // Object is unreachable, sweep it!
+                // Unreachable: unlink and free it. No `Root` points at an unmarked
+                // object (a root forces a mark), so there is no outstanding `&T`.
                 if let Some(prev) = prev_ptr {
-                    // SAFETY: `prev` is a valid, live node we still own. We write ONLY the
-                    // `next` field via a raw field pointer (`addr_of_mut!`) instead of
-                    // forming a `&mut GcBox` over the whole box, so we never alias any
-                    // outstanding `&T` from `Gc::deref`.
+                    // SAFETY: `prev` is a valid, live node we still own. We write
+                    // ONLY the `next` field via a raw field pointer instead of
+                    // forming a `&mut GcBox` over the whole box, so we never alias
+                    // any outstanding `&T`.
                     unsafe {
                         std::ptr::addr_of_mut!((*prev.as_ptr()).next).write(next_ptr);
                     }
                 } else {
-                    self.head = next_ptr;
+                    self.head.set(next_ptr);
                 }
 
-                // SAFETY: We reconstruct the Box to safely drop the inner value and
-                // deallocate the memory. Since it wasn't marked, there are no live `Gc<T>`
-                // pointers to it, and the shared `node` borrow above has ended (its last use
-                // was reading `next`/`marked`), so this frees the allocation exactly once.
+                // SAFETY: the object is unmarked (hence unrooted and unreachable),
+                // and the shared `node` borrow above has ended (its last use was
+                // reading `next`/`marked`), so reconstructing the `Box` drops the
+                // value and frees the allocation exactly once.
                 unsafe {
-                    let _dropped_box = Box::from_raw(node_ptr.as_ptr());
-                    // `_dropped_box` goes out of scope here, calling drop logic
+                    let _dropped = Box::from_raw(node_ptr.as_ptr());
                 }
             }
 
@@ -270,11 +432,12 @@ impl Collector {
     }
 }
 
-// Ensure the Collector cleans up everything when it gets dropped
+// Free every remaining object when the collector itself is dropped.
 impl Drop for Collector {
     fn drop(&mut self) {
-        let mut current = self.head;
+        let mut current = self.head.get();
         while let Some(node_ptr) = current {
+            // SAFETY: sole owner tearing down; each node is freed exactly once.
             unsafe {
                 let next = node_ptr.as_ref().next;
                 let _ = Box::from_raw(node_ptr.as_ptr());
@@ -288,22 +451,20 @@ impl Drop for Collector {
 // Footer
 // =========================================================================================
 //
-// Comparison to Canonical Crates:
-// - `gc` crate: Provides thread-local garbage collection with derive macros for `Trace`.
-// - `rust-gc`: A more robust implementation using compiler plugins/macros.
+// Comparison to canonical crates:
+// - `gc` / `rust-gc`: thread-local tracing GC with a `#[derive(Trace)]` macro and
+//   a `Gc<T>` that roots itself while on the stack. Our `Root` guard makes the
+//   same "on the stack => rooted" idea explicit and visible.
+// - `gc-arena`: uses branded lifetimes and a `mutate` phase so collection can only
+//   run when no GC references are borrowed — another sound answer to the same hole.
 //
-// Missing vs. Production:
-// - **Automatic Root Tracking**: Real GCs track roots automatically (via stack scanning or smart pointers that register themselves). Here we must pass roots manually to `collect`.
-// - **Generational GC**: Real GCs segregate objects by age (nursery vs. tenured) because most objects die young.
-// - **Compaction**: This GC doesn't move objects to prevent memory fragmentation.
-// - **Derive Macros**: Real crates provide `#[derive(Trace)]` to avoid boilerplate.
-//
-//
-// Next Steps:
-// 1. Implement a `#[derive(Trace)]` macro using `syn` and `quote`.
-// 2. Implement generational collection.
-// 3. Implement a Tri-color concurrent marker.
-// 4. Benchmark using `criterion` by creating a large cyclic graph and measuring `collect()` time.
+// Missing vs. production:
+// - **Automatic root discovery** via stack scanning (we make rooting explicit).
+// - **O(1) resurrection**: `root()` scans the arena for an id; a slot table keyed
+//   by id would make it O(1).
+// - **Generational / incremental / concurrent** collection and **compaction**.
+// - **Finalization ordering** for cyclic `Drop` (we assume values' `Drop` does not
+//   read through `Gc` handles).
 
 #[cfg(test)]
 mod tests {
@@ -323,78 +484,95 @@ mod tests {
 
     #[test]
     fn test_gc_alloc_and_deref() {
-        let mut gc = Collector::new();
+        let gc = Collector::new();
         let val = gc.alloc(42);
         assert_eq!(*val, 42);
     }
 
     #[test]
     fn test_gc_collection_sweeps_unreachable() {
-        let mut gc = Collector::new();
-
-        // Create an object, but don't hold a root to it.
-        // We drop the Gc pointer, but the allocation remains in the Collector's arena.
+        let gc = Collector::new();
         {
             let _val = gc.alloc(10);
-        }
-
-        // Pass empty roots array. The object should be swept.
-        let roots: [&dyn Trace; 0] = [];
-        gc.collect(roots);
-
-        // Internally head should be None, but we can't observe that directly without adding accessors.
-        // The Drop implementation of Collector will not panic, meaning it's clean.
-        assert!(gc.head.is_none());
+        } // root dropped here -> object is unrooted
+        gc.collect();
+        assert!(gc.head.get().is_none());
     }
 
     #[test]
     fn test_gc_retains_reachable() {
-        let mut gc = Collector::new();
-
+        let gc = Collector::new();
         let val = gc.alloc(10);
-        let roots: [&dyn Trace; 1] = [&val];
-
-        gc.collect(roots);
-
-        // If it was kept, we can still dereference it safely.
+        gc.collect();
+        // Still rooted, so still valid to dereference.
         assert_eq!(*val, 10);
-        assert!(gc.head.is_some());
+        assert!(gc.head.get().is_some());
     }
 
     #[test]
     fn test_gc_mixed_roots_survive_and_unreachable_freed() {
-        // Functional check that the reworked (non-aliasing) sweep still preserves behavior:
-        // rooted objects survive and stay dereferenceable; unrooted objects are swept.
-        // NOTE: full validation of the removed Stacked-Borrows aliasing requires Miri, which
-        // cannot run in this environment; the aliasing is removed by construction (sweep now
-        // only takes shared references + raw field writes).
-        let mut gc = Collector::new();
-
+        let gc = Collector::new();
         let a = gc.alloc(10);
-        let _b = gc.alloc(20); // unreachable
         let c = gc.alloc(30);
-        let _d = gc.alloc(40); // unreachable
+        {
+            let _b = gc.alloc(20); // unrooted at end of block
+            let _d = gc.alloc(40); // unrooted at end of block
+        }
 
-        // Root only a and c. This exercises both sweep branches (keep + unlink), including
-        // the interior-node unlink that uses the raw `next`-field write.
-        let roots: [&dyn Trace; 2] = [&a, &c];
-        gc.collect(roots);
-
-        // Reachable objects survive and are still safely dereferenceable.
+        gc.collect();
+        // Rooted objects survive and stay dereferenceable.
         assert_eq!(*a, 10);
         assert_eq!(*c, 30);
-        assert!(gc.head.is_some());
+        assert!(gc.head.get().is_some());
 
-        // A second collection with no roots frees everything that remains.
-        let empty: [&dyn Trace; 0] = [];
-        gc.collect(empty);
-        assert!(gc.head.is_none());
+        // Drop the remaining roots; a second collection frees everything.
+        drop(a);
+        drop(c);
+        gc.collect();
+        assert!(gc.head.get().is_none());
+    }
+
+    #[test]
+    fn test_gc_reachable_through_root_survives_collection() {
+        let gc = Collector::new();
+        let root = gc.alloc(Node {
+            val: 1,
+            next: RefCell::new(None),
+        });
+        let child = gc.alloc(Node {
+            val: 2,
+            next: RefCell::new(None),
+        });
+        // Link child into root's field, then drop the child's own root: the child
+        // is now reachable only through `root`.
+        *root.next.borrow_mut() = Some(child.to_gc());
+        drop(child);
+
+        gc.collect();
+
+        // The child survived because it is reachable from a root. Revive its
+        // handle to read it — the safe traversal pattern.
+        let child_gc = (*root.next.borrow()).unwrap();
+        let child_root = gc.root(child_gc).expect("child still reachable via root");
+        assert_eq!(child_root.val, 2);
+        assert_eq!(root.val, 1);
+    }
+
+    #[test]
+    fn test_gc_root_on_stale_handle_returns_none() {
+        let gc = Collector::new();
+        let handle = {
+            let tmp = gc.alloc(99);
+            tmp.to_gc()
+        }; // `tmp` root dropped -> object unrooted
+        gc.collect(); // object swept
+        // Reviving the stale handle is safe and simply fails.
+        assert!(gc.root(handle).is_none());
     }
 
     #[test]
     fn test_gc_cyclic_references_are_collected() {
-        let mut gc = Collector::new();
-
+        let gc = Collector::new();
         {
             let node1 = gc.alloc(Node {
                 val: 1,
@@ -402,21 +580,15 @@ mod tests {
             });
             let node2 = gc.alloc(Node {
                 val: 2,
-                next: RefCell::new(Some(node1.clone())),
+                next: RefCell::new(Some(node1.to_gc())),
             });
-
-            // Create cycle
-            *node1.next.borrow_mut() = Some(node2.clone());
-
-            // Both node1 and node2 go out of scope here.
-            // The cyclic reference exists entirely within the GC heap.
+            // Close the cycle.
+            *node1.next.borrow_mut() = Some(node2.to_gc());
+            // Both roots dropped at end of block; the cycle lives only in the heap.
         }
 
-        // Run collection without roots
-        let roots: [&dyn Trace; 0] = [];
-        gc.collect(roots);
-
-        // Cycle should be broken and swept.
-        assert!(gc.head.is_none());
+        gc.collect();
+        // The cycle is unreachable from any root and is swept (no leak).
+        assert!(gc.head.get().is_none());
     }
 }
