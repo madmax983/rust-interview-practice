@@ -13,11 +13,12 @@
 //! ## Approach
 //!
 //! We will explore two approaches:
-//! 1.  **Straightforward Recursive**: Uses a standard backtracking template. We loop through valid candidates,
-//!     push a candidate onto our path buffer, recurse to find the remaining numbers, and pop to backtrack.
-//! 2.  **Optimized Backtracking**: Adds an algorithmic optimization. If the remaining available numbers
+//! 1.  **Brute Force (Straightforward Recursive)**: Uses a standard backtracking template. We loop through valid
+//!     candidates, push a candidate onto our path buffer, recurse to find the remaining numbers, and pop to backtrack.
+//! 2.  **Optimal (Pruned Backtracking)**: Adds an algorithmic optimization. If the remaining available numbers
 //!     are insufficient to reach the required combination size `k`, we can mathematically short-circuit
-//!     and stop exploring that branch entirely.
+//!     and stop exploring that branch entirely. Both approaches share the same `O(k * C(n, k))` complexity; the
+//!     pruning simply avoids descending into branches that can never complete.
 //!
 //! Time Complexity: O(k * C(n, k)) where C(n, k) is the binomial coefficient. We generate all combinations,
 //! and each takes O(k) time to clone into the result array.
@@ -31,7 +32,7 @@
 //! - **Bit Manipulation (Gosper's Hack)**: Generates combinations by using bitwise operations to find the next number
 //!   with the same number of set bits.
 
-/// Straightforward Backtracking approach.
+/// Brute force approach: Straightforward Backtracking (no pruning).
 ///
 /// Uses a `&mut Vec<i32>` buffer to store the current combination. When the buffer reaches size `k`,
 /// we clone it and push it into the results.
@@ -39,7 +40,7 @@
 /// ⚡ BOLT OPTIMIZATION: We pre-calculate the mathematical combinations `C(n, k)` to pre-allocate
 /// the exact capacity for the `results` vector, completely preventing dynamic heap reallocations.
 #[must_use]
-pub fn combine_straightforward(n: i32, k: i32) -> Vec<Vec<i32>> {
+pub fn combine_brute_force(n: i32, k: i32) -> Vec<Vec<i32>> {
     let capacity = {
         let k_min = k.min(n - k);
         let mut res = 1;
@@ -74,16 +75,17 @@ pub fn combine_straightforward(n: i32, k: i32) -> Vec<Vec<i32>> {
     results
 }
 
-/// Optimized Backtracking approach.
+/// Optimal approach: Pruned Backtracking.
 ///
 /// This version includes an early exit condition. If we are currently exploring a branch
 /// where the number of remaining elements is less than the number of elements we still need to pick,
-/// we stop iterating.
+/// we stop iterating. This is the canonical solution; it shares the brute force's `O(k * C(n, k))`
+/// complexity but prunes dead branches for a better constant factor.
 ///
 /// ⚡ BOLT OPTIMIZATION: We pre-calculate the mathematical combinations `C(n, k)` to pre-allocate
 /// the exact capacity for the `results` vector, completely preventing dynamic heap reallocations.
 #[must_use]
-pub fn combine_optimized(n: i32, k: i32) -> Vec<Vec<i32>> {
+pub fn combine_optimal(n: i32, k: i32) -> Vec<Vec<i32>> {
     let capacity = {
         let k_min = k.min(n - k);
         let mut res = 1;
@@ -121,10 +123,10 @@ pub fn combine_optimized(n: i32, k: i32) -> Vec<Vec<i32>> {
     results
 }
 
-/// Main entry point - aliases to the optimized solution for competitive programming defaults.
+/// Main entry point - aliases to the optimal solution for competitive programming defaults.
 #[must_use]
 pub fn combine(n: i32, k: i32) -> Vec<Vec<i32>> {
-    combine_optimized(n, k)
+    combine_optimal(n, k)
 }
 
 #[cfg(test)]
@@ -139,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn test_straightforward_example1() {
+    fn test_brute_force_example1() {
         let n = 4;
         let k = 2;
         let expected = vec![
@@ -150,11 +152,11 @@ mod tests {
             vec![2, 4],
             vec![3, 4],
         ];
-        check_results(combine_straightforward(n, k), expected);
+        check_results(combine_brute_force(n, k), expected);
     }
 
     #[test]
-    fn test_optimized_example1() {
+    fn test_optimal_example1() {
         let n = 4;
         let k = 2;
         let expected = vec![
@@ -165,7 +167,7 @@ mod tests {
             vec![2, 4],
             vec![3, 4],
         ];
-        check_results(combine_optimized(n, k), expected);
+        check_results(combine_optimal(n, k), expected);
     }
 
     #[test]
@@ -190,7 +192,7 @@ mod tests {
         let k = 3;
         let expected = vec![vec![1, 2, 3]];
         check_results(combine(n, k), expected.clone());
-        check_results(combine_straightforward(n, k), expected);
+        check_results(combine_brute_force(n, k), expected);
     }
 
     #[test]
@@ -200,6 +202,19 @@ mod tests {
         let k = 1;
         let expected = vec![vec![1], vec![2], vec![3]];
         check_results(combine(n, k), expected.clone());
-        check_results(combine_straightforward(n, k), expected);
+        check_results(combine_brute_force(n, k), expected);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement: both approaches produce the same set of
+        // combinations (order-independent) for a non-trivial input.
+        let n = 5;
+        let k = 3;
+        let mut bf = combine_brute_force(n, k);
+        let mut opt = combine_optimal(n, k);
+        bf.sort_unstable();
+        opt.sort_unstable();
+        assert_eq!(bf, opt);
     }
 }

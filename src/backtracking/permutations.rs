@@ -31,8 +31,16 @@
 //! - `1 <= nums.length <= 6`
 //! - `-10 <= nums[i] <= 10`
 //! - All the integers of `nums` are unique.
+//!
+//! ## Implementation note
+//!
+//! This problem has a single, canonical optimal solution: in-place backtracking with swaps,
+//! which generates all `N!` permutations in `O(N * N!)` time (the output itself is `O(N * N!)`,
+//! so no approach can be asymptotically faster). We therefore expose one implementation named
+//! `permute_optimal`. Alternatives such as Heap's algorithm share the same complexity and differ
+//! only in constant factors, so we do not present a padded "brute force / optimized" trio here.
 
-/// Approach: Backtracking with Swaps
+/// Optimal approach: Backtracking with Swaps
 ///
 /// **Strategy**:
 /// To generate all permutations of `nums[start..]`:
@@ -49,7 +57,7 @@
 /// We only clone the vector when we reach a base case (a valid permutation).
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn permute_recursive(mut nums: Vec<i32>) -> Vec<Vec<i32>> {
+pub fn permute_optimal(mut nums: Vec<i32>) -> Vec<Vec<i32>> {
     let n = nums.len();
 
     // Calculate factorial to pre-allocate exact capacity
@@ -82,17 +90,17 @@ fn backtrack(n: usize, start: usize, nums: &mut Vec<i32>, results: &mut Vec<Vec<
     }
 }
 
-/// Alternative Approach: Heap's Algorithm (Iterative)
-///
-/// Heap's algorithm generates permutations by swapping elements.
-/// It can be implemented iteratively to avoid recursion depth limits (though N=6 is small).
-///
-/// We stick to the recursive swap approach above as it is the standard "backtracking" teaching example.
+// Alternative Approach: Heap's Algorithm (Iterative)
+//
+// Heap's algorithm generates permutations by swapping elements.
+// It can be implemented iteratively to avoid recursion depth limits (though N=6 is small).
+//
+// We stick to the recursive swap approach above as it is the standard "backtracking" teaching example.
 
-/// Main entry point
+/// Main entry point - uses the optimal solution
 #[must_use]
 pub fn permute(nums: Vec<i32>) -> Vec<Vec<i32>> {
-    permute_recursive(nums)
+    permute_optimal(nums)
 }
 
 #[cfg(test)]

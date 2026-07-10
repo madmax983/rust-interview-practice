@@ -31,7 +31,12 @@
 //! - `-10 <= nums[i] <= 10`
 //! - All the numbers of `nums` are unique.
 
-/// Brute force / Backtracking Approach
+/// Brute force approach: Recursive Backtracking
+///
+/// Note: all three approaches in this file share the same `O(N * 2^N)` asymptotic
+/// complexity (the output alone is that large). The tiers reflect constant-factor cost
+/// and idiomatic clarity, not asymptotic ranking. This recursive variant carries the most
+/// overhead (call-stack management plus per-leaf clones), hence `brute_force`.
 ///
 /// **Strategy**:
 /// At each element in the input array, we have two choices:
@@ -49,7 +54,7 @@
 /// when adding a completed path to the final `results`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn subsets_backtracking(nums: Vec<i32>) -> Vec<Vec<i32>> {
+pub fn subsets_brute_force(nums: Vec<i32>) -> Vec<Vec<i32>> {
     // 2^N subsets are generated, so we pre-allocate the capacity
     let mut results = Vec::with_capacity(1 << nums.len());
     let mut current_path = Vec::new();
@@ -81,7 +86,10 @@ fn backtrack(nums: &[i32], index: usize, current_path: &mut Vec<i32>, results: &
     current_path.pop();
 }
 
-/// Iterative / Cascading Approach
+/// Optimized approach: Iterative / Cascading
+///
+/// Equivalent `O(N * 2^N)` complexity to the other approaches, but avoids recursion overhead
+/// by building the power set iteratively with `Iterator::fold`.
 ///
 /// **Strategy**:
 /// Start with an empty subset `[[]]`.
@@ -96,7 +104,7 @@ fn backtrack(nums: &[i32], index: usize, current_path: &mut Vec<i32>, results: &
 /// result functional-style. The initial state is a vector containing an empty vector.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn subsets_functional(nums: Vec<i32>) -> Vec<Vec<i32>> {
+pub fn subsets_optimized(nums: Vec<i32>) -> Vec<Vec<i32>> {
     nums.into_iter().fold(vec![vec![]], |mut acc, num| {
         // BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<_>>()` chains.
         // We know exactly how many new subsets we will add (the current length of `acc`).
@@ -115,7 +123,11 @@ pub fn subsets_functional(nums: Vec<i32>) -> Vec<Vec<i32>> {
     })
 }
 
-/// Bit Manipulation Approach
+/// Optimal approach: Bit Manipulation
+///
+/// Equivalent `O(N * 2^N)` complexity, but with the lowest constant factor: no recursion and no
+/// intermediate cloning of prior subsets. Each subset maps directly to the set bits of an integer
+/// mask. Valid because the constraint `N <= 10` fits comfortably in a machine word.
 ///
 /// **Strategy**:
 /// A subset can be represented by a binary sequence of length N, where the i-th bit indicates
@@ -130,7 +142,7 @@ pub fn subsets_functional(nums: Vec<i32>) -> Vec<Vec<i32>> {
 /// mathematical mapping direct and performant. `(mask & (1 << i)) != 0` checks if the i-th bit is set.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn subsets_bitwise(nums: Vec<i32>) -> Vec<Vec<i32>> {
+pub fn subsets_optimal(nums: Vec<i32>) -> Vec<Vec<i32>> {
     let n = nums.len();
     let subset_count = 1 << n; // 2^n
     let mut results = Vec::with_capacity(subset_count);
@@ -151,16 +163,16 @@ pub fn subsets_bitwise(nums: Vec<i32>) -> Vec<Vec<i32>> {
     results
 }
 
-/// Main entry point - defaulting to the functional cascading approach for its idiomatic Rust flavor
+/// Main entry point - uses the optimal (bit manipulation) solution
 #[must_use]
 pub fn subsets(nums: Vec<i32>) -> Vec<Vec<i32>> {
-    subsets_functional(nums)
+    subsets_optimal(nums)
 }
 
-/// Alternative approaches footer:
-/// - **Backtracking**: Best for when we need to add constraints (like `subsets_with_dup` where we prune branches).
-/// - **Functional/Cascading**: Most readable and idiomatic in Rust when just building combinations.
-/// - **Bitwise**: Technically fastest due to avoiding recursion overhead, but only works if N is small (<= 64 for `u64`, <= 32 for `i32`).
+/// Approach notes (all `O(N * 2^N)`; differ only in constant factor / readability):
+/// - **Backtracking** (`subsets_brute_force`): Best when we need to add constraints (like `subsets_with_dup` where we prune branches).
+/// - **Functional/Cascading** (`subsets_optimized`): Most readable and idiomatic in Rust when just building combinations.
+/// - **Bitwise** (`subsets_optimal`): Fastest due to avoiding recursion overhead, but only works if N is small (<= 64 for `u64`, <= 32 for `i32`).
 
 #[cfg(test)]
 mod tests {
@@ -188,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn test_backtracking_basic() {
+    fn test_brute_force_basic() {
         let nums = vec![1, 2, 3];
         let expected = vec![
             vec![],
@@ -200,11 +212,11 @@ mod tests {
             vec![2, 3],
             vec![1, 2, 3],
         ];
-        assert_subsets_eq(subsets_backtracking(nums), expected);
+        assert_subsets_eq(subsets_brute_force(nums), expected);
     }
 
     #[test]
-    fn test_functional_basic() {
+    fn test_optimized_basic() {
         let nums = vec![1, 2, 3];
         let expected = vec![
             vec![],
@@ -216,11 +228,11 @@ mod tests {
             vec![2, 3],
             vec![1, 2, 3],
         ];
-        assert_subsets_eq(subsets_functional(nums), expected);
+        assert_subsets_eq(subsets_optimized(nums), expected);
     }
 
     #[test]
-    fn test_bitwise_basic() {
+    fn test_optimal_basic() {
         let nums = vec![1, 2, 3];
         let expected = vec![
             vec![],
@@ -232,22 +244,34 @@ mod tests {
             vec![2, 3],
             vec![1, 2, 3],
         ];
-        assert_subsets_eq(subsets_bitwise(nums), expected);
+        assert_subsets_eq(subsets_optimal(nums), expected);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement: all three approaches must produce the same
+        // power set (order-independent) for a non-trivial input.
+        let nums = vec![4, 1, 7, 2];
+        let bf = subsets_brute_force(nums.clone());
+        let opt = subsets_optimized(nums.clone());
+        let optimal = subsets_optimal(nums);
+        assert_subsets_eq(bf.clone(), opt.clone());
+        assert_subsets_eq(opt, optimal);
     }
 
     #[test]
     fn test_empty_input() {
         let expected = vec![vec![]];
-        assert_subsets_eq(subsets_backtracking(vec![]), expected.clone());
-        assert_subsets_eq(subsets_functional(vec![]), expected.clone());
-        assert_subsets_eq(subsets_bitwise(vec![]), expected);
+        assert_subsets_eq(subsets_brute_force(vec![]), expected.clone());
+        assert_subsets_eq(subsets_optimized(vec![]), expected.clone());
+        assert_subsets_eq(subsets_optimal(vec![]), expected);
     }
 
     #[test]
     fn test_single_element() {
         let expected = vec![vec![], vec![0]];
-        assert_subsets_eq(subsets_backtracking(vec![0]), expected.clone());
-        assert_subsets_eq(subsets_functional(vec![0]), expected.clone());
-        assert_subsets_eq(subsets_bitwise(vec![0]), expected);
+        assert_subsets_eq(subsets_brute_force(vec![0]), expected.clone());
+        assert_subsets_eq(subsets_optimized(vec![0]), expected.clone());
+        assert_subsets_eq(subsets_optimal(vec![0]), expected);
     }
 }
