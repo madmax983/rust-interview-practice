@@ -200,10 +200,14 @@ impl<T: Deserialize> Deserialize for Vec<T> {
             return Err(DecodeError::CapacityOverflow);
         }
 
-        // BOLT OPTIMIZATION: Pre-allocate capacity to eliminate dynamic heap reallocations.
-        // Since we know exactly how many items to deserialize, we initialize the vector
-        // with the precise capacity to prevent costly reallocations.
-        let mut vec = Vec::with_capacity(len);
+        // Bound the pre-allocation by the remaining input. A tiny payload can claim a
+        // huge element count (up to the 100M cap above) and, since every element
+        // consumes at least one byte, `bytes.len()` is a safe upper bound on how many
+        // elements can actually follow. This prevents a memory-amplification DoS where
+        // an 8-byte payload forces a multi-hundred-MB allocation. The vector still
+        // grows as needed if the input genuinely contains more elements.
+        let cap = len.min(bytes.len());
+        let mut vec = Vec::with_capacity(cap);
         for _ in 0..len {
             vec.push(T::deserialize(bytes)?);
         }
@@ -319,6 +323,20 @@ mod tests {
         let mut bytes = buffer.as_slice();
         assert_eq!(Option::<u32>::deserialize(&mut bytes).unwrap(), Some(123));
         assert_eq!(Option::<u32>::deserialize(&mut bytes).unwrap(), None);
+    }
+
+    #[test]
+    fn test_vec_huge_count_small_payload_no_prealloc() {
+        // Regression: `Vec::with_capacity(len)` was bounded only by the 100M count
+        // cap, so a tiny payload claiming 100M elements would pre-allocate hundreds
+        // of MB before reading any element. Now the pre-allocation is bounded by the
+        // remaining bytes, so this returns an error (EOF) without a huge allocation.
+        let mut buffer = Vec::new();
+        100_000_000u64.serialize(&mut buffer); // claim 100M elements, provide none
+        let mut bytes = buffer.as_slice();
+
+        let result = Vec::<u64>::deserialize(&mut bytes);
+        assert_eq!(result.unwrap_err(), DecodeError::UnexpectedEof);
     }
 
     #[test]

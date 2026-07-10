@@ -74,7 +74,18 @@ pub enum DecodeError {
     InvalidUtf8,
     /// An integer conversion failed.
     Overflow,
+    /// The nesting depth of arrays/maps exceeded `MAX_DEPTH`.
+    DepthLimitExceeded,
 }
+
+/// Maximum nesting depth for arrays/maps. Bounds recursion so that adversarial
+/// deeply nested input (e.g. a long run of fixarray markers) returns a recoverable
+/// error instead of aborting the process via stack overflow.
+///
+/// The `decode` stack frame is large (the marker match plus `Value` construction),
+/// so the cap is kept well below the point where legitimate maximum-depth input
+/// could itself exhaust a default (2 MiB) thread stack.
+const MAX_DEPTH: usize = 128;
 
 /// Encodes a `Value` into a writer using the most compact representation.
 pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
@@ -202,6 +213,14 @@ pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
 /// Decodes a MessagePack value from a byte slice.
 /// Returns a tuple of the parsed `Value` and the remaining unparsed bytes.
 pub fn decode(input: &[u8]) -> Result<(Value<'_>, &[u8]), DecodeError> {
+    decode_depth(input, 0)
+}
+
+/// Internal decode that tracks the current nesting depth to bound recursion.
+fn decode_depth(input: &[u8], depth: usize) -> Result<(Value<'_>, &[u8]), DecodeError> {
+    if depth > MAX_DEPTH {
+        return Err(DecodeError::DepthLimitExceeded);
+    }
     if input.is_empty() {
         return Err(DecodeError::UnexpectedEof);
     }
@@ -231,14 +250,14 @@ pub fn decode(input: &[u8]) -> Result<(Value<'_>, &[u8]), DecodeError> {
         // FixMap: 1000xxxx
         0x80..=0x8f => {
             let len = (marker & 0x0f) as usize;
-            let (map, rest) = decode_map(len, rest)?;
+            let (map, rest) = decode_map(len, rest, depth)?;
             Ok((Value::Map(map), rest))
         }
 
         // FixArray: 1001xxxx
         0x90..=0x9f => {
             let len = (marker & 0x0f) as usize;
-            let (arr, rest) = decode_array(len, rest)?;
+            let (arr, rest) = decode_array(len, rest, depth)?;
             Ok((Value::Array(arr), rest))
         }
 
@@ -341,14 +360,14 @@ pub fn decode(input: &[u8]) -> Result<(Value<'_>, &[u8]), DecodeError> {
         0xdc => {
             let len_bytes = read_bytes!(2).try_into().unwrap();
             let len = u16::from_be_bytes(len_bytes) as usize;
-            let (arr, rest) = decode_array(len, rest)?;
+            let (arr, rest) = decode_array(len, rest, depth)?;
             Ok((Value::Array(arr), rest))
         }
         // Array 32
         0xdd => {
             let len_bytes = read_bytes!(4).try_into().unwrap();
             let len = u32::from_be_bytes(len_bytes) as usize;
-            let (arr, rest) = decode_array(len, rest)?;
+            let (arr, rest) = decode_array(len, rest, depth)?;
             Ok((Value::Array(arr), rest))
         }
 
@@ -356,14 +375,14 @@ pub fn decode(input: &[u8]) -> Result<(Value<'_>, &[u8]), DecodeError> {
         0xde => {
             let len_bytes = read_bytes!(2).try_into().unwrap();
             let len = u16::from_be_bytes(len_bytes) as usize;
-            let (map, rest) = decode_map(len, rest)?;
+            let (map, rest) = decode_map(len, rest, depth)?;
             Ok((Value::Map(map), rest))
         }
         // Map 32
         0xdf => {
             let len_bytes = read_bytes!(4).try_into().unwrap();
             let len = u32::from_be_bytes(len_bytes) as usize;
-            let (map, rest) = decode_map(len, rest)?;
+            let (map, rest) = decode_map(len, rest, depth)?;
             Ok((Value::Map(map), rest))
         }
 
@@ -371,14 +390,18 @@ pub fn decode(input: &[u8]) -> Result<(Value<'_>, &[u8]), DecodeError> {
     }
 }
 
-fn decode_array(len: usize, mut input: &[u8]) -> Result<(Vec<Value<'_>>, &[u8]), DecodeError> {
+fn decode_array(
+    len: usize,
+    mut input: &[u8],
+    depth: usize,
+) -> Result<(Vec<Value<'_>>, &[u8]), DecodeError> {
     // GOTCHA: Do not pre-allocate using `Vec::with_capacity(len)` blindly!
     // A malicious payload could specify a len of `u32::MAX` with a 5-byte file, causing an OOM panic.
     // Production parsers bound this or allocate incrementally.
     let cap = std::cmp::min(len, 1024);
     let mut arr = Vec::with_capacity(cap);
     for _ in 0..len {
-        let (val, rest) = decode(input)?;
+        let (val, rest) = decode_depth(input, depth + 1)?;
         arr.push(val);
         input = rest;
     }
@@ -388,12 +411,13 @@ fn decode_array(len: usize, mut input: &[u8]) -> Result<(Vec<Value<'_>>, &[u8]),
 fn decode_map(
     len: usize,
     mut input: &[u8],
+    depth: usize,
 ) -> Result<(Vec<(Value<'_>, Value<'_>)>, &[u8]), DecodeError> {
     let cap = std::cmp::min(len, 1024);
     let mut map = Vec::with_capacity(cap);
     for _ in 0..len {
-        let (k, rest1) = decode(input)?;
-        let (v, rest2) = decode(rest1)?;
+        let (k, rest1) = decode_depth(input, depth + 1)?;
+        let (v, rest2) = decode_depth(rest1, depth + 1)?;
         map.push((k, v));
         input = rest2;
     }
@@ -453,6 +477,15 @@ mod tests {
 
         let s40000 = "a".repeat(40000);
         assert_roundtrip(Value::String(&s40000)); // Str16
+    }
+
+    #[test]
+    fn test_deeply_nested_returns_err_no_crash() {
+        // Regression: a long run of fixarray-of-1 markers (0x91) previously recursed
+        // one level per byte with no depth guard, overflowing the stack. Now it must
+        // return a recoverable error.
+        let deep = vec![0x91u8; 100_000];
+        assert_eq!(decode(&deep), Err(DecodeError::DepthLimitExceeded));
     }
 
     #[test]
