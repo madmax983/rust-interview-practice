@@ -163,8 +163,8 @@ fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
         // Hash it
         let mut hasher = sha256::Sha256::new();
         hasher.update(key);
-        let hashed = hasher.finalize();
-        k[..32].copy_from_slice(&hashed);
+        let key_digest = hasher.finalize();
+        k[..32].copy_from_slice(&key_digest);
     } else {
         k[..key.len()].copy_from_slice(key);
     }
@@ -216,6 +216,13 @@ fn base64url_decode(data: &str) -> Option<Vec<u8>> {
 /// Demonstrates how to abstract the signing algorithm and validation logic.
 pub trait JwtHandler {
     fn encode(&self, claims: &Claims) -> String;
+
+    /// Decodes and verifies a token, returning its claims.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the token is malformed, has an invalid signature,
+    /// contains a payload that is not valid UTF-8 or JSON, or has expired.
     fn decode(&self, token: &str) -> Result<Claims, &'static str>;
 }
 
