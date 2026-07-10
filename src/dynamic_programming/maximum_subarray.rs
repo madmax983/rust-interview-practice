@@ -147,7 +147,7 @@ pub fn max_sub_array_optimal(nums: Vec<i32>) -> i32 {
 /// Functional-style variant of the optimal Kadane approach using `fold`.
 ///
 /// NOTE: This shares the same O(N) time / O(1) space profile as `max_sub_array_optimal`; it is kept
-/// under a clearly-named suffix to demonstrate carrying complex state (current_max, global_max)
+/// under a clearly-named suffix to demonstrate carrying complex state (`current_max`, `global_max`)
 /// through an iterator chain, which is a core idiom this repository practices.
 ///
 /// **Time**: O(N) - Single pass.

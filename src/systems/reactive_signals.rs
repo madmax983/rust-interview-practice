@@ -155,7 +155,7 @@ impl Effect {
 struct SignalState<T> {
     value: T,
     /// Subscribers are stored as weak pointers to prevent memory leaks if the Effect is dropped.
-    /// We use a HashMap keyed by Effect ID to prevent exponential duplicate subscriptions
+    /// We use a `HashMap` keyed by Effect ID to prevent exponential duplicate subscriptions
     /// if an effect evaluates a signal multiple times or in a loop.
     subscribers: HashMap<usize, std::rc::Weak<EffectState>>,
 }

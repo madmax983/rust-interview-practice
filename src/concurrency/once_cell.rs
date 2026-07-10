@@ -1,4 +1,4 @@
-//! # OnceCell Implementation
+//! # `OnceCell` Implementation
 //!
 //! Implements a thread-safe initialization primitive that allows a value to be initialized exactly once.
 //!

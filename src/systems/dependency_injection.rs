@@ -1,6 +1,6 @@
 //! # Dependency Injection (DI) Container
 //!
-//! An inversion of control (IoC) container from scratch.
+//! An inversion of control (`IoC`) container from scratch.
 //!
 //! **Replaces Crates:** `shaku`, `symphony`, `teloc`
 //!
@@ -103,7 +103,7 @@ impl Container {
 impl DIContainer for Container {
     /// Registers a Singleton service.
     ///
-    /// # RUST INSIGHT: TypeId and 'static
+    /// # RUST INSIGHT: `TypeId` and 'static
     /// `TypeId::of::<T>()` requires `T` to be `'static`. This ensures we don't store types
     /// that contain references with shorter lifetimes, preventing dangling pointers.
     fn register_singleton<T: Any + Send + Sync>(&mut self, instance: T) {

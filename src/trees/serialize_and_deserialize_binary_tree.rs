@@ -78,7 +78,7 @@ pub struct Codec;
 
 impl Codec {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 
@@ -98,6 +98,7 @@ impl Codec {
     /// reallocations. Instead of `n.val.to_string()` which allocates a temporary
     /// string per node, we use `use std::fmt::Write; write!(out, ...)` to write
     /// directly to the buffer in-place, achieving zero-allocation formatting.
+    #[must_use] 
     pub fn serialize(&self, root: Option<Box<TreeNode>>) -> String {
         let mut out = String::with_capacity(128);
         self.serialize_helper(&root, &mut out);

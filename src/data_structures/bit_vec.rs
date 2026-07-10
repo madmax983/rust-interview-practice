@@ -1,4 +1,4 @@
-//! # Dynamic Bit Vector (BitSet)
+//! # Dynamic Bit Vector (`BitSet`)
 //!
 //! Implements a dynamically sized bit vector (or bitset) where individual bits
 //! are packed efficiently into underlying `usize` words.
@@ -137,7 +137,8 @@ impl BitSet for BitVec {
 
 impl BitVec {
     /// Creates a new, empty bit vector.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             words: Vec::new(),
             len: 0,
@@ -145,6 +146,7 @@ impl BitVec {
     }
 
     /// Creates a bit vector with at least the specified capacity (in bits).
+    #[must_use] 
     pub fn with_capacity(capacity: usize) -> Self {
         let words_capacity = capacity.div_ceil(BITS_PER_WORD);
         Self {

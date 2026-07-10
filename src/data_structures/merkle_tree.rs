@@ -5,7 +5,7 @@
 //! *   **Problem Name**: Merkle Tree
 //! *   **Difficulty**: Hard
 //! *   **Link**: <https://en.wikipedia.org/wiki/Merkle_tree>
-//! *   **Why this matters in Rust**: Fundamental to distributed systems (Git, BitTorrent, Blockchains) for efficient data verification.
+//! *   **Why this matters in Rust**: Fundamental to distributed systems (Git, `BitTorrent`, Blockchains) for efficient data verification.
 //!
 //! # Architecture
 //!
@@ -54,9 +54,10 @@ pub struct MerkleTree<T: Hash> {
 impl<T: Hash + Clone> MerkleTree<T> {
     /// Constructs a Merkle Tree from a list of items.
     // GOTCHA: If the number of items is odd, the last item is duplicated to balance the tree level.
+    #[must_use] 
     pub fn new(data: Vec<T>) -> Self {
         if data.is_empty() {
-            return MerkleTree {
+            return Self {
                 layers: vec![],
                 data,
             };
@@ -76,16 +77,18 @@ impl<T: Hash + Clone> MerkleTree<T> {
             current_layer = next_layer;
         }
 
-        MerkleTree { layers, data }
+        Self { layers, data }
     }
 
     /// Returns the root hash of the tree.
+    #[must_use] 
     pub fn root(&self) -> Option<u64> {
         self.layers.last().and_then(|layer| layer.first().copied())
     }
 
     /// Generates a Merkle Proof for the item at the given index.
     /// The proof consists of a list of sibling hashes needed to recompute the root.
+    #[must_use] 
     pub fn generate_proof(&self, index: usize) -> Option<Vec<u64>> {
         if index >= self.data.len() {
             return None;

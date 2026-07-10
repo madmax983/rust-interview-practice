@@ -53,7 +53,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 //   though a production system would definitely use `serde_json`.
 
 /// JWT Header (Simplified)
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Header {
     pub alg: String,
     pub typ: String,
@@ -77,7 +77,7 @@ impl Header {
 }
 
 /// JWT Payload
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Claims {
     pub sub: String,
     pub exp: Option<u64>,
@@ -86,7 +86,8 @@ pub struct Claims {
 }
 
 impl Claims {
-    pub fn new(sub: String, exp: Option<u64>, iat: Option<u64>) -> Self {
+    #[must_use] 
+    pub const fn new(sub: String, exp: Option<u64>, iat: Option<u64>) -> Self {
         Self { sub, exp, iat }
     }
 
@@ -95,10 +96,10 @@ impl Claims {
         let mut json = String::with_capacity(128);
         let _ = write!(json, r#"{{"sub":"{}""#, self.sub);
         if let Some(exp) = self.exp {
-            let _ = write!(json, r#","exp":{}"#, exp);
+            let _ = write!(json, r#","exp":{exp}"#);
         }
         if let Some(iat) = self.iat {
-            let _ = write!(json, r#","iat":{}"#, iat);
+            let _ = write!(json, r#","iat":{iat}"#);
         }
         json.push('}');
         json
@@ -227,6 +228,7 @@ pub struct Hs256Jwt {
 }
 
 impl Hs256Jwt {
+    #[must_use] 
     pub fn new(secret: &[u8]) -> Self {
         Self {
             secret: secret.to_vec(),

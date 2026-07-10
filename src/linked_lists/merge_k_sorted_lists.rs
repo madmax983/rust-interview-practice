@@ -1,7 +1,7 @@
 //! # 23. Merge k Sorted Lists
 //!
 //! Difficulty: Hard
-//! Link: https://leetcode.com/problems/merge-k-sorted-lists/
+//! Link: <https://leetcode.com/problems/merge-k-sorted-lists>/
 //!
 //! You are given an array of `k` linked-lists `lists`, each linked-list is sorted in ascending order.
 //!
@@ -43,7 +43,7 @@ use std::collections::BinaryHeap;
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct ListNode {
     pub val: i32,
-    pub next: Option<Box<ListNode>>,
+    pub next: Option<Box<Self>>,
 }
 
 impl ListNode {
@@ -56,10 +56,10 @@ impl ListNode {
     /// Helper to create a list from a vector (useful for tests and initialization)
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
-    pub fn from_vec(vec: Vec<i32>) -> Option<Box<ListNode>> {
+    pub fn from_vec(vec: Vec<i32>) -> Option<Box<Self>> {
         let mut current = None;
         for &val in vec.iter().rev() {
-            let mut node = ListNode::new(val);
+            let mut node = Self::new(val);
             node.next = current;
             current = Some(Box::new(node));
         }

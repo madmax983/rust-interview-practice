@@ -5,7 +5,7 @@
 //! **Replaces Crates:** `bendy`, `bencode`
 //!
 //! **Real-world Usage:**
-//! - Core serialization format for the BitTorrent protocol.
+//! - Core serialization format for the `BitTorrent` protocol.
 //! - Used to encode `.torrent` files and peer-to-peer tracker messages.
 //! - Used wherever deterministic encoding (lexicographical sorting of keys) is required for hashing.
 //!
@@ -53,14 +53,14 @@ use std::collections::BTreeMap;
 /// Represents a value in the Bencode format.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BencodeValue {
-    /// An integer, typically i64 in BitTorrent.
+    /// An integer, typically i64 in `BitTorrent`.
     Integer(i64),
     /// A raw byte string (not necessarily UTF-8).
     ByteString(Vec<u8>),
     /// A list of Bencode values.
-    List(Vec<BencodeValue>),
+    List(Vec<Self>),
     /// A dictionary mapping strings to Bencode values, ordered lexicographically.
-    Dictionary(BTreeMap<String, BencodeValue>),
+    Dictionary(BTreeMap<String, Self>),
 }
 
 /// A trait for types that can be serialized into Bencode format.
@@ -84,7 +84,7 @@ pub trait BencodeDecode: Sized {
 // Implement the traits for the generic BencodeValue DOM
 impl BencodeEncode for BencodeValue {
     fn bencode_into(&self, buffer: &mut Vec<u8>) {
-        self.encode_into(buffer)
+        self.encode_into(buffer);
     }
 }
 
@@ -108,7 +108,7 @@ impl BencodeDecode for String {
         let (val, remaining) = decode_byte_string(bytes)?;
         match val {
             BencodeValue::ByteString(b) => {
-                let s = String::from_utf8(b).map_err(|_| "Invalid UTF-8")?;
+                let s = Self::from_utf8(b).map_err(|_| "Invalid UTF-8")?;
                 Ok((s, remaining))
             }
             _ => Err("Expected byte string".to_string()),
@@ -117,7 +117,8 @@ impl BencodeDecode for String {
 }
 
 impl BencodeValue {
-    /// Encodes the BencodeValue into a raw byte vector.
+    /// Encodes the `BencodeValue` into a raw byte vector.
+    #[must_use] 
     pub fn encode(&self) -> Vec<u8> {
         let mut buffer = Vec::new();
         self.encode_into(&mut buffer);
@@ -131,27 +132,27 @@ impl BencodeValue {
     /// This is a common zero-cost abstraction pattern in Rust serializers.
     fn encode_into(&self, buffer: &mut Vec<u8>) {
         match self {
-            BencodeValue::Integer(i) => {
+            Self::Integer(i) => {
                 // GOTCHA: It's tempting to use `format!("i{}e", i).into_bytes()`, but that allocates
                 // a new String and Vec on the heap for every integer. Using `itoa` or `write!` into
                 // the buffer is much more efficient.
                 use std::io::Write;
-                write!(buffer, "i{}e", i).expect("Writing to Vec should never fail");
+                write!(buffer, "i{i}e").expect("Writing to Vec should never fail");
             }
-            BencodeValue::ByteString(bytes) => {
+            Self::ByteString(bytes) => {
                 use std::io::Write;
                 // Length prefix, colon, then raw bytes
                 write!(buffer, "{}:", bytes.len()).expect("Writing to Vec should never fail");
                 buffer.extend_from_slice(bytes);
             }
-            BencodeValue::List(list) => {
+            Self::List(list) => {
                 buffer.push(b'l');
                 for item in list {
                     item.encode_into(buffer);
                 }
                 buffer.push(b'e');
             }
-            BencodeValue::Dictionary(dict) => {
+            Self::Dictionary(dict) => {
                 buffer.push(b'd');
                 // BTreeMap automatically iterates over keys in sorted order.
                 for (key, value) in dict {
@@ -167,7 +168,7 @@ impl BencodeValue {
     }
 }
 
-/// Decodes a BencodeValue from a raw byte slice.
+/// Decodes a `BencodeValue` from a raw byte slice.
 /// Returns the parsed value and the remaining unparsed bytes.
 const MAX_DEPTH: usize = 512;
 
@@ -294,11 +295,10 @@ fn decode_dictionary(mut bytes: &[u8], depth: usize) -> Result<(BencodeValue, &[
         };
 
         // Bencode spec: keys must be sorted lexicographically
-        if let Some(ref last) = last_key {
-            if &key_bytes <= last {
+        if let Some(ref last) = last_key
+            && &key_bytes <= last {
                 return Err("Dictionary keys must be strictly sorted lexicographically".to_string());
             }
-        }
         last_key = Some(key_bytes.clone());
 
         let key_str = String::from_utf8(key_bytes)

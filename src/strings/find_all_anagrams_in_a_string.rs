@@ -72,6 +72,7 @@ pub fn find_anagrams_brute_force(s: String, p: String) -> Vec<i32> {
 }
 
 /// Optimized approach: Idiomatic Iterator with `.windows()`.
+///
 /// Time: O(N * P) - We build a frequency array for every window from scratch.
 /// Space: O(1) - Fixed-size arrays `[i32; 26]` allocated purely on the stack.
 ///
@@ -119,6 +120,7 @@ pub fn find_anagrams_optimized(s: String, p: String) -> Vec<i32> {
 }
 
 /// Optimal approach: Imperative Sliding Window with Incremental Frequency Updates.
+///
 /// Time: O(N) - Single pass through `s`. Array comparisons `[i32; 26] == [i32; 26]` are O(1)
 /// Space: O(1) - Fixed-size arrays on the stack.
 ///

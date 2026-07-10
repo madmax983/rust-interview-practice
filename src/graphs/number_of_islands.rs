@@ -7,8 +7,8 @@
 //! You may assume all four edges of the grid are all surrounded by water.
 //!
 //! Difficulty: Medium
-//! LeetCode: 200. Number of Islands
-//! Link: https://leetcode.com/problems/number-of-islands/
+//! `LeetCode`: 200. Number of Islands
+//! Link: <https://leetcode.com/problems/number-of-islands>/
 //!
 //! ## Why this matters in Rust
 //! This problem is a classic example of **Graph Traversal** (DFS/BFS) on a grid. In Rust, it highlights:
@@ -172,6 +172,7 @@ fn bfs(grid: &mut Vec<Vec<char>>, start_r: usize, start_c: usize) {
 /// Time: O(M * N)
 /// Space: O(M * N) - explicit copy of grid plus recursion stack.
 #[allow(clippy::ptr_arg)] // Taking ownership or &Vec is a design choice here
+#[must_use] 
 pub fn num_islands_brute_force(grid: &Vec<Vec<char>>) -> i32 {
     // Clone the grid so we can mutate the copy
     let mut working_grid = grid.clone();
@@ -180,7 +181,7 @@ pub fn num_islands_brute_force(grid: &Vec<Vec<char>>) -> i32 {
 
 /// Main entry point - uses the optimal (DFS) solution.
 ///
-/// Takes ownership of the grid so callers get the canonical LeetCode signature; the grid is
+/// Takes ownership of the grid so callers get the canonical `LeetCode` signature; the grid is
 /// consumed and sunk in place internally.
 #[must_use]
 pub fn number_of_islands(mut grid: Vec<Vec<char>>) -> i32 {

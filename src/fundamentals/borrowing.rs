@@ -47,7 +47,7 @@ pub fn reborrow_example(nums: &mut Vec<i32>) {
     nums.push(1); // Original borrow still valid after helper returns
 }
 
-fn helper_function(_nums: &mut Vec<i32>) {
+const fn helper_function(_nums: &mut Vec<i32>) {
     // Does something with the reborrow
 }
 
@@ -61,7 +61,7 @@ pub fn return_reference(nums: &[i32]) -> &i32 {
 /// Pattern: Multiple lifetimes - when inputs have different lifetimes
 /// Return type must pick one of the input lifetimes
 #[must_use]
-pub fn longest<'a>(s1: &'a str, s2: &'a str) -> &'a str {
+pub const fn longest<'a>(s1: &'a str, s2: &'a str) -> &'a str {
     // Both inputs must live at least as long as 'a
     if s1.len() > s2.len() {
         s1 // Could return either - both have lifetime 'a
@@ -88,7 +88,7 @@ pub fn clone_to_avoid_borrow(nums: &[i32]) -> Vec<i32> {
 
 /// Pattern: Copy types don't have borrow issues
 #[must_use]
-pub fn copy_types_example(x: i32) -> i32 {
+pub const fn copy_types_example(x: i32) -> i32 {
     let y = x; // x is Copy, so it's copied not moved
     let z = x; // Can use x again - it wasn't moved!
     y + z + x // All three are valid
@@ -121,7 +121,7 @@ pub fn iter_vs_into_iter(nums: Vec<i32>) -> (Vec<i32>, i32) {
 }
 
 /// Pattern: Dereferencing with *
-pub fn deref_example(x: &mut i32) {
+pub const fn deref_example(x: &mut i32) {
     *x += 1; // Dereference to access/modify the value
     // x is &mut i32, *x is i32
 }
@@ -134,7 +134,7 @@ pub struct Borrowed<'a> {
 impl<'a> Borrowed<'a> {
     /// Create a new Borrowed that holds a reference
     #[must_use]
-    pub fn new(data: &'a [i32]) -> Self {
+    pub const fn new(data: &'a [i32]) -> Self {
         Self { data } // Lifetime ensures data outlives this struct
     }
 
@@ -156,7 +156,7 @@ pub fn return_owned(nums: &[i32]) -> Vec<i32> {
 #[must_use]
 pub fn as_ref_example(opt: &Option<String>) -> Option<&str> {
     // Option<String> -> Option<&str>
-    opt.as_ref().map(|s| s.as_str()) // as_ref() converts &Option<T> to Option<&T>
+    opt.as_ref().map(std::string::String::as_str) // as_ref() converts &Option<T> to Option<&T>
 }
 
 /// Pattern: Entry API avoids double borrow

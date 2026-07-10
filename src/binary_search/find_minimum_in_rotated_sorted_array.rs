@@ -1,7 +1,7 @@
 //! # 153. Find Minimum in Rotated Sorted Array
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/
+//! Link: <https://leetcode.com/problems/find-minimum-in-rotated-sorted-array>/
 //!
 //! This problem emphasizes the core binary search paradigm of finding the "pivot" point.
 //! It teaches how to converge on a single element rather than searching for a specific target.

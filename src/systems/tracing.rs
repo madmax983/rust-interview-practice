@@ -82,11 +82,11 @@ pub enum Level {
 impl fmt::Display for Level {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Level::Trace => write!(f, "TRACE"),
-            Level::Debug => write!(f, "DEBUG"),
-            Level::Info => write!(f, "INFO "),
-            Level::Warn => write!(f, "WARN "),
-            Level::Error => write!(f, "ERROR"),
+            Self::Trace => write!(f, "TRACE"),
+            Self::Debug => write!(f, "DEBUG"),
+            Self::Info => write!(f, "INFO "),
+            Self::Warn => write!(f, "WARN "),
+            Self::Error => write!(f, "ERROR"),
         }
     }
 }
@@ -163,7 +163,7 @@ impl SpanGuard {
         CURRENT_SPANS.with(|spans| {
             let mut stack = spans.borrow_mut();
             stack.push(span);
-            SpanGuard { depth: stack.len() }
+            Self { depth: stack.len() }
         })
     }
 }
@@ -245,7 +245,7 @@ impl Subscriber for FmtSubscriber {
 
         let _ = write!(output, " {}", event.timestamp);
 
-        println!("{}", output);
+        println!("{output}");
     }
 }
 

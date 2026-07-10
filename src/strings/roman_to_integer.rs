@@ -73,13 +73,13 @@ impl TryFrom<char> for RomanSymbol {
     }
 }
 
-/// Brute Force Approach: HashMap lookup
+/// Brute Force Approach: `HashMap` lookup
 ///
 /// Time: O(N) where N is the length of the string.
 /// Space: O(N) for the collected `Vec<char>` (the map itself is constant size).
 ///
 /// This is how you might solve it in Java or Python. While valid in Rust,
-/// using a HashMap adds overhead (hashing, heap allocation) that we don't need
+/// using a `HashMap` adds overhead (hashing, heap allocation) that we don't need
 /// for a fixed set of characters.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]

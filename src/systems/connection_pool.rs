@@ -7,7 +7,7 @@
 //! **Replaces Crates:** `r2d2`, `deadpool` (sync parts), `mobc`
 //!
 //! **Real-world Usage:**
-//! - Database Connection Pooling (PostgreSQL, MySQL).
+//! - Database Connection Pooling (`PostgreSQL`, `MySQL`).
 //! - Redis/Memcached client connection management.
 //! - Reusing expensive TLS connections for outgoing HTTP requests.
 //!
@@ -78,7 +78,7 @@ pub trait ManageConnection: Send + Sync + 'static {
 }
 
 /// Errors that can occur when interacting with the pool.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PoolError<E> {
     /// The factory function returned an error while creating a connection.
     Factory(E),
@@ -122,7 +122,7 @@ struct ActiveCountGuard<'a, M: ManageConnection> {
 }
 
 impl<'a, M: ManageConnection> ActiveCountGuard<'a, M> {
-    fn new(shared: &'a Arc<Shared<M>>) -> Self {
+    const fn new(shared: &'a Arc<Shared<M>>) -> Self {
         Self {
             shared,
             commit: false,
@@ -136,7 +136,7 @@ impl<'a, M: ManageConnection> ActiveCountGuard<'a, M> {
     }
 }
 
-impl<'a, M: ManageConnection> Drop for ActiveCountGuard<'a, M> {
+impl<M: ManageConnection> Drop for ActiveCountGuard<'_, M> {
     fn drop(&mut self) {
         if !self.commit {
             let mut state = self.shared.state.lock().unwrap();
@@ -274,12 +274,14 @@ impl<M: ManageConnection> ConnectionPool<M> {
     }
 
     /// Returns the number of connections currently created and available in the pool.
+    #[must_use] 
     pub fn idle_count(&self) -> usize {
         let state = self.shared.state.lock().unwrap();
         state.idle.len()
     }
 
     /// Returns the number of connections currently checked out by clients.
+    #[must_use] 
     pub fn active_count(&self) -> usize {
         let state = self.shared.state.lock().unwrap();
         state.active_count

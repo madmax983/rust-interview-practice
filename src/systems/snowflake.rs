@@ -63,7 +63,7 @@ const NODE_ID_SHIFT: u64 = SEQUENCE_BITS;
 const TIMESTAMP_SHIFT: u64 = SEQUENCE_BITS + NODE_ID_BITS;
 
 /// A trait for generating unique distributed IDs.
-/// Allows swapping implementations (e.g., Snowflake vs UUIDv7) seamlessly.
+/// Allows swapping implementations (e.g., Snowflake vs `UUIDv7`) seamlessly.
 pub trait IdGenerator: Send + Sync {
     type Id;
 
@@ -110,8 +110,7 @@ impl Snowflake {
     pub fn new(epoch: u64, node_id: u64) -> Self {
         assert!(
             node_id <= MAX_NODE_ID,
-            "Node ID must be between 0 and {}",
-            MAX_NODE_ID
+            "Node ID must be between 0 and {MAX_NODE_ID}"
         );
 
         Self {

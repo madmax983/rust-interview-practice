@@ -8,7 +8,7 @@
 //! **Real-world Usage:**
 //! - Web APIs (REST/GraphQL).
 //! - Configuration files.
-//! - Data storage (NoSQL databases like MongoDB).
+//! - Data storage (`NoSQL` databases like `MongoDB`).
 //!
 //! **Why build it yourself?**
 //! Writing a JSON parser is the "Hello World" of language implementation.
@@ -71,8 +71,8 @@ pub enum JsonValue {
     Bool(bool),
     Number(f64),
     String(String),
-    Array(Vec<JsonValue>),
-    Object(HashMap<String, JsonValue>),
+    Array(Vec<Self>),
+    Object(HashMap<String, Self>),
 }
 
 /// Maximum nesting depth for objects/arrays. Bounds recursion so that adversarial
@@ -80,7 +80,7 @@ pub enum JsonValue {
 /// via stack overflow.
 const MAX_DEPTH: usize = 128;
 
-/// Parses a JSON string into a JsonValue.
+/// Parses a JSON string into a `JsonValue`.
 pub fn parse(input: &str) -> Result<JsonValue, String> {
     let mut parser = Parser::new(input);
     let value = parser.parse_value(0)?;
@@ -132,9 +132,9 @@ impl<'a> Parser<'a> {
             '[' => self.parse_array(depth),
             '"' => self.parse_string().map(JsonValue::String),
             't' | 'f' => self.parse_bool().map(JsonValue::Bool),
-            'n' => self.parse_null().map(|_| JsonValue::Null),
+            'n' => self.parse_null().map(|()| JsonValue::Null),
             '-' | '0'..='9' => self.parse_number().map(JsonValue::Number),
-            _ => Err(format!("Unexpected character: {}", c)),
+            _ => Err(format!("Unexpected character: {c}")),
         }
     }
 
@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
         let mut map = HashMap::new();
 
         self.skip_whitespace();
-        if let Some(&'}') = self.peek() {
+        if self.peek() == Some(&'}') {
             self.next();
             return Ok(JsonValue::Object(map));
         }
@@ -176,7 +176,7 @@ impl<'a> Parser<'a> {
         let mut vec = Vec::new();
 
         self.skip_whitespace();
-        if let Some(&']') = self.peek() {
+        if self.peek() == Some(&']') {
             self.next();
             return Ok(JsonValue::Array(vec));
         }
@@ -225,7 +225,7 @@ impl<'a> Parser<'a> {
                                 .map_err(|_| "Invalid unicode escape".to_string())?;
                             s.push(std::char::from_u32(code).ok_or("Invalid unicode char")?);
                         }
-                        Some(c) => return Err(format!("Invalid escape sequence: \\{}", c)),
+                        Some(c) => return Err(format!("Invalid escape sequence: \\{c}")),
                         None => return Err("Unexpected EOF in string escape".to_string()),
                     }
                 }
@@ -253,7 +253,7 @@ impl<'a> Parser<'a> {
     fn consume(&mut self, expected: &str) -> Result<(), String> {
         for c in expected.chars() {
             if self.next() != Some(c) {
-                return Err(format!("Expected '{}'", expected));
+                return Err(format!("Expected '{expected}'"));
             }
         }
         Ok(())
@@ -263,7 +263,7 @@ impl<'a> Parser<'a> {
         let mut num_str = String::new();
 
         // Handle negative sign
-        if let Some(&'-') = self.peek() {
+        if self.peek() == Some(&'-') {
             num_str.push(self.next().unwrap());
         }
 
@@ -283,7 +283,7 @@ impl<'a> Parser<'a> {
         }
 
         // Handle fraction
-        if let Some(&'.') = self.peek() {
+        if self.peek() == Some(&'.') {
             num_str.push(self.next().unwrap());
             while let Some(&c) = self.peek() {
                 if c.is_ascii_digit() {
@@ -295,9 +295,9 @@ impl<'a> Parser<'a> {
         }
 
         // Handle exponent
-        if let Some(&'e') | Some(&'E') = self.peek() {
+        if let Some(&'e' | &'E') = self.peek() {
             num_str.push(self.next().unwrap());
-            if let Some(&'+') | Some(&'-') = self.peek() {
+            if let Some(&'+' | &'-') = self.peek() {
                 num_str.push(self.next().unwrap());
             }
             while let Some(&c) = self.peek() {
@@ -318,21 +318,21 @@ impl<'a> Parser<'a> {
 impl fmt::Display for JsonValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            JsonValue::Null => write!(f, "null"),
-            JsonValue::Bool(b) => write!(f, "{}", b),
-            JsonValue::Number(n) => write!(f, "{}", n),
-            JsonValue::String(s) => write!(f, "{:?}", s), // Use Debug to handle escaping
-            JsonValue::Array(arr) => {
+            Self::Null => write!(f, "null"),
+            Self::Bool(b) => write!(f, "{b}"),
+            Self::Number(n) => write!(f, "{n}"),
+            Self::String(s) => write!(f, "{s:?}"), // Use Debug to handle escaping
+            Self::Array(arr) => {
                 write!(f, "[")?;
                 for (i, v) in arr.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", v)?;
+                    write!(f, "{v}")?;
                 }
                 write!(f, "]")
             }
-            JsonValue::Object(obj) => {
+            Self::Object(obj) => {
                 write!(f, "{{")?;
                 // Sort keys for deterministic output in display
                 let mut keys: Vec<&String> = obj.keys().collect();

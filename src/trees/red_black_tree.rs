@@ -51,12 +51,12 @@ struct Node<K, V> {
     key: K,
     val: V,
     color: Color,
-    left: Option<Box<Node<K, V>>>,
-    right: Option<Box<Node<K, V>>>,
+    left: Option<Box<Self>>,
+    right: Option<Box<Self>>,
 }
 
 impl<K, V> Node<K, V> {
-    fn new(key: K, val: V, color: Color) -> Self {
+    const fn new(key: K, val: V, color: Color) -> Self {
         Self {
             key,
             val,
@@ -79,15 +79,18 @@ impl<K: Ord, V> Default for RedBlackTree<K, V> {
 }
 
 impl<K: Ord, V> RedBlackTree<K, V> {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { root: None, len: 0 }
     }
 
-    pub fn len(&self) -> usize {
+    #[must_use] 
+    pub const fn len(&self) -> usize {
         self.len
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use] 
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 

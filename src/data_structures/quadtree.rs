@@ -52,7 +52,8 @@ pub struct Point {
 }
 
 impl Point {
-    pub fn new(x: f32, y: f32) -> Self {
+    #[must_use] 
+    pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 }
@@ -64,13 +65,15 @@ pub struct AABB {
 }
 
 impl AABB {
-    pub fn new(center: Point, half_dimension: f32) -> Self {
+    #[must_use] 
+    pub const fn new(center: Point, half_dimension: f32) -> Self {
         Self {
             center,
             half_dimension,
         }
     }
 
+    #[must_use] 
     pub fn contains(&self, p: &Point) -> bool {
         p.x >= self.center.x - self.half_dimension
             && p.x <= self.center.x + self.half_dimension
@@ -78,7 +81,8 @@ impl AABB {
             && p.y <= self.center.y + self.half_dimension
     }
 
-    pub fn intersects(&self, other: &AABB) -> bool {
+    #[must_use] 
+    pub fn intersects(&self, other: &Self) -> bool {
         // Separating Axis Theorem (simplified for AABB)
         let dx = (self.center.x - other.center.x).abs();
         let dy = (self.center.y - other.center.y).abs();
@@ -100,15 +104,16 @@ pub struct Quadtree {
     divided: bool,
     depth: usize,
     // Children: NW, NE, SW, SE
-    children: Option<Box<[Quadtree; 4]>>,
+    children: Option<Box<[Self; 4]>>,
 }
 
 impl Quadtree {
-    pub fn new(boundary: AABB, capacity: usize) -> Self {
+    #[must_use] 
+    pub const fn new(boundary: AABB, capacity: usize) -> Self {
         Self::with_depth(boundary, capacity, 0)
     }
 
-    fn with_depth(boundary: AABB, capacity: usize, depth: usize) -> Self {
+    const fn with_depth(boundary: AABB, capacity: usize, depth: usize) -> Self {
         Self {
             boundary,
             capacity,
@@ -168,10 +173,10 @@ impl Quadtree {
         let hd = self.boundary.half_dimension / 2.0;
 
         let d = self.depth + 1;
-        let nw = Quadtree::with_depth(AABB::new(Point::new(x - hd, y + hd), hd), self.capacity, d);
-        let ne = Quadtree::with_depth(AABB::new(Point::new(x + hd, y + hd), hd), self.capacity, d);
-        let sw = Quadtree::with_depth(AABB::new(Point::new(x - hd, y - hd), hd), self.capacity, d);
-        let se = Quadtree::with_depth(AABB::new(Point::new(x + hd, y - hd), hd), self.capacity, d);
+        let nw = Self::with_depth(AABB::new(Point::new(x - hd, y + hd), hd), self.capacity, d);
+        let ne = Self::with_depth(AABB::new(Point::new(x + hd, y + hd), hd), self.capacity, d);
+        let sw = Self::with_depth(AABB::new(Point::new(x - hd, y - hd), hd), self.capacity, d);
+        let se = Self::with_depth(AABB::new(Point::new(x + hd, y - hd), hd), self.capacity, d);
 
         self.children = Some(Box::new([nw, ne, sw, se]));
         self.divided = true;
@@ -196,6 +201,7 @@ impl Quadtree {
     }
 
     /// Query points within a given range (AABB).
+    #[must_use] 
     pub fn query(&self, range: &AABB) -> Vec<Point> {
         let mut results = Vec::new();
         self.query_recursive(range, &mut results);

@@ -45,7 +45,7 @@ use std::collections::{HashMap, HashSet};
 // └───────────┴──────────────┴────────┘
 // N = number of arguments, M = length of combined short flags. Space for storing results.
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgType {
     /// A boolean flag (e.g., `--verbose`, `-v`)
     Flag,
@@ -61,7 +61,7 @@ pub struct ArgConfig {
     pub arg_type: ArgType,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ParseResult {
     /// Stores the presence of boolean flags. Key is the logical `key`.
     pub flags: HashSet<String>,
@@ -85,6 +85,7 @@ impl Default for CliParser {
 }
 
 impl CliParser {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             configs: Vec::new(),
@@ -143,13 +144,13 @@ impl CliParser {
                 let config_idx = self
                     .long_map
                     .get(key)
-                    .ok_or_else(|| format!("Unknown option: --{}", key))?;
+                    .ok_or_else(|| format!("Unknown option: --{key}"))?;
                 let config = &self.configs[*config_idx];
 
                 match config.arg_type {
                     ArgType::Flag => {
                         if value.is_some() {
-                            return Err(format!("Flag --{} does not take a value", key));
+                            return Err(format!("Flag --{key} does not take a value"));
                         }
                         result.flags.insert(config.key.clone());
                     }
@@ -160,7 +161,7 @@ impl CliParser {
                             // Take the next argument as the value
                             arg_iter
                                 .next()
-                                .ok_or_else(|| format!("Option --{} requires a value", key))?
+                                .ok_or_else(|| format!("Option --{key} requires a value"))?
                                 .as_ref()
                                 .to_string()
                         };
@@ -171,13 +172,13 @@ impl CliParser {
                 // Short Option(s)
                 // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<Vec<char>>()` and `.collect::<String>()` allocations.
                 // We iterate over `char_indices` to process short options and efficiently slice `arg` for attached values.
-                let mut char_indices = arg[1..].char_indices();
+                let char_indices = arg[1..].char_indices();
 
-                while let Some((idx, c)) = char_indices.next() {
+                for (idx, c) in char_indices {
                     let config_idx = self
                         .short_map
                         .get(&c)
-                        .ok_or_else(|| format!("Unknown short option: -{}", c))?;
+                        .ok_or_else(|| format!("Unknown short option: -{c}"))?;
                     let config = &self.configs[*config_idx];
 
                     match config.arg_type {
@@ -188,18 +189,18 @@ impl CliParser {
                             // If it's an Option, it either takes the rest of this string as value
                             // (e.g., `-p8080`) OR the next argument.
                             let rest = &arg[1 + idx + c.len_utf8()..];
-                            if !rest.is_empty() {
-                                // Value is the rest of the string
-                                result.options.insert(config.key.clone(), rest.to_string());
-                                break; // Consumed the rest of the characters
-                            } else {
+                            if rest.is_empty() {
                                 // Value is the next argument
                                 let val = arg_iter
                                     .next()
-                                    .ok_or_else(|| format!("Option -{} requires a value", c))?
+                                    .ok_or_else(|| format!("Option -{c} requires a value"))?
                                     .as_ref()
                                     .to_string();
                                 result.options.insert(config.key.clone(), val);
+                            } else {
+                                // Value is the rest of the string
+                                result.options.insert(config.key.clone(), rest.to_string());
+                                break; // Consumed the rest of the characters
                             }
                         }
                     }

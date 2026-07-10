@@ -152,13 +152,13 @@ enum CharType {
 }
 
 impl CharType {
-    fn from_byte(b: u8) -> Self {
+    const fn from_byte(b: u8) -> Self {
         match b {
-            b'0'..=b'9' => CharType::Digit,
-            b'+' | b'-' => CharType::Sign,
-            b'.' => CharType::Dot,
-            b'e' | b'E' => CharType::Exponent,
-            _ => CharType::Invalid,
+            b'0'..=b'9' => Self::Digit,
+            b'+' | b'-' => Self::Sign,
+            b'.' => Self::Dot,
+            b'e' | b'E' => Self::Exponent,
+            _ => Self::Invalid,
         }
     }
 }
@@ -183,53 +183,53 @@ impl State {
     ///
     /// // RUST INSIGHT: Exhaustive pattern matching ensures we never miss a state-input
     /// // combination. The compiler enforces that every possible state transition is handled.
-    fn transition(self, char_type: CharType) -> Self {
+    const fn transition(self, char_type: CharType) -> Self {
         match (self, char_type) {
             // Transitions from Start
-            (State::Start, CharType::Sign) => State::Sign,
-            (State::Start, CharType::Digit) => State::Integer,
-            (State::Start, CharType::Dot) => State::EmptyDot,
+            (Self::Start, CharType::Sign) => Self::Sign,
+            (Self::Start, CharType::Digit) => Self::Integer,
+            (Self::Start, CharType::Dot) => Self::EmptyDot,
 
             // Transitions from Sign
-            (State::Sign, CharType::Digit) => State::Integer,
-            (State::Sign, CharType::Dot) => State::EmptyDot,
+            (Self::Sign, CharType::Digit) => Self::Integer,
+            (Self::Sign, CharType::Dot) => Self::EmptyDot,
 
             // Transitions from Integer
-            (State::Integer, CharType::Digit) => State::Integer,
-            (State::Integer, CharType::Dot) => State::Dot,
-            (State::Integer, CharType::Exponent) => State::Exponent,
+            (Self::Integer, CharType::Digit) => Self::Integer,
+            (Self::Integer, CharType::Dot) => Self::Dot,
+            (Self::Integer, CharType::Exponent) => Self::Exponent,
 
             // Transitions from Dot (integer preceding it)
-            (State::Dot, CharType::Digit) => State::Fraction,
-            (State::Dot, CharType::Exponent) => State::Exponent,
+            (Self::Dot, CharType::Digit) => Self::Fraction,
+            (Self::Dot, CharType::Exponent) => Self::Exponent,
 
             // Transitions from EmptyDot (no integer preceding it)
-            (State::EmptyDot, CharType::Digit) => State::Fraction,
+            (Self::EmptyDot, CharType::Digit) => Self::Fraction,
 
             // Transitions from Fraction
-            (State::Fraction, CharType::Digit) => State::Fraction,
-            (State::Fraction, CharType::Exponent) => State::Exponent,
+            (Self::Fraction, CharType::Digit) => Self::Fraction,
+            (Self::Fraction, CharType::Exponent) => Self::Exponent,
 
             // Transitions from Exponent
-            (State::Exponent, CharType::Sign) => State::ExponentSign,
-            (State::Exponent, CharType::Digit) => State::ExponentInt,
+            (Self::Exponent, CharType::Sign) => Self::ExponentSign,
+            (Self::Exponent, CharType::Digit) => Self::ExponentInt,
 
             // Transitions from ExponentSign
-            (State::ExponentSign, CharType::Digit) => State::ExponentInt,
+            (Self::ExponentSign, CharType::Digit) => Self::ExponentInt,
 
             // Transitions from ExponentInt
-            (State::ExponentInt, CharType::Digit) => State::ExponentInt,
+            (Self::ExponentInt, CharType::Digit) => Self::ExponentInt,
 
             // Any other input moves us to an invalid state, or keeps us there
-            _ => State::Invalid,
+            _ => Self::Invalid,
         }
     }
 
     /// Determines if the current state is considered a final valid state for the entire string.
-    fn is_valid_end(&self) -> bool {
+    const fn is_valid_end(&self) -> bool {
         matches!(
             self,
-            State::Integer | State::Dot | State::Fraction | State::ExponentInt
+            Self::Integer | Self::Dot | Self::Fraction | Self::ExponentInt
         )
     }
 }

@@ -29,7 +29,7 @@
 ///
 /// This approach explores every possible combination recursively. It calculates the same
 /// subproblems repeatedly (e.g., `climb_stairs(n-2)` is calculated in both branches).
-/// This will Time Limit Exceed (TLE) on LeetCode for large N.
+/// This will Time Limit Exceed (TLE) on `LeetCode` for large N.
 #[must_use]
 pub fn climb_stairs_brute_force(n: i32) -> i32 {
     if n <= 2 {

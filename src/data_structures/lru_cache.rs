@@ -1,7 +1,7 @@
 //! # 146. LRU Cache
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/lru-cache/
+//! Link: <https://leetcode.com/problems/lru-cache>/
 //!
 //! Design a data structure that follows the constraints of a Least Recently Used (LRU) cache.
 //!
@@ -45,7 +45,7 @@ use std::collections::HashMap;
 // Brute Force / Naive Approach
 // ============================================================================
 
-/// Brute force approach: HashMap + Vec
+/// Brute force approach: `HashMap` + Vec
 ///
 /// Uses a `HashMap` for `O(1)` lookups and a `Vec` to track the order of recently used keys.
 /// Updating the LRU order requires finding the key in the `Vec` and moving it to the back,
@@ -120,7 +120,7 @@ struct Node {
     next: usize,
 }
 
-/// Optimal approach: HashMap + Array-based Doubly-Linked List
+/// Optimal approach: `HashMap` + Array-based Doubly-Linked List
 ///
 /// Instead of fighting the borrow checker with `Rc<RefCell<Node>>` or risking
 /// UB with `unsafe` pointers, we use a `Vec<Node>` to act as an arena allocator.

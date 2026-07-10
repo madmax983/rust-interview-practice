@@ -42,7 +42,7 @@
 //!
 //! *   **Generics**: `RadixTrie<V>` allows storing any payload.
 //! *   **Ownership**: Recursive `Box<Node<V>>` handles memory management automatically.
-//! *   **HashMap**: We use `HashMap<char, Box<Node<V>>>` for children to allow O(1) branch selection.
+//! *   **`HashMap`**: We use `HashMap<char, Box<Node<V>>>` for children to allow O(1) branch selection.
 
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -50,7 +50,7 @@ use std::fmt::Debug;
 #[derive(Debug, Clone)]
 struct Node<V> {
     prefix: String,
-    children: HashMap<char, Box<Node<V>>>,
+    children: HashMap<char, Box<Self>>,
     value: Option<V>,
 }
 

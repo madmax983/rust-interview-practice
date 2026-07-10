@@ -41,7 +41,7 @@ pub trait Backend: Send + Sync {
     fn active_connections(&self) -> usize; // For Least Connections
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Strategy {
     RoundRobin,
     WeightedRoundRobin,
@@ -56,6 +56,7 @@ pub struct LoadBalancer<B> {
 }
 
 impl<B: Backend> LoadBalancer<B> {
+    #[must_use] 
     pub fn new(strategy: Strategy) -> Self {
         Self {
             backends: Arc::new(Mutex::new(Vec::new())),
@@ -111,7 +112,7 @@ impl<B: Backend> LoadBalancer<B> {
                 // For "From Scratch" simplicity, let's just pick based on `(idx % sum_weights)` mapped to ranges.
                 // This is O(N) to search the range.
 
-                let total_weight: usize = backends.iter().map(|b| b.weight()).sum();
+                let total_weight: usize = backends.iter().map(Backend::weight).sum();
                 if total_weight == 0 {
                     return backends.first().cloned();
                 }

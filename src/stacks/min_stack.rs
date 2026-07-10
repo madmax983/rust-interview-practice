@@ -37,7 +37,7 @@ pub struct MinStack {
 
 impl MinStack {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { stack: Vec::new() }
     }
 
@@ -78,7 +78,7 @@ pub struct MinStackOptimized {
 
 impl MinStackOptimized {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             stack: Vec::new(),
             min_stack: Vec::new(),

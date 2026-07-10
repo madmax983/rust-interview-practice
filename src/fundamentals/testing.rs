@@ -9,16 +9,14 @@
 
 /// Basic function to test.
 #[allow(dead_code)]
-fn add(a: i32, b: i32) -> i32 {
+const fn add(a: i32, b: i32) -> i32 {
     a + b
 }
 
 /// Function that might panic.
 #[allow(dead_code)]
 fn divide(a: i32, b: i32) -> i32 {
-    if b == 0 {
-        panic!("Division by zero!");
-    }
+    assert!(b != 0, "Division by zero!");
     a / b
 }
 
@@ -85,16 +83,16 @@ mod basic_tests {
 
 #[allow(dead_code)]
 mod calculator {
-    pub fn add(a: i32, b: i32) -> i32 {
+    pub const fn add(a: i32, b: i32) -> i32 {
         a + b
     }
 
-    pub fn multiply(a: i32, b: i32) -> i32 {
+    pub const fn multiply(a: i32, b: i32) -> i32 {
         a * b
     }
 
     // Private function - only testable from tests module
-    fn internal_helper(x: i32) -> i32 {
+    const fn internal_helper(x: i32) -> i32 {
         x * 2
     }
 
@@ -655,7 +653,7 @@ mod error_tests {
 /// assert!(parse_number("not a number").is_err());
 /// ```
 #[allow(dead_code)]
-fn documented_add(a: i32, b: i32) -> i32 {
+const fn documented_add(a: i32, b: i32) -> i32 {
     a + b
 }
 

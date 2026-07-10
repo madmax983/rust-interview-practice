@@ -5,7 +5,7 @@
 //! **Replaces Crates:** `lru`, `cached` (partial)
 //!
 //! **Real-world Usage:**
-//! - Database buffer pools (PostgreSQL, MySQL)
+//! - Database buffer pools (`PostgreSQL`, `MySQL`)
 //! - CPU caches (L1/L2 eviction policies)
 //! - Web browser resource caching
 //! - CDN edge node content eviction
@@ -62,12 +62,12 @@ use std::ptr::NonNull;
 struct Node<K, V> {
     key: K,
     val: V,
-    prev: Option<NonNull<Node<K, V>>>,
-    next: Option<NonNull<Node<K, V>>>,
+    prev: Option<NonNull<Self>>,
+    next: Option<NonNull<Self>>,
 }
 
 impl<K, V> Node<K, V> {
-    fn new(key: K, val: V) -> Self {
+    const fn new(key: K, val: V) -> Self {
         Self {
             key,
             val,
@@ -185,7 +185,7 @@ impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
     /// # Safety
     /// `node` must be a valid pointer to a node that is *not* currently in the list
     /// (or has been unlinked).
-    unsafe fn add_to_head(&mut self, mut node: NonNull<Node<K, V>>) {
+    const unsafe fn add_to_head(&mut self, mut node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid.
         let node_ref = unsafe { node.as_mut() };
 
@@ -208,7 +208,7 @@ impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
     ///
     /// # Safety
     /// `node` must be a valid pointer to a node currently in the list.
-    unsafe fn unlink(&mut self, mut node: NonNull<Node<K, V>>) {
+    const unsafe fn unlink(&mut self, mut node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid.
         let node_ref = unsafe { node.as_mut() };
 

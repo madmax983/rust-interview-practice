@@ -116,6 +116,7 @@ pub enum PushError<T> {
 impl<T> ArrayQueue<T> {
     /// Creates a new `ArrayQueue` with the specified capacity.
     /// Capacity must be a power of two.
+    #[must_use] 
     pub fn new(capacity: usize) -> Self {
         assert!(
             capacity > 0 && capacity.is_power_of_two(),

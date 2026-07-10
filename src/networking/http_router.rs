@@ -48,11 +48,11 @@ use std::sync::Arc;
 #[derive(Default)]
 struct Node {
     /// Children nodes keyed by static path segment.
-    children: HashMap<String, Node>,
+    children: HashMap<String, Self>,
     /// Optional child node for dynamic parameter (e.g., ":id").
     /// We store the parameter name (without ':') and the node.
     /// Limitation: Only one dynamic parameter per level.
-    dynamic_child: Option<(String, Box<Node>)>,
+    dynamic_child: Option<(String, Box<Self>)>,
     /// Handlers for this path, keyed by HTTP method (GET, POST, etc.).
     handlers: HashMap<String, Arc<dyn Handler>>,
 }
@@ -64,6 +64,7 @@ pub struct Router {
 
 impl Router {
     /// Creates a new empty Router.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             root: Node::default(),
@@ -93,8 +94,7 @@ impl Router {
                     && existing_name != &param_name
                 {
                     panic!(
-                        "Conflict: Route already has dynamic parameter '{}', cannot add '{}'",
-                        existing_name, param_name
+                        "Conflict: Route already has dynamic parameter '{existing_name}', cannot add '{param_name}'"
                     );
                 }
 
@@ -125,6 +125,7 @@ impl Router {
 
     /// Matches a request method and path to a registered handler.
     /// Returns the handler and extracted path parameters.
+    #[must_use] 
     pub fn match_route(
         &self,
         method: &str,

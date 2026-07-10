@@ -5,17 +5,17 @@
 //! You may return the answer in any order. The answer is guaranteed to be unique (except for the order that it is in).
 //!
 //! - Difficulty: Medium
-//! - LeetCode: <https://leetcode.com/problems/k-closest-points-to-origin/>
+//! - `LeetCode`: <https://leetcode.com/problems/k-closest-points-to-origin/>
 //!
 //! ## Why this matters in Rust
-//! This problem is a natural fit for Rust's `std::collections::BinaryHeap` and demonstrates how to leverage Rust's type system by implementing the `Ord` and `PartialOrd` traits for custom behavior. Instead of passing anonymous comparator closures like in Python or C++, Rust encourages modeling the problem domain with specific types and embedding the sorting logic directly into the type's behavior, leading to robust and reusable code. It also highlights efficient in-place slice mutation for the QuickSelect approach.
+//! This problem is a natural fit for Rust's `std::collections::BinaryHeap` and demonstrates how to leverage Rust's type system by implementing the `Ord` and `PartialOrd` traits for custom behavior. Instead of passing anonymous comparator closures like in Python or C++, Rust encourages modeling the problem domain with specific types and embedding the sorting logic directly into the type's behavior, leading to robust and reusable code. It also highlights efficient in-place slice mutation for the `QuickSelect` approach.
 //!
 //! ## Approach
 //!
 //! We explore three implementations:
 //! 1.  **Brute Force**: Sort the entire array of points by their distance to the origin and take the first `k` elements.
 //! 2.  **Optimized (Max-Heap)**: Maintain a Max-Heap of size `k`. As we iterate through the points, we add them to the heap and pop the maximum element if the heap size exceeds `k`. The remaining elements are the `k` closest points.
-//! 3.  **Optimal (QuickSelect)**: Use the QuickSelect algorithm to partially sort the array in-place, partitioning elements such that the first `k` elements are the closest points.
+//! 3.  **Optimal (`QuickSelect`)**: Use the `QuickSelect` algorithm to partially sort the array in-place, partitioning elements such that the first `k` elements are the closest points.
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -31,7 +31,8 @@ impl Point {
     /// RUST INSIGHT: We compute the squared distance to avoid floating-point operations
     /// (square root) and potential precision issues. Since we only care about relative
     /// ordering, `a^2 < b^2` is equivalent to `a < b` for non-negative distances.
-    pub fn distance_squared(&self) -> i32 {
+    #[must_use] 
+    pub const fn distance_squared(&self) -> i32 {
         self.x * self.x + self.y * self.y
     }
 }
@@ -58,6 +59,7 @@ impl PartialOrd for Point {
 ///
 /// - **Time Complexity**: O(N log N), where N is the number of points. Sorting takes O(N log N).
 /// - **Space Complexity**: O(1) extra space (or O(N) if sorting requires an allocation like `slice::sort_by`).
+#[must_use] 
 pub fn k_closest_brute_force(points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
     let mut points = points;
     // RUST INSIGHT: `sort_by_key` is idiomatic and clean. Since `distance_squared`
@@ -74,6 +76,7 @@ pub fn k_closest_brute_force(points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
 ///
 /// - **Time Complexity**: O(N log K), where N is the total number of points. Each push/pop takes O(log K), and we do it at most N times.
 /// - **Space Complexity**: O(K) to store the elements in the heap.
+#[must_use] 
 pub fn k_closest_optimized(points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
     let k_usize = k as usize;
     // We use our custom `Point` struct to wrap the coordinates, leveraging its `Ord` impl.
@@ -95,14 +98,15 @@ pub fn k_closest_optimized(points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
     heap.into_iter().map(|p| vec![p.x, p.y]).collect()
 }
 
-/// Optimal Approach: QuickSelect
+/// Optimal Approach: `QuickSelect`
 ///
-/// We use the QuickSelect algorithm to partially sort the array such that the first
+/// We use the `QuickSelect` algorithm to partially sort the array such that the first
 /// `k` elements are the closest points. This avoids sorting the entire array or
 /// maintaining a heap.
 ///
 /// - **Time Complexity**: O(N) on average, O(N^2) in the worst case (though random pivot mitigates this).
 /// - **Space Complexity**: O(1) auxiliary space, as the partitioning happens in-place.
+#[must_use] 
 pub fn k_closest_optimal(mut points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
     let k_usize = k as usize;
     let len = points.len();
@@ -154,6 +158,7 @@ pub fn k_closest_optimal(mut points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
 }
 
 /// Main entry point
+#[must_use] 
 pub fn k_closest(points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
     k_closest_optimal(points, k)
 }

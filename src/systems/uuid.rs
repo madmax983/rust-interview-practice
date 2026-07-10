@@ -141,7 +141,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 thread_local! {
     static RNG_STATE: Cell<u64> = {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let seed = now.as_secs() ^ now.subsec_nanos() as u64;
+        let seed = now.as_secs() ^ u64::from(now.subsec_nanos());
         Cell::new(if seed == 0 { 0xCAFEBABE } else { seed })
     };
 }

@@ -93,7 +93,7 @@ fn register_constraints_example() {
 // X86_64 Specific Instructions
 // ============================================================================
 
-/// Count set bits (population count) using x86_64 POPCNT instruction.
+/// Count set bits (population count) using `x86_64` POPCNT instruction.
 ///
 /// # Safety
 ///
@@ -114,7 +114,7 @@ pub unsafe fn popcnt_asm(value: u64) -> u64 {
     result
 }
 
-/// Byte swap using x86_64 BSWAP instruction.
+/// Byte swap using `x86_64` BSWAP instruction.
 #[cfg(target_arch = "x86_64")]
 #[must_use]
 pub fn bswap_asm(value: u64) -> u64 {
@@ -129,7 +129,7 @@ pub fn bswap_asm(value: u64) -> u64 {
     result
 }
 
-/// Count leading zeros using x86_64 LZCNT instruction.
+/// Count leading zeros using `x86_64` LZCNT instruction.
 ///
 /// # Safety
 ///
@@ -150,7 +150,7 @@ pub unsafe fn lzcnt_asm(value: u64) -> u64 {
     result
 }
 
-/// Count trailing zeros using x86_64 TZCNT instruction.
+/// Count trailing zeros using `x86_64` TZCNT instruction.
 ///
 /// # Safety
 ///
@@ -175,10 +175,10 @@ pub unsafe fn tzcnt_asm(value: u64) -> u64 {
 // Atomic Operations
 // ============================================================================
 
-/// Atomic compare-and-swap using x86_64 CMPXCHG instruction.
+/// Atomic compare-and-swap using `x86_64` CMPXCHG instruction.
 ///
-/// Compares *ptr with old_value. If equal, stores new_value and returns old value.
-/// Otherwise, loads current value into old_value and returns it.
+/// Compares *ptr with `old_value`. If equal, stores `new_value` and returns old value.
+/// Otherwise, loads current value into `old_value` and returns it.
 ///
 /// # Safety
 ///
@@ -200,7 +200,7 @@ pub unsafe fn atomic_cas(ptr: *mut u64, old_value: u64, new_value: u64) -> u64 {
     prev
 }
 
-/// Atomic fetch-and-add using x86_64 XADD instruction.
+/// Atomic fetch-and-add using `x86_64` XADD instruction.
 ///
 /// Atomically adds `value` to `*ptr` and returns the previous value.
 ///
@@ -223,7 +223,7 @@ pub unsafe fn atomic_fetch_add(ptr: *mut u64, value: u64) -> u64 {
     prev
 }
 
-/// Atomic increment using x86_64 LOCK INC instruction.
+/// Atomic increment using `x86_64` LOCK INC instruction.
 ///
 /// # Safety
 ///
@@ -312,7 +312,7 @@ pub fn store_fence() {
 // System Calls
 // ============================================================================
 
-/// Direct system call using SYSCALL instruction (Linux x86_64).
+/// Direct system call using SYSCALL instruction (Linux `x86_64`).
 ///
 /// # Safety
 ///
@@ -398,7 +398,7 @@ pub fn spin_loop_hint() {
     }
 }
 
-/// Read timestamp counter (x86_64 RDTSC).
+/// Read timestamp counter (`x86_64` RDTSC).
 ///
 /// Returns the number of CPU cycles since reset.
 #[cfg(target_arch = "x86_64")]
@@ -435,7 +435,7 @@ pub fn rdtscp() -> u64 {
     ((u64::from(high)) << 32) | u64::from(low)
 }
 
-/// Prefetch data into cache (x86_64).
+/// Prefetch data into cache (`x86_64`).
 ///
 /// # Safety
 ///

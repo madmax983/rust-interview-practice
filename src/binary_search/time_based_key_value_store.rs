@@ -1,7 +1,7 @@
 //! # 981. Time Based Key-Value Store
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/time-based-key-value-store/
+//! Link: <https://leetcode.com/problems/time-based-key-value-store>/
 //!
 //! This problem is a natural fit for Rust's `std::collections::BTreeMap` and demonstrates why iterator adapters eliminate off-by-one errors.
 //! It teaches how to compose collections (`HashMap` containing `BTreeMap` or `Vec`) and how to leverage `range` queries or `partition_point` for efficient O(log N) lookups without manual binary search implementation.
@@ -10,11 +10,11 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-/// Approach 1: BTreeMap (Straightforward & Idiomatic)
+/// Approach 1: `BTreeMap` (Straightforward & Idiomatic)
 ///
 /// Time Complexity:
-///   - `set`: O(log N) for BTreeMap insertion.
-///   - `get`: O(log N) for BTreeMap range query.
+///   - `set`: O(log N) for `BTreeMap` insertion.
+///   - `get`: O(log N) for `BTreeMap` range query.
 /// Space Complexity: O(K * N) where K is number of keys and N is number of timestamps.
 ///
 /// Why this is idiomatic Rust:
@@ -61,12 +61,12 @@ impl TimeMapBTree {
 /// Approach 2: Vector + Binary Search (Optimized & Cache Friendly)
 ///
 /// Time Complexity:
-///   - `set`: O(1) amortized, since timestamps are strictly increasing per LeetCode constraints.
+///   - `set`: O(1) amortized, since timestamps are strictly increasing per `LeetCode` constraints.
 ///   - `get`: O(log N) using binary search (`partition_point`).
 /// Space Complexity: O(K * N)
 ///
-/// Why prefer this over BTreeMap?
-/// BTreeMap nodes are heap-allocated individually, which can cause memory fragmentation.
+/// Why prefer this over `BTreeMap`?
+/// `BTreeMap` nodes are heap-allocated individually, which can cause memory fragmentation.
 /// If we know timestamps arrive in strictly increasing order (as the problem states),
 /// a `Vec` is much more cache-friendly and `set` becomes O(1) instead of O(log N).
 #[derive(Default)]

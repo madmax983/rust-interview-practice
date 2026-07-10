@@ -46,6 +46,7 @@ impl<K: Hash + Eq + Clone + Send + 'static, V: Send + 'static> ConcurrentLruCach
     /// Creates a new Concurrent LRU Cache.
     /// `capacity` is the total capacity across all shards.
     /// `num_shards` should be a power of two for better distribution (though we use modulo here for simplicity).
+    #[must_use] 
     pub fn new(capacity: usize, num_shards: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");
         assert!(num_shards > 0, "Number of shards must be greater than 0");

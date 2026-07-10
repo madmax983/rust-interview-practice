@@ -5,7 +5,7 @@
 //! **Replaces Crates:** `r2d2`, `bb8`, `deadpool`
 //!
 //! **Real-world Usage:**
-//! - Database clients (PostgreSQL, MySQL, Redis) to avoid handshake overhead.
+//! - Database clients (`PostgreSQL`, `MySQL`, Redis) to avoid handshake overhead.
 //! - HTTP clients (Keep-Alive connections).
 //!
 //! **Why build it yourself?**
@@ -137,22 +137,18 @@ impl<M: ConnectionManager> Pool<M> {
                 // during potentially slow I/O operations. This improves concurrency.
                 drop(state);
 
-                match self.shared.manager.is_valid(&mut conn) {
-                    Ok(()) => {
-                        return Ok(PooledConnection {
-                            pool: self.clone(),
-                            conn: Some(conn),
-                        });
-                    }
-                    Err(_) => {
-                        // Connection is invalid. We must re-acquire lock to update state.
-                        state = self.shared.state.lock().unwrap();
-                        state.num_connections -= 1;
-                        // We freed a slot, so notify waiting threads.
-                        self.shared.cond.notify_one();
-                        continue;
-                    }
+                if matches!(self.shared.manager.is_valid(&mut conn), Ok(())) {
+                    return Ok(PooledConnection {
+                        pool: self.clone(),
+                        conn: Some(conn),
+                    });
                 }
+                // Connection is invalid. We must re-acquire lock to update state.
+                state = self.shared.state.lock().unwrap();
+                state.num_connections -= 1;
+                // We freed a slot, so notify waiting threads.
+                self.shared.cond.notify_one();
+                continue;
             }
 
             // 2. If no idle, try to create new

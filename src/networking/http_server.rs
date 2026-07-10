@@ -143,12 +143,12 @@ impl<H: Handler> HttpServer<H> {
                         if let Err(e) = Self::handle_connection(stream, handler) {
                             // Don't log unexpected EOF which is normal connection close
                             if e.kind() != io::ErrorKind::UnexpectedEof {
-                                eprintln!("Error handling connection: {}", e);
+                                eprintln!("Error handling connection: {e}");
                             }
                         }
                     });
                 }
-                Err(e) => eprintln!("Connection failed: {}", e),
+                Err(e) => eprintln!("Connection failed: {e}"),
             }
         }
         Ok(())
@@ -166,7 +166,7 @@ impl<H: Handler> HttpServer<H> {
                     let response = HttpResponse::new(
                         400,
                         "Bad Request",
-                        Some(format!("Error parsing request: {}", e).into_bytes()),
+                        Some(format!("Error parsing request: {e}").into_bytes()),
                     );
                     // Ignore write error on broken pipe
                     let _ = stream.write_all(&response.to_bytes());
@@ -180,8 +180,7 @@ impl<H: Handler> HttpServer<H> {
             let close_connection = request
                 .headers
                 .get("connection")
-                .map(|v| v.to_lowercase() == "close")
-                .unwrap_or(false);
+                .is_some_and(|v| v.to_lowercase() == "close");
 
             let response = handler.handle(request);
             stream.write_all(&response.to_bytes())?;
@@ -325,7 +324,7 @@ impl HttpRequest {
             body = buffer;
         }
 
-        Ok(Some(HttpRequest {
+        Ok(Some(Self {
             method,
             path,
             version,
@@ -337,6 +336,7 @@ impl HttpRequest {
 }
 
 impl HttpResponse {
+    #[must_use] 
     pub fn new(status_code: u16, status_text: &str, body: Option<Vec<u8>>) -> Self {
         Self {
             status_code,
@@ -346,6 +346,7 @@ impl HttpResponse {
         }
     }
 
+    #[must_use] 
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut response = Vec::new();
 
@@ -358,12 +359,12 @@ impl HttpResponse {
         .unwrap();
 
         // Headers
-        let is_chunked = self.headers.get("Transfer-Encoding").map(|v| v.as_str())
+        let is_chunked = self.headers.get("Transfer-Encoding").map(std::string::String::as_str)
             == Some("chunked")
-            || self.headers.get("transfer-encoding").map(|v| v.as_str()) == Some("chunked");
+            || self.headers.get("transfer-encoding").map(std::string::String::as_str) == Some("chunked");
 
         for (key, value) in &self.headers {
-            write!(&mut response, "{}: {}\r\n", key, value).unwrap();
+            write!(&mut response, "{key}: {value}\r\n").unwrap();
         }
 
         // Content-Length or Transfer-Encoding

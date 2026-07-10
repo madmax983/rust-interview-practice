@@ -1,7 +1,7 @@
 //! # 743. Network Delay Time
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/network-delay-time/
+//! Link: <https://leetcode.com/problems/network-delay-time>/
 //!
 //! You are given a network of `n` nodes, labeled from 1 to `n`. You are also given `times`, a list of
 //! travel times as directed edges `times[i] = (u, v, w)`, where `u` is the source node, `v` is the

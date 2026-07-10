@@ -38,7 +38,8 @@ pub struct Semaphore {
 
 impl Semaphore {
     /// Creates a new semaphore with the initial number of permits.
-    pub fn new(permits: usize) -> Self {
+    #[must_use] 
+    pub const fn new(permits: usize) -> Self {
         Self {
             count: Mutex::new(permits),
             cond: Condvar::new(),
@@ -84,7 +85,7 @@ impl Semaphore {
             if elapsed >= timeout {
                 return false;
             }
-            remaining = timeout - elapsed;
+            remaining = timeout.checked_sub(elapsed).unwrap();
         }
 
         *count -= 1;

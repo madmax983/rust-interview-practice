@@ -150,7 +150,7 @@ impl fmt::Debug for Error {
         if chain.peek().is_some() {
             write!(f, "\n\nCaused by:")?;
             for (i, error) in chain.enumerate() {
-                write!(f, "\n    {}: {}", i, error)?;
+                write!(f, "\n    {i}: {error}")?;
             }
         }
         Ok(())

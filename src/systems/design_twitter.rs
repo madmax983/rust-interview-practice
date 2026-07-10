@@ -1,6 +1,6 @@
 //! # Design Twitter
 //!
-//! **Problem Name:** Design Twitter (LeetCode 355)
+//! **Problem Name:** Design Twitter (`LeetCode` 355)
 //! **Difficulty:** Medium
 //! **Link:** <https://leetcode.com/problems/design-twitter/>
 //!
@@ -45,7 +45,7 @@
 //!     Good for read-heavy systems (like actual Twitter), but expensive for users with millions of followers (the "Justin Bieber problem").
 //!
 //! - **Database**:
-//!   - In a real system, you'd use a DB. Here, we simulate it with in-memory HashMaps.
+//!   - In a real system, you'd use a DB. Here, we simulate it with in-memory `HashMaps`.
 
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
@@ -55,7 +55,7 @@ type Timestamp = u64;
 
 /// A simplified Twitter backend simulation.
 pub struct Twitter {
-    /// Maps User ID to a list of their tweets (Timestamp, TweetId).
+    /// Maps User ID to a list of their tweets (Timestamp, `TweetId`).
     /// Vectors are strictly ordered by Timestamp (ascending).
     tweets: HashMap<UserId, Vec<(Timestamp, TweetId)>>,
     /// Maps User ID to a Set of User IDs they follow.
@@ -89,6 +89,7 @@ impl PartialOrd for HeapItem {
 
 impl Twitter {
     /// Creates a new, empty Twitter instance.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             tweets: HashMap::new(),
@@ -109,6 +110,7 @@ impl Twitter {
     /// Retrieve the 10 most recent tweet IDs in the user's news feed.
     /// Each item must be posted by users who the user followed or by the user themselves.
     /// Tweets must be ordered from most recent to least recent.
+    #[must_use] 
     pub fn get_news_feed(&self, user_id: UserId) -> Vec<TweetId> {
         // 1. Identify sources: The user themselves + their followees
         // RUST INSIGHT: We can use `std::iter::once` chained with the followees iterator

@@ -7,7 +7,7 @@
 //! You may assume that the given expression is always valid. All intermediate results will be in the range of `[-2^31, 2^31 - 1]`.
 //!
 //! - Difficulty: Medium
-//! - LeetCode: <https://leetcode.com/problems/basic-calculator-ii/>
+//! - `LeetCode`: <https://leetcode.com/problems/basic-calculator-ii/>
 //!
 //! ## Why this matters in Rust
 //! This problem perfectly illustrates the power of Rust's iterators, enums, and pattern matching.
@@ -149,6 +149,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    #[must_use] 
     pub fn new(s: &'a str) -> Self {
         let mut bytes = s.as_bytes().iter();
         let peeked = bytes.next().copied();
@@ -160,7 +161,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-impl<'a> Iterator for Lexer<'a> {
+impl Iterator for Lexer<'_> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {

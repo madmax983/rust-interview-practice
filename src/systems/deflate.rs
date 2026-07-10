@@ -17,7 +17,6 @@
 //! Huffman coding eliminates redundancy over symbol frequency. It also forces you to handle
 //! bit-level IO operations in Rust, crossing standard byte boundaries.
 
-use std::cmp::Reverse;
 use std::collections::{BinaryHeap, HashMap};
 
 // =========================================================================================
@@ -80,7 +79,7 @@ struct BitWriter {
 }
 
 impl BitWriter {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             bytes: Vec::new(),
             accumulator: 0,
@@ -120,7 +119,7 @@ struct BitReader<'a> {
 }
 
 impl<'a> BitReader<'a> {
-    fn new(bytes: &'a [u8]) -> Self {
+    const fn new(bytes: &'a [u8]) -> Self {
         Self {
             bytes,
             byte_idx: 0,
@@ -135,7 +134,7 @@ impl<'a> BitReader<'a> {
             if self.byte_idx >= self.bytes.len() {
                 return None; // Not enough bits
             }
-            self.accumulator |= (self.bytes[self.byte_idx] as u64) << self.bits_in_acc;
+            self.accumulator |= u64::from(self.bytes[self.byte_idx]) << self.bits_in_acc;
             self.bits_in_acc += 8;
             self.byte_idx += 1;
         }
@@ -159,8 +158,8 @@ struct FreqNode {
     freq: usize,
     id: usize, // Tie-breaker for stable sorting
     symbol: Option<u16>,
-    left: Option<Box<FreqNode>>,
-    right: Option<Box<FreqNode>>,
+    left: Option<Box<Self>>,
+    right: Option<Box<Self>>,
 }
 
 // Implement custom Ord to make FreqNode a Min-Heap element based on frequency.
@@ -207,7 +206,7 @@ impl Compressor for Deflate {
         let mut freqs = HashMap::new();
         for &t in &tokens {
             match t {
-                Lz77Token::Literal(b) => *freqs.entry(b as u16).or_insert(0) += 1,
+                Lz77Token::Literal(b) => *freqs.entry(u16::from(b)).or_insert(0) += 1,
                 Lz77Token::Match { .. } => *freqs.entry(MATCH_MARKER).or_insert(0) += 1,
             }
         }
@@ -230,7 +229,7 @@ impl Compressor for Deflate {
         for t in tokens {
             match t {
                 Lz77Token::Literal(b) => {
-                    let (code, bits) = codes[&(b as u16)];
+                    let (code, bits) = codes[&u16::from(b)];
                     writer.write_bits(code, bits);
                 }
                 Lz77Token::Match { length, distance } => {
@@ -240,8 +239,8 @@ impl Compressor for Deflate {
                     // GOTCHA: We write length as 8 bits and distance as 16 bits *uncompressed*.
                     // This deviates from real DEFLATE which uses a second Huffman tree for distances
                     // and base values + extra bits.
-                    writer.write_bits((length - MIN_MATCH_LEN as u16) as u64, 8);
-                    writer.write_bits(distance as u64, 16);
+                    writer.write_bits(u64::from(length - MIN_MATCH_LEN as u16), 8);
+                    writer.write_bits(u64::from(distance), 16);
                 }
             }
         }
@@ -422,7 +421,7 @@ impl Deflate {
     fn serialize_tree(node: &FreqNode, writer: &mut BitWriter) {
         if let Some(sym) = node.symbol {
             writer.write_bits(1, 1); // 1 indicates Leaf
-            writer.write_bits(sym as u64, 9); // 9 bits handles 0-257
+            writer.write_bits(u64::from(sym), 9); // 9 bits handles 0-257
         } else {
             writer.write_bits(0, 1); // 0 indicates Internal node
             if let Some(ref l) = node.left {

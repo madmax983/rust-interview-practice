@@ -62,7 +62,7 @@ pub struct WordDictionaryBruteForce {
 
 impl WordDictionaryBruteForce {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { words: Vec::new() }
     }
 
@@ -70,6 +70,7 @@ impl WordDictionaryBruteForce {
         self.words.push(word);
     }
 
+    #[must_use] 
     pub fn search(&self, word: String) -> bool {
         let search_bytes = word.as_bytes();
 
@@ -106,7 +107,7 @@ impl WordDictionaryBruteForce {
 /// It dramatically reduces the search space by only comparing against words of the exact same length.
 ///
 /// Time:
-/// - `add_word`: O(L) to compute hash and insert into HashSet.
+/// - `add_word`: O(L) to compute hash and insert into `HashSet`.
 /// - `search`: O(M * L) where M is the number of words with the *same length*.
 /// Space: O(N * L) to store all words in the hash map.
 #[derive(Default)]
@@ -126,6 +127,7 @@ impl WordDictionaryOptimized {
         self.length_map.entry(word.len()).or_default().insert(word);
     }
 
+    #[must_use] 
     pub fn search(&self, word: String) -> bool {
         // If there are no words of this length, return early.
         let Some(words) = self.length_map.get(&word.len()) else {
@@ -161,7 +163,7 @@ impl WordDictionaryOptimized {
 /// Trie Node representation using a fixed array.
 #[derive(Default)]
 struct TrieNode {
-    children: [Option<Box<TrieNode>>; 26],
+    children: [Option<Box<Self>>; 26],
     is_end: bool,
 }
 
@@ -212,6 +214,7 @@ impl WordDictionaryOptimal {
         curr.is_end = true;
     }
 
+    #[must_use] 
     pub fn search(&self, word: String) -> bool {
         // Delegate to the recursive helper function
         Self::search_dfs(&self.root, word.as_bytes())

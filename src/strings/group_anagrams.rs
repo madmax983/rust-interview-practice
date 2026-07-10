@@ -116,7 +116,7 @@ pub fn group_anagrams_optimal(strs: Vec<String>) -> Vec<Vec<String>> {
 
 /// Main entry point - uses the optimal frequency-count approach.
 ///
-/// Note: this assumes ASCII lowercase input per the LeetCode constraints. For arbitrary
+/// Note: this assumes ASCII lowercase input per the `LeetCode` constraints. For arbitrary
 /// Unicode input, call `group_anagrams_brute_force` (the sorting approach) directly.
 #[must_use]
 pub fn group_anagrams(strs: Vec<String>) -> Vec<Vec<String>> {

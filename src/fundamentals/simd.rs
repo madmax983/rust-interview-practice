@@ -12,7 +12,7 @@
 // Platform Detection
 // ============================================================================
 
-/// Check if CPU supports SSE4.2 (x86/x86_64).
+/// Check if CPU supports SSE4.2 (`x86/x86_64`).
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[must_use]
 pub fn has_sse42() -> bool {
@@ -45,7 +45,7 @@ pub fn has_fma() -> bool {
 // ============================================================================
 
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+use std::arch::x86_64::{__m128, _mm_movehl_ps, _mm_add_ps, _mm_shuffle_ps, _mm_add_ss, _mm_cvtss_f32, _mm_loadu_ps, _mm_storeu_ps, _mm_mul_ps, _mm_setzero_ps, _mm_set1_ps, _mm_max_ps, _mm256_loadu_ps, _mm256_add_ps, _mm256_storeu_ps, _mm256_fmadd_ps, _mm256_setzero_ps, _mm256_castps256_ps128, _mm256_extractf128_ps, _mm_movehdup_ps, _mm_loadu_si128, _mm_add_epi32, _mm_storeu_si128, _mm256_loadu_si256, _mm256_add_epi32, _mm256_storeu_si256, _mm256_setzero_si256, _mm256_castsi256_si128, _mm256_extracti128_si256, _mm_hadd_epi32, _mm_cvtsi128_si32, _mm_cmpgt_ps, _mm_movemask_ps};
 
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
@@ -191,7 +191,7 @@ pub fn dot_product_sse(a: &[f32], b: &[f32]) -> f32 {
 /// SSE2 implementation of [`dot_product_sse`].
 ///
 /// Uses an SSE2-only horizontal reduction (`hsum_ps_sse2`) instead of the SSE3
-/// `_mm_movehdup_ps`, so it stays within the x86_64 SSE2 baseline.
+/// `_mm_movehdup_ps`, so it stays within the `x86_64` SSE2 baseline.
 ///
 /// # Safety
 /// The CPU must support SSE2.

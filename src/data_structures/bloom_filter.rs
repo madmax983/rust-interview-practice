@@ -64,6 +64,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     /// # Arguments
     /// * `expected_items` - The number of items you expect to insert (n).
     /// * `false_positive_rate` - The desired false positive rate (p) (e.g., 0.01 for 1%).
+    #[must_use] 
     pub fn new(expected_items: usize, false_positive_rate: f64) -> Self {
         // RUST INSIGHT:
         // Optimal m = -(n * ln(p)) / (ln(2)^2)
@@ -109,7 +110,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
         for i in 0..self.hash_count {
             // Double hashing: h_i = (h1 + i * h2) % m
             // Wrapping add to allow overflow (standard behavior)
-            let index = h1.wrapping_add((i as u64).wrapping_mul(h2)) % self.bit_count;
+            let index = h1.wrapping_add(u64::from(i).wrapping_mul(h2)) % self.bit_count;
             self.set_bit(index);
         }
     }
@@ -120,7 +121,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
         let (h1, h2) = self.get_hash_pair(item);
 
         for i in 0..self.hash_count {
-            let index = h1.wrapping_add((i as u64).wrapping_mul(h2)) % self.bit_count;
+            let index = h1.wrapping_add(u64::from(i).wrapping_mul(h2)) % self.bit_count;
             if !self.get_bit(index) {
                 return false;
             }
@@ -153,7 +154,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     ///
     /// We use `DefaultHasher` which is not cryptographically secure and can vary across Rust versions,
     /// but is sufficient for this educational implementation.
-    /// In production, use SipHash (which DefaultHasher often wraps) or Murmur3 explicitly.
+    /// In production, use `SipHash` (which `DefaultHasher` often wraps) or Murmur3 explicitly.
     fn get_hash_pair(&self, item: &T) -> (u64, u64) {
         let mut hasher1 = DefaultHasher::new();
         item.hash(&mut hasher1);
@@ -192,7 +193,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     }
 
     /// Saves the Bloom Filter to a file.
-    /// Format: [bit_count (8 bytes)] [hash_count (4 bytes)] [vec_len (8 bytes)] [bit_vec (8 * vec_len bytes)]
+    /// Format: [`bit_count` (8 bytes)] [`hash_count` (4 bytes)] [`vec_len` (8 bytes)] [`bit_vec` (8 * `vec_len` bytes)]
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut file = File::create(path)?;
         file.write_all(&self.bit_count.to_le_bytes())?;
@@ -240,7 +241,7 @@ struct Fnv1aHasher {
 }
 
 impl Fnv1aHasher {
-    fn new(seed: u64) -> Self {
+    const fn new(seed: u64) -> Self {
         Self { state: seed }
     }
 }
@@ -253,7 +254,7 @@ impl Hasher for Fnv1aHasher {
     fn write(&mut self, bytes: &[u8]) {
         let prime = 1099511628211;
         for byte in bytes {
-            self.state ^= *byte as u64;
+            self.state ^= u64::from(*byte);
             self.state = self.state.wrapping_mul(prime);
         }
     }

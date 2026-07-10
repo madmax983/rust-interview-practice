@@ -83,7 +83,7 @@ pub fn is_valid_brute_force(s: String) -> bool {
 /// Time: O(N) - Iterates through each byte.
 /// Space: O(N) - In the worst case, the stack stores all bytes.
 ///
-/// Because LeetCode guarantees the input only contains ASCII bracket characters,
+/// Because `LeetCode` guarantees the input only contains ASCII bracket characters,
 /// we can bypass UTF-8 decoding (`chars()`) and work directly on the underlying bytes (`as_bytes()`).
 #[must_use]
 pub fn is_valid_optimal(s: String) -> bool {

@@ -97,7 +97,7 @@ impl Sha256 {
     ];
 
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             state: Self::H0,
             buffer: [0; 64],
@@ -147,6 +147,7 @@ impl Sha256 {
     }
 
     /// Finalize the hash and return the 32-byte digest.
+    #[must_use] 
     pub fn finalize(mut self) -> [u8; 32] {
         let bit_len = self.len * 8;
 

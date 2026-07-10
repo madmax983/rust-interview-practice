@@ -6,7 +6,7 @@
 //!
 //! **Real-world Usage:**
 //! - Core synchronization primitive in high-performance Rust applications.
-//! - WebKit's WTF::Lock (which inspired parking_lot).
+//! - `WebKit`'s `WTF::Lock` (which inspired `parking_lot`).
 //! - JVM monitors and Linux futexes use similar concepts.
 //!
 //! **Why build it yourself?**
@@ -143,7 +143,7 @@ impl<T> Mutex<T> {
 
     fn lock_slow(&self) {
         let mut spin_count = 0;
-        let address = self as *const Mutex<T> as usize;
+        let address = std::ptr::from_ref::<Self>(self) as usize;
         let current_thread = thread::current();
         // Our personal handoff flag. `unlock` sets this to `true` (under the lot
         // lock) when it hands us the lock directly, so a spurious `park` wakeup
@@ -274,7 +274,7 @@ impl<T> Mutex<T> {
         // (or LOCKED_WITH_PARKED if more waiters remain), set the waiter's
         // `granted` flag, and unpark it. Because the lock never looks free, no
         // other thread can win a fast-path acquisition and skip over the queue.
-        let address = self as *const Mutex<T> as usize;
+        let address = std::ptr::from_ref::<Self>(self) as usize;
 
         let mut lot = global_lot().lock().unwrap();
 
@@ -313,7 +313,7 @@ pub struct MutexGuard<'a, T> {
 
 // UNSAFE JUSTIFICATION:
 // Deref allows safe access to the inner data because the Mutex ensures exclusive access.
-impl<'a, T> Deref for MutexGuard<'a, T> {
+impl<T> Deref for MutexGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -321,13 +321,13 @@ impl<'a, T> Deref for MutexGuard<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for MutexGuard<'a, T> {
+impl<T> DerefMut for MutexGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { &mut *self.lock.data.get() }
     }
 }
 
-impl<'a, T> Drop for MutexGuard<'a, T> {
+impl<T> Drop for MutexGuard<'_, T> {
     fn drop(&mut self) {
         self.lock.unlock();
     }

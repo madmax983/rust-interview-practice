@@ -79,7 +79,7 @@ struct Task {
     future: Mutex<Option<BoxFuture<'static, ()>>>,
 
     /// The channel sender to put this task back into the ready queue when woken.
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
 /// Spawner spawns new tasks onto the executor.
@@ -125,6 +125,7 @@ impl Executor {
     }
 }
 
+#[must_use] 
 pub fn new_executor_and_spawner() -> (Executor, Spawner) {
     let (task_sender, ready_queue) = sync_channel(10_000);
     (Executor { ready_queue }, Spawner { task_sender })
@@ -140,7 +141,7 @@ fn waker_ref(task: &Arc<Task>) -> Waker {
 }
 
 fn arc_to_raw_waker(task: Arc<Task>) -> RawWaker {
-    let raw_ptr = Arc::into_raw(task) as *const ();
+    let raw_ptr = Arc::into_raw(task).cast::<()>();
     RawWaker::new(raw_ptr, &VTABLE)
 }
 
@@ -148,7 +149,7 @@ const VTABLE: RawWakerVTable =
     RawWakerVTable::new(task_clone, task_wake, task_wake_by_ref, task_drop);
 
 unsafe fn task_clone(raw_ptr: *const ()) -> RawWaker {
-    let ptr = raw_ptr as *const Task;
+    let ptr = raw_ptr.cast::<Task>();
     let arc = ManuallyDrop::new(unsafe { Arc::from_raw(ptr) });
     // We want a new Arc that owns a reference count.
     // (*arc) gives us &Arc<Task>.
@@ -158,14 +159,14 @@ unsafe fn task_clone(raw_ptr: *const ()) -> RawWaker {
 }
 
 unsafe fn task_wake(raw_ptr: *const ()) {
-    let ptr = raw_ptr as *const Task;
+    let ptr = raw_ptr.cast::<Task>();
     let task = unsafe { Arc::from_raw(ptr) }; // Take ownership
     let sender = task.task_sender.clone();
     let _ = sender.send(task);
 }
 
 unsafe fn task_wake_by_ref(raw_ptr: *const ()) {
-    let ptr = raw_ptr as *const Task;
+    let ptr = raw_ptr.cast::<Task>();
     let arc = ManuallyDrop::new(unsafe { Arc::from_raw(ptr) });
     let task_to_send: Arc<Task> = (*arc).clone();
     let sender = task_to_send.task_sender.clone();
@@ -173,7 +174,7 @@ unsafe fn task_wake_by_ref(raw_ptr: *const ()) {
 }
 
 unsafe fn task_drop(raw_ptr: *const ()) {
-    let ptr = raw_ptr as *const Task;
+    let ptr = raw_ptr.cast::<Task>();
     drop(unsafe { Arc::from_raw(ptr) });
 }
 
@@ -205,6 +206,7 @@ impl Future for TimerFuture {
 }
 
 impl TimerFuture {
+    #[must_use] 
     pub fn new(duration: Duration) -> Self {
         let shared_state = Arc::new(Mutex::new(SharedState {
             completed: false,
@@ -221,7 +223,7 @@ impl TimerFuture {
             }
         });
 
-        TimerFuture { shared_state }
+        Self { shared_state }
     }
 }
 

@@ -62,38 +62,38 @@ use std::collections::HashMap;
 pub enum Value {
     String(String),
     Bool(bool),
-    List(Vec<Value>),
-    Map(HashMap<String, Value>),
+    List(Vec<Self>),
+    Map(HashMap<String, Self>),
 }
 
 // RUST INSIGHT: Impl From traits to make building Contexts ergonomic.
 impl From<&str> for Value {
     fn from(s: &str) -> Self {
-        Value::String(s.to_string())
+        Self::String(s.to_string())
     }
 }
 
 impl From<String> for Value {
     fn from(s: String) -> Self {
-        Value::String(s)
+        Self::String(s)
     }
 }
 
 impl From<bool> for Value {
     fn from(b: bool) -> Self {
-        Value::Bool(b)
+        Self::Bool(b)
     }
 }
 
-impl From<Vec<Value>> for Value {
-    fn from(vec: Vec<Value>) -> Self {
-        Value::List(vec)
+impl From<Vec<Self>> for Value {
+    fn from(vec: Vec<Self>) -> Self {
+        Self::List(vec)
     }
 }
 
-impl From<HashMap<String, Value>> for Value {
-    fn from(map: HashMap<String, Value>) -> Self {
-        Value::Map(map)
+impl From<HashMap<String, Self>> for Value {
+    fn from(map: HashMap<String, Self>) -> Self {
+        Self::Map(map)
     }
 }
 
@@ -104,7 +104,7 @@ pub type Context = HashMap<String, Value>;
 enum RenderContext<'a> {
     Root(&'a Context),
     Scoped {
-        parent: &'a RenderContext<'a>,
+        parent: &'a Self,
         key: &'a str,
         value: &'a Value,
     },
@@ -130,8 +130,8 @@ impl<'a> RenderContext<'a> {
 enum Node {
     Text(String),
     Variable(String),
-    If(String, Vec<Node>),
-    For(String, String, Vec<Node>), // For(iterator_name, list_name, body)
+    If(String, Vec<Self>),
+    For(String, String, Vec<Self>), // For(iterator_name, list_name, body)
 }
 
 /// Trait representing a generic Template Engine.
@@ -151,7 +151,7 @@ pub struct Template {
     nodes: Vec<Node>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TemplateError {
     ParseError(String),
     RenderError(String),
@@ -177,10 +177,10 @@ impl Engine for Template {
 }
 
 impl Template {
-    fn render_nodes<'a>(
+    fn render_nodes(
         &self,
         nodes: &[Node],
-        context: &RenderContext<'a>,
+        context: &RenderContext<'_>,
         output: &mut String,
     ) -> Result<(), TemplateError> {
         for node in nodes {
@@ -195,8 +195,7 @@ impl Template {
                             Value::Bool(b) => output.push_str(if *b { "true" } else { "false" }),
                             _ => {
                                 return Err(TemplateError::RenderError(format!(
-                                    "Cannot render complex type for variable '{}'",
-                                    name
+                                    "Cannot render complex type for variable '{name}'"
                                 )));
                             }
                         }
@@ -353,8 +352,7 @@ fn parse_nodes(
                     ));
                 } else {
                     return Err(TemplateError::ParseError(format!(
-                        "Unknown block: {}",
-                        content
+                        "Unknown block: {content}"
                     )));
                 }
             }
@@ -378,8 +376,7 @@ fn parse_nodes(
 
     if let Some(expected) = expected_end {
         return Err(TemplateError::ParseError(format!(
-            "Missing closing block: {}",
-            expected
+            "Missing closing block: {expected}"
         )));
     }
 

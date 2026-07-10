@@ -7,7 +7,7 @@
 //! **Replaces Crates:** `std::sync::Barrier`
 //!
 //! **Real-world Usage:**
-//! - Parallel algorithms with distinct phases (e.g., MapReduce, scatter-gather).
+//! - Parallel algorithms with distinct phases (e.g., `MapReduce`, scatter-gather).
 //! - Wait for all worker threads to finish initialization before starting a workload.
 //! - Graphics rendering pipelines (synchronizing frames across multiple GPU command queues).
 //!
@@ -75,7 +75,7 @@ impl BarrierWaitResult {
     /// Returns `true` if this thread is the "leader" (the last thread to arrive at the barrier).
     /// Exactly one thread will receive `true` per barrier cycle.
     #[must_use]
-    pub fn is_leader(&self) -> bool {
+    pub const fn is_leader(&self) -> bool {
         self.is_leader
     }
 }

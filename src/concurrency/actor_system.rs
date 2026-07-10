@@ -70,7 +70,7 @@ pub trait ActorContext {
     fn stop(&mut self);
 }
 
-/// A concrete implementation of ActorContext.
+/// A concrete implementation of `ActorContext`.
 pub struct ContextImpl {
     running: bool,
 }
@@ -220,7 +220,7 @@ impl<A: Actor> Addr<A> {
         });
 
         match self.sender.send(envelope) {
-            Ok(_) => Ok(rx),
+            Ok(()) => Ok(rx),
             Err(_) => Err(SendError::Closed),
         }
     }

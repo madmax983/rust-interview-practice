@@ -3,5 +3,5 @@ fn main() {
     let data = vec![b'a'; 10_000_000];
     hasher.update(&data);
     let hash = hasher.finalize();
-    println!("{:?}", hash);
+    println!("{hash:?}");
 }

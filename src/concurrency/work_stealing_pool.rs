@@ -77,7 +77,7 @@ thread_local! {
     static WORKER_ID: Cell<Option<usize>> = const { Cell::new(None) };
 }
 
-/// The main ThreadPool struct.
+/// The main `ThreadPool` struct.
 pub struct WorkStealingPool {
     workers: Arc<Vec<WorkerState>>,
     global_queue: Arc<GlobalQueue>,
@@ -95,7 +95,8 @@ struct WorkerState {
 }
 
 impl WorkStealingPool {
-    /// Create a new WorkStealingPool with `size` threads.
+    /// Create a new `WorkStealingPool` with `size` threads.
+    #[must_use] 
     pub fn new(size: usize) -> Self {
         assert!(size > 0, "Pool size must be > 0");
 
@@ -124,7 +125,7 @@ impl WorkStealingPool {
             let thread_global = global_queue.clone();
             let thread_shutdown = shutdown.clone();
 
-            let builder = thread::Builder::new().name(format!("worker-{}", id));
+            let builder = thread::Builder::new().name(format!("worker-{id}"));
 
             let _handle = builder
                 .spawn(move || {
@@ -196,7 +197,7 @@ impl WorkStealingPool {
                 .unwrap();
         }
 
-        WorkStealingPool {
+        Self {
             workers: shared_states, // we keep this mainly to ensure they stay alive? No, threads own them.
             global_queue,
             shutdown,
@@ -211,7 +212,7 @@ impl WorkStealingPool {
         let job = Box::new(f);
 
         // Check if called from a worker thread
-        let worker_id = WORKER_ID.with(|id_cell| id_cell.get());
+        let worker_id = WORKER_ID.with(std::cell::Cell::get);
 
         if let Some(id) = worker_id {
             // Push to local queue
@@ -264,13 +265,13 @@ struct XorShift64 {
 }
 
 impl XorShift64 {
-    fn new(seed: u64) -> Self {
+    const fn new(seed: u64) -> Self {
         // Avoid 0 state
         let state = if seed == 0 { 0xCAFEBABE } else { seed };
         Self { state }
     }
 
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         let mut x = self.state;
         x ^= x << 13;
         x ^= x >> 7;

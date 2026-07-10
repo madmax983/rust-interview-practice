@@ -7,7 +7,7 @@
 /// a highly customized, minimal execution engine without external dependencies.
 ///
 /// Real-world systems that use this:
-/// - Python (CPython uses a stack-based bytecode interpreter)
+/// - Python (`CPython` uses a stack-based bytecode interpreter)
 /// - Java (JVM is a stack-based machine)
 /// - Lua (Uses a register-based VM, but earlier versions were stack-based; both concepts apply)
 /// - WebAssembly (Wasm execution engines)
@@ -71,8 +71,8 @@ pub enum Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Number(n) => write!(f, "{}", n),
-            Self::Bool(b) => write!(f, "{}", b),
+            Self::Number(n) => write!(f, "{n}"),
+            Self::Bool(b) => write!(f, "{b}"),
             Self::Nil => write!(f, "nil"),
         }
     }
@@ -168,7 +168,8 @@ pub struct Chunk {
 
 impl Chunk {
     /// Creates a new, empty chunk.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             code: Vec::new(),
             constants: Vec::new(),
@@ -223,6 +224,7 @@ pub struct VM {
 
 impl VM {
     /// Creates a new VM instance.
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             stack: Vec::with_capacity(256),

@@ -207,7 +207,7 @@ impl EventLoop {
     }
 
     /// Stops the event loop.
-    pub fn stop(&mut self) {
+    pub const fn stop(&mut self) {
         self.running = false;
     }
 
@@ -255,14 +255,14 @@ impl EventLoop {
 
             // 3. Calculate sleep timeout for the Selector
             // We only sleep if there are no immediate tasks queued.
-            let timeout = if !self.tasks.is_empty() {
-                Some(Duration::from_millis(0))
-            } else {
+            let timeout = if self.tasks.is_empty() {
                 // Find the nearest timer
                 self.timers
                     .iter()
                     .map(|t| t.expires_at.saturating_duration_since(Instant::now()))
                     .min()
+            } else {
+                Some(Duration::from_millis(0))
             };
 
             // 4. Poll I/O

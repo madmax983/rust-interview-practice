@@ -152,7 +152,7 @@ pub fn build_tree_optimized(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Box
 /// Time: O(n)
 /// Space: O(n) - No hashmap allocation, only recursion stack.
 ///
-/// This avoids allocations except the TreeNodes and avoids the overhead of a HashMap
+/// This avoids allocations except the `TreeNodes` and avoids the overhead of a `HashMap`
 /// by leveraging `Peekable` and recursion bounds. It uses an elegant technique
 /// matching the inorder elements as a stop boundary.
 #[must_use]

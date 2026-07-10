@@ -31,7 +31,7 @@ use std::cmp;
 /// Space: O(1) - constant extra space.
 ///
 /// While easy to understand, this approach is too slow for large inputs
-/// and times out on LeetCode.
+/// and times out on `LeetCode`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
@@ -54,6 +54,7 @@ pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
 }
 
 /// Optimized approach: Divide and Conquer.
+///
 /// Time: O(n log n) - The array is split in half at each level (log n levels), and each level
 ///       does O(n) total work computing the maximum crossing sum.
 /// Space: O(log n) - Recursion stack depth.

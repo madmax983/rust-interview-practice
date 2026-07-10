@@ -51,6 +51,7 @@ pub struct UnionFind {
 impl UnionFind {
     /// Creates a new Union-Find structure with `n` elements (0 to n-1).
     /// Initially, each element is in its own set.
+    #[must_use] 
     pub fn new(n: usize) -> Self {
         let mut parent = Vec::with_capacity(n);
         for i in 0..n {
@@ -67,9 +68,7 @@ impl UnionFind {
     /// Returns the representative (root) of the set containing element `i`.
     /// Performs path compression.
     pub fn find(&mut self, i: usize) -> usize {
-        if i >= self.parent.len() {
-            panic!("Index out of bounds");
-        }
+        assert!(i < self.parent.len(), "Index out of bounds");
 
         let mut root = i;
         // Find root
@@ -123,12 +122,14 @@ impl UnionFind {
     }
 
     /// Returns the number of disjoint sets.
-    pub fn count(&self) -> usize {
+    #[must_use] 
+    pub const fn count(&self) -> usize {
         self.count
     }
 
     /// Returns the total number of elements.
-    pub fn len(&self) -> usize {
+    #[must_use] 
+    pub const fn len(&self) -> usize {
         self.parent.len()
     }
 }

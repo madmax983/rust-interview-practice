@@ -186,7 +186,7 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
     // =========================================================================
 
     /// Returns the dummy head index for a given region.
-    fn head_idx(region: Region) -> usize {
+    const fn head_idx(region: Region) -> usize {
         match region {
             Region::Window => 0,
             Region::Probation => 2,
@@ -195,7 +195,7 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
     }
 
     /// Returns the dummy tail index for a given region.
-    fn tail_idx(region: Region) -> usize {
+    const fn tail_idx(region: Region) -> usize {
         match region {
             Region::Window => 1,
             Region::Probation => 3,
@@ -304,11 +304,10 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
                 self.add_node_to_head(idx, Region::Protected);
 
                 // If Protected is over capacity, demote its LRU to Probation
-                if self.protected_len > self.protected_cap {
-                    if let Some(demoted_idx) = self.pop_tail(Region::Protected) {
+                if self.protected_len > self.protected_cap
+                    && let Some(demoted_idx) = self.pop_tail(Region::Protected) {
                         self.add_node_to_head(demoted_idx, Region::Probation);
                     }
-                }
             } else {
                 // For Window and Protected, just move to head (MRU)
                 self.move_to_head(idx);
@@ -339,11 +338,10 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
                 self.probation_len -= 1;
                 self.add_node_to_head(idx, Region::Protected);
 
-                if self.protected_len > self.protected_cap {
-                    if let Some(demoted_idx) = self.pop_tail(Region::Protected) {
+                if self.protected_len > self.protected_cap
+                    && let Some(demoted_idx) = self.pop_tail(Region::Protected) {
                         self.add_node_to_head(demoted_idx, Region::Probation);
                     }
-                }
             }
             return;
         }
@@ -354,14 +352,13 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
         self.map.insert(key, new_idx);
 
         // Enforce Window capacity
-        if self.window_len > self.window_cap {
-            if let Some(window_victim_idx) = self.pop_tail(Region::Window) {
+        if self.window_len > self.window_cap
+            && let Some(window_victim_idx) = self.pop_tail(Region::Window) {
                 // ⚡ BOLT OPTIMIZATION: Avoid `.clone()` allocation overhead.
                 // We pass only the `window_victim_idx` to `admit_to_probation` and look up the key by reference inside the method.
                 // Attempt to admit Window Victim to Probation (Main Cache)
                 self.admit_to_probation(window_victim_idx);
             }
-        }
     }
 
     /// Admission Policy: Compares the Window Victim against the Probation Victim using Sketch frequencies.
@@ -381,11 +378,10 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
 
         // Otherwise, find the LRU of the Probation segment
         // If Probation is empty, we must demote from Protected first
-        if self.probation_len == 0 && self.protected_len > 0 {
-            if let Some(demoted_idx) = self.pop_tail(Region::Protected) {
+        if self.probation_len == 0 && self.protected_len > 0
+            && let Some(demoted_idx) = self.pop_tail(Region::Protected) {
                 self.add_node_to_head(demoted_idx, Region::Probation);
             }
-        }
 
         // Peek at the Probation Victim
         let probation_tail = Self::tail_idx(Region::Probation);

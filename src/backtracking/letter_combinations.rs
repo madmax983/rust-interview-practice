@@ -1,7 +1,7 @@
 //! # 17. Letter Combinations of a Phone Number
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/letter-combinations-of-a-phone-number/
+//! Link: <https://leetcode.com/problems/letter-combinations-of-a-phone-number>/
 //!
 //! Given a string containing digits from `2-9` inclusive, return all possible letter
 //! combinations that the number could represent. Return the answer in any order.
@@ -13,7 +13,7 @@
 //! This problem elegantly contrasts two different Rust paradigms: Iterator-based combinatorics
 //! and recursive backtracking with mutable buffers. It showcases how to use zero-cost
 //! abstractions like static arrays of string slices (`&[&str]`) instead of heap-allocated
-//! HashMaps for mappings. Furthermore, it demonstrates Rust's strict but powerful mutable
+//! `HashMaps` for mappings. Furthermore, it demonstrates Rust's strict but powerful mutable
 //! borrowing (`&mut String`), ensuring that a single path buffer can be manipulated safely
 //! across recursive calls without triggering unnecessary heap allocations or garbage collection.
 //!

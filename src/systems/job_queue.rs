@@ -24,7 +24,7 @@ use std::error::Error;
 use std::fmt;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 // =========================================================================================
 // Architecture
@@ -112,7 +112,7 @@ impl Job {
     }
 
     #[must_use]
-    pub fn with_retries(mut self, retries: u32) -> Self {
+    pub const fn with_retries(mut self, retries: u32) -> Self {
         self.max_retries = retries;
         self
     }
@@ -254,12 +254,11 @@ impl JobQueue {
             let next_scheduled_time = state.promote_scheduled_jobs();
 
             // Try to pop a job from the active queue.
-            if let Some(queue) = state.queues.get_mut(queue_name) {
-                if let Some(mut job) = queue.pop_front() {
+            if let Some(queue) = state.queues.get_mut(queue_name)
+                && let Some(mut job) = queue.pop_front() {
                     job.status = JobStatus::Processing;
                     return Some(job);
                 }
-            }
 
             // No jobs available. We need to sleep.
             if let Some(wake_at) = next_scheduled_time {
@@ -292,7 +291,7 @@ impl JobQueue {
 
         if job.attempts <= job.max_retries {
             // Re-schedule with exponential backoff: (attempts^2) seconds.
-            let backoff_secs = (job.attempts * job.attempts) as u64;
+            let backoff_secs = u64::from(job.attempts * job.attempts);
             let execute_at = Instant::now() + Duration::from_secs(backoff_secs);
 
             job.status = JobStatus::Pending;

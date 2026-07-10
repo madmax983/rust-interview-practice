@@ -54,7 +54,7 @@ impl Wal {
 
         let writer = BufWriter::new(file.try_clone()?);
 
-        Ok(Wal { file, writer })
+        Ok(Self { file, writer })
     }
 
     /// Appends an entry to the WAL.
@@ -110,7 +110,7 @@ impl Wal {
             // Read Checksum
             let mut checksum_bytes = [0u8; 8];
             match reader.read_exact(&mut checksum_bytes) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break, // End of file
                 Err(e) => return Err(e),
             }

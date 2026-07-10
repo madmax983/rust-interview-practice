@@ -13,7 +13,7 @@
 //! Only the filled cells need to be validated according to the mentioned rules.
 //!
 //! This problem is an excellent showcase of managing state across multi-dimensional arrays in Rust.
-//! It highlights the transition from typical HashSets (heap-allocated) to simple arrays,
+//! It highlights the transition from typical `HashSets` (heap-allocated) to simple arrays,
 //! and ultimately to primitive bitmasks. It demonstrates how Rust's integer bitwise operations
 //! provide zero-cost, type-safe abstractions for sets, avoiding memory allocation overhead entirely.
 //!
@@ -38,13 +38,13 @@
 
 use std::collections::HashSet;
 
-/// Brute force approach: Independent HashSets for rows, columns, and sub-boxes
+/// Brute force approach: Independent `HashSets` for rows, columns, and sub-boxes
 ///
 /// Time: O(1) - The board size is always 9x9, so we do 81 iterations * 3 passes.
-/// Space: O(1) - The HashSets store at most 9 elements each.
+/// Space: O(1) - The `HashSets` store at most 9 elements each.
 ///
 /// This approach iterates the board multiple times. First checking all rows, then
-/// all columns, and finally all 3x3 sub-boxes. Each check allocates a new HashSet
+/// all columns, and finally all 3x3 sub-boxes. Each check allocates a new `HashSet`
 /// to track seen digits.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
@@ -91,12 +91,12 @@ pub fn is_valid_sudoku_brute_force(board: Vec<Vec<char>>) -> bool {
     true
 }
 
-/// Optimized approach: One pass using arrays of HashSets
+/// Optimized approach: One pass using arrays of `HashSets`
 ///
 /// Time: O(1) - Single pass over the 9x9 board.
-/// Space: O(1) - 27 HashSets initialized once, holding at most 9 elements each.
+/// Space: O(1) - 27 `HashSets` initialized once, holding at most 9 elements each.
 ///
-/// By instantiating arrays of HashSets for rows, columns, and boxes simultaneously,
+/// By instantiating arrays of `HashSets` for rows, columns, and boxes simultaneously,
 /// we can validate the board in a single pass. The box index is computed using integer
 /// division: `(r / 3) * 3 + (c / 3)`.
 #[must_use]

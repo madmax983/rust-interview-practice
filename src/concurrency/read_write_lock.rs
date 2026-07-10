@@ -70,8 +70,8 @@ pub struct WriteGuard<'a, T> {
 }
 
 impl<T> RwLock<T> {
-    /// Creates a new RwLock.
-    pub fn new(t: T) -> Self {
+    /// Creates a new `RwLock`.
+    pub const fn new(t: T) -> Self {
         Self {
             data: UnsafeCell::new(t),
             state: Mutex::new(State {
@@ -118,7 +118,7 @@ impl<T> RwLock<T> {
     }
 }
 
-impl<'a, T> Deref for ReadGuard<'a, T> {
+impl<T> Deref for ReadGuard<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         // SAFETY: The guard ensures we have shared access.
@@ -126,7 +126,7 @@ impl<'a, T> Deref for ReadGuard<'a, T> {
     }
 }
 
-impl<'a, T> Drop for ReadGuard<'a, T> {
+impl<T> Drop for ReadGuard<'_, T> {
     fn drop(&mut self) {
         let mut state = self.lock.state.lock().unwrap();
         state.readers -= 1;
@@ -139,7 +139,7 @@ impl<'a, T> Drop for ReadGuard<'a, T> {
     }
 }
 
-impl<'a, T> Deref for WriteGuard<'a, T> {
+impl<T> Deref for WriteGuard<'_, T> {
     type Target = T;
     fn deref(&self) -> &T {
         // SAFETY: The guard ensures we have exclusive access.
@@ -147,14 +147,14 @@ impl<'a, T> Deref for WriteGuard<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for WriteGuard<'a, T> {
+impl<T> DerefMut for WriteGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         // SAFETY: The guard ensures we have exclusive access.
         unsafe { &mut *self.lock.data.get() }
     }
 }
 
-impl<'a, T> Drop for WriteGuard<'a, T> {
+impl<T> Drop for WriteGuard<'_, T> {
     fn drop(&mut self) {
         let mut state = self.lock.state.lock().unwrap();
         state.writer_active = false;

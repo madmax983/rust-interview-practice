@@ -79,12 +79,12 @@ pub fn word_ladder_brute_force(
 /// Time: O(N * M * 26) = O(N * M)
 /// Space: O(N * M) for queue and visited set.
 ///
-/// By recognizing that LeetCode inputs guarantee ASCII characters ('a'-'z'), we can safely cast
+/// By recognizing that `LeetCode` inputs guarantee ASCII characters ('a'-'z'), we can safely cast
 /// strings to `Vec<u8>` or `&[u8]`. This bypasses UTF-8 boundaries and allows us to perform
 /// O(1) in-place byte manipulation, drastically reducing heap allocations per character mutation.
 #[must_use]
 pub fn word_ladder_optimized(begin_word: String, end_word: String, word_list: Vec<String>) -> i32 {
-    let mut word_set: HashSet<Vec<u8>> = word_list.into_iter().map(|w| w.into_bytes()).collect();
+    let mut word_set: HashSet<Vec<u8>> = word_list.into_iter().map(std::string::String::into_bytes).collect();
     let end_word_bytes = end_word.into_bytes();
 
     if !word_set.contains(&end_word_bytes) {
@@ -141,7 +141,7 @@ pub fn word_ladder_optimized(begin_word: String, end_word: String, word_list: Ve
 /// search perimeters ever intersect, we've found the shortest path.
 #[must_use]
 pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<String>) -> i32 {
-    let mut word_set: HashSet<Vec<u8>> = word_list.into_iter().map(|w| w.into_bytes()).collect();
+    let mut word_set: HashSet<Vec<u8>> = word_list.into_iter().map(std::string::String::into_bytes).collect();
     let end_word_bytes = end_word.into_bytes();
 
     if !word_set.contains(&end_word_bytes) {

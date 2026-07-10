@@ -29,7 +29,7 @@ use std::collections::HashSet;
 
 /// Brute force approach: Sort and count.
 /// Time: O(n log n) - dominated by sorting.
-/// Space: O(1) or O(n) depending on the sorting algorithm (Rust's slice::sort is O(n) worst-case space).
+/// Space: O(1) or O(n) depending on the sorting algorithm (Rust's `slice::sort` is O(n) worst-case space).
 ///
 /// This approach modifies the input to sort it, then uses iterator windows to
 /// cleanly count consecutive elements.
@@ -66,11 +66,12 @@ pub fn longest_consecutive_brute_force(mut nums: Vec<i32>) -> i32 {
     max_len
 }
 
-/// Optimal approach: HashSet and Iterator chain.
+/// Optimal approach: `HashSet` and Iterator chain.
+///
 /// Time: O(n) - We iterate through the array to build the set, then iterate through
 ///       again, only starting a sequence count if the number is the start of a sequence.
 ///       The inner loop runs at most `n` times total across all iterations.
-/// Space: O(n) - The HashSet stores at most `n` unique elements.
+/// Space: O(n) - The `HashSet` stores at most `n` unique elements.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn longest_consecutive_optimal(nums: Vec<i32>) -> i32 {

@@ -62,12 +62,12 @@ pub struct Receiver<T> {
 }
 
 // Errors
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum SendError<T> {
     Disconnected(T),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RecvError {
     Empty,
     Disconnected,
@@ -193,7 +193,7 @@ impl<T> Receiver<T> {
             // wait_timeout returns (guard, wait_timeout_result)
             let (new_guard, _) = self
                 .received
-                .wait_timeout(guard, timeout - elapsed)
+                .wait_timeout(guard, timeout.checked_sub(elapsed).unwrap())
                 .unwrap();
             guard = new_guard;
         }
@@ -201,6 +201,7 @@ impl<T> Receiver<T> {
 }
 
 /// Creates a new bounded channel.
+#[must_use] 
 pub fn channel<T>(capacity: usize) -> (Sender<T>, Receiver<T>) {
     assert!(capacity > 0, "Capacity must be greater than 0");
 

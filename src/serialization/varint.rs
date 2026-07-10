@@ -88,7 +88,7 @@ pub fn decode_u64<R: Read>(reader: &mut R) -> io::Result<u64> {
             ));
         }
 
-        result |= ((byte & 0x7F) as u64) << shift;
+        result |= u64::from(byte & 0x7F) << shift;
         if (byte & 0x80) == 0 {
             break;
         }
@@ -97,8 +97,9 @@ pub fn decode_u64<R: Read>(reader: &mut R) -> io::Result<u64> {
     Ok(result)
 }
 
-/// Encodes a signed 64-bit integer into a writer using ZigZag LEB128.
-/// ZigZag encoding maps signed integers to unsigned integers so that small negative numbers
+/// Encodes a signed 64-bit integer into a writer using `ZigZag` LEB128.
+///
+/// `ZigZag` encoding maps signed integers to unsigned integers so that small negative numbers
 /// become small unsigned numbers (e.g., -1 -> 1, 1 -> 2, -2 -> 3).
 // RUST INSIGHT: ZigZag encoding is crucial for efficiency with signed integers because standard two's complement
 // for small negative numbers (like -1) has all high bits set, which would result in max-length LEB128.
@@ -107,7 +108,7 @@ pub fn encode_i64<W: Write>(writer: &mut W, value: i64) -> io::Result<usize> {
     encode_u64(writer, zigzag)
 }
 
-/// Decodes a signed 64-bit integer from a reader using ZigZag LEB128.
+/// Decodes a signed 64-bit integer from a reader using `ZigZag` LEB128.
 pub fn decode_i64<R: Read>(reader: &mut R) -> io::Result<i64> {
     let zigzag = decode_u64(reader)?;
     let value = (zigzag >> 1) as i64 ^ -((zigzag & 1) as i64);

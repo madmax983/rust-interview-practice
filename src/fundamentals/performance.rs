@@ -11,13 +11,13 @@ use std::collections::HashMap;
 
 /// Always inline - small, frequently called functions.
 #[inline(always)]
-fn add_inline_always(a: i32, b: i32) -> i32 {
+const fn add_inline_always(a: i32, b: i32) -> i32 {
     a + b
 }
 
 /// Hint to inline - let compiler decide.
 #[inline]
-fn multiply_inline(a: i32, b: i32) -> i32 {
+const fn multiply_inline(a: i32, b: i32) -> i32 {
     a * b
 }
 
@@ -106,7 +106,7 @@ fn demonstrate_allocation_optimization() {
 // Cache-Friendly Patterns
 // ============================================================================
 
-/// Struct of Arrays (SoA) - cache friendly for iteration.
+/// Struct of Arrays (`SoA`) - cache friendly for iteration.
 #[allow(dead_code)]
 struct ParticlesSOA {
     x: Vec<f32>,
@@ -117,7 +117,7 @@ struct ParticlesSOA {
 
 impl ParticlesSOA {
     fn new(capacity: usize) -> Self {
-        ParticlesSOA {
+        Self {
             x: Vec::with_capacity(capacity),
             y: Vec::with_capacity(capacity),
             z: Vec::with_capacity(capacity),
@@ -131,7 +131,7 @@ impl ParticlesSOA {
     }
 }
 
-/// Array of Structs (AoS) - cache friendly for single-element access.
+/// Array of Structs (`AoS`) - cache friendly for single-element access.
 #[derive(Clone, Copy)]
 #[allow(dead_code)]
 struct Particle {
@@ -148,7 +148,7 @@ struct ParticlesAOS {
 
 impl ParticlesAOS {
     fn new(capacity: usize) -> Self {
-        ParticlesAOS {
+        Self {
             particles: Vec::with_capacity(capacity),
         }
     }
@@ -160,7 +160,7 @@ impl ParticlesAOS {
 }
 
 #[allow(dead_code)]
-fn demonstrate_data_layout() {
+const fn demonstrate_data_layout() {
     // Use SoA when:
     // - Processing one field across many elements
     // - SIMD operations
@@ -227,7 +227,7 @@ fn demonstrate_iterator_optimization() {
 
     // Pattern 3: fold vs collect for simple cases
     // collect creates allocation:
-    let _sum1: i32 = numbers.to_vec().iter().sum();
+    let _sum1: i32 = numbers.clone().iter().sum();
 
     // fold doesn't:
     let _sum2 = numbers.iter().sum::<i32>();
@@ -357,7 +357,7 @@ fn sum_slice(slice: &[i32]) -> i32 {
 
 /// Branch prediction hints (unstable - for demonstration).
 #[allow(dead_code)]
-fn with_branch_hints(x: i32) -> i32 {
+const fn with_branch_hints(x: i32) -> i32 {
     // In nightly Rust:
     // if std::intrinsics::likely(x > 0) {
     //     x * 2
@@ -389,7 +389,7 @@ struct StringInterner {
 
 impl StringInterner {
     fn new() -> Self {
-        StringInterner {
+        Self {
             strings: HashSet::new(),
         }
     }
@@ -439,7 +439,7 @@ impl<T> ObjectPool<T> {
         for _ in 0..initial_capacity {
             pool.push(factory());
         }
-        ObjectPool { pool, factory }
+        Self { pool, factory }
     }
 
     fn acquire(&mut self) -> T {
@@ -489,7 +489,7 @@ struct LazyInit<T> {
 
 impl<T> LazyInit<T> {
     const fn new(init: fn() -> T) -> Self {
-        LazyInit { value: None, init }
+        Self { value: None, init }
     }
 
     fn get(&mut self) -> &T {
@@ -513,16 +513,16 @@ impl SmallString {
         if s.len() <= 23 {
             let mut buf = [0u8; 23];
             buf[..s.len()].copy_from_slice(s.as_bytes());
-            SmallString::Inline(buf, s.len() as u8)
+            Self::Inline(buf, s.len() as u8)
         } else {
-            SmallString::Heap(s.to_string())
+            Self::Heap(s.to_string())
         }
     }
 
     fn as_str(&self) -> &str {
         match self {
-            SmallString::Inline(buf, len) => std::str::from_utf8(&buf[..*len as usize]).unwrap(),
-            SmallString::Heap(s) => s,
+            Self::Inline(buf, len) => std::str::from_utf8(&buf[..*len as usize]).unwrap(),
+            Self::Heap(s) => s,
         }
     }
 }
@@ -548,7 +548,7 @@ struct Arena {
 
 impl Arena {
     fn with_capacity(capacity: usize) -> Self {
-        Arena {
+        Self {
             buffer: vec![0; capacity],
             pos: 0,
         }
@@ -557,13 +557,11 @@ impl Arena {
     fn allocate(&mut self, size: usize) -> &mut [u8] {
         let start = self.pos;
         self.pos += size;
-        if self.pos > self.buffer.len() {
-            panic!("Arena exhausted");
-        }
+        assert!(self.pos <= self.buffer.len(), "Arena exhausted");
         &mut self.buffer[start..self.pos]
     }
 
-    fn reset(&mut self) {
+    const fn reset(&mut self) {
         self.pos = 0; // Free all at once
     }
 }
@@ -659,7 +657,7 @@ fn demonstrate_profiling() {
     // Integration points:
     // 1. Mark hot functions for profiling
     #[inline(never)] // Easier to see in profiles
-    fn hot_function() {
+    const fn hot_function() {
         // ...
     }
 
@@ -680,8 +678,8 @@ fn demonstrate_profiling() {
 #[allow(dead_code)]
 fn demonstrate_pitfalls() {
     // Pitfall 1: Unnecessary cloning
-    fn bad(s: String) -> String {
-        s.clone() // Unnecessary clone
+    const fn bad(s: String) -> String {
+        s // Unnecessary clone
     }
 
     fn good(s: &str) -> String {
@@ -702,7 +700,7 @@ fn demonstrate_pitfalls() {
     // Pitfall 3: String concatenation in loops
     let mut bad_str = String::new();
     for i in 0..100 {
-        bad_str = format!("{}{}", bad_str, i); // Reallocates each time
+        bad_str = format!("{bad_str}{i}"); // Reallocates each time
     }
 
     let mut good_str = String::with_capacity(300);

@@ -1,6 +1,6 @@
 //! # 153. Find Minimum in Rotated Sorted Array
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/
+//! Link: <https://leetcode.com/problems/find-minimum-in-rotated-sorted-array>/
 //!
 //! Suppose an array of length `n` sorted in ascending order is rotated between `1` and `n` times.
 //! For example, the array `nums = [0,1,2,4,5,6,7]` might become:
@@ -92,7 +92,7 @@ pub fn find_min_optimized(nums: Vec<i32>) -> i32 {
 /// complexity and explicitly relies on slice sizes.
 ///
 /// RUST INSIGHT: By borrowing the vector as a slice `&[i32]`, we show that the function
-/// does not need ownership of the data. Although LeetCode forces `Vec<i32>` as the argument,
+/// does not need ownership of the data. Although `LeetCode` forces `Vec<i32>` as the argument,
 /// internally operating on a slice is more flexible and idiomatic.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature

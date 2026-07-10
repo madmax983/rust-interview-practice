@@ -12,7 +12,7 @@
 //! **Why build it yourself?**
 //! LFU is notoriously difficult to implement in true `O(1)` time complexity. While LRU just needs
 //! a single queue, LFU requires managing multiple frequency buckets while keeping them ordered.
-//! Implementing this teaches you how to compose multiple HashMaps and doubly-linked lists.
+//! Implementing this teaches you how to compose multiple `HashMaps` and doubly-linked lists.
 
 // =========================================================================================
 // Architecture
@@ -73,7 +73,7 @@ struct List {
 
 impl List {
     #[must_use]
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             head: None,
             tail: None,

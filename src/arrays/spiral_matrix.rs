@@ -3,7 +3,7 @@
 //! Given an `m x n` `matrix`, return all elements of the `matrix` in spiral order.
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/spiral-matrix/
+//! Link: <https://leetcode.com/problems/spiral-matrix>/
 //!
 //! Why this matters in Rust:
 //! This problem perfectly illustrates the tension between Rust's strict `usize` indexing

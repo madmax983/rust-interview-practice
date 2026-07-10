@@ -19,7 +19,7 @@
 //! 2.  **Stack Operations**: RPN is the canonical stack problem. Rust's `Vec` serves as an efficient stack.
 //! 3.  **Iterators vs Loops**: We can contrast a traditional imperative loop with a functional `fold` approach.
 //! 4.  **Error Handling**: By using `Result`, we can propagate parsing or stack underflow errors gracefully,
-//!     rather than panicking (though LeetCode guarantees valid input, real-world parsers shouldn't).
+//!     rather than panicking (though `LeetCode` guarantees valid input, real-world parsers shouldn't).
 //!
 //! ## Approach
 //!
@@ -53,14 +53,14 @@ enum Op {
 impl Op {
     /// Applies the operator to two operands.
     /// Note the order: `b` was popped first (top of stack), so it is the right-hand operand.
-    fn apply(self, a: i32, b: i32) -> i32 {
+    const fn apply(self, a: i32, b: i32) -> i32 {
         match self {
-            Op::Add => a + b,
-            Op::Sub => a - b,
-            Op::Mul => a * b,
+            Self::Add => a + b,
+            Self::Sub => a - b,
+            Self::Mul => a * b,
             // RUST INSIGHT: Integer division in Rust truncates toward zero,
             // matching the problem requirement and C/C++ behavior.
-            Op::Div => a / b,
+            Self::Div => a / b,
         }
     }
 }
@@ -73,14 +73,14 @@ impl FromStr for Token {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "+" => Ok(Token::Operator(Op::Add)),
-            "-" => Ok(Token::Operator(Op::Sub)),
-            "*" => Ok(Token::Operator(Op::Mul)),
-            "/" => Ok(Token::Operator(Op::Div)),
+            "+" => Ok(Self::Operator(Op::Add)),
+            "-" => Ok(Self::Operator(Op::Sub)),
+            "*" => Ok(Self::Operator(Op::Mul)),
+            "/" => Ok(Self::Operator(Op::Div)),
             _ => s
                 .parse::<i32>()
                 .map(Token::Number)
-                .map_err(|_| format!("Invalid token: {}", s)),
+                .map_err(|_| format!("Invalid token: {s}")),
         }
     }
 }
@@ -137,6 +137,7 @@ pub fn eval_rpn_brute_force(tokens: Vec<String>) -> Result<i32, String> {
 /// Time Complexity: O(N)
 /// Space Complexity: O(N)
 #[allow(clippy::needless_pass_by_value)]
+#[must_use] 
 pub fn eval_rpn_optimal(tokens: Vec<String>) -> i32 {
     // BOLT OPTIMIZATION: Pre-allocate capacity for the stack.
     // In valid RPN, the maximum number of elements on the stack at any time

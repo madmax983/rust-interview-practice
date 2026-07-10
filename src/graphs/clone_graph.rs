@@ -74,7 +74,7 @@ impl Node {
 
 /// Brute Force: DFS with Linear Scan for Visited Nodes.
 ///
-/// Instead of a HashMap, we use a simple `Vec` to track visited nodes.
+/// Instead of a `HashMap`, we use a simple `Vec` to track visited nodes.
 /// To check if a node has been visited, we iterate through the `Vec`.
 ///
 /// Time: O(V * V + E) - For each node, we scan the visited list (O(V)). Total O(V^2).

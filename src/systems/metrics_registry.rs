@@ -280,31 +280,31 @@ impl Registry {
         // Export Counters
         let counters = self.counters.read().unwrap();
         for (name, counter) in counters.iter() {
-            writeln!(output, "# TYPE {} counter", name).expect("writing to String cannot fail");
+            writeln!(output, "# TYPE {name} counter").expect("writing to String cannot fail");
             writeln!(output, "{} {}", name, counter.get()).expect("writing to String cannot fail");
         }
 
         // Export Gauges
         let gauges = self.gauges.read().unwrap();
         for (name, gauge) in gauges.iter() {
-            writeln!(output, "# TYPE {} gauge", name).expect("writing to String cannot fail");
+            writeln!(output, "# TYPE {name} gauge").expect("writing to String cannot fail");
             writeln!(output, "{} {}", name, gauge.get()).expect("writing to String cannot fail");
         }
 
         // Export Histograms
         let histograms = self.histograms.read().unwrap();
         for (name, hist) in histograms.iter() {
-            writeln!(output, "# TYPE {} histogram", name).expect("writing to String cannot fail");
+            writeln!(output, "# TYPE {name} histogram").expect("writing to String cannot fail");
 
             let bounds = hist.buckets();
             let counts = hist.bucket_counts();
 
             for (bound, count) in bounds.iter().zip(counts.iter()) {
                 if *bound == f64::INFINITY {
-                    writeln!(output, "{}_bucket{{le=\"+Inf\"}} {}", name, count)
+                    writeln!(output, "{name}_bucket{{le=\"+Inf\"}} {count}")
                         .expect("writing to String cannot fail");
                 } else {
-                    writeln!(output, "{}_bucket{{le=\"{}\"}} {}", name, bound, count)
+                    writeln!(output, "{name}_bucket{{le=\"{bound}\"}} {count}")
                         .expect("writing to String cannot fail");
                 }
             }

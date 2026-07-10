@@ -11,7 +11,7 @@
 //! - Graph nodes (where indices are used as pointers).
 //!
 //! **Why build it yourself?**
-//! Standard `Vec` has O(1) push but O(N) remove (unless swap_remove, which changes indices).
+//! Standard `Vec` has O(1) push but O(N) remove (unless `swap_remove`, which changes indices).
 //! A Slab provides stable indices and O(1) removal by tracking a "free list" of vacant slots within the vector itself.
 //! Adding "Generational Indices" solves the "ABA Problem" where a slot is reused but an old reference (handle) still points to it.
 
@@ -80,7 +80,8 @@ pub struct Slab<T> {
 
 impl<T> Slab<T> {
     /// Creates a new empty Slab.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             entries: Vec::new(),
             next_free: usize::MAX, // Sentinel for "no free slots"
@@ -89,6 +90,7 @@ impl<T> Slab<T> {
     }
 
     /// Creates a new Slab with specified capacity.
+    #[must_use] 
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             entries: Vec::with_capacity(capacity),
@@ -171,6 +173,7 @@ impl<T> Slab<T> {
     }
 
     /// Returns a reference to the value associated with the key.
+    #[must_use] 
     pub fn get(&self, key: Key) -> Option<&T> {
         if key.index >= self.entries.len() {
             return None;
@@ -207,12 +210,14 @@ impl<T> Slab<T> {
     }
 
     /// Returns the number of elements in the slab.
-    pub fn len(&self) -> usize {
+    #[must_use] 
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the slab is empty.
-    pub fn is_empty(&self) -> bool {
+    #[must_use] 
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 }

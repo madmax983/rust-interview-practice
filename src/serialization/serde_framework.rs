@@ -79,9 +79,9 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Custom(msg) => write!(f, "{}", msg),
-            Error::TypeMismatch => write!(f, "type mismatch"),
-            Error::EndOfStream => write!(f, "end of stream"),
+            Self::Custom(msg) => write!(f, "{msg}"),
+            Self::TypeMismatch => write!(f, "type mismatch"),
+            Self::EndOfStream => write!(f, "end of stream"),
         }
     }
 }
@@ -185,7 +185,7 @@ impl Serialize for bool {
 
 struct I32Visitor;
 
-impl<'de> Visitor<'de> for I32Visitor {
+impl Visitor<'_> for I32Visitor {
     type Value = i32;
     type Error = Error;
 
@@ -203,7 +203,7 @@ impl<'de> Deserialize<'de> for i32 {
 
 struct StringVisitor;
 
-impl<'de> Visitor<'de> for StringVisitor {
+impl Visitor<'_> for StringVisitor {
     type Value = String;
     type Error = Error;
 
@@ -228,12 +228,12 @@ pub struct SimpleStringSerializer<'a> {
 }
 
 impl<'a> SimpleStringSerializer<'a> {
-    pub fn new(output: &'a mut String) -> Self {
+    pub const fn new(output: &'a mut String) -> Self {
         Self { output }
     }
 }
 
-impl<'a> Serializer for SimpleStringSerializer<'a> {
+impl Serializer for SimpleStringSerializer<'_> {
     type Error = Error;
 
     fn serialize_bool(self, v: bool) -> Result<(), Self::Error> {
@@ -246,7 +246,7 @@ impl<'a> Serializer for SimpleStringSerializer<'a> {
         // Allocations can happen during serialization. Using `std::fmt::Write` directly
         // on strings avoids some allocations.
         use std::fmt::Write;
-        write!(self.output, "{}", v).map_err(|_| Error::Custom("Format error".into()))
+        write!(self.output, "{v}").map_err(|_| Error::Custom("Format error".into()))
     }
 
     fn serialize_str(self, v: &str) -> Result<(), Self::Error> {
@@ -261,7 +261,8 @@ pub struct SimpleStringDeserializer<'de> {
 }
 
 impl<'de> SimpleStringDeserializer<'de> {
-    pub fn new(input: &'de str) -> Self {
+    #[must_use] 
+    pub const fn new(input: &'de str) -> Self {
         Self { input }
     }
 }
@@ -281,7 +282,7 @@ impl<'de> Deserializer<'de> for SimpleStringDeserializer<'de> {
         V::Error: From<Error>,
     {
         let val = self.input.parse::<i32>().map_err(|_| Error::TypeMismatch)?;
-        visitor.visit_i32(val).map_err(|e| e.into())
+        visitor.visit_i32(val).map_err(std::convert::Into::into)
     }
 
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -290,7 +291,7 @@ impl<'de> Deserializer<'de> for SimpleStringDeserializer<'de> {
     {
         // Zero-copy string deserialization could return a borrowed `&'de str`, but our
         // string visitor currently allocates a `String`.
-        visitor.visit_str(self.input).map_err(|e| e.into())
+        visitor.visit_str(self.input).map_err(std::convert::Into::into)
     }
 
     fn deserialize_bool<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -302,7 +303,7 @@ impl<'de> Deserializer<'de> for SimpleStringDeserializer<'de> {
             "false" => false,
             _ => return Err(Error::TypeMismatch),
         };
-        visitor.visit_bool(val).map_err(|e| e.into())
+        visitor.visit_bool(val).map_err(std::convert::Into::into)
     }
 }
 

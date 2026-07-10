@@ -49,13 +49,13 @@ fn demonstrate_box_basics() {
 #[derive(Debug)]
 struct TreeNode {
     value: i32,
-    left: Option<Box<TreeNode>>,
-    right: Option<Box<TreeNode>>,
+    left: Option<Box<Self>>,
+    right: Option<Box<Self>>,
 }
 
 impl TreeNode {
-    fn new(value: i32) -> Self {
-        TreeNode {
+    const fn new(value: i32) -> Self {
+        Self {
             value,
             left: None,
             right: None,
@@ -66,12 +66,12 @@ impl TreeNode {
         if value < self.value {
             match &mut self.left {
                 Some(node) => node.insert(value),
-                None => self.left = Some(Box::new(TreeNode::new(value))),
+                None => self.left = Some(Box::new(Self::new(value))),
             }
         } else {
             match &mut self.right {
                 Some(node) => node.insert(value),
-                None => self.right = Some(Box::new(TreeNode::new(value))),
+                None => self.right = Some(Box::new(Self::new(value))),
             }
         }
     }
@@ -123,12 +123,12 @@ fn demonstrate_rc_basics() {
 #[derive(Debug)]
 struct GraphNode {
     value: i32,
-    neighbors: Vec<Rc<GraphNode>>,
+    neighbors: Vec<Rc<Self>>,
 }
 
 impl GraphNode {
     fn new(value: i32) -> Rc<Self> {
-        Rc::new(GraphNode {
+        Rc::new(Self {
             value,
             neighbors: Vec::new(),
         })
@@ -222,19 +222,19 @@ fn demonstrate_refcell_basics() {
 // Rc<RefCell<T>> - The Graph/Tree Pattern
 // ============================================================================
 
-/// Tree node with parent reference using Rc<RefCell<T>>.
+/// Tree node with parent reference using Rc<`RefCell`<T>>.
 /// This pattern enables bidirectional navigation and mutation.
 #[allow(dead_code)]
 #[derive(Debug)]
 struct MutableTreeNode {
     value: i32,
-    children: Vec<Rc<RefCell<MutableTreeNode>>>,
-    parent: Option<Weak<RefCell<MutableTreeNode>>>,
+    children: Vec<Rc<RefCell<Self>>>,
+    parent: Option<Weak<RefCell<Self>>>,
 }
 
 impl MutableTreeNode {
     fn new(value: i32) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(MutableTreeNode {
+        Rc::new(RefCell::new(Self {
             value,
             children: Vec::new(),
             parent: None,
@@ -276,23 +276,23 @@ fn demonstrate_rc_refcell_tree() {
     }
 }
 
-/// Graph with cycles using Rc<RefCell<T>>.
+/// Graph with cycles using Rc<`RefCell`<T>>.
 #[allow(dead_code)]
 #[derive(Debug)]
 struct MutableGraphNode {
     value: i32,
-    neighbors: RefCell<Vec<Rc<MutableGraphNode>>>,
+    neighbors: RefCell<Vec<Rc<Self>>>,
 }
 
 impl MutableGraphNode {
     fn new(value: i32) -> Rc<Self> {
-        Rc::new(MutableGraphNode {
+        Rc::new(Self {
             value,
             neighbors: RefCell::new(Vec::new()),
         })
     }
 
-    fn add_neighbor(&self, neighbor: Rc<MutableGraphNode>) {
+    fn add_neighbor(&self, neighbor: Rc<Self>) {
         self.neighbors.borrow_mut().push(neighbor);
     }
 }
@@ -445,12 +445,12 @@ struct LinkedList {
 #[derive(Debug)]
 struct ListNode {
     value: i32,
-    next: Option<Box<ListNode>>,
+    next: Option<Box<Self>>,
 }
 
 impl LinkedList {
-    fn new() -> Self {
-        LinkedList { head: None }
+    const fn new() -> Self {
+        Self { head: None }
     }
 
     fn push_front(&mut self, value: i32) {
@@ -483,19 +483,19 @@ fn demonstrate_linked_list() {
     }
 }
 
-/// LRU Cache key-value node using Rc<RefCell<T>>.
+/// LRU Cache key-value node using Rc<`RefCell`<T>>.
 #[allow(dead_code)]
 #[derive(Debug)]
 struct LRUNode {
     key: i32,
     value: i32,
-    prev: Option<Weak<RefCell<LRUNode>>>,
-    next: Option<Rc<RefCell<LRUNode>>>,
+    prev: Option<Weak<RefCell<Self>>>,
+    next: Option<Rc<RefCell<Self>>>,
 }
 
 impl LRUNode {
     fn new(key: i32, value: i32) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(LRUNode {
+        Rc::new(RefCell::new(Self {
             key,
             value,
             prev: None,

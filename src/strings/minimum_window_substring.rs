@@ -11,7 +11,7 @@
 //!
 //! This problem perfectly demonstrates sliding window techniques in Rust, contrasting string slice (`&str`)
 //! and char iteration with zero-cost byte slice (`&[u8]`) manipulation. It illustrates why array-based frequency
-//! maps (`[i32; 128]`) outperform generic HashMaps for fixed-domain ASCII problems.
+//! maps (`[i32; 128]`) outperform generic `HashMaps` for fixed-domain ASCII problems.
 //!
 //! ## Examples
 //!
@@ -36,7 +36,7 @@ use std::collections::HashMap;
 ///
 /// We provide three implementations ranging from naive to optimal:
 /// 1.  **Brute Force**: Exhaustive search over all substrings, taking O(n³). This is generally how you'd quickly write a mental model or script in Python before optimizing, but it allocates and iterates far too much.
-/// 2.  **Optimized (HashMap)**: A classic sliding window that tracks frequencies in a `HashMap`. This is how you'd typically solve this in Java or Python `Counter`, but in Rust, the hashing overhead can be noticeable.
+/// 2.  **Optimized (`HashMap`)**: A classic sliding window that tracks frequencies in a `HashMap`. This is how you'd typically solve this in Java or Python `Counter`, but in Rust, the hashing overhead can be noticeable.
 /// 3.  **Optimal (Array Mapping)**: A highly optimized sliding window leveraging the problem's constraints (ASCII only). By converting the strings to byte slices (`&[u8]`) and mapping directly into a fixed-size array (`[i32; 128]`), we achieve zero-allocation O(1) character frequency lookups. This is the idiomatic Rust way to process constrained text efficiently, matching C/C++ speeds while retaining safety guarantees.
 ///
 /// Brute force approach: Check all possible substrings.
@@ -100,13 +100,13 @@ pub fn min_window_brute_force(s: String, t: String) -> String {
     }
 }
 
-/// Optimized approach: Sliding window with HashMap.
+/// Optimized approach: Sliding window with `HashMap`.
 /// Time: O(m + n) - Each character is visited at most twice.
 /// Space: O(K) where K is unique characters in `t`.
 ///
 /// This approach uses a dynamic sliding window `[left, right]`. We expand `right` until we
 /// have all required characters, then shrink `left` to find the minimum valid window.
-/// We use HashMaps to track character frequencies, which is conceptually clear but incurs
+/// We use `HashMaps` to track character frequencies, which is conceptually clear but incurs
 /// hashing overhead compared to array maps.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
@@ -173,7 +173,7 @@ pub fn min_window_optimized(s: String, t: String) -> String {
 /// Time: O(m + n)
 /// Space: O(1) - Fixed 128-element arrays for ASCII.
 ///
-/// Eliminates HashMap overhead by mapping ASCII bytes directly to array indices.
+/// Eliminates `HashMap` overhead by mapping ASCII bytes directly to array indices.
 ///
 /// **RUST INSIGHT**: Operating on `&[u8]` avoids the O(n) UTF-8 boundary checks of `.chars()`.
 /// Array access `map[b as usize]` is bounds-checked but easily optimized away by LLVM.

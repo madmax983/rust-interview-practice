@@ -50,14 +50,14 @@ use std::str::Chars;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NestedInteger {
     Int(i32),
-    List(Vec<NestedInteger>),
+    List(Vec<Self>),
 }
 
 impl NestedInteger {
     /// Helper method to add an element to the list variant.
     /// Panics if called on an `Int` variant.
-    pub fn add(&mut self, elem: NestedInteger) {
-        if let NestedInteger::List(list) = self {
+    pub fn add(&mut self, elem: Self) {
+        if let Self::List(list) = self {
             list.push(elem);
         } else {
             panic!("Called add on Int variant");
@@ -173,12 +173,11 @@ fn parse_list(iter: &mut Peekable<Chars>) -> NestedInteger {
     let mut list = Vec::new();
 
     // Check for empty list '[]'
-    if let Some(&c) = iter.peek() {
-        if c == ']' {
+    if let Some(&c) = iter.peek()
+        && c == ']' {
             iter.next(); // Consume ']'
             return NestedInteger::List(list);
         }
-    }
 
     loop {
         // Parse the next element (either a number or a nested list)

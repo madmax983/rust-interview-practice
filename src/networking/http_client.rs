@@ -85,13 +85,13 @@ pub enum Method {
 impl std::fmt::Display for Method {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            Method::Get => "GET",
-            Method::Post => "POST",
-            Method::Put => "PUT",
-            Method::Delete => "DELETE",
-            Method::Patch => "PATCH",
+            Self::Get => "GET",
+            Self::Post => "POST",
+            Self::Put => "PUT",
+            Self::Delete => "DELETE",
+            Self::Patch => "PATCH",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -155,7 +155,7 @@ pub struct SyncHttpClient {
 impl SyncHttpClient {
     /// Creates a new client with an optional timeout.
     #[must_use]
-    pub fn new(timeout: Option<Duration>) -> Self {
+    pub const fn new(timeout: Option<Duration>) -> Self {
         Self { timeout }
     }
 
@@ -221,11 +221,11 @@ impl HttpClient for SyncHttpClient {
             if key.eq_ignore_ascii_case("host") {
                 has_host = true;
             }
-            write!(&mut request_bytes, "{}: {}\r\n", key, value)?;
+            write!(&mut request_bytes, "{key}: {value}\r\n")?;
         }
 
         if !has_host {
-            write!(&mut request_bytes, "Host: {}\r\n", host)?;
+            write!(&mut request_bytes, "Host: {host}\r\n")?;
         }
 
         // Handle body headers
@@ -391,7 +391,7 @@ impl Response {
             reader.read_to_end(&mut body)?;
         }
 
-        Ok(Response {
+        Ok(Self {
             status_code,
             status_text,
             version,

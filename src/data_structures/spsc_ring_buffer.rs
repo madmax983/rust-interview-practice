@@ -2,7 +2,7 @@
 //!
 //! A high-performance, thread-safe, lock-free queue for one producer and one consumer.
 //!
-//! **Replaces Crates:** `rigtorp-spsc`, `heapless::spsc`, `crossbeam-queue` (ArrayQueue)
+//! **Replaces Crates:** `rigtorp-spsc`, `heapless::spsc`, `crossbeam-queue` (`ArrayQueue`)
 //!
 //! **Real-world Usage:**
 //! - Audio processing callbacks (real-time thread to UI thread).
@@ -79,6 +79,7 @@ pub struct Consumer<T> {
 
 /// Creates a new SPSC Ring Buffer.
 /// Returns a (Producer, Consumer) pair.
+#[must_use] 
 pub fn channel<T>(capacity: usize) -> (Producer<T>, Consumer<T>) {
     assert!(capacity > 0, "Capacity must be greater than 0");
 
@@ -159,6 +160,7 @@ impl<T> Producer<T> {
     }
 
     /// Returns the capacity of the queue.
+    #[must_use] 
     pub fn capacity(&self) -> usize {
         self.shared.capacity - 1
     }

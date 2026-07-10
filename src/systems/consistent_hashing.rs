@@ -5,7 +5,7 @@
 //! **Replaces Crates:** `consistent_hash`, `hashring`
 //!
 //! **Real-world Usage:**
-//! - DynamoDB (partitioning data across nodes).
+//! - `DynamoDB` (partitioning data across nodes).
 //! - Cassandra (token ring).
 //! - Memcached clients (distributing keys across cache servers).
 //!
@@ -50,7 +50,7 @@ use std::hash::{Hash, Hasher};
 /// A Consistent Hashing Ring.
 pub struct ConsistentHashRing {
     /// Map from Hash -> Node Identifier.
-    /// We use BTreeMap to keep hashes sorted and allow efficient range queries.
+    /// We use `BTreeMap` to keep hashes sorted and allow efficient range queries.
     ring: BTreeMap<u64, String>,
     /// Number of virtual nodes (replicas) per physical node.
     virtual_nodes: usize,
@@ -65,7 +65,8 @@ impl ConsistentHashRing {
     /// * `virtual_nodes` - Number of points on the ring each node is responsible for.
     ///                     Higher values provide better distribution balance but increase memory/lookup cost.
     ///                     (e.g., 100-200 is common in production).
-    pub fn new(virtual_nodes: usize) -> Self {
+    #[must_use] 
+    pub const fn new(virtual_nodes: usize) -> Self {
         Self {
             ring: BTreeMap::new(),
             virtual_nodes,
@@ -77,7 +78,7 @@ impl ConsistentHashRing {
     pub fn add_node(&mut self, node_id: &str) {
         let mut newly_added = false;
         for i in 0..self.virtual_nodes {
-            let key = format!("{}:{}", node_id, i);
+            let key = format!("{node_id}:{i}");
             let hash = self.hash_key(&key);
             if self.ring.insert(hash, node_id.to_string()).is_none() {
                 newly_added = true;
@@ -99,7 +100,7 @@ impl ConsistentHashRing {
         // Alternatively, we could construct the keys we know we added.
         let mut newly_removed = false;
         for i in 0..self.virtual_nodes {
-            let key = format!("{}:{}", node_id, i);
+            let key = format!("{node_id}:{i}");
             let hash = self.hash_key(&key);
             // We only remove if the value matches, in case of hash collision (unlikely but possible)
             // GOTCHA: Cannot remove while holding a reference from get()
@@ -117,6 +118,7 @@ impl ConsistentHashRing {
     }
 
     /// Returns the node responsible for the given key.
+    #[must_use] 
     pub fn get_node(&self, key: &str) -> Option<&String> {
         if self.ring.is_empty() {
             return None;
@@ -136,7 +138,7 @@ impl ConsistentHashRing {
         })
     }
 
-    /// Helper to hash a key using DefaultHasher.
+    /// Helper to hash a key using `DefaultHasher`.
     fn hash_key(&self, key: &str) -> u64 {
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
@@ -146,6 +148,7 @@ impl ConsistentHashRing {
     /// Returns the number of physical nodes.
     /// Note: ⚡ BOLT OPTIMIZATION: Explicitly tracking `physical_node_count`
     /// changes this operation from `O(N*V)` to `O(1)` and eliminates a `HashSet` allocation.
+    #[must_use] 
     pub const fn node_count(&self) -> usize {
         self.physical_node_count
     }

@@ -105,7 +105,7 @@ impl<'a, T> Future for MutexAcquire<'a, T> {
             // is already in the wait queue. If so, we just update the waker.
             // If not, we push it to the back.
             let mut found = false;
-            for (id, waker) in state.wakers.iter_mut() {
+            for (id, waker) in &mut state.wakers {
                 if *id == self.id {
                     // Update the waker in case it has changed (e.g. `tokio::select!`).
                     if !waker.will_wake(cx.waker()) {
@@ -134,7 +134,7 @@ impl<'a, T> Future for MutexAcquire<'a, T> {
     }
 }
 
-impl<'a, T> Drop for MutexAcquire<'a, T> {
+impl<T> Drop for MutexAcquire<'_, T> {
     fn drop(&mut self) {
         // If the future is dropped before completing, remove its waker from the queue.
         // This prevents the "leak queue space" bug and the deadly cancellation bug where
@@ -177,7 +177,7 @@ unsafe impl<T: Send> Sync for AsyncMutex<T> {}
 impl<T> AsyncMutex<T> {
     /// Creates a new `AsyncMutex` wrapping the given value.
     #[must_use]
-    pub fn new(value: T) -> Self {
+    pub const fn new(value: T) -> Self {
         Self {
             state: Mutex::new(MutexState {
                 locked: false,
@@ -203,12 +203,12 @@ pub struct AsyncMutexGuard<'a, T> {
     _marker: PhantomData<*mut T>,
 }
 
-unsafe impl<'a, T: Send> Send for AsyncMutexGuard<'a, T> {}
-unsafe impl<'a, T: Sync> Sync for AsyncMutexGuard<'a, T> {}
+unsafe impl<T: Send> Send for AsyncMutexGuard<'_, T> {}
+unsafe impl<T: Sync> Sync for AsyncMutexGuard<'_, T> {}
 
 // RUST INSIGHT: `Deref` and `DerefMut` allow the guard to be used transparently as if
 // it were the underlying `T`.
-impl<'a, T> Deref for AsyncMutexGuard<'a, T> {
+impl<T> Deref for AsyncMutexGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -219,14 +219,14 @@ impl<'a, T> Deref for AsyncMutexGuard<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for AsyncMutexGuard<'a, T> {
+impl<T> DerefMut for AsyncMutexGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // UNSAFE JUSTIFICATION: Same as `deref`.
         unsafe { &mut *self.mutex.inner.get() }
     }
 }
 
-impl<'a, T> Drop for AsyncMutexGuard<'a, T> {
+impl<T> Drop for AsyncMutexGuard<'_, T> {
     fn drop(&mut self) {
         let mut state = self.mutex.state.lock().unwrap();
 

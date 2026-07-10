@@ -1,6 +1,6 @@
 //! # Macro Patterns
 //!
-//! Declarative macros (macro_rules!) for compile-time metaprogramming.
+//! Declarative macros (`macro_rules`!) for compile-time metaprogramming.
 //! Master these patterns to write DSLs and eliminate boilerplate.
 
 // ============================================================================
@@ -184,7 +184,7 @@ macro_rules! type_of {
 macro_rules! create_function {
     // With explicit return type
     ($name:ident ( $($param:ident : $ptype:ty),* ) -> $rtype:ty $body:block) => {
-        fn $name($($param: $ptype),*) -> $rtype $body
+        const fn $name($($param: $ptype),*) -> $rtype $body
     };
 
     // Without return type (defaults to unit)
@@ -219,7 +219,7 @@ fn demonstrate_multiple_branches() {
 // Practical Macro Patterns
 // ============================================================================
 
-/// HashMap literal macro (like serde_json::json!).
+/// `HashMap` literal macro (like `serde_json::json`!).
 macro_rules! hashmap {
     ($($key:expr => $value:expr),* $(,)?) => {
         {
@@ -264,7 +264,7 @@ macro_rules! string_enum {
         }
 
         impl $name {
-            fn as_str(&self) -> &'static str {
+            const fn as_str(&self) -> &'static str {
                 match self {
                     $(
                         $name::$variant => stringify!($variant),
@@ -272,7 +272,7 @@ macro_rules! string_enum {
                 }
             }
 
-            fn variants() -> &'static [$name] {
+            const fn variants() -> &'static [$name] {
                 &[$($name::$variant),*]
             }
         }
@@ -424,7 +424,7 @@ fn demonstrate_recursive_macros() {
     #[derive(Debug)]
     enum Node {
         Leaf(i32),
-        Branch { value: i32, children: Vec<Node> },
+        Branch { value: i32, children: Vec<Self> },
     }
 
     let reversed = reverse!(1, 2, 3, 4, 5);
@@ -692,7 +692,7 @@ fn demonstrate_interview_patterns() {
 
 // `test_cases!` generates `#[test]` functions from a table of inputs/outputs.
 #[allow(dead_code)]
-fn square_for_demo(x: i32) -> i32 {
+const fn square_for_demo(x: i32) -> i32 {
     x * x
 }
 

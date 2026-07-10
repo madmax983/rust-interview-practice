@@ -1,7 +1,7 @@
 //! # 74. Search a 2D Matrix
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/search-a-2d-matrix/
+//! Link: <https://leetcode.com/problems/search-a-2d-matrix>/
 //!
 //! This problem extends 1D binary search over to a 2D matrix, demonstrating
 //! index math and safe indexing. It highlights Rust's `as` casting for handling calculations

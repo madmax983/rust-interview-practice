@@ -11,7 +11,7 @@
 //! - Multiplayer games.
 //!
 //! **Why build it yourself?**
-//! WebSockets bridge the gap between HTTP (request/response) and raw TCP (streams).
+//! `WebSockets` bridge the gap between HTTP (request/response) and raw TCP (streams).
 //! Implementing it teaches you about protocol upgrading, binary framing (handling bits, variable-length fields),
 //! and masking requirements designed to prevent proxy cache poisoning.
 
@@ -88,26 +88,26 @@ enum Opcode {
 }
 
 impl Opcode {
-    fn from_u8(byte: u8) -> Option<Self> {
+    const fn from_u8(byte: u8) -> Option<Self> {
         match byte {
-            0x0 => Some(Opcode::Continuation),
-            0x1 => Some(Opcode::Text),
-            0x2 => Some(Opcode::Binary),
-            0x8 => Some(Opcode::Close),
-            0x9 => Some(Opcode::Ping),
-            0xA => Some(Opcode::Pong),
+            0x0 => Some(Self::Continuation),
+            0x1 => Some(Self::Text),
+            0x2 => Some(Self::Binary),
+            0x8 => Some(Self::Close),
+            0x9 => Some(Self::Ping),
+            0xA => Some(Self::Pong),
             _ => None,
         }
     }
 
     /// Returns true for control frames (Close/Ping/Pong), which are subject to
     /// the RFC 6455 §5.5 payload limit of 125 bytes.
-    fn is_control(self) -> bool {
-        matches!(self, Opcode::Close | Opcode::Ping | Opcode::Pong)
+    const fn is_control(self) -> bool {
+        matches!(self, Self::Close | Self::Ping | Self::Pong)
     }
 }
 
-/// A wrapper around a stream (e.g., TcpStream) that speaks WebSocket.
+/// A wrapper around a stream (e.g., `TcpStream`) that speaks WebSocket.
 pub struct WebSocketConnection<S: Read + Write> {
     stream: BufReader<S>,
     is_server: bool,
@@ -164,8 +164,7 @@ impl<S: Read + Write> WebSocketConnection<S> {
             "HTTP/1.1 101 Switching Protocols\r\n\
              Upgrade: websocket\r\n\
              Connection: Upgrade\r\n\
-             Sec-WebSocket-Accept: {}\r\n\r\n",
-            accept_key
+             Sec-WebSocket-Accept: {accept_key}\r\n\r\n"
         );
 
         // Unwrap the stream from BufReader to write to it, then wrap back?
@@ -226,12 +225,12 @@ impl<S: Read + Write> WebSocketConnection<S> {
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Invalid Opcode"))?;
 
         let masked = (second_byte & 0x80) != 0;
-        let mut payload_len = (second_byte & 0x7F) as u64;
+        let mut payload_len = u64::from(second_byte & 0x7F);
 
         if payload_len == 126 {
             let mut len_bytes = [0u8; 2];
             self.stream.read_exact(&mut len_bytes)?;
-            payload_len = u16::from_be_bytes(len_bytes) as u64;
+            payload_len = u64::from(u16::from_be_bytes(len_bytes));
         } else if payload_len == 127 {
             let mut len_bytes = [0u8; 8];
             self.stream.read_exact(&mut len_bytes)?;
@@ -316,7 +315,7 @@ impl<S: Read + Write> WebSocketConnection<S> {
         // Client MUST mask. Server MUST NOT mask.
         // We'll simplify and say if we are server, we don't mask.
         // If we are client (not fully supported here but for completeness), we should.
-        let mask_bit = if !self.is_server { 0x80 } else { 0x00 };
+        let mask_bit = if self.is_server { 0x00 } else { 0x80 };
 
         let second_byte = mask_bit | payload_len_code;
 
@@ -325,7 +324,9 @@ impl<S: Read + Write> WebSocketConnection<S> {
         stream.write_all(&[first_byte, second_byte])?;
         stream.write_all(&len_bytes)?;
 
-        if !self.is_server {
+        if self.is_server {
+            stream.write_all(payload)?;
+        } else {
             // Generate random mask (dummy here, should be random)
             let mask_key = [1, 2, 3, 4];
             stream.write_all(&mask_key)?;
@@ -336,8 +337,6 @@ impl<S: Read + Write> WebSocketConnection<S> {
                 .map(|(i, b)| b ^ mask_key[i % 4])
                 .collect();
             stream.write_all(&masked_payload)?;
-        } else {
-            stream.write_all(payload)?;
         }
 
         stream.flush()?;
@@ -359,7 +358,7 @@ struct FrameHeader {
 
 fn generate_accept_key(key: &str) -> String {
     let guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-    let input = format!("{}{}", key, guid);
+    let input = format!("{key}{guid}");
     let digest = sha1(input.as_bytes());
     base64::encode(digest)
 }

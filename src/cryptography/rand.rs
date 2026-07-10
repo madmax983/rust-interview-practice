@@ -94,8 +94,9 @@ pub struct Prng {
 impl Prng {
     /// Creates a new PRNG seeded with the given 64-bit seed.
     ///
-    /// Uses SplitMix64 to initialize the 128-bit state.
-    pub fn new(seed: u64) -> Self {
+    /// Uses `SplitMix64` to initialize the 128-bit state.
+    #[must_use] 
+    pub const fn new(seed: u64) -> Self {
         let mut sm64 = SplitMix64 { state: seed };
         let s0 = sm64.next();
         let s1 = sm64.next();
@@ -133,7 +134,7 @@ struct SplitMix64 {
 }
 
 impl SplitMix64 {
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E3779B97F4A7C15);
         let mut z = self.state;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);

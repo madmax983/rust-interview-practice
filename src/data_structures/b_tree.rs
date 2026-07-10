@@ -6,7 +6,7 @@
 //! **Replaces Crates:** `btree_map` (std), `im` (persistent B-Trees)
 //!
 //! **Real-world Usage:**
-//! - Databases (PostgreSQL, MySQL, SQLite) for indexing.
+//! - Databases (`PostgreSQL`, `MySQL`, `SQLite`) for indexing.
 //! - File systems (NTFS, HFS+, Btrfs, XFS).
 //! - In-memory ordered maps where cache locality is critical (Rust's `BTreeMap`).
 //!
@@ -66,11 +66,11 @@ struct Node<K, V> {
     // We use `Vec<Box<Node<K, V>>>` for children. A real production B-Tree (like standard library `BTreeMap`)
     // often uses raw pointers and allocates nodes manually or via an arena to guarantee nodes are stored
     // contiguously or strictly manage lifetimes without the overhead of `Box`.
-    children: Vec<Box<Node<K, V>>>,
+    children: Vec<Box<Self>>,
 }
 
 impl<K: Ord + Clone, V: Clone> Node<K, V> {
-    fn new(is_leaf: bool) -> Self {
+    const fn new(is_leaf: bool) -> Self {
         Self {
             keys: Vec::new(),
             vals: Vec::new(),
@@ -78,7 +78,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         }
     }
 
-    fn is_leaf(&self) -> bool {
+    const fn is_leaf(&self) -> bool {
         self.children.is_empty()
     }
 
@@ -134,7 +134,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
             let (pred_key, pred_val) = self.get_pred(idx);
             // Replace k with pred
             self.keys[idx] = pred_key.clone();
-            let old_val = std::mem::replace(&mut self.vals[idx], pred_val.clone());
+            let old_val = std::mem::replace(&mut self.vals[idx], pred_val);
 
             // Recursively delete pred from the child
             self.children[idx].delete_key(t, &pred_key);
@@ -145,7 +145,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         if self.children[idx + 1].keys.len() >= t {
             let (succ_key, succ_val) = self.get_succ(idx);
             self.keys[idx] = succ_key.clone();
-            let old_val = std::mem::replace(&mut self.vals[idx], succ_val.clone());
+            let old_val = std::mem::replace(&mut self.vals[idx], succ_val);
 
             self.children[idx + 1].delete_key(t, &succ_key);
             return Some(old_val);
@@ -285,6 +285,7 @@ pub struct BTree<K, V> {
 impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
     /// Creates a new B-Tree with minimum degree `t`.
     /// `t` must be >= 2.
+    #[must_use] 
     pub fn new(t: usize) -> Self {
         assert!(t >= 2, "Degree must be at least 2");
         Self {
@@ -295,12 +296,14 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
     }
 
     /// Returns the number of elements in the B-Tree.
-    pub fn len(&self) -> usize {
+    #[must_use] 
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the B-Tree is empty.
-    pub fn is_empty(&self) -> bool {
+    #[must_use] 
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -368,7 +371,7 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
         result
     }
 
-    fn is_full(t: usize, node: &Node<K, V>) -> bool {
+    const fn is_full(t: usize, node: &Node<K, V>) -> bool {
         node.keys.len() == 2 * t - 1
     }
 

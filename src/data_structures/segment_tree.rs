@@ -113,9 +113,7 @@ where
     ///
     /// Time Complexity: O(log n)
     pub fn update(&mut self, mut idx: usize, val: T) {
-        if idx >= self.n {
-            panic!("Index out of bounds");
-        }
+        assert!(idx < self.n, "Index out of bounds");
 
         // Move to leaf position
         idx += self.n;

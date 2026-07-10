@@ -55,7 +55,7 @@ use std::collections::VecDeque;
 /// Space: O(M*N) - Recursion stack for DFS.
 ///
 /// # Gotcha
-/// This approach will likely TLE (Time Limit Exceeded) on LeetCode for larger grids.
+/// This approach will likely TLE (Time Limit Exceeded) on `LeetCode` for larger grids.
 #[must_use]
 pub fn pacific_atlantic_brute_force(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     let rows = heights.len();

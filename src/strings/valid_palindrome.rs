@@ -29,6 +29,7 @@
 //! - `s` consists only of printable ASCII characters.
 
 /// Brute force approach: Filter, collect, and reverse.
+///
 /// Time: O(n) - Iterates through the string twice (once to collect, once to reverse/compare)
 /// Space: O(n) - Allocates a new `String` for the cleaned characters
 ///
@@ -40,7 +41,7 @@ pub fn is_palindrome_brute_force(s: String) -> bool {
     // Even though the constraints say ASCII only, idiomatic string iteration in Rust uses chars().
     let cleaned: String = s
         .chars()
-        .filter(|c| c.is_ascii_alphanumeric())
+        .filter(char::is_ascii_alphanumeric)
         .map(|c| c.to_ascii_lowercase())
         .collect(); // Allocates a new String
 
@@ -66,7 +67,7 @@ pub fn is_palindrome_optimized(s: String) -> bool {
     // Create an iterator that lazily yields cleaned lowercase characters.
     let iter = s
         .chars()
-        .filter(|c| c.is_ascii_alphanumeric())
+        .filter(char::is_ascii_alphanumeric)
         .map(|c| c.to_ascii_lowercase());
 
     // RUST INSIGHT: Because our iterator pipeline implements `Clone` and `DoubleEndedIterator`,
@@ -79,7 +80,7 @@ pub fn is_palindrome_optimized(s: String) -> bool {
 /// Time: O(n) - Single pass
 /// Space: O(1) - No allocations
 ///
-/// Since LeetCode guarantees the string contains only printable ASCII characters,
+/// Since `LeetCode` guarantees the string contains only printable ASCII characters,
 /// we can bypass UTF-8 decoding overhead entirely and work directly on bytes (`u8`).
 /// This is the absolute fastest approach, common in C/C++, but written safely in Rust.
 #[must_use]

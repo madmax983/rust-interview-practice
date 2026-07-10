@@ -161,7 +161,8 @@ impl<N, E> DirectedGraph<N, E> for Graph<N, E> {
 
 impl<N, E> Graph<N, E> {
     /// Creates a new, empty graph.
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             nodes: Vec::new(),
             edges: Vec::new(),
@@ -169,6 +170,7 @@ impl<N, E> Graph<N, E> {
     }
 
     /// Creates a new, empty graph with pre-allocated capacity.
+    #[must_use] 
     pub fn with_capacity(nodes: usize, edges: usize) -> Self {
         Self {
             nodes: Vec::with_capacity(nodes),
@@ -182,6 +184,7 @@ impl<N, E> Graph<N, E> {
     }
 
     /// Returns an iterator over the neighbor nodes directed from the given source node.
+    #[must_use] 
     pub fn neighbors(&self, source: NodeIndex) -> Neighbors<'_, N, E> {
         let current_edge = self.nodes.get(source.0).and_then(|n| n.first_outgoing_edge);
         Neighbors {

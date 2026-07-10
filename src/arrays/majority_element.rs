@@ -51,7 +51,7 @@ pub fn majority_element_brute_force(mut nums: Vec<i32>) -> i32 {
 // Approach 2: HashMap Counting (Straightforward)
 // =========================================================================================
 
-/// Optimized Approach: HashMap Frequency Count
+/// Optimized Approach: `HashMap` Frequency Count
 ///
 /// We count the occurrences of each element using a `HashMap`. The Entry API (`entry(x).or_insert(0)`)
 /// simplifies inserting or updating counts in a single pass.

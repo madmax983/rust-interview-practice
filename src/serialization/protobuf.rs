@@ -1,7 +1,7 @@
 //! # Protobuf / Binary Serialization Implementation
 //!
 //! Implements a minimal, zero-allocation binary serializer/deserializer modeled after Protocol Buffers.
-//! It supports Varint encoding, ZigZag encoding for signed integers, and tag-based field resolution.
+//! It supports Varint encoding, `ZigZag` encoding for signed integers, and tag-based field resolution.
 //!
 //! **Replaces Crates:** `prost`, `protobuf`
 //!
@@ -12,7 +12,7 @@
 //!
 //! **Why build it yourself?**
 //! Understanding binary wire formats makes you better at diagnosing network overhead.
-//! Implementing Varint and ZigZag encoding teaches you bitwise manipulation and how to pack integers efficiently.
+//! Implementing Varint and `ZigZag` encoding teaches you bitwise manipulation and how to pack integers efficiently.
 //! You'll learn how schema evolution (adding/removing fields) works via field tags instead of rigid struct layouts.
 
 // =========================================================================================
@@ -60,10 +60,10 @@ impl TryFrom<u8> for WireType {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value & 0x07 {
-            0 => Ok(WireType::Varint),
-            1 => Ok(WireType::Fixed64),
-            2 => Ok(WireType::LengthDelimited),
-            5 => Ok(WireType::Fixed32),
+            0 => Ok(Self::Varint),
+            1 => Ok(Self::Fixed64),
+            2 => Ok(Self::LengthDelimited),
+            5 => Ok(Self::Fixed32),
             _ => Err("Invalid wire type"),
         }
     }
@@ -87,7 +87,7 @@ pub struct Varint;
 impl Varint {
     /// Computes the size of a u64 encoded as a varint.
     #[must_use]
-    pub fn encoded_len(mut val: u64) -> usize {
+    pub const fn encoded_len(mut val: u64) -> usize {
         if val == 0 {
             return 1;
         }
@@ -136,18 +136,18 @@ impl Varint {
         Err("Buffer exhausted before varint completed")
     }
 
-    /// ZigZag encodes a signed 64-bit integer to an unsigned 64-bit integer.
+    /// `ZigZag` encodes a signed 64-bit integer to an unsigned 64-bit integer.
     #[must_use]
-    pub fn zigzag_encode(val: i64) -> u64 {
+    pub const fn zigzag_encode(val: i64) -> u64 {
         // RUST INSIGHT: Arithmetic shift right (`>>`) on a signed integer duplicates the sign bit.
         // `val >> 63` will be all 1s (-1) if negative, or all 0s (0) if positive.
         // XORing with this mask effectively flips the bits if it was negative.
         ((val << 1) ^ (val >> 63)) as u64
     }
 
-    /// ZigZag decodes an unsigned 64-bit integer back to a signed 64-bit integer.
+    /// `ZigZag` decodes an unsigned 64-bit integer back to a signed 64-bit integer.
     #[must_use]
-    pub fn zigzag_decode(val: u64) -> i64 {
+    pub const fn zigzag_decode(val: u64) -> i64 {
         // Shift right logical, then XOR with the negation of the least significant bit.
         let right_shifted = val >> 1;
         let lsb = val & 1;
@@ -166,7 +166,7 @@ impl Field {
         Varint::encode(u64::from(tag), buf);
     }
 
-    /// Decodes a tag from the buffer. Returns (field_number, wire_type, bytes_read).
+    /// Decodes a tag from the buffer. Returns (`field_number`, `wire_type`, `bytes_read`).
     pub fn decode_tag(buf: &[u8]) -> Result<(u32, WireType, usize), &'static str> {
         let (tag, read) = Varint::decode(buf)?;
         let wire_type = WireType::try_from((tag & 0x07) as u8)?;

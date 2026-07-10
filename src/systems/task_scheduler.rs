@@ -130,7 +130,7 @@ pub trait Scheduler: Send + Sync {
     fn stop(&mut self);
 }
 
-/// A background task scheduler using a BinaryHeap.
+/// A background task scheduler using a `BinaryHeap`.
 pub struct TaskScheduler {
     state: Arc<Mutex<SchedulerState>>,
     condvar: Arc<Condvar>,

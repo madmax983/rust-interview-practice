@@ -33,7 +33,7 @@
 ///
 /// We define `helper(prev_index, curr_index)` as the length of the LIS starting at `curr_index`
 /// given that the previous element included in the LIS was at `prev_index`.
-/// To make this runnable on LeetCode constraints (N=2500), we add memoization.
+/// To make this runnable on `LeetCode` constraints (N=2500), we add memoization.
 ///
 /// Time: O(N²) - There are N * N states.
 /// Space: O(N²) - For the memoization table.

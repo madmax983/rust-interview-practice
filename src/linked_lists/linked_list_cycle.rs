@@ -26,7 +26,7 @@
 //!
 //! ## Approaches
 //!
-//! ### Approach 1: HashSet (Visited Nodes)
+//! ### Approach 1: `HashSet` (Visited Nodes)
 //! We can traverse the list, putting the pointer (or memory address) of each node into a `HashSet`.
 //! If we ever see a pointer we've already stored, there's a cycle.
 //! - **Time Complexity:** O(N)
@@ -65,13 +65,14 @@ use std::rc::Rc;
 #[derive(Debug)]
 pub struct ListNode {
     pub val: i32,
-    pub next: Option<Rc<RefCell<ListNode>>>,
+    pub next: Option<Rc<RefCell<Self>>>,
 }
 
 impl ListNode {
     #[inline]
-    pub fn new(val: i32) -> Self {
-        ListNode { val, next: None }
+    #[must_use] 
+    pub const fn new(val: i32) -> Self {
+        Self { val, next: None }
     }
 }
 

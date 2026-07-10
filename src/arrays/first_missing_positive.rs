@@ -1,7 +1,7 @@
 //! # 41. First Missing Positive
 //!
 //! Hard
-//! https://leetcode.com/problems/first-missing-positive/
+//! <https://leetcode.com/problems/first-missing-positive>/
 //!
 //! Given an unsorted integer array `nums`, return the smallest missing positive integer.
 //! You must implement an algorithm that runs in `O(n)` time and uses `O(1)` auxiliary space.
@@ -120,11 +120,10 @@ pub fn first_missing_positive_optimal(mut nums: Vec<i32>) -> i32 {
 
             // RUST INSIGHT: The condition `nums[i] != nums[target_idx]` prevents infinite loops
             // if there are duplicates. If `nums[i]` is already correct, we stop.
-            if nums[i] != nums[target_idx] {
-                nums.swap(i, target_idx);
-            } else {
+            if nums[i] == nums[target_idx] {
                 break;
             }
+            nums.swap(i, target_idx);
         }
     }
 

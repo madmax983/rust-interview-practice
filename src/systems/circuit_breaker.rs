@@ -70,6 +70,7 @@ impl CircuitBreaker {
     /// # Arguments
     /// * `failure_threshold` - Number of failures before opening the circuit.
     /// * `reset_timeout` - Duration to wait before attempting recovery (Open -> Half-Open).
+    #[must_use] 
     pub fn new(failure_threshold: usize, reset_timeout: Duration) -> Self {
         Self {
             state: Arc::new(Mutex::new(InnerState {
@@ -126,11 +127,11 @@ impl CircuitBreaker {
         let mut inner = self.state.lock().unwrap();
         match result {
             Ok(val) => {
-                if let State::HalfOpen = inner.state {
+                if inner.state == State::HalfOpen {
                     // Success in Half-Open -> Reset to Closed
                     inner.state = State::Closed;
                     inner.failure_count = 0;
-                } else if let State::Closed = inner.state {
+                } else if inner.state == State::Closed {
                     // Success in Closed -> Reset failure count (sliding window or consecutive)
                     // Here we implement "consecutive failures", so success resets count.
                     inner.failure_count = 0;
@@ -162,6 +163,7 @@ impl CircuitBreaker {
     }
 
     /// Returns true if the circuit is currently accepting requests (Closed or Half-Open).
+    #[must_use] 
     pub fn is_accepting(&self) -> bool {
         let inner = self.state.lock().unwrap();
         match inner.state {
@@ -171,7 +173,7 @@ impl CircuitBreaker {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error<E> {
     CircuitOpen,
     OperationFailed(E),

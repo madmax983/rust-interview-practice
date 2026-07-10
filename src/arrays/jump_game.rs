@@ -42,7 +42,7 @@ use std::cmp;
 /// Space: O(N) - The reachability table.
 ///
 /// **Rust Insight:**
-/// A `Vec<bool>` is a compact, cache-friendly way to memoize reachability without a HashMap.
+/// A `Vec<bool>` is a compact, cache-friendly way to memoize reachability without a `HashMap`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 #[allow(clippy::cast_possible_truncation)]
@@ -77,7 +77,7 @@ pub fn can_jump_brute_force(nums: Vec<i32>) -> bool {
 ///
 /// This achieves the greedy logic entirely functionally, eliminating mutable variables.
 /// `try_fold` (via `ControlFlow`) allows us to short-circuit the fold as soon as we discover we
-/// are stuck (index > max_reachable) or have proven the target reachable.
+/// are stuck (index > `max_reachable`) or have proven the target reachable.
 ///
 /// Time: O(N) - We process elements linearly, stopping early if stuck.
 /// Space: O(1) - Purely accumulator state.

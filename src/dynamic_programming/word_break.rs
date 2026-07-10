@@ -5,7 +5,7 @@
 //! **Note** that the same word in the dictionary may be reused multiple times in the segmentation.
 //!
 //! - Difficulty: Medium
-//! - LeetCode: <https://leetcode.com/problems/word-break/>
+//! - `LeetCode`: <https://leetcode.com/problems/word-break/>
 //!
 //! ## Why this matters in Rust
 //! This problem perfectly illustrates Rust's zero-cost string slicing (`&str`) vs heap allocation (`String`).
@@ -34,7 +34,7 @@ use std::collections::{HashMap, HashSet};
 ///
 /// # GOTCHA
 /// String slicing in Rust `&s[..i]` expects byte indices. If the string contains multi-byte UTF-8 characters,
-/// this could panic. LeetCode guarantees the string contains only lowercase English letters (ASCII),
+/// this could panic. `LeetCode` guarantees the string contains only lowercase English letters (ASCII),
 /// making byte indexing perfectly safe and fast.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]

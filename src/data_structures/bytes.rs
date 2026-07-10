@@ -94,19 +94,19 @@ impl Bytes {
 
     /// Returns the length of the view.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns `true` if the view is empty.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
     /// Returns a slice of the view.
     #[must_use]
-    pub fn as_slice(&self) -> &[u8] {
+    pub const fn as_slice(&self) -> &[u8] {
         // UNSAFE JUSTIFICATION:
         // `ptr` and `len` are guaranteed to be valid and within the bounds of `self.data`.
         // The memory is kept alive by `self.data`.
@@ -153,7 +153,7 @@ impl Bytes {
     }
 
     /// Shortens the buffer, keeping the first `len` bytes and dropping the rest.
-    pub fn truncate(&mut self, len: usize) {
+    pub const fn truncate(&mut self, len: usize) {
         if len < self.len {
             self.len = len;
         }

@@ -5,7 +5,7 @@
 //! **Replaces Crates:** `bloomfilter`, `fastbloom`, `probabilistic-collections`
 //!
 //! **Real-world Usage:**
-//! - **Databases & Storage Engines (LSM Trees):** Used in RocksDB, Cassandra, and Bigtable to avoid disk lookups for non-existent keys (SSTables).
+//! - **Databases & Storage Engines (LSM Trees):** Used in `RocksDB`, Cassandra, and Bigtable to avoid disk lookups for non-existent keys (`SSTables`).
 //! - **Web Browsers:** Chrome used it to check for malicious URLs (Safe Browsing).
 //! - **CDNs & Caches:** Akamai uses it to prevent "one-hit wonders" from polluting web caches.
 //! - **Cryptocurrency:** Bitcoin clients (SPV) use it to request relevant transactions without revealing exact addresses.
@@ -89,6 +89,7 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
     /// Creates a Bloom filter with a specific number of bits (`m`) and hash functions (`k`).
     ///
     /// Note: It is usually easier to use `with_rate` to calculate these optimally.
+    #[must_use] 
     pub fn new(m: usize, k: u32) -> Self {
         // Clamp `m` to at least 1 bit. A zero-sized filter would make the
         // `h % self.m` mapping in `insert`/`contains` a divide-by-zero panic.
@@ -96,7 +97,7 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
 
         // Calculate the number of u64 blocks needed.
         // We use (m + 63) / 64 to round up.
-        let num_blocks = (m + 63) / 64;
+        let num_blocks = m.div_ceil(64);
 
         // RUST INSIGHT:
         // By pre-allocating the vector with `vec![0; num_blocks]`, we ensure continuous memory
@@ -111,6 +112,7 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
 
     /// Creates an optimally sized Bloom filter given the expected number of items (`n`)
     /// and the desired false positive probability (`p`).
+    #[must_use] 
     pub fn with_rate(expected_items: usize, false_positive_rate: f64) -> Self {
         assert!(
             false_positive_rate > 0.0 && false_positive_rate < 1.0,
@@ -137,7 +139,7 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
     /// Computes the two 32-bit halves of a 64-bit hash.
     ///
     /// PRODUCTION NOTE:
-    /// In a production system like RocksDB, `DefaultHasher` (which uses SipHash to prevent DOS attacks)
+    /// In a production system like `RocksDB`, `DefaultHasher` (which uses `SipHash` to prevent DOS attacks)
     /// might be considered too slow. A non-cryptographic, high-performance hash like `xxHash` or `MurmurHash3`
     /// is strongly preferred for Bloom filters since collision resistance against attackers isn't usually the
     /// primary concern for internal database structures.

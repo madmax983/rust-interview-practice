@@ -86,13 +86,13 @@ fn check_positive(value: i32) -> Result<i32, String> {
     }
 }
 
-fn double_value(value: i32) -> Result<i32, String> {
+const fn double_value(value: i32) -> Result<i32, String> {
     Ok(value * 2)
 }
 
 /// Pattern: match on Option
 #[must_use]
-pub fn match_option_example(opt: Option<i32>) -> i32 {
+pub const fn match_option_example(opt: Option<i32>) -> i32 {
     match opt {
         Some(x) => x * 2, // Pattern match: extract x from Some
         None => 0,        // Handle the None case
@@ -111,7 +111,7 @@ pub fn match_result_example(res: Result<i32, String>) -> i32 {
 
 /// Pattern: if let for Option
 #[must_use]
-pub fn if_let_option_example(opt: Option<i32>) -> i32 {
+pub const fn if_let_option_example(opt: Option<i32>) -> i32 {
     if let Some(x) = opt { x * 2 } else { 0 }
 }
 
@@ -139,7 +139,7 @@ pub fn collect_results(values: Vec<i32>) -> Result<Vec<i32>, String> {
 
 /// Pattern: transpose Option<Result> to Result<Option>
 #[must_use]
-pub fn transpose_example(opt: Option<Result<i32, String>>) -> Result<Option<i32>, String> {
+pub const fn transpose_example(opt: Option<Result<i32, String>>) -> Result<Option<i32>, String> {
     opt.transpose()
 }
 

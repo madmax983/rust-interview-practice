@@ -148,7 +148,7 @@ impl UiComponent for WindowComponent {
         // ⚡ BOLT OPTIMIZATION: Use `String::with_capacity` and `write!` to avoid
         // intermediate `format!` allocations and reallocations when appending strings.
         let mut out = String::with_capacity(32 + self.children.len() * 32); // Heuristic
-        let _ = write!(&mut out, "[Window: {}]\n", self.title);
+        let _ = writeln!(&mut out, "[Window: {}]", self.title);
         for child in &self.children {
             out.push_str("  ");
             out.push_str(&child.render());

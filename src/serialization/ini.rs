@@ -31,6 +31,7 @@ impl Default for Ini {
 }
 
 impl Ini {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             sections: HashMap::new(),
@@ -38,7 +39,7 @@ impl Ini {
     }
 
     pub fn parse(input: &str) -> Result<Self, ParseError> {
-        let mut ini = Ini::new();
+        let mut ini = Self::new();
         let mut current_section = "default".to_string();
 
         for (line_idx, line) in input.lines().enumerate() {
@@ -70,6 +71,7 @@ impl Ini {
         Ok(ini)
     }
 
+    #[must_use] 
     pub fn get(&self, section: &str, key: &str) -> Option<&String> {
         self.sections.get(section).and_then(|s| s.get(key))
     }

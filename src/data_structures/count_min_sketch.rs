@@ -65,6 +65,7 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
     /// # Arguments
     /// * `epsilon` - Acceptable error rate (e.g., 0.01). Error is within `epsilon * N`.
     /// * `delta` - Probability of error exceeding the bound (e.g., 0.01).
+    #[must_use] 
     pub fn new(epsilon: f64, delta: f64) -> Self {
         // Guard against degenerate / non-finite parameters. epsilon and delta
         // must live in the open interval (0, 1); clamp anything else (including
@@ -120,7 +121,8 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
     }
 
     /// Returns the total number of items added (sum of all counts).
-    pub fn total_count(&self) -> u64 {
+    #[must_use] 
+    pub const fn total_count(&self) -> u64 {
         self.total_count
     }
 
@@ -155,7 +157,7 @@ struct Fnv1aHasher {
 }
 
 impl Fnv1aHasher {
-    fn new(seed: u64) -> Self {
+    const fn new(seed: u64) -> Self {
         Self { state: seed }
     }
 }
@@ -168,7 +170,7 @@ impl Hasher for Fnv1aHasher {
     fn write(&mut self, bytes: &[u8]) {
         let prime = 1099511628211;
         for byte in bytes {
-            self.state ^= *byte as u64;
+            self.state ^= u64::from(*byte);
             self.state = self.state.wrapping_mul(prime);
         }
     }

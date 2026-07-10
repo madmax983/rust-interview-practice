@@ -165,7 +165,7 @@ impl RpcResponse {
     fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         // Format: ID\nIS_ERROR\nPAYLOAD_LEN\nPAYLOAD
-        let err_flag = if self.is_error { 1 } else { 0 };
+        let err_flag = i32::from(self.is_error);
         write!(
             &mut buf,
             "{}\n{}\n{}\n",
@@ -238,6 +238,7 @@ impl Default for RpcServer {
 }
 
 impl RpcServer {
+    #[must_use] 
     pub fn new() -> Self {
         Self {
             handlers: Arc::new(RwLock::new(HashMap::new())),
@@ -264,11 +265,10 @@ impl RpcServer {
                     // GOTCHA: Unbounded thread spawning can lead to exhaustion.
                     // PRODUCTION NOTE: A production RPC server uses a bounded thread pool or async tasks.
                     thread::spawn(move || {
-                        if let Err(e) = Self::handle_client(stream, handlers) {
-                            if e.kind() != io::ErrorKind::UnexpectedEof {
+                        if let Err(e) = Self::handle_client(stream, handlers)
+                            && e.kind() != io::ErrorKind::UnexpectedEof {
                                 // Ignore standard disconnects, log others
                             }
-                        }
                     });
                 }
                 Err(_) => continue,

@@ -14,17 +14,17 @@ fn demonstrate_bit_basics() {
     // Setting a bit at position pos (0-indexed from right)
     let pos = 0;
     n |= 1 << pos; // Set bit 0: 1010 -> 1011
-    println!("After setting bit {pos}: {n:b} ({})", n);
+    println!("After setting bit {pos}: {n:b} ({n})");
 
     // Clearing a bit at position pos
     let pos = 1;
     n &= !(1 << pos); // Clear bit 1: 1011 -> 1001
-    println!("After clearing bit {pos}: {n:b} ({})", n);
+    println!("After clearing bit {pos}: {n:b} ({n})");
 
     // Toggling a bit at position pos
     let pos = 3;
     n ^= 1 << pos; // Toggle bit 3: 1001 -> 0001
-    println!("After toggling bit {pos}: {n:b} ({})", n);
+    println!("After toggling bit {pos}: {n:b} ({n})");
 
     // Checking if a bit is set
     let pos = 0;
@@ -63,7 +63,7 @@ fn demonstrate_bit_basics() {
 /// Powers of 2 have exactly one bit set: 8 = 1000, 16 = 10000
 /// n & (n-1) clears the rightmost set bit.
 #[allow(dead_code)]
-fn is_power_of_two(n: i32) -> bool {
+const fn is_power_of_two(n: i32) -> bool {
     n > 0 && (n & (n - 1)) == 0
 }
 
@@ -71,14 +71,14 @@ fn is_power_of_two(n: i32) -> bool {
 /// n & -n isolates the lowest set bit.
 /// Example: 12 = 1100, 12 & -12 = 0100 (bit at position 2)
 #[allow(dead_code)]
-fn rightmost_set_bit(n: i32) -> i32 {
+const fn rightmost_set_bit(n: i32) -> i32 {
     n & -n
 }
 
 /// Clear the rightmost set bit.
 /// n & (n-1) clears the rightmost set bit.
 #[allow(dead_code)]
-fn clear_rightmost_set_bit(n: i32) -> i32 {
+const fn clear_rightmost_set_bit(n: i32) -> i32 {
     n & (n - 1)
 }
 
@@ -92,21 +92,21 @@ fn find_unique_element(nums: &[i32]) -> i32 {
 /// Create a bit mask with n bits set.
 /// Example: n=3 creates 0b111 (7)
 #[allow(dead_code)]
-fn create_mask(n: u32) -> i32 {
+const fn create_mask(n: u32) -> i32 {
     (1 << n) - 1
 }
 
 /// Get bits in range [start, end).
 /// Extract bits from position start to end (exclusive).
 #[allow(dead_code)]
-fn get_bits_in_range(n: i32, start: u32, end: u32) -> i32 {
+const fn get_bits_in_range(n: i32, start: u32, end: u32) -> i32 {
     let mask = (1 << (end - start)) - 1;
     (n >> start) & mask
 }
 
 /// Set bits in range [start, end) to value.
 #[allow(dead_code)]
-fn set_bits_in_range(n: i32, start: u32, end: u32, value: i32) -> i32 {
+const fn set_bits_in_range(n: i32, start: u32, end: u32, value: i32) -> i32 {
     let mask = ((1 << (end - start)) - 1) << start;
     (n & !mask) | ((value << start) & mask)
 }
@@ -213,7 +213,7 @@ fn demonstrate_numeric_operations() {
 
     // Integer square root
     let n = 17;
-    let sqrt = (n as f64).sqrt() as i32;
+    let sqrt = f64::from(n).sqrt() as i32;
     println!("floor(sqrt({n})) = {sqrt}");
 
     // Division methods
@@ -241,7 +241,7 @@ fn demonstrate_numeric_operations() {
 
 /// Calculate greatest common divisor using Euclidean algorithm.
 #[allow(dead_code)]
-fn gcd(mut a: i32, mut b: i32) -> i32 {
+const fn gcd(mut a: i32, mut b: i32) -> i32 {
     while b != 0 {
         let temp = b;
         b = a % b;
@@ -253,14 +253,14 @@ fn gcd(mut a: i32, mut b: i32) -> i32 {
 /// Calculate least common multiple.
 /// LCM(a, b) = (a * b) / GCD(a, b)
 #[allow(dead_code)]
-fn lcm(a: i32, b: i32) -> i32 {
+const fn lcm(a: i32, b: i32) -> i32 {
     (a * b).abs() / gcd(a, b)
 }
 
 /// Fast exponentiation using binary exponentiation.
 /// Computes base^exp in O(log exp) time.
 #[allow(dead_code)]
-fn fast_pow(mut base: i64, mut exp: u32) -> i64 {
+const fn fast_pow(mut base: i64, mut exp: u32) -> i64 {
     let mut result = 1i64;
     while exp > 0 {
         if exp % 2 == 1 {
@@ -275,7 +275,7 @@ fn fast_pow(mut base: i64, mut exp: u32) -> i64 {
 /// Fast modular exponentiation: (base^exp) % modulo.
 /// Useful for large number computations.
 #[allow(dead_code)]
-fn mod_pow(mut base: i64, mut exp: u32, modulo: i64) -> i64 {
+const fn mod_pow(mut base: i64, mut exp: u32, modulo: i64) -> i64 {
     let mut result = 1i64;
     base %= modulo;
     while exp > 0 {
@@ -302,7 +302,7 @@ fn is_prime(n: i32) -> bool {
         return false;
     }
 
-    let limit = (n as f64).sqrt() as i32;
+    let limit = f64::from(n).sqrt() as i32;
     for i in (3..=limit).step_by(2) {
         if n % i == 0 {
             return false;
@@ -399,7 +399,7 @@ fn reverse_bits(mut n: u32) -> u32 {
 
 /// Count number of 1 bits (Hamming weight).
 #[allow(dead_code)]
-fn hamming_weight(mut n: u32) -> i32 {
+const fn hamming_weight(mut n: u32) -> i32 {
     let mut count = 0;
     while n != 0 {
         n &= n - 1; // Clear rightmost set bit
@@ -410,7 +410,7 @@ fn hamming_weight(mut n: u32) -> i32 {
 
 /// Check if a number is palindrome without converting to string.
 #[allow(dead_code)]
-fn is_palindrome(mut x: i32) -> bool {
+const fn is_palindrome(mut x: i32) -> bool {
     if x < 0 {
         return false;
     }
@@ -438,8 +438,8 @@ fn int_sqrt(x: i32) -> i32 {
 
     while left <= right {
         let mid = left + (right - left) / 2;
-        let mid_squared = mid as i64 * mid as i64;
-        let x_i64 = x as i64;
+        let mid_squared = i64::from(mid) * i64::from(mid);
+        let x_i64 = i64::from(x);
 
         match mid_squared.cmp(&x_i64) {
             std::cmp::Ordering::Equal => return mid,

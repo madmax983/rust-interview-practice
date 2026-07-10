@@ -142,7 +142,8 @@ pub struct DnsPacket {
 }
 
 impl BytePacketBuffer {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             buf: [0; MAX_PACKET_SIZE],
             pos: 0,
@@ -150,25 +151,26 @@ impl BytePacketBuffer {
         }
     }
 
-    pub fn pos(&self) -> usize {
+    #[must_use] 
+    pub const fn pos(&self) -> usize {
         self.pos
     }
 
-    pub fn set_valid_len(&mut self, len: usize) {
+    pub const fn set_valid_len(&mut self, len: usize) {
         self.valid_len = len;
     }
 
-    pub fn step(&mut self, steps: usize) -> Result<(), &'static str> {
+    pub const fn step(&mut self, steps: usize) -> Result<(), &'static str> {
         self.pos += steps;
         Ok(())
     }
 
-    pub fn seek(&mut self, pos: usize) -> Result<(), &'static str> {
+    pub const fn seek(&mut self, pos: usize) -> Result<(), &'static str> {
         self.pos = pos;
         Ok(())
     }
 
-    pub fn read(&mut self) -> Result<u8, &'static str> {
+    pub const fn read(&mut self) -> Result<u8, &'static str> {
         if self.pos >= self.valid_len {
             return Err("End of buffer");
         }
@@ -177,7 +179,7 @@ impl BytePacketBuffer {
         Ok(res)
     }
 
-    pub fn get(&mut self, pos: usize) -> Result<u8, &'static str> {
+    pub const fn get(&mut self, pos: usize) -> Result<u8, &'static str> {
         if pos >= self.valid_len {
             return Err("End of buffer");
         }
@@ -192,15 +194,15 @@ impl BytePacketBuffer {
     }
 
     pub fn read_u16(&mut self) -> Result<u16, &'static str> {
-        let res = ((self.read()? as u16) << 8) | (self.read()? as u16);
+        let res = (u16::from(self.read()?) << 8) | u16::from(self.read()?);
         Ok(res)
     }
 
     pub fn read_u32(&mut self) -> Result<u32, &'static str> {
-        let res = ((self.read()? as u32) << 24)
-            | ((self.read()? as u32) << 16)
-            | ((self.read()? as u32) << 8)
-            | (self.read()? as u32);
+        let res = (u32::from(self.read()?) << 24)
+            | (u32::from(self.read()?) << 16)
+            | (u32::from(self.read()?) << 8)
+            | u32::from(self.read()?);
         Ok(res)
     }
 
@@ -233,8 +235,8 @@ impl BytePacketBuffer {
                     self.seek(pos + 2)?;
                 }
 
-                let b2 = self.get(pos + 1)? as u16;
-                let offset = (((len as u16) ^ 0xC0) << 8) | b2;
+                let b2 = u16::from(self.get(pos + 1)?);
+                let offset = ((u16::from(len) ^ 0xC0) << 8) | b2;
                 pos = offset as usize;
                 jumped = true;
                 jumps_performed += 1;
@@ -264,7 +266,7 @@ impl BytePacketBuffer {
         Ok(())
     }
 
-    pub fn write(&mut self, val: u8) -> Result<(), &'static str> {
+    pub const fn write(&mut self, val: u8) -> Result<(), &'static str> {
         if self.pos >= MAX_PACKET_SIZE {
             return Err("End of buffer");
         }
@@ -276,7 +278,7 @@ impl BytePacketBuffer {
         Ok(())
     }
 
-    pub fn write_u8(&mut self, val: u8) -> Result<(), &'static str> {
+    pub const fn write_u8(&mut self, val: u8) -> Result<(), &'static str> {
         self.write(val)
     }
 
@@ -302,20 +304,22 @@ impl Default for BytePacketBuffer {
 }
 
 impl ResultCode {
-    pub fn from_num(num: u8) -> ResultCode {
+    #[must_use] 
+    pub const fn from_num(num: u8) -> Self {
         match num {
-            1 => ResultCode::FORMERR,
-            2 => ResultCode::SERVFAIL,
-            3 => ResultCode::NXDOMAIN,
-            4 => ResultCode::NOTIMP,
-            5 => ResultCode::REFUSED,
-            0 | _ => ResultCode::NOERROR,
+            1 => Self::FORMERR,
+            2 => Self::SERVFAIL,
+            3 => Self::NXDOMAIN,
+            4 => Self::NOTIMP,
+            5 => Self::REFUSED,
+            0 | _ => Self::NOERROR,
         }
     }
 }
 
 impl DnsHeader {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             id: 0,
             recursion_desired: false,
@@ -414,23 +418,26 @@ impl Default for DnsHeader {
 }
 
 impl QueryType {
-    pub fn to_num(&self) -> u16 {
+    #[must_use] 
+    pub const fn to_num(&self) -> u16 {
         match *self {
-            QueryType::UNKNOWN(x) => x,
-            QueryType::A => 1,
+            Self::UNKNOWN(x) => x,
+            Self::A => 1,
         }
     }
 
-    pub fn from_num(num: u16) -> QueryType {
+    #[must_use] 
+    pub const fn from_num(num: u16) -> Self {
         match num {
-            1 => QueryType::A,
-            _ => QueryType::UNKNOWN(num),
+            1 => Self::A,
+            _ => Self::UNKNOWN(num),
         }
     }
 }
 
 impl DnsQuestion {
-    pub fn new(name: String, qtype: QueryType) -> Self {
+    #[must_use] 
+    pub const fn new(name: String, qtype: QueryType) -> Self {
         Self { name, qtype }
     }
 
@@ -464,7 +471,7 @@ impl DnsQuestion {
 }
 
 impl DnsRecord {
-    pub fn read(buffer: &mut BytePacketBuffer) -> Result<DnsRecord, &'static str> {
+    pub fn read(buffer: &mut BytePacketBuffer) -> Result<Self, &'static str> {
         let mut domain = String::new();
         buffer.read_qname(&mut domain)?;
 
@@ -483,14 +490,14 @@ impl DnsRecord {
                     ((raw_addr >> 8) & 0xFF) as u8,
                     (raw_addr & 0xFF) as u8,
                 );
-                Ok(DnsRecord::A { domain, addr, ttl })
+                Ok(Self::A { domain, addr, ttl })
             }
             QueryType::UNKNOWN(_) => {
                 let mut data = Vec::with_capacity(data_len as usize);
                 for _ in 0..data_len {
                     data.push(buffer.read()?);
                 }
-                Ok(DnsRecord::UNKNOWN {
+                Ok(Self::UNKNOWN {
                     domain,
                     qtype: qtype_num,
                     data_len,
@@ -505,7 +512,7 @@ impl DnsRecord {
         let start_pos = buffer.pos();
 
         match *self {
-            DnsRecord::A {
+            Self::A {
                 ref domain,
                 ref addr,
                 ttl,
@@ -537,7 +544,7 @@ impl DnsRecord {
                 buffer.write_u8(octets[2])?;
                 buffer.write_u8(octets[3])?;
             }
-            DnsRecord::UNKNOWN {
+            Self::UNKNOWN {
                 ref domain,
                 qtype,
                 data_len,
@@ -574,7 +581,8 @@ impl DnsRecord {
 }
 
 impl DnsPacket {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self {
             header: DnsHeader::new(),
             questions: Vec::new(),
@@ -585,11 +593,11 @@ impl DnsPacket {
     }
 
     pub fn from_buffer(buffer: &mut BytePacketBuffer) -> Result<Self, &'static str> {
-        let mut result = DnsPacket::new();
+        let mut result = Self::new();
         result.header.read(buffer)?;
 
         for _ in 0..result.header.questions {
-            let mut question = DnsQuestion::new("".to_string(), QueryType::UNKNOWN(0));
+            let mut question = DnsQuestion::new(String::new(), QueryType::UNKNOWN(0));
             question.read(buffer)?;
             result.questions.push(question);
         }
@@ -654,6 +662,7 @@ pub struct DnsResolver {
 
 impl DnsResolver {
     /// Creates a new DNS Resolver pointing to the specified server (e.g., ("8.8.8.8", 53)).
+    #[must_use] 
     pub fn new(server_ip: &str, server_port: u16) -> Self {
         Self {
             server: (server_ip.to_string(), server_port),
@@ -684,7 +693,7 @@ impl DnsResolver {
 
         // 3. Serialize query
         let mut req_buffer = BytePacketBuffer::new();
-        packet.write(&mut req_buffer).map_err(|e| e.to_string())?;
+        packet.write(&mut req_buffer).map_err(std::string::ToString::to_string)?;
 
         // 4. Send query
         let socket = UdpSocket::bind(("0.0.0.0", 0)).map_err(|e| e.to_string())?;
@@ -707,7 +716,7 @@ impl DnsResolver {
         res_buffer.set_valid_len(len);
 
         // 6. Parse response
-        let res_packet = DnsPacket::from_buffer(&mut res_buffer).map_err(|e| e.to_string())?;
+        let res_packet = DnsPacket::from_buffer(&mut res_buffer).map_err(std::string::ToString::to_string)?;
 
         // 7. Extract A record
         for answer in res_packet.answers {

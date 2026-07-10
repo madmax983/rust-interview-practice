@@ -7,7 +7,7 @@
 //!
 //! **Real-world Usage:**
 //! - Redis (Sorted Sets / ZSET) - uses Skip Lists for ranking and range queries.
-//! - LevelDB / RocksDB (MemTable) - uses Skip Lists for in-memory write buffers.
+//! - `LevelDB` / `RocksDB` (`MemTable`) - uses Skip Lists for in-memory write buffers.
 //!
 //! **Why build it yourself?**
 //! Implementing a Skip List teaches you about probabilistic balancing. Unlike trees which require strict rebalancing (rotations),
@@ -59,7 +59,7 @@ const MAX_LEVEL: usize = 16;
 /// A node in the skip list.
 struct Node<T> {
     val: Option<T>, // None for head sentinel
-    forward: Vec<Option<NonNull<Node<T>>>>,
+    forward: Vec<Option<NonNull<Self>>>,
 }
 
 impl<T> Node<T> {
@@ -88,7 +88,7 @@ unsafe impl<T: Send> Send for SkipList<T> {}
 unsafe impl<T: Sync> Sync for SkipList<T> {}
 
 impl<T: Ord> SkipList<T> {
-    /// Creates a new empty SkipList.
+    /// Creates a new empty `SkipList`.
     pub fn new() -> Self {
         // Create head node with max level
         let head = Box::new(Node::new(None, MAX_LEVEL));
@@ -104,12 +104,14 @@ impl<T: Ord> SkipList<T> {
     }
 
     /// Returns the number of elements in the list.
-    pub fn len(&self) -> usize {
+    #[must_use] 
+    pub const fn len(&self) -> usize {
         self.length
     }
 
     /// Returns true if the list is empty.
-    pub fn is_empty(&self) -> bool {
+    #[must_use] 
+    pub const fn is_empty(&self) -> bool {
         self.length == 0
     }
 
@@ -251,7 +253,7 @@ impl<T: Ord> SkipList<T> {
     }
 
     // Helper: Generate random level
-    fn random_level(&mut self) -> usize {
+    const fn random_level(&mut self) -> usize {
         let mut lvl = 0;
         while self.rng.next_bool() && lvl < MAX_LEVEL {
             lvl += 1;
@@ -260,6 +262,7 @@ impl<T: Ord> SkipList<T> {
     }
 
     /// Returns an iterator over the values.
+    #[must_use] 
     pub fn iter(&self) -> Iter<'_, T> {
         unsafe {
             Iter {
@@ -329,13 +332,13 @@ struct XorShift {
 }
 
 impl XorShift {
-    fn new(seed: u32) -> Self {
+    const fn new(seed: u32) -> Self {
         Self {
             state: if seed == 0 { 12345 } else { seed },
         }
     }
 
-    fn next_u32(&mut self) -> u32 {
+    const fn next_u32(&mut self) -> u32 {
         let mut x = self.state;
         x ^= x << 13;
         x ^= x >> 17;
@@ -344,7 +347,7 @@ impl XorShift {
         x
     }
 
-    fn next_bool(&mut self) -> bool {
+    const fn next_bool(&mut self) -> bool {
         self.next_u32().is_multiple_of(2)
     }
 }

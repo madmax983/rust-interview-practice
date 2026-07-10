@@ -13,16 +13,16 @@
 //!
 //! **Components:**
 //! 1.  **Data File (Active)**: Append-only file where all writes go.
-//! 2.  **KeyDir (In-Memory)**: A Hash Map mapping `Key -> (FileId, ValueSize, ValuePos, Timestamp)`.
-//! 3.  **Hint File**: Acceleration structure to rebuild KeyDir faster on startup (omitted for brevity).
+//! 2.  **`KeyDir` (In-Memory)**: A Hash Map mapping `Key -> (FileId, ValueSize, ValuePos, Timestamp)`.
+//! 3.  **Hint File**: Acceleration structure to rebuild `KeyDir` faster on startup (omitted for brevity).
 //!
 //! **Write Path:**
 //! 1.  Serialize Key, Value, Metadata.
 //! 2.  Append to active file.
-//! 3.  Update KeyDir.
+//! 3.  Update `KeyDir`.
 //!
 //! **Read Path:**
-//! 1.  Lookup Key in KeyDir to get position.
+//! 1.  Lookup Key in `KeyDir` to get position.
 //! 2.  Seek to position in file.
 //! 3.  Read and deserialize value.
 //!
@@ -82,7 +82,7 @@ pub struct Bitcask {
 }
 
 /// Represents an entry in the log file.
-/// Format: [CRC (4) | Tstamp (8) | KeySz (4) | ValSz (4) | Key | Value]
+/// Format: [CRC (4) | Tstamp (8) | `KeySz` (4) | `ValSz` (4) | Key | Value]
 struct EntryHeader {
     crc: u32,
     timestamp: u64,
@@ -150,12 +150,12 @@ impl Bitcask {
             let mut value = Vec::new();
             let entry_sz = if header.value_sz == TOMBSTONE_VALUE_SZ {
                 // Tombstone has no value payload
-                HEADER_SIZE as u64 + header.key_sz as u64
+                HEADER_SIZE as u64 + u64::from(header.key_sz)
             } else {
                 // Read Value to verify CRC
                 value = vec![0u8; header.value_sz as usize];
                 file.read_exact(&mut value)?;
-                HEADER_SIZE as u64 + header.key_sz as u64 + header.value_sz as u64
+                HEADER_SIZE as u64 + u64::from(header.key_sz) + u64::from(header.value_sz)
             };
 
             let mut hasher = Hasher::new();
@@ -174,7 +174,7 @@ impl Bitcask {
                     keydir.remove(&key);
                 } else {
                     // Value position is start + header + key
-                    let value_pos = pos + HEADER_SIZE as u64 + header.key_sz as u64;
+                    let value_pos = pos + HEADER_SIZE as u64 + u64::from(header.key_sz);
 
                     keydir.insert(
                         key,

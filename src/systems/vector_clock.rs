@@ -6,7 +6,7 @@
 //! **Replaces Crates:** `vector-clock`, `crdts` (partially)
 //!
 //! **Real-world Usage:**
-//! - Amazon DynamoDB (detecting conflicting versions of an object).
+//! - Amazon `DynamoDB` (detecting conflicting versions of an object).
 //! - Riak (dotted version vectors).
 //! - Collaborative editing (CRDTs).
 //!
@@ -58,9 +58,9 @@ use std::fmt;
 #[derive(Clone, Debug)]
 pub struct VectorClock {
     /// Map of Node ID to logical timestamp.
-    /// Using BTreeMap would allow cheaper comparison (sorted keys), but HashMap is O(1) access.
+    /// Using `BTreeMap` would allow cheaper comparison (sorted keys), but `HashMap` is O(1) access.
     /// For small N, iteration overhead dominates anyway.
-    /// We use HashMap for O(1) increment.
+    /// We use `HashMap` for O(1) increment.
     clock: HashMap<String, u64>,
     my_id: String,
 }
@@ -88,7 +88,7 @@ impl VectorClock {
     /// Merges another vector clock into this one.
     /// Should be called when receiving a message carrying a vector clock.
     /// Takes the element-wise maximum.
-    pub fn merge(&mut self, other: &VectorClock) {
+    pub fn merge(&mut self, other: &Self) {
         for (node, &count) in &other.clock {
             let my_count = self.clock.entry(node.clone()).or_insert(0);
             if count > *my_count {
@@ -98,6 +98,7 @@ impl VectorClock {
     }
 
     /// Returns the logical timestamp for a specific node.
+    #[must_use] 
     pub fn get(&self, node_id: &str) -> u64 {
         *self.clock.get(node_id).unwrap_or(&0)
     }
@@ -108,7 +109,8 @@ impl VectorClock {
     /// - `Some(Ordering::Less)` if `self` happened before `other`.
     /// - `Some(Ordering::Greater)` if `other` happened before `self`.
     /// - `None` if they are concurrent.
-    pub fn partial_cmp(&self, other: &VectorClock) -> Option<Ordering> {
+    #[must_use] 
+    pub fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let mut self_has_greater = false;
         let mut other_has_greater = false;
 

@@ -69,7 +69,7 @@ use std::collections::{HashMap, HashSet};
 pub type DocId = u32;
 
 /// Postings list entry representing a term's occurrence in a specific document.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Posting {
     pub doc_id: DocId,
     pub term_frequency: usize, // Raw count of the term in the document
@@ -115,7 +115,7 @@ impl InvertedIndex {
             "are", "was", "were", "it", "this", "that", "of", "by", "as", "be",
         ]
         .iter()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect();
 
         Self {
@@ -134,7 +134,7 @@ impl InvertedIndex {
                 // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<String>()` allocation by using `.flat_map(|c| c.to_lowercase())`.
                 word.chars()
                     .filter(|c| c.is_alphanumeric())
-                    .flat_map(|c| c.to_lowercase())
+                    .flat_map(char::to_lowercase)
                     .collect::<String>()
             })
             .filter(|term| !term.is_empty() && !self.stop_words.contains(term))

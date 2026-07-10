@@ -48,21 +48,25 @@ impl<T: Ord> Default for BinaryHeap<T> {
 }
 
 impl<T: Ord> BinaryHeap<T> {
-    pub fn new() -> Self {
+    #[must_use] 
+    pub const fn new() -> Self {
         Self { data: Vec::new() }
     }
 
+    #[must_use] 
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity(capacity),
         }
     }
 
-    pub fn len(&self) -> usize {
+    #[must_use] 
+    pub const fn len(&self) -> usize {
         self.data.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use] 
+    pub const fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
 
@@ -90,6 +94,7 @@ impl<T: Ord> BinaryHeap<T> {
     }
 
     /// Returns a reference to the greatest item.
+    #[must_use] 
     pub fn peek(&self) -> Option<&T> {
         self.data.first()
     }
@@ -121,12 +126,11 @@ impl<T: Ord> BinaryHeap<T> {
                 largest = right_child;
             }
 
-            if largest != idx {
-                self.data.swap(idx, largest);
-                idx = largest;
-            } else {
+            if largest == idx {
                 break;
             }
+            self.data.swap(idx, largest);
+            idx = largest;
         }
     }
 }

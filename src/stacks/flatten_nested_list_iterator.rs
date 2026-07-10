@@ -41,11 +41,11 @@
 //!
 //! Note: single canonical (design) implementation of a custom iterator; the brute/optimized/optimal progression does not apply here.
 
-/// Represents a nested integer, which can be a single integer or a list of NestedIntegers.
+/// Represents a nested integer, which can be a single integer or a list of `NestedIntegers`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NestedInteger {
     Int(i32),
-    List(Vec<NestedInteger>),
+    List(Vec<Self>),
 }
 
 /// Iterator that flattens a `NestedInteger` structure.
@@ -59,6 +59,7 @@ pub struct NestedIterator {
 
 impl NestedIterator {
     /// Creates a new iterator from a vector of `NestedInteger`.
+    #[must_use] 
     pub fn new(nested_list: Vec<NestedInteger>) -> Self {
         let mut stack = Vec::new();
         // Push the main list's iterator onto the stack.

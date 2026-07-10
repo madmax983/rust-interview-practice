@@ -11,7 +11,7 @@
 //! - Deduplication and grouping operations.
 //!
 //! **Why build it yourself?**
-//! Everyone uses HashMaps, but few understand the mechanics of collision resolution,
+//! Everyone uses `HashMaps`, but few understand the mechanics of collision resolution,
 //! load factor triggers, and the performance differences between chaining (linked lists)
 //! and open addressing (arrays). Robin Hood hashing teaches you how to minimize the variance
 //! of probe lengths, drastically reducing the worst-case lookup time.
@@ -86,7 +86,7 @@ impl<K: Hash + Eq, V> Default for HashMap<K, V> {
 }
 
 impl<K: Hash + Eq, V> HashMap<K, V> {
-    /// Creates an empty HashMap.
+    /// Creates an empty `HashMap`.
     #[must_use]
     pub fn new() -> Self {
         let mut buckets = Vec::with_capacity(INITIAL_CAPACITY);
@@ -96,12 +96,14 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
     }
 
     /// Returns the number of elements in the map.
-    pub fn len(&self) -> usize {
+    #[must_use] 
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the map contains no elements.
-    pub fn is_empty(&self) -> bool {
+    #[must_use] 
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -125,28 +127,25 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
         let mut idx = (hash as usize) & (cap - 1);
 
         loop {
-            match self.buckets[idx].as_mut() {
-                Some(existing) => {
-                    if existing.hash == entry.hash && existing.key == entry.key {
-                        // Key exists, update value and return old
-                        return Some(mem::replace(&mut existing.value, entry.value));
-                    }
-
-                    // Robin Hood swap: if the current entry has probed further than the existing one, swap them.
-                    if entry.dib > existing.dib {
-                        mem::swap(existing, &mut entry);
-                    }
-
-                    // Continue probing for the displaced (or original) entry
-                    entry.dib += 1;
-                    idx = (idx + 1) & (cap - 1);
+            if let Some(existing) = self.buckets[idx].as_mut() {
+                if existing.hash == entry.hash && existing.key == entry.key {
+                    // Key exists, update value and return old
+                    return Some(mem::replace(&mut existing.value, entry.value));
                 }
-                None => {
-                    // Empty bucket found, insert here
-                    self.buckets[idx] = Some(entry);
-                    self.len += 1;
-                    return None;
+
+                // Robin Hood swap: if the current entry has probed further than the existing one, swap them.
+                if entry.dib > existing.dib {
+                    mem::swap(existing, &mut entry);
                 }
+
+                // Continue probing for the displaced (or original) entry
+                entry.dib += 1;
+                idx = (idx + 1) & (cap - 1);
+            } else {
+                // Empty bucket found, insert here
+                self.buckets[idx] = Some(entry);
+                self.len += 1;
+                return None;
             }
         }
     }
@@ -282,19 +281,16 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
             let mut idx = (entry.hash as usize) & (cap - 1);
 
             loop {
-                match self.buckets[idx].as_mut() {
-                    Some(existing) => {
-                        if entry.dib > existing.dib {
-                            mem::swap(existing, &mut entry);
-                        }
-                        entry.dib += 1;
-                        idx = (idx + 1) & (cap - 1);
+                if let Some(existing) = self.buckets[idx].as_mut() {
+                    if entry.dib > existing.dib {
+                        mem::swap(existing, &mut entry);
                     }
-                    None => {
-                        self.buckets[idx] = Some(entry);
-                        self.len += 1;
-                        break;
-                    }
+                    entry.dib += 1;
+                    idx = (idx + 1) & (cap - 1);
+                } else {
+                    self.buckets[idx] = Some(entry);
+                    self.len += 1;
+                    break;
                 }
             }
         }

@@ -149,6 +149,7 @@ impl<'a, Output> Parser<'a, Output> for BoxedParser<'a, Output> {
 // =========================================================================
 
 /// Matches an exact string literal.
+#[must_use] 
 pub fn tag<'a>(expected: &'a str) -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
         if input.starts_with(expected) {
@@ -157,7 +158,7 @@ pub fn tag<'a>(expected: &'a str) -> impl Parser<'a, &'a str> {
         } else {
             Err(ParseError {
                 location: input,
-                expected: format!("Expected '{}'", expected),
+                expected: format!("Expected '{expected}'"),
             })
         }
     }
@@ -169,7 +170,7 @@ where
     P: Fn(char) -> bool,
 {
     move |input: &'a str| {
-        let mut chars = input.chars();
+        let chars = input.chars();
         let mut matched_len = 0;
 
         for c in chars {

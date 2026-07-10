@@ -6,35 +6,35 @@
 //! *   **Difficulty**: Hard (Systems)
 //! *   **Replaces Crates**: `rocksdb`, `leveldb`, `sled` (partially)
 //! *   **Real-world Usage**:
-//!     *   **Cassandra / ScyllaDB**: Core storage engine for high write throughput.
-//!     *   **RocksDB / LevelDB**: Embedded key-value stores used everywhere (from Kafka to TiDB).
-//!     *   **InfluxDB**: Time-series databases heavily rely on LSM semantics.
+//!     *   **Cassandra / `ScyllaDB`**: Core storage engine for high write throughput.
+//!     *   **`RocksDB` / `LevelDB`**: Embedded key-value stores used everywhere (from Kafka to `TiDB`).
+//!     *   **`InfluxDB`**: Time-series databases heavily rely on LSM semantics.
 //! *   **Why build it yourself?**
 //!     Implementing an LSM Tree teaches you how modern databases achieve insanely high write throughput.
 //!     You learn how to trade off read speed (which might need to search multiple files) for write speed
-//!     (which only writes to memory and appends to disk). You will grapple with `BTreeMap`s (MemTable),
-//!     immutable disk structures (SSTables), and the concept of Tombstones for deletion.
+//!     (which only writes to memory and appends to disk). You will grapple with `BTreeMap`s (`MemTable`),
+//!     immutable disk structures (`SSTables`), and the concept of Tombstones for deletion.
 //!
 //! # Architecture
 //!
 //! An LSM Tree buffers writes in memory and periodically flushes them to disk as immutable, sorted files.
 //!
 //! **Components:**
-//! 1.  **MemTable (In-Memory)**: A balanced tree (e.g., `BTreeMap`) holding the most recent writes.
-//! 2.  **SSTable (Disk)**: Sorted String Table. Immutable files on disk containing sorted Key-Value pairs.
+//! 1.  **`MemTable` (In-Memory)**: A balanced tree (e.g., `BTreeMap`) holding the most recent writes.
+//! 2.  **`SSTable` (Disk)**: Sorted String Table. Immutable files on disk containing sorted Key-Value pairs.
 //! 3.  **WAL (Write-Ahead Log)**: (Omitted here for simplicity, but crucial for durability in production).
 //!
 //! **Write Path (`put`):**
-//! 1.  Insert into the MemTable.
-//! 2.  If the MemTable exceeds a threshold size, flush it to disk as an SSTable and clear the MemTable.
+//! 1.  Insert into the `MemTable`.
+//! 2.  If the `MemTable` exceeds a threshold size, flush it to disk as an `SSTable` and clear the `MemTable`.
 //!
 //! **Read Path (`get`):**
-//! 1.  Check the MemTable. If found, return the value.
-//! 2.  If not found, search the SSTables (from newest to oldest).
+//! 1.  Check the `MemTable`. If found, return the value.
+//! 2.  If not found, search the `SSTables` (from newest to oldest).
 //!
 //! **Deletion:**
-//! 1.  Since SSTables are immutable, we cannot physically delete a record.
-//! 2.  Instead, we write a **Tombstone** (a special marker) to the MemTable.
+//! 1.  Since `SSTables` are immutable, we cannot physically delete a record.
+//! 2.  Instead, we write a **Tombstone** (a special marker) to the `MemTable`.
 //! 3.  During a read, if a Tombstone is found, we return `None`.
 //!
 //! **Complexity:**
@@ -45,7 +45,7 @@
 //! | Read      | O(log M + K * log S) | O(1)    |
 //! | Space     | -               | O(Total Data)|
 //!
-//! *M = items in MemTable, K = number of SSTables, S = items per SSTable.*
+//! *M = items in `MemTable`, K = number of `SSTables`, S = items per `SSTable`.*
 //!
 use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
@@ -60,7 +60,7 @@ use std::sync::{Mutex, RwLock};
 /// Defines the core operations of a Key-Value store.
 ///
 /// RUST INSIGHT: Defining a trait first allows us to swap out storage engines
-/// (e.g., swapping a simple HashMap for this LSM Tree) without changing the
+/// (e.g., swapping a simple `HashMap` for this LSM Tree) without changing the
 /// consuming application code.
 pub trait KeyValueStore<K, V> {
     fn put(&self, key: K, value: V) -> io::Result<()>;
@@ -73,7 +73,7 @@ pub type Value = Vec<u8>;
 
 /// Represents the value stored in the LSM tree.
 /// It can either be actual data or a Tombstone indicating deletion.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Entry {
     Data(Value),
     Tombstone,
@@ -82,14 +82,14 @@ pub enum Entry {
 /// The in-memory buffer for the LSM tree.
 ///
 /// RUST INSIGHT: Rust's standard library provides a highly optimized `BTreeMap`
-/// which is perfect for our MemTable.
+/// which is perfect for our `MemTable`.
 struct MemTable {
     map: BTreeMap<Key, Entry>,
     estimated_size: usize,
 }
 
 impl MemTable {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             map: BTreeMap::new(),
             estimated_size: 0,
@@ -135,7 +135,7 @@ struct SSTable {
 const TOMBSTONE_MARKER: u32 = u32::MAX;
 
 impl SSTable {
-    /// Creates a new SSTable from a MemTable.
+    /// Creates a new `SSTable` from a `MemTable`.
     fn flush_from(memtable: &MemTable, path: PathBuf) -> io::Result<Self> {
         let file = OpenOptions::new()
             .create(true)
@@ -175,7 +175,7 @@ impl SSTable {
         Ok(Self { path })
     }
 
-    /// Searches for a key in this SSTable.
+    /// Searches for a key in this `SSTable`.
     /// Returns `Ok(Some(Entry))` if found, `Ok(None)` if not found.
     // PRODUCTION NOTE: A real SSTable uses an index (e.g., Sparse Index + Bloom Filter)
     // to find keys in O(log S) or O(1) time without full sequential scans.
@@ -188,7 +188,7 @@ impl SSTable {
             // Read Key Length
             let mut k_len_buf = [0u8; 4];
             match reader.read_exact(&mut k_len_buf) {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => return Ok(None),
                 Err(e) => return Err(e),
             }
@@ -212,11 +212,10 @@ impl SSTable {
                     reader.read_exact(&mut val)?;
                     return Ok(Some(Entry::Data(val)));
                 }
-            } else {
-                // Skip Value if not target
-                if v_len_marker != TOMBSTONE_MARKER {
-                    reader.seek(SeekFrom::Current(v_len_marker as i64))?;
-                }
+            }
+            // Skip Value if not target
+            if v_len_marker != TOMBSTONE_MARKER {
+                reader.seek(SeekFrom::Current(i64::from(v_len_marker)))?;
             }
         }
     }
@@ -339,7 +338,7 @@ impl LsmTree {
         Ok(())
     }
 
-    /// Flushes the current MemTable to an SSTable on disk.
+    /// Flushes the current `MemTable` to an `SSTable` on disk.
     fn flush_memtable(&self) -> io::Result<()> {
         let mut mem = self.memtable.write().unwrap();
 
@@ -364,7 +363,7 @@ impl LsmTree {
         Ok(())
     }
 
-    /// Explicitly forces a flush of the MemTable to disk.
+    /// Explicitly forces a flush of the `MemTable` to disk.
     pub fn force_flush(&self) -> io::Result<()> {
         self.flush_memtable()
     }

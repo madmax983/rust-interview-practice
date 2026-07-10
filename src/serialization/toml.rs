@@ -42,10 +42,10 @@ use std::str::Chars;
 pub enum TomlValue {
     String(String),
     Integer(i64),
-    Table(HashMap<String, TomlValue>),
+    Table(HashMap<String, Self>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -53,7 +53,7 @@ pub struct Span {
     pub col: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     Identifier(String),
     StringLiteral(String),
@@ -114,6 +114,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    #[must_use] 
     pub fn new(input: &'a str) -> Self {
         Self {
             _input: input,
@@ -357,7 +358,7 @@ impl<'a> Parser<'a> {
                     if let Some(table) = sections.get_mut(&current_section) {
                         if table.contains_key(&key) {
                             return Err(ParseError::Generic(
-                                format!("Duplicate key '{}'", key),
+                                format!("Duplicate key '{key}'"),
                                 self.current_token.span,
                             ));
                         }

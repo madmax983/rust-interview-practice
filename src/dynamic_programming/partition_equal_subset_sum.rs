@@ -26,6 +26,7 @@
 ///
 /// Time: O(N * Target), where N is the number of elements and Target is sum / 2.
 /// Space: O(N * Target)
+#[must_use] 
 pub fn can_partition_optimized(nums: Vec<i32>) -> bool {
     let total_sum: i32 = nums.iter().sum();
 
@@ -66,6 +67,7 @@ pub fn can_partition_optimized(nums: Vec<i32>) -> bool {
 ///
 /// Time: O(N * Target)
 /// Space: O(Target)
+#[must_use] 
 pub fn can_partition_optimal(nums: Vec<i32>) -> bool {
     // RUST INSIGHT: Using iterators and closures is idiomatic and often faster than manual loops.
     // The compiler can unroll and vectorize this sum.

@@ -51,6 +51,7 @@
 /// Why this matters:
 /// This explicitly uses standard collection mechanisms (a vector for the current line). It focuses
 /// on algorithm correctness (how to divide the extra spaces) rather than memory optimal operations.
+#[must_use] 
 pub fn full_justify_brute_force(words: Vec<String>, max_width: i32) -> Vec<String> {
     let max_width = max_width as usize;
     let mut res = Vec::new();
@@ -126,8 +127,9 @@ pub fn full_justify_brute_force(words: Vec<String>, max_width: i32) -> Vec<Strin
 ///   which just writes bytes directly into our buffer without any extra allocations.
 ///
 /// GOTCHA:
-/// Do not confuse byte length with character length, though LeetCode guarantees ASCII so
+/// Do not confuse byte length with character length, though `LeetCode` guarantees ASCII so
 /// `.len()` is safe here. If there were Unicode text, `.chars().count()` might be required for `max_width`.
+#[must_use] 
 pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
     let max_width = max_width as usize;
     let mut res = Vec::new();
@@ -145,7 +147,7 @@ pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
 
         let num_words = j - i;
         // Total chars in the words without spaces
-        let words_len: usize = words[i..j].iter().map(|w| w.len()).sum();
+        let words_len: usize = words[i..j].iter().map(std::string::String::len).sum();
         let total_spaces = max_width - words_len;
 
         let mut line = String::with_capacity(max_width);
@@ -187,6 +189,7 @@ pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
 }
 
 /// Main Entry Point
+#[must_use] 
 pub fn full_justify(words: Vec<String>, max_width: i32) -> Vec<String> {
     full_justify_optimal(words, max_width)
 }

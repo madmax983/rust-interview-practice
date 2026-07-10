@@ -67,7 +67,7 @@ use std::thread;
 //   - *Tradeoff*: `mpsc::Receiver` is not `Sync`, so it must be wrapped in a `Mutex`.
 //   - *Alternative*: `crossbeam-channel` which supports multiple consumers (MPMC) without a Mutex.
 
-/// A ThreadPool that manages a group of spawned threads.
+/// A `ThreadPool` that manages a group of spawned threads.
 pub struct ThreadPool {
     workers: Vec<Worker>,
     sender: Option<mpsc::Sender<Job>>,
@@ -81,14 +81,15 @@ pub struct ThreadPool {
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
 impl ThreadPool {
-    /// Create a new ThreadPool.
+    /// Create a new `ThreadPool`.
     ///
     /// The size is the number of threads in the pool.
     ///
     /// # Panics
     ///
     /// The `new` function will panic if the size is zero.
-    pub fn new(size: usize) -> ThreadPool {
+    #[must_use] 
+    pub fn new(size: usize) -> Self {
         assert!(size > 0);
 
         let (sender, receiver) = mpsc::channel();
@@ -105,7 +106,7 @@ impl ThreadPool {
             workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
-        ThreadPool {
+        Self {
             workers,
             sender: Some(sender),
         }
@@ -157,7 +158,7 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Self {
         let thread = thread::spawn(move || {
             loop {
                 // RUST INSIGHT: Lock Contention
@@ -209,7 +210,7 @@ impl Worker {
             }
         });
 
-        Worker {
+        Self {
             _id: id,
             thread: Some(thread),
         }

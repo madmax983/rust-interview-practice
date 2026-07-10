@@ -5,7 +5,7 @@
 //! *   **Problem Name**: LSM-Tree Storage Engine
 //! *   **Difficulty**: Hard (Systems Design)
 //! *   **Link**: <https://en.wikipedia.org/wiki/Log-structured_merge-tree>
-//! *   **Why this matters in Rust**: Basis of modern K-V stores (RocksDB, LevelDB, Cassandra).
+//! *   **Why this matters in Rust**: Basis of modern K-V stores (`RocksDB`, `LevelDB`, Cassandra).
 //!
 //! # Architecture
 //!
@@ -13,39 +13,39 @@
 //!
 //! **Components:**
 //! 1.  **Memtable**: In-memory `BTreeMap`. Accepts writes. Sorted by key.
-//! 2.  **SSTable (Sorted String Table)**: Immutable, on-disk file. Created when Memtable is full.
+//! 2.  **`SSTable` (Sorted String Table)**: Immutable, on-disk file. Created when Memtable is full.
 //! 3.  **WAL**: Write-Ahead Log for durability.
-//! 4.  **Bloom Filter**: Probabilistic structure to skip SSTables.
+//! 4.  **Bloom Filter**: Probabilistic structure to skip `SSTables`.
 //!
 //! **Read Path (`get`):**
 //! 1.  Check Memtable.
-//! 2.  Check SSTables (Newest -> Oldest).
+//! 2.  Check `SSTables` (Newest -> Oldest).
 //!
 //! **Write Path (`put`):**
 //! 1.  Write to Memtable.
-//! 2.  If Memtable size > Threshold -> Flush to new SSTable.
+//! 2.  If Memtable size > Threshold -> Flush to new `SSTable`.
 //!
 //! **Format:**
-//! SSTables use an unambiguous length-prefixed binary record encoding:
+//! `SSTables` use an unambiguous length-prefixed binary record encoding:
 //! `[key_len: u32 LE][key bytes][val_len: u32 LE][val bytes]` repeated. This lets keys and
 //! values contain arbitrary bytes (including `,` and `\n`) without corrupting the framing.
 //!
 //! # Invariants
 //!
 //! *   Memtable is always sorted.
-//! *   SSTables are immutable and sorted.
+//! *   `SSTables` are immutable and sorted.
 //! *   Newer data shadows older data.
 //!
 //! # Rust Insight
 //!
-//! *   **BTreeMap**: Provides the sorted in-memory structure out of the box.
+//! *   **`BTreeMap`**: Provides the sorted in-memory structure out of the box.
 //! *   **File I/O**: We use `BufReader` for efficient scanning.
 //!
 //! # Production Note
 //!
 //! Real LSM-Trees use:
 //! *   **Sparse Index**: In-memory map of `Key -> FileOffset` to allow binary search in blocks.
-//! *   **Compaction**: Background threads merging SSTables to reclaim space and improve read speed. (Our `compact` is manual).
+//! *   **Compaction**: Background threads merging `SSTables` to reclaim space and improve read speed. (Our `compact` is manual).
 //! *   **Binary Format**: Protobuf or custom binary for space efficiency.
 
 use std::collections::{BTreeMap, HashMap};
@@ -57,7 +57,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::data_structures::bloom_filter::BloomFilter;
 use crate::systems::wal::Wal;
 
-/// Writes a single length-prefixed record to an SSTable writer.
+/// Writes a single length-prefixed record to an `SSTable` writer.
 ///
 /// Format: `[key_len: u32 LE][key bytes][val_len: u32 LE][val bytes]`.
 /// Unlike the old `key,value\n` text format, this is unambiguous for keys/values
@@ -72,7 +72,7 @@ fn write_record<W: Write>(writer: &mut W, key: &str, value: &str) -> io::Result<
     Ok(())
 }
 
-/// Reads a single length-prefixed record from an SSTable reader.
+/// Reads a single length-prefixed record from an `SSTable` reader.
 ///
 /// Returns `Ok(None)` at a clean end-of-file.
 fn read_record<R: Read>(reader: &mut R) -> io::Result<Option<(String, String)>> {
@@ -266,7 +266,7 @@ impl LsmTree {
             .unwrap()
             .as_nanos();
 
-        let filename = format!("{}.sst", timestamp);
+        let filename = format!("{timestamp}.sst");
         let sst_path = self.dir.join(filename);
 
         // 1. Write SSTable
@@ -302,7 +302,7 @@ impl LsmTree {
         Ok(())
     }
 
-    /// Compaction (Sketch): Merge all SSTables into one.
+    /// Compaction (Sketch): Merge all `SSTables` into one.
     /// In reality, this would be leveled or tiered compaction.
     pub fn compact(&mut self) -> io::Result<()> {
         if self.sstables.is_empty() {
@@ -326,7 +326,7 @@ impl LsmTree {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let new_filename = format!("compacted_{}.sst", timestamp);
+        let new_filename = format!("compacted_{timestamp}.sst");
         let new_path = self.dir.join(new_filename);
 
         let file = OpenOptions::new()
