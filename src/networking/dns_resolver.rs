@@ -756,7 +756,7 @@ impl DnsResolver {
         Self {
             server: (server_ip.to_string(), server_port),
             // Cache valid for 5 minutes (standard-ish default)
-            cache: TTLCache::new(Duration::from_secs(300)),
+            cache: TTLCache::new(Duration::from_mins(5)),
         }
     }
 

@@ -40,6 +40,8 @@ mod basic_tests {
     }
 
     #[test]
+    // This test intentionally contrasts `assert!` with `assert_eq!`, so keep the boolean form.
+    #[allow(clippy::manual_assert_eq)]
     fn test_assertions() {
         // assert! - boolean condition
         assert!(2 + 2 == 4);

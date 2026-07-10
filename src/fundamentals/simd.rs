@@ -235,7 +235,7 @@ unsafe fn dot_product_sse2(a: &[f32], b: &[f32]) -> f32 {
 
     // Add remainder with scalar code
     for i in (chunks * 4)..(chunks * 4 + remainder) {
-        result += a[i] * b[i];
+        result = a[i].mul_add(b[i], result);
     }
 
     result

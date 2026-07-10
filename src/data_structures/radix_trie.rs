@@ -175,15 +175,13 @@ impl<V> RadixTrie<V> {
         let mut remaining_key = key;
 
         while let Some(first_char) = remaining_key.chars().next() {
-            if let Some(child) = current.children.get(&first_char) {
-                if remaining_key.starts_with(&child.prefix) {
-                    remaining_key = &remaining_key[child.prefix.len()..];
-                    current = child;
-                } else {
-                    // Key diverges from prefix -> Not found
-                    return None;
-                }
+            // No child for this character means the key is absent -> `?` yields `None`.
+            let child = current.children.get(&first_char)?;
+            if remaining_key.starts_with(&child.prefix) {
+                remaining_key = &remaining_key[child.prefix.len()..];
+                current = child;
             } else {
+                // Key diverges from prefix -> Not found
                 return None;
             }
         }

@@ -165,21 +165,18 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
         let mut dib = 0;
 
         loop {
-            match &self.buckets[idx] {
-                Some(entry) => {
-                    if entry.hash == hash && entry.key.borrow() == key {
-                        return Some(&entry.value);
-                    }
-                    if dib > entry.dib {
-                        // The element we are looking for would have been inserted before this one
-                        // or would have displaced it. Therefore, it's not in the map.
-                        return None;
-                    }
-                    dib += 1;
-                    idx = (idx + 1) & (cap - 1);
-                }
-                None => return None,
+            // An empty bucket means the key is absent, so `?` short-circuits to `None`.
+            let entry = self.buckets[idx].as_ref()?;
+            if entry.hash == hash && entry.key.borrow() == key {
+                return Some(&entry.value);
             }
+            if dib > entry.dib {
+                // The element we are looking for would have been inserted before this one
+                // or would have displaced it. Therefore, it's not in the map.
+                return None;
+            }
+            dib += 1;
+            idx = (idx + 1) & (cap - 1);
         }
     }
 
@@ -197,12 +194,13 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
         loop {
             // RUST INSIGHT: To avoid NLL borrow checking issues, we first extract
             // whether the current bucket matches or whether we should stop searching.
-            let (is_match, stop) = match &self.buckets[idx] {
-                Some(entry) => (
+            // An empty bucket means the key is absent, so `?` short-circuits to `None`.
+            let (is_match, stop) = {
+                let entry = self.buckets[idx].as_ref()?;
+                (
                     entry.hash == hash && entry.key.borrow() == key,
                     dib > entry.dib,
-                ),
-                None => return None,
+                )
             };
 
             if is_match {
@@ -231,24 +229,21 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
         let mut dib = 0;
 
         loop {
-            match &self.buckets[idx] {
-                Some(entry) => {
-                    if entry.hash == hash && entry.key.borrow() == key {
-                        // Found it. Remove it and do backward shifting to fill the gap.
-                        // `take` yields Some because we just matched on Some above.
-                        let old_val = self.buckets[idx].take().map(|e| e.value);
-                        self.len -= 1;
-                        self.backward_shift(idx);
-                        return old_val;
-                    }
-                    if dib > entry.dib {
-                        return None;
-                    }
-                    dib += 1;
-                    idx = (idx + 1) & (cap - 1);
-                }
-                None => return None,
+            // An empty bucket means the key is absent, so `?` short-circuits to `None`.
+            let entry = self.buckets[idx].as_ref()?;
+            if entry.hash == hash && entry.key.borrow() == key {
+                // Found it. Remove it and do backward shifting to fill the gap.
+                // `take` yields Some because we just matched on Some above.
+                let old_val = self.buckets[idx].take().map(|e| e.value);
+                self.len -= 1;
+                self.backward_shift(idx);
+                return old_val;
             }
+            if dib > entry.dib {
+                return None;
+            }
+            dib += 1;
+            idx = (idx + 1) & (cap - 1);
         }
     }
 
