@@ -10,6 +10,12 @@
 //! 2.  **Trade-offs**: Memory vs Speed vs Flexibility (Array vs HashMap).
 //! 3.  **Ownership**: Managing recursive `Box<Node>` structures.
 //!
+//! Note: data-structure design problem; a single canonical implementation (or the shown
+//! design variants) is the sensible form, so the brute/optimized/optimal progression does
+//! not apply. The three types below (`TrieBruteForce` via `HashSet`, `TrieOptimized` via
+//! `HashMap`, `TrieOptimal` via a fixed `[_; 26]` array) are genuinely distinct *designs*
+//! with different trade-offs, not three tiers of the same algorithm.
+//!
 //! ## Examples
 //!
 //! ```

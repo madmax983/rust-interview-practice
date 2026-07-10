@@ -29,10 +29,29 @@
 use std::collections::HashMap;
 
 // =========================================================================================
-// Approach 1: HashMap Counting (Straightforward)
+// Approach 1: Sorting (Brute Force)
 // =========================================================================================
 
-/// Straightforward Approach: HashMap Frequency Count
+/// Brute force approach: Sort and pick the middle element.
+///
+/// Because the majority element appears more than `⌊n / 2⌋` times, once the array is sorted
+/// the majority element is guaranteed to occupy the middle index `n / 2`, regardless of where
+/// its run begins.
+///
+/// Time: O(N log N) - Dominated by the sort.
+/// Space: O(1) - `sort_unstable` sorts in place with constant auxiliary space.
+#[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+pub fn majority_element_brute_force(mut nums: Vec<i32>) -> i32 {
+    nums.sort_unstable();
+    nums[nums.len() / 2]
+}
+
+// =========================================================================================
+// Approach 2: HashMap Counting (Straightforward)
+// =========================================================================================
+
+/// Optimized Approach: HashMap Frequency Count
 ///
 /// We count the occurrences of each element using a `HashMap`. The Entry API (`entry(x).or_insert(0)`)
 /// simplifies inserting or updating counts in a single pass.
@@ -43,7 +62,8 @@ use std::collections::HashMap;
 /// **Rust Insight:**
 /// The `Entry` API prevents double-lookups that are common in other languages when checking
 /// if a key exists before incrementing.
-pub fn majority_element_hashmap(nums: Vec<i32>) -> i32 {
+#[must_use]
+pub fn majority_element_optimized(nums: Vec<i32>) -> i32 {
     let mut counts = HashMap::new();
     let threshold = nums.len() / 2;
 
@@ -66,10 +86,10 @@ pub fn majority_element_hashmap(nums: Vec<i32>) -> i32 {
 }
 
 // =========================================================================================
-// Approach 2: Boyer-Moore Voting Algorithm (Optimized)
+// Approach 3: Boyer-Moore Voting Algorithm (Optimal)
 // =========================================================================================
 
-/// Optimized Approach: Boyer-Moore Voting Algorithm
+/// Optimal Approach: Boyer-Moore Voting Algorithm
 ///
 /// The Boyer-Moore algorithm finds the majority element in O(1) space. It works by maintaining
 /// a `candidate` and a `count`. If `count` is 0, we assign the current element as the candidate.
@@ -81,7 +101,9 @@ pub fn majority_element_hashmap(nums: Vec<i32>) -> i32 {
 /// **Rust Insight:**
 /// Using `Iterator::fold` allows us to implement this state machine in a purely functional way,
 /// completely avoiding mutable variables (`mut`) outside the accumulator tuple.
-pub fn majority_element(nums: Vec<i32>) -> i32 {
+#[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+pub fn majority_element_optimal(nums: Vec<i32>) -> i32 {
     // We fold over the elements, carrying a state tuple of (candidate, count)
     let (candidate, _count) = nums.into_iter().fold((0, 0), |(candidate, count), num| {
         if count == 0 {
@@ -99,6 +121,12 @@ pub fn majority_element(nums: Vec<i32>) -> i32 {
     candidate
 }
 
+/// Main entry point - uses optimal solution
+#[must_use]
+pub fn majority_element(nums: Vec<i32>) -> i32 {
+    majority_element_optimal(nums)
+}
+
 // =========================================================================================
 // Alternative Approaches
 // =========================================================================================
@@ -114,17 +142,38 @@ mod tests {
     #[test]
     fn test_majority_element_happy_path() {
         assert_eq!(majority_element(vec![3, 2, 3]), 3);
-        assert_eq!(majority_element_hashmap(vec![3, 2, 3]), 3);
+        assert_eq!(majority_element_brute_force(vec![3, 2, 3]), 3);
+        assert_eq!(majority_element_optimized(vec![3, 2, 3]), 3);
+        assert_eq!(majority_element_optimal(vec![3, 2, 3]), 3);
 
-        assert_eq!(majority_element(vec![2, 2, 1, 1, 1, 2, 2]), 2);
-        assert_eq!(majority_element_hashmap(vec![2, 2, 1, 1, 1, 2, 2]), 2);
+        assert_eq!(majority_element_brute_force(vec![2, 2, 1, 1, 1, 2, 2]), 2);
+        assert_eq!(majority_element_optimized(vec![2, 2, 1, 1, 1, 2, 2]), 2);
+        assert_eq!(majority_element_optimal(vec![2, 2, 1, 1, 1, 2, 2]), 2);
     }
 
     #[test]
     fn test_majority_element_edge_case() {
         // Single element
-        assert_eq!(majority_element(vec![1]), 1);
-        assert_eq!(majority_element_hashmap(vec![1]), 1);
+        assert_eq!(majority_element_brute_force(vec![1]), 1);
+        assert_eq!(majority_element_optimized(vec![1]), 1);
+        assert_eq!(majority_element_optimal(vec![1]), 1);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        let cases = vec![
+            vec![3, 2, 3],
+            vec![2, 2, 1, 1, 1, 2, 2],
+            vec![1],
+            vec![6, 5, 5],
+            vec![-1, -1, -1, 2, 3],
+            vec![4, 4, 4, 4, 1, 2, 3],
+        ];
+        for case in cases {
+            let expected = majority_element_brute_force(case.clone());
+            assert_eq!(majority_element_optimized(case.clone()), expected);
+            assert_eq!(majority_element_optimal(case.clone()), expected);
+        }
     }
 
     #[test]
@@ -132,6 +181,6 @@ mod tests {
         let mut nums = vec![7; 50000];
         nums.extend(vec![2; 49999]);
         assert_eq!(majority_element(nums.clone()), 7);
-        assert_eq!(majority_element_hashmap(nums), 7);
+        assert_eq!(majority_element_optimized(nums), 7);
     }
 }

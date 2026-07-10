@@ -176,7 +176,10 @@ fn demonstrate_deny_unknown_fields() {
 // Enum Serialization
 // ============================================================================
 
-/// Tagged enum (default).
+/// Externally tagged (the default — no serde attribute).
+///
+/// The variant name becomes the outer key wrapping the content.
+/// Example: `{"Coords":{"x":1.0,"y":2.0}}`
 #[derive(Debug, Serialize, Deserialize)]
 enum Message {
     Text(String),
@@ -184,7 +187,11 @@ enum Message {
     Coords { x: f64, y: f64 },
 }
 
-/// Externally tagged (default behavior).
+/// Internally tagged (`#[serde(tag = "...")]`).
+///
+/// The tag field lives *inside* the same object as the variant's fields.
+/// Example: `{"type":"Click","x":10,"y":20}`
+/// Note: struct/unit variants only — newtype variants over non-structs won't work.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 enum Event {
@@ -193,7 +200,10 @@ enum Event {
     Scroll { delta: i32 },
 }
 
-/// Internally tagged.
+/// Adjacently tagged (`#[serde(tag = "...", content = "...")]`).
+///
+/// The tag and the content sit side-by-side in the object under separate keys.
+/// Example: `{"type":"Move","data":{"x":5,"y":10}}`
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 enum Command {
@@ -219,13 +229,13 @@ fn demonstrate_enum_serialization() {
     println!("Message: {json}");
     // Output: {"Coords":{"x":1.0,"y":2.0}}
 
-    // Internally tagged with "type" field
+    // Internally tagged: tag field alongside variant fields
     let event = Event::Click { x: 10, y: 20 };
     let json = serde_json::to_string(&event).unwrap();
     println!("Event: {json}");
     // Output: {"type":"Click","x":10,"y":20}
 
-    // Tagged with separate content
+    // Adjacently tagged: tag and content in separate keys
     let cmd = Command::Move { x: 5, y: 10 };
     let json = serde_json::to_string(&cmd).unwrap();
     println!("Command: {json}");

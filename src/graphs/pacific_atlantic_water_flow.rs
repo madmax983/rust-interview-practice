@@ -143,15 +143,20 @@ pub fn pacific_atlantic_brute_force(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 }
 
 // =========================================================================================
-// Optimized Approach: Reverse DFS
+// Optimal Approach: Reverse DFS
 // =========================================================================================
 
-/// Optimized: Reverse DFS from the Ocean
+/// Optimal approach: Reverse DFS from the Ocean
 ///
 /// Instead of starting from each cell and checking if it can reach the ocean,
 /// we start from the ocean boundaries and traverse backwards (uphill).
 /// We maintain two sets of visited cells: one for Pacific and one for Atlantic.
 /// The intersection of both sets is our answer.
+///
+/// NOTE: Reverse DFS and reverse BFS are equivalent-complexity alternatives here (both O(M*N)).
+/// This DFS version is labeled `_optimal` and the BFS version `_optimized` only to fit the
+/// standard suffix scheme; neither is asymptotically superior. DFS is picked as the default for
+/// its compact recursive form; BFS trades that for bounded stack usage.
 ///
 /// Time: O(M*N) - Each cell is visited at most twice (once for each ocean).
 /// Space: O(M*N) - Visited sets and recursion stack.
@@ -161,7 +166,7 @@ pub fn pacific_atlantic_brute_force(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 /// a dynamically sized, fast lookup set across multiple recursive calls. Alternatively,
 /// a `vec![vec![false; cols]; rows]` matrix is generally faster and uses less memory overhead.
 #[must_use]
-pub fn pacific_atlantic_dfs(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+pub fn pacific_atlantic_optimal(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     let rows = heights.len();
     if rows == 0 {
         return vec![];
@@ -264,20 +269,24 @@ pub fn pacific_atlantic_dfs(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 }
 
 // =========================================================================================
-// Optimal Approach: Reverse BFS
+// Optimized Approach: Reverse BFS
 // =========================================================================================
 
-/// Optimal: Reverse BFS from the Ocean
+/// Optimized approach: Reverse BFS from the Ocean
 ///
-/// Same logic as the optimized DFS approach, but using Breadth-First Search.
+/// Same logic as the optimal reverse-DFS approach, but using Breadth-First Search.
 /// BFS avoids deep recursion, which can prevent stack overflows in languages without
 /// tail-call optimization or deep default stacks, though Rust's stack is usually fine
 /// for standard grid sizes.
 ///
+/// NOTE: This is an equivalent-complexity alternative to the reverse-DFS (`_optimal`) approach
+/// above (both O(M*N)); it is labeled `_optimized` only to fit the suffix scheme, and its genuine
+/// advantage is bounded (iterative) stack usage.
+///
 /// Time: O(M*N)
 /// Space: O(M*N)
 #[must_use]
-pub fn pacific_atlantic_bfs(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+pub fn pacific_atlantic_optimized(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     let rows = heights.len();
     if rows == 0 {
         return vec![];
@@ -364,10 +373,10 @@ pub fn pacific_atlantic_bfs(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
         .collect()
 }
 
-/// Main entry point - uses Optimal Reverse DFS as default.
+/// Main entry point - uses the optimal reverse-DFS solution.
 #[must_use]
 pub fn pacific_atlantic(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
-    pacific_atlantic_dfs(heights)
+    pacific_atlantic_optimal(heights)
 }
 
 #[cfg(test)]
@@ -399,7 +408,7 @@ mod tests {
     }
 
     #[test]
-    fn test_optimized_dfs_basic() {
+    fn test_optimal_dfs_basic() {
         let heights = vec![
             vec![1, 2, 2, 3, 5],
             vec![3, 2, 3, 4, 4],
@@ -416,14 +425,14 @@ mod tests {
             vec![3, 1],
             vec![4, 0],
         ];
-        let mut result = pacific_atlantic_dfs(heights);
+        let mut result = pacific_atlantic_optimal(heights);
         expected.sort();
         result.sort();
         assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_optimal_bfs_basic() {
+    fn test_optimized_bfs_basic() {
         let heights = vec![
             vec![1, 2, 2, 3, 5],
             vec![3, 2, 3, 4, 4],
@@ -440,10 +449,33 @@ mod tests {
             vec![3, 1],
             vec![4, 0],
         ];
-        let mut result = pacific_atlantic_bfs(heights);
+        let mut result = pacific_atlantic_optimized(heights);
         expected.sort();
         result.sort();
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement across brute force, optimal DFS, and optimized BFS.
+        let heights = vec![
+            vec![1, 2, 2, 3, 5],
+            vec![3, 2, 3, 4, 4],
+            vec![2, 4, 5, 3, 1],
+            vec![6, 7, 1, 4, 5],
+            vec![5, 1, 1, 2, 4],
+        ];
+
+        let mut brute = pacific_atlantic_brute_force(heights.clone());
+        let mut optimal = pacific_atlantic_optimal(heights.clone());
+        let mut optimized = pacific_atlantic_optimized(heights);
+
+        brute.sort();
+        optimal.sort();
+        optimized.sort();
+
+        assert_eq!(brute, optimal);
+        assert_eq!(optimal, optimized);
     }
 
     #[test]

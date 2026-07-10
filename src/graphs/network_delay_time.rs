@@ -49,8 +49,52 @@ impl PartialOrd for State {
     }
 }
 
-/// Dijkstra's Algorithm Approach
-/// Time: O(E log V) or O(E + V log V) depending on implementation details. Here O(E log E) because we push edges.
+/// Brute force approach: Bellman-Ford
+///
+/// Relax every edge `V - 1` times. After `V - 1` full passes, all shortest paths from the
+/// source are finalized (a simple path visits at most `V` nodes / `V - 1` edges). This does not
+/// need a priority queue and, unlike Dijkstra, also tolerates negative edge weights (not required
+/// here, but it is why Bellman-Ford is the natural "simpler but slower" baseline).
+///
+/// Time: O(V * E) - `V - 1` passes, each relaxing all `E` edges.
+/// Space: O(V) - just the distance vector (edges are read directly from `times`).
+#[must_use]
+pub fn network_delay_time_brute_force(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
+    let n = n as usize;
+    let mut dist = vec![i32::MAX; n];
+    let start_node = (k - 1) as usize;
+    dist[start_node] = 0;
+
+    // Relax all edges up to V - 1 times.
+    for _ in 0..n.saturating_sub(1) {
+        let mut updated = false;
+        for edge in &times {
+            let u = (edge[0] - 1) as usize;
+            let v = (edge[1] - 1) as usize;
+            let w = edge[2];
+
+            // Only relax from a reachable node; guard against i32::MAX + w overflow.
+            if dist[u] != i32::MAX
+                && let Some(next_cost) = dist[u].checked_add(w)
+                && next_cost < dist[v]
+            {
+                dist[v] = next_cost;
+                updated = true;
+            }
+        }
+        // Early exit: a pass with no relaxation means we've converged.
+        if !updated {
+            break;
+        }
+    }
+
+    let max_dist = *dist.iter().max().unwrap();
+    if max_dist == i32::MAX { -1 } else { max_dist }
+}
+
+/// Optimal approach: Dijkstra's Algorithm with a binary-heap priority queue
+///
+/// Time: O(E log V) - each edge can push one entry onto the heap; heap ops are O(log V).
 /// Space: O(N + E) for the adjacency list and distance vector.
 ///
 /// Steps:
@@ -63,7 +107,7 @@ impl PartialOrd for State {
 ///    c. Iterate through neighbors. If `new_cost < old_cost`, update `dist` and push to queue.
 /// 5. After the loop, find the maximum value in `dist`. If it's `i32::MAX`, return -1 (unreachable nodes exist).
 #[must_use]
-pub fn network_delay_time(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
+pub fn network_delay_time_optimal(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
     let n = n as usize;
     // GOTCHA: The problem uses 1-based indexing for nodes (1 to n).
     // Idiomatic Rust uses 0-based indexing. We'll adjust indices when accessing the graph.
@@ -127,20 +171,28 @@ pub fn network_delay_time(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
     if max_dist == i32::MAX { -1 } else { max_dist }
 }
 
-/// Alternative approaches:
-///
-/// 1. **Bellman-Ford Algorithm**:
-///    - Useful if the graph contains negative weight edges (which Dijkstra cannot handle).
-///    - Time Complexity: O(V * E).
-///
-/// 2. **SPFA (Shortest Path Faster Algorithm)**:
-///    - An optimization of Bellman-Ford using a queue.
-///    - Average case O(E), worst case O(V * E).
-///
-/// 3. **Floyd-Warshall Algorithm**:
-///    - Computes all-pairs shortest paths.
-///    - Time Complexity: O(V^3).
-///    - Useful if N is very small (e.g., N <= 100).
+/// Main entry point - uses the optimal (Dijkstra) solution.
+#[must_use]
+pub fn network_delay_time(times: Vec<Vec<i32>>, n: i32, k: i32) -> i32 {
+    network_delay_time_optimal(times, n, k)
+}
+
+// =========================================================================================
+// Alternative approaches
+// =========================================================================================
+//
+// 1. Bellman-Ford Algorithm (implemented above as `network_delay_time_brute_force`):
+//    - Also handles negative weight edges (which Dijkstra cannot).
+//    - Time Complexity: O(V * E).
+//
+// 2. SPFA (Shortest Path Faster Algorithm):
+//    - An optimization of Bellman-Ford using a queue.
+//    - Average case O(E), worst case O(V * E).
+//
+// 3. Floyd-Warshall Algorithm:
+//    - Computes all-pairs shortest paths.
+//    - Time Complexity: O(V^3).
+//    - Useful if N is very small (e.g., N <= 100).
 
 #[cfg(test)]
 mod tests {
@@ -186,5 +238,33 @@ mod tests {
         // Shortest to 3 is 3. Max time to reach all (2 and 3) is 3.
         let times = vec![vec![1, 2, 1], vec![2, 3, 2], vec![1, 3, 4]];
         assert_eq!(network_delay_time(times, 3, 1), 3);
+    }
+
+    #[test]
+    fn test_brute_force_bellman_ford() {
+        // Same cases as the LeetCode examples, exercised via Bellman-Ford directly.
+        let times = vec![vec![2, 1, 1], vec![2, 3, 1], vec![3, 4, 1]];
+        assert_eq!(network_delay_time_brute_force(times, 4, 2), 2);
+
+        let times = vec![vec![1, 2, 1]];
+        assert_eq!(network_delay_time_brute_force(times, 2, 2), -1);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement between Bellman-Ford (brute force) and Dijkstra (optimal).
+        let cases: Vec<(Vec<Vec<i32>>, i32, i32)> = vec![
+            (vec![vec![2, 1, 1], vec![2, 3, 1], vec![3, 4, 1]], 4, 2),
+            (vec![vec![1, 2, 1]], 2, 1),
+            (vec![vec![1, 2, 1]], 2, 2),
+            (vec![vec![1, 2, 1], vec![2, 3, 2], vec![1, 3, 4]], 3, 1),
+            (vec![vec![1, 2, 10]], 3, 1),
+        ];
+
+        for (times, n, k) in cases {
+            let bf = network_delay_time_brute_force(times.clone(), n, k);
+            let optimal = network_delay_time_optimal(times, n, k);
+            assert_eq!(bf, optimal);
+        }
     }
 }

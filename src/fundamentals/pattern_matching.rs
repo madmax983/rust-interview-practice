@@ -71,14 +71,11 @@ pub fn if_let_single(value: Option<i32>) -> i32 {
 
 /// Pattern: if let with multiple patterns
 #[must_use]
+#[allow(clippy::manual_unwrap_or_default, clippy::manual_unwrap_or)] // Demonstrating if let / else on Result
 pub fn if_let_multiple(value: Result<i32, String>) -> i32 {
-    if let Ok(x) = value {
-        x
-    } else if value.is_err() {
-        0
-    } else {
-        -1
-    }
+    // A Result is exhaustive: if the Ok arm does not match, it must be Err,
+    // so the else branch covers every remaining case (no dead arm needed).
+    if let Ok(x) = value { x } else { 0 }
 }
 
 /// Pattern: while let for iteration

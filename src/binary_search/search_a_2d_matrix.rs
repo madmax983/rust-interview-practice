@@ -6,6 +6,8 @@
 //! This problem extends 1D binary search over to a 2D matrix, demonstrating
 //! index math and safe indexing. It highlights Rust's `as` casting for handling calculations
 //! securely across array dimensions while ensuring no overflow or out-of-bounds panics happen.
+//!
+//! Note: single canonical implementation; the brute/optimized/optimal progression does not apply here.
 
 /// Approach: 1D Binary Search
 ///

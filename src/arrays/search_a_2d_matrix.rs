@@ -95,6 +95,12 @@ pub fn search_matrix_optimal(matrix: Vec<Vec<i32>>, target: i32) -> bool {
     false
 }
 
+/// Main entry point - uses the optimal binary-search solution.
+#[must_use]
+pub fn search_matrix(matrix: Vec<Vec<i32>>, target: i32) -> bool {
+    search_matrix_optimal(matrix, target)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,5 +146,23 @@ mod tests {
         let col_matrix = vec![vec![1], vec![3], vec![5], vec![7], vec![9]];
         assert!(search_matrix_optimal(col_matrix.clone(), 5));
         assert!(!search_matrix_optimal(col_matrix.clone(), 4));
+    }
+
+    #[test]
+    fn test_main_entry_point() {
+        let matrix = vec![vec![1, 3, 5, 7], vec![10, 11, 16, 20], vec![23, 30, 34, 60]];
+        assert!(search_matrix(matrix.clone(), 16));
+        assert!(!search_matrix(matrix, 15));
+    }
+
+    #[test]
+    fn test_all_approaches_agreement() {
+        let matrix = vec![vec![1, 3, 5, 7], vec![10, 11, 16, 20], vec![23, 30, 34, 60]];
+        // Probe every value in range, present and absent, to confirm both agree.
+        for target in -5..=65 {
+            let brute = search_matrix_brute_force(matrix.clone(), target);
+            let optimal = search_matrix_optimal(matrix.clone(), target);
+            assert_eq!(brute, optimal, "mismatch for target {target}");
+        }
     }
 }

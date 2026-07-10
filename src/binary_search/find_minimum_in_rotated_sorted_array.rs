@@ -5,6 +5,8 @@
 //!
 //! This problem emphasizes the core binary search paradigm of finding the "pivot" point.
 //! It teaches how to converge on a single element rather than searching for a specific target.
+//!
+//! Note: single canonical implementation; the brute/optimized/optimal progression does not apply here.
 
 /// Approach: Binary Search for Inflection Point
 ///

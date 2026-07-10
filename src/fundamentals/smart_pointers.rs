@@ -25,8 +25,9 @@ fn demonstrate_box_basics() {
     println!("Boxed point: {boxed_point:?}");
 
     // Dereferencing Box
-    let x_value = boxed_point.x; // Explicit dereference
-    let y_value = boxed_point.y; // Automatic dereference (deref coercion)
+    #[allow(clippy::explicit_auto_deref)] // Showing the explicit *deref form on purpose
+    let x_value = (*boxed_point).x; // Explicit dereference with *
+    let y_value = boxed_point.y; // Automatic dereference (deref coercion) - same result
     println!("x: {x_value}, y: {y_value}");
 
     // Pattern matching on Box

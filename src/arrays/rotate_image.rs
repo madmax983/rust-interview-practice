@@ -147,4 +147,28 @@ mod tests {
             ]
         );
     }
+
+    // Cross-implementation agreement test
+    #[test]
+    fn test_all_approaches_agreement() {
+        let cases: Vec<Vec<Vec<i32>>> = vec![
+            vec![vec![1]],
+            vec![vec![1, 2], vec![3, 4]],
+            vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]],
+            vec![
+                vec![5, 1, 9, 11],
+                vec![2, 4, 8, 10],
+                vec![13, 3, 6, 7],
+                vec![15, 14, 12, 16],
+            ],
+        ];
+
+        for matrix in cases {
+            let mut a = matrix.clone();
+            let mut b = matrix.clone();
+            rotate_brute_force(&mut a);
+            rotate_optimal(&mut b);
+            assert_eq!(a, b, "brute vs optimal mismatch for {matrix:?}");
+        }
+    }
 }

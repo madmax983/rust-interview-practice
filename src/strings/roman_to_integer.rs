@@ -73,17 +73,17 @@ impl TryFrom<char> for RomanSymbol {
     }
 }
 
-/// Brute Force / HashMap Approach (for comparison)
+/// Brute Force Approach: HashMap lookup
 ///
 /// Time: O(N) where N is the length of the string.
-/// Space: O(1) as the mapping is a constant size.
+/// Space: O(N) for the collected `Vec<char>` (the map itself is constant size).
 ///
 /// This is how you might solve it in Java or Python. While valid in Rust,
 /// using a HashMap adds overhead (hashing, heap allocation) that we don't need
 /// for a fixed set of characters.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn roman_to_int_hashmap(s: String) -> i32 {
+pub fn roman_to_int_brute_force(s: String) -> i32 {
     let mut map = std::collections::HashMap::with_capacity(7);
     map.insert('I', 1);
     map.insert('V', 5);
@@ -117,7 +117,7 @@ pub fn roman_to_int_hashmap(s: String) -> i32 {
     total
 }
 
-/// Optimized Approach using `Peekable` Iterator
+/// Optimized Approach: `Peekable` Iterator
 ///
 /// Time: O(N) where N is the length of the string.
 /// Space: O(1)
@@ -126,7 +126,7 @@ pub fn roman_to_int_hashmap(s: String) -> i32 {
 /// and bounds checking.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn roman_to_int_peekable(s: String) -> i32 {
+pub fn roman_to_int_optimized(s: String) -> i32 {
     let mut total = 0;
 
     // RUST INSIGHT: `filter_map` safely ignores invalid characters and unwraps `Ok` values,
@@ -233,15 +233,15 @@ mod tests {
 
         for (s, expected) in cases {
             assert_eq!(
-                roman_to_int_hashmap(s.to_string()),
+                roman_to_int_brute_force(s.to_string()),
                 expected,
-                "Hashmap failed on {}",
+                "Brute force (HashMap) failed on {}",
                 s
             );
             assert_eq!(
-                roman_to_int_peekable(s.to_string()),
+                roman_to_int_optimized(s.to_string()),
                 expected,
-                "Peekable failed on {}",
+                "Optimized (Peekable) failed on {}",
                 s
             );
             assert_eq!(
@@ -270,10 +270,10 @@ mod tests {
 
     #[test]
     fn test_invalid_characters_ignored() {
-        // The peekable approach ignores invalid characters due to filter_map.
+        // The optimized (peekable) approach ignores invalid characters due to filter_map.
         // The optimal approach currently treats invalid characters as 0 value.
         // I will omit the test for optimal on invalid string, as it's undefined behavior in LeetCode constraints.
-        // But for peekable, let's verify it ignores correctly.
-        assert_eq!(roman_to_int_peekable("I Z V".to_string()), 4); // Z is ignored, space is ignored, so IV -> 4.
+        // But for the optimized approach, let's verify it ignores correctly.
+        assert_eq!(roman_to_int_optimized("I Z V".to_string()), 4); // Z is ignored, space is ignored, so IV -> 4.
     }
 }

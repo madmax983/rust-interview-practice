@@ -29,14 +29,54 @@ impl ListNode {
 }
 
 // =========================================================================================
-// Approach 1: Recursive (Elegant, but O(N) Space)
+// Approach 1: Vec Transformation (Brute Force, O(N) Space)
 // =========================================================================================
 
-/// Recursive Approach:
+/// Brute force approach: Collect to Vec, swap adjacent pairs, rebuild
+///
+/// This sidesteps pointer juggling entirely: flatten the list into a `Vec`, swap adjacent
+/// pairs with slice `swap`, then rebuild the linked list. Easy to reason about, but it uses
+/// O(N) auxiliary space, defeating the purpose of an in-place linked-list problem.
+///
+/// Time: O(N) - one pass to collect, one to rebuild.
+/// Space: O(N) - the `Vec` stores every value.
+#[must_use]
+pub fn swap_pairs_brute_force(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+    // Flatten the list into a vector of values.
+    let mut vals = Vec::new();
+    let mut current = head;
+    while let Some(node) = current {
+        vals.push(node.val);
+        current = node.next;
+    }
+
+    // Swap adjacent pairs: (0,1), (2,3), ... A trailing odd element stays put.
+    let mut i = 0;
+    while i + 1 < vals.len() {
+        vals.swap(i, i + 1);
+        i += 2;
+    }
+
+    // Rebuild the linked list from tail to head.
+    let mut result = None;
+    for &val in vals.iter().rev() {
+        let mut node = Box::new(ListNode::new(val));
+        node.next = result;
+        result = Some(node);
+    }
+    result
+}
+
+// =========================================================================================
+// Approach 2: Recursive (Elegant, but O(N) Space)
+// =========================================================================================
+
+/// Optimized approach: recursive
 ///
 /// Recursion handles the state implicitly on the call stack. Instead of managing a complex chain
 /// of pointers iteratively, we split the problem: swap the first two nodes, and then recursively
-/// solve for the rest of the list.
+/// solve for the rest of the list. Unlike the brute force, this relinks the existing nodes rather
+/// than allocating a fresh list.
 ///
 /// Time: O(N) - visits each node once.
 /// Space: O(N) - recursion stack depth could be N/2.
@@ -46,7 +86,7 @@ impl ListNode {
 /// In Rust, recursion simplifies the problem dramatically because we don't need to juggle mutable
 /// borrows across loop iterations. We just move ownership back and forth.
 #[must_use]
-pub fn swap_pairs_recursive(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+pub fn swap_pairs_optimized(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     // RUST INSIGHT: We use pattern matching to elegantly destructure the first two nodes.
     // If we have at least two nodes...
     let mut node1 = head?; // equivalent to: if let Some(mut n1) = head { ... } else { return None; }
@@ -56,7 +96,7 @@ pub fn swap_pairs_recursive(head: Option<Box<ListNode>>) -> Option<Box<ListNode>
 
         // Recursively solve the rest of the list.
         // `node2.next` is taken out, moving ownership to the recursive call.
-        let rest = swap_pairs_recursive(node2.next.take());
+        let rest = swap_pairs_optimized(node2.next.take());
 
         // Re-link the nodes in swapped order
         node1.next = rest;
@@ -71,10 +111,10 @@ pub fn swap_pairs_recursive(head: Option<Box<ListNode>>) -> Option<Box<ListNode>
 }
 
 // =========================================================================================
-// Approach 2: Iterative (Optimal, O(1) Space)
+// Approach 3: Iterative (Optimal, O(1) Space)
 // =========================================================================================
 
-/// Iterative Approach:
+/// Optimal approach: iterative in-place with a dummy head
 ///
 /// To achieve O(1) space complexity, we use an iterative approach with a dummy node.
 /// This avoids recursion stack overhead.
@@ -136,13 +176,6 @@ pub fn swap_pairs(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     swap_pairs_optimal(head)
 }
 
-// =========================================================================================
-// Alternative Approaches
-// =========================================================================================
-// 1. **Vec Transformation**: Convert the linked list to a `Vec`, swap pairs using slice `swap`,
-//    and then rebuild the linked list. Easy but requires O(N) auxiliary space for the Vec,
-//    defeating the purpose of an in-place linked list problem.
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,46 +206,47 @@ mod tests {
         let input = build_list(&[1, 2, 3, 4]);
         let expected = vec![2, 1, 4, 3];
 
-        let res_recursive = swap_pairs_recursive(input.clone());
-        assert_eq!(to_vec(res_recursive), expected);
-
-        let res_optimal = swap_pairs_optimal(input);
-        assert_eq!(to_vec(res_optimal), expected);
+        assert_eq!(to_vec(swap_pairs_brute_force(input.clone())), expected);
+        assert_eq!(to_vec(swap_pairs_optimized(input.clone())), expected);
+        assert_eq!(to_vec(swap_pairs_optimal(input)), expected);
     }
 
     #[test]
     fn test_edge_case_empty() {
-        let input = build_list(&[]);
         let expected: Vec<i32> = vec![];
 
-        let res_recursive = swap_pairs_recursive(input.clone());
-        assert_eq!(to_vec(res_recursive), expected);
-
-        let res_optimal = swap_pairs_optimal(input);
-        assert_eq!(to_vec(res_optimal), expected);
+        assert_eq!(to_vec(swap_pairs_brute_force(build_list(&[]))), expected);
+        assert_eq!(to_vec(swap_pairs_optimized(build_list(&[]))), expected);
+        assert_eq!(to_vec(swap_pairs_optimal(build_list(&[]))), expected);
     }
 
     #[test]
     fn test_edge_case_single() {
-        let input = build_list(&[1]);
         let expected = vec![1];
 
-        let res_recursive = swap_pairs_recursive(input.clone());
-        assert_eq!(to_vec(res_recursive), expected);
-
-        let res_optimal = swap_pairs_optimal(input);
-        assert_eq!(to_vec(res_optimal), expected);
+        assert_eq!(to_vec(swap_pairs_brute_force(build_list(&[1]))), expected);
+        assert_eq!(to_vec(swap_pairs_optimized(build_list(&[1]))), expected);
+        assert_eq!(to_vec(swap_pairs_optimal(build_list(&[1]))), expected);
     }
 
     #[test]
     fn test_stress_test_odd_even() {
-        let input = build_list(&[1, 2, 3, 4, 5]);
+        let input = &[1, 2, 3, 4, 5];
         let expected = vec![2, 1, 4, 3, 5]; // 5 remains in place
 
-        let res_recursive = swap_pairs_recursive(input.clone());
-        assert_eq!(to_vec(res_recursive), expected);
+        assert_eq!(to_vec(swap_pairs_brute_force(build_list(input))), expected);
+        assert_eq!(to_vec(swap_pairs_optimized(build_list(input))), expected);
+        assert_eq!(to_vec(swap_pairs_optimal(build_list(input))), expected);
+    }
 
-        let res_optimal = swap_pairs_optimal(input);
-        assert_eq!(to_vec(res_optimal), expected);
+    #[test]
+    fn test_all_approaches_agree() {
+        // All three impls must produce identical output; rebuild the input for each.
+        let data = [9, 8, 7, 6, 5, 4, 3];
+        let brute = to_vec(swap_pairs_brute_force(build_list(&data)));
+        let optimized = to_vec(swap_pairs_optimized(build_list(&data)));
+        let optimal = to_vec(swap_pairs_optimal(build_list(&data)));
+        assert_eq!(brute, optimized);
+        assert_eq!(optimized, optimal);
     }
 }

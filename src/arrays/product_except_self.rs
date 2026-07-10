@@ -21,13 +21,15 @@
 //! 3.  **Safety**: Rust's bounds checking protects us from the common off-by-one errors in the
 //!     imperative approach, while iterators eliminate bounds checks entirely.
 
-/// Functional approach: Using `scan` and `zip`.
+/// Brute force approach: Functional style using `scan` and `zip`.
 ///
 /// This approach prioritizes readability and "declarative" logic. We construct the prefix products
-/// and suffix products as separate streams and multiply them.
+/// and suffix products as separate streams and multiply them. It is the "brute force" of the two
+/// implementations only in the sense that it uses more auxiliary space; the technique is the
+/// functional/iterator (`scan` + `zip`) style.
 ///
-/// Time: O(n)
-/// Space: O(n) - The `suffix` vector requires separate allocation.
+/// Time: O(n) - two linear scans plus a zip pass.
+/// Space: O(n) - the `suffix` vector requires separate allocation (excluding the output).
 ///
 /// # Arguments
 ///
@@ -37,7 +39,7 @@
 ///
 /// * A vector where the element at index `i` is the product of all elements in `nums` except `nums[i]`.
 #[must_use]
-pub fn product_except_self_functional(nums: &[i32]) -> Vec<i32> {
+pub fn product_except_self_brute_force(nums: &[i32]) -> Vec<i32> {
     // RUST INSIGHT: `scan` maintains internal state during iteration.
     // We use it here to compute running products.
     // The closure returns the value *before* the update to get exclusive prefix products.
@@ -83,15 +85,15 @@ pub fn product_except_self_functional(nums: &[i32]) -> Vec<i32> {
         .collect()
 }
 
-/// Optimized imperative approach: O(1) extra space.
+/// Optimal approach: Imperative prefix/suffix products with O(1) extra space.
 ///
 /// We reuse the result vector to store the prefix products first, then multiply by the suffix
 /// products on the fly in a second reverse pass.
 ///
-/// Time: O(n)
-/// Space: O(1) (ignoring the output array).
+/// Time: O(n) - two linear passes.
+/// Space: O(1) - only a single running-product accumulator (ignoring the output array).
 #[must_use]
-pub fn product_except_self_optimized(nums: &[i32]) -> Vec<i32> {
+pub fn product_except_self_optimal(nums: &[i32]) -> Vec<i32> {
     let n = nums.len();
     if n == 0 {
         return vec![];
@@ -128,7 +130,7 @@ pub fn product_except_self_optimized(nums: &[i32]) -> Vec<i32> {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // To match LeetCode signature if needed, though we use &[i32]
 pub fn product_except_self(nums: Vec<i32>) -> Vec<i32> {
-    product_except_self_optimized(&nums)
+    product_except_self_optimal(&nums)
 }
 
 #[cfg(test)]
@@ -140,8 +142,8 @@ mod tests {
         let input = vec![1, 2, 3, 4];
         let expected = vec![24, 12, 8, 6];
 
-        assert_eq!(product_except_self_functional(&input), expected);
-        assert_eq!(product_except_self_optimized(&input), expected);
+        assert_eq!(product_except_self_brute_force(&input), expected);
+        assert_eq!(product_except_self_optimal(&input), expected);
     }
 
     #[test]
@@ -150,8 +152,8 @@ mod tests {
         let input = vec![-1, 1, 0, -3, 3];
         let expected = vec![0, 0, 9, 0, 0];
 
-        assert_eq!(product_except_self_functional(&input), expected);
-        assert_eq!(product_except_self_optimized(&input), expected);
+        assert_eq!(product_except_self_brute_force(&input), expected);
+        assert_eq!(product_except_self_optimal(&input), expected);
     }
 
     #[test]
@@ -161,8 +163,8 @@ mod tests {
         let input = vec![0, 1, 2, 0, 4];
         let expected = vec![0, 0, 0, 0, 0];
 
-        assert_eq!(product_except_self_functional(&input), expected);
-        assert_eq!(product_except_self_optimized(&input), expected);
+        assert_eq!(product_except_self_brute_force(&input), expected);
+        assert_eq!(product_except_self_optimal(&input), expected);
     }
 
     #[test]
@@ -170,8 +172,8 @@ mod tests {
         let input = vec![];
         let expected: Vec<i32> = vec![];
 
-        assert_eq!(product_except_self_functional(&input), expected);
-        assert_eq!(product_except_self_optimized(&input), expected);
+        assert_eq!(product_except_self_brute_force(&input), expected);
+        assert_eq!(product_except_self_optimal(&input), expected);
     }
 
     #[test]
@@ -182,12 +184,34 @@ mod tests {
         // scan(1, ...) -> yield 1. Suffix -> yield 1. Result 1*1 = 1.
         let expected = vec![1];
 
-        assert_eq!(product_except_self_functional(&input), expected);
+        assert_eq!(product_except_self_brute_force(&input), expected);
 
-        // For optimized:
+        // For optimal:
         // Pass 1: 1..n is empty range. result = [1].
         // Pass 2: i=0. result[0] *= 1 -> 1. right_product *= 5.
         // Returns [1].
-        assert_eq!(product_except_self_optimized(&input), expected);
+        assert_eq!(product_except_self_optimal(&input), expected);
+    }
+
+    #[test]
+    fn test_main_entry_point() {
+        assert_eq!(product_except_self(vec![1, 2, 3, 4]), vec![24, 12, 8, 6]);
+    }
+
+    #[test]
+    fn test_all_approaches_agreement() {
+        let inputs = vec![
+            vec![1, 2, 3, 4],
+            vec![-1, 1, 0, -3, 3],
+            vec![0, 1, 2, 0, 4],
+            vec![2, 3, 5, 7, 11],
+            vec![-4, -3, -2, -1],
+        ];
+
+        for input in inputs {
+            let brute = product_except_self_brute_force(&input);
+            let optimal = product_except_self_optimal(&input);
+            assert_eq!(brute, optimal, "mismatch for input {input:?}");
+        }
     }
 }

@@ -19,17 +19,22 @@
 
 use std::collections::VecDeque;
 
-/// Depth-First Search (Recursive)
+/// Optimal approach: Depth-First Search (Recursive), in-place marking
 ///
 /// Approaches the problem by iterating through each cell. When a '1' is found, it increments the island count
 /// and recursively sinks the entire island (turning '1's to '0's) so it's not counted again.
+///
+/// NOTE: DFS and BFS are equivalent-complexity alternatives here (both O(M * N) time). This DFS
+/// version is labeled `_optimal` and the BFS version `_optimized` only to fit the standard suffix
+/// scheme; neither is asymptotically superior. DFS is picked as the default for its lower constant
+/// factors and minimal code, at the cost of O(M * N) worst-case recursion depth.
 ///
 /// Time: O(M * N) - we visit each cell once.
 /// Space: O(M * N) - worst case recursion stack (e.g., all land).
 ///
 /// # Arguments
 /// * `grid` - A mutable reference to the grid. Modified in-place to mark visited cells.
-pub fn num_islands_dfs(grid: &mut Vec<Vec<char>>) -> i32 {
+pub fn num_islands_optimal(grid: &mut Vec<Vec<char>>) -> i32 {
     if grid.is_empty() {
         return 0;
     }
@@ -85,14 +90,19 @@ fn dfs(grid: &mut Vec<Vec<char>>, r: usize, c: usize) {
     dfs(grid, r, c + 1); // Right
 }
 
-/// Breadth-First Search (Iterative)
+/// Optimized approach: Breadth-First Search (Iterative), in-place marking
 ///
 /// Uses a `VecDeque` queue to traverse the island level-by-level. This avoids recursion depth issues
 /// on very large grids (stack overflow risk).
 ///
+/// NOTE: This is an equivalent-complexity alternative to the DFS (`_optimal`) approach above
+/// (both O(M * N) time). Its advantage is a much smaller O(min(M, N)) worst-case auxiliary space
+/// and no recursion-depth limit, which is why it is a legitimate co-equal implementation rather
+/// than a strictly worse one.
+///
 /// Time: O(M * N)
 /// Space: O(min(M, N)) - worst case queue size is proportional to the smaller dimension (diagonal traversal).
-pub fn num_islands_bfs(grid: &mut Vec<Vec<char>>) -> i32 {
+pub fn num_islands_optimized(grid: &mut Vec<Vec<char>>) -> i32 {
     if grid.is_empty() {
         return 0;
     }
@@ -152,20 +162,29 @@ fn bfs(grid: &mut Vec<Vec<char>>, start_r: usize, start_c: usize) {
     }
 }
 
-/// Immutable Input Approach
+/// Brute force approach: Immutable Input (clone-then-sink)
 ///
-/// Instead of modifying the grid, we use a separate `visited` set (represented by a cloned grid or `HashSet`).
-/// This preserves the original data but uses O(M * N) extra space.
-///
-/// Here, we simply clone the grid and reuse the modification logic to keep the implementation clean.
+/// Instead of modifying the caller's grid, we defensively clone the entire grid up front and run
+/// the destructive DFS on the copy. This preserves the original data but pays a full O(M * N) extra
+/// allocation on top of the traversal — the least space-efficient of the three approaches, which is
+/// why it is labeled `_brute_force` despite matching the others on time complexity.
 ///
 /// Time: O(M * N)
-/// Space: O(M * N) - explicit copy of grid.
+/// Space: O(M * N) - explicit copy of grid plus recursion stack.
 #[allow(clippy::ptr_arg)] // Taking ownership or &Vec is a design choice here
-pub fn num_islands_immutable(grid: &Vec<Vec<char>>) -> i32 {
+pub fn num_islands_brute_force(grid: &Vec<Vec<char>>) -> i32 {
     // Clone the grid so we can mutate the copy
     let mut working_grid = grid.clone();
-    num_islands_dfs(&mut working_grid)
+    num_islands_optimal(&mut working_grid)
+}
+
+/// Main entry point - uses the optimal (DFS) solution.
+///
+/// Takes ownership of the grid so callers get the canonical LeetCode signature; the grid is
+/// consumed and sunk in place internally.
+#[must_use]
+pub fn number_of_islands(mut grid: Vec<Vec<char>>) -> i32 {
+    num_islands_optimal(&mut grid)
 }
 
 #[cfg(test)]
@@ -173,18 +192,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_dfs_basic() {
+    fn test_optimal_dfs_basic() {
         let mut grid = vec![
             vec!['1', '1', '1', '1', '0'],
             vec!['1', '1', '0', '1', '0'],
             vec!['1', '1', '0', '0', '0'],
             vec!['0', '0', '0', '0', '0'],
         ];
-        assert_eq!(num_islands_dfs(&mut grid), 1);
+        assert_eq!(num_islands_optimal(&mut grid), 1);
     }
 
     #[test]
-    fn test_bfs_basic() {
+    fn test_optimized_bfs_basic() {
         let mut grid = vec![
             vec!['1', '1', '0', '0', '0'],
             vec!['1', '1', '0', '0', '0'],
@@ -192,37 +211,85 @@ mod tests {
             vec!['0', '0', '0', '1', '1'],
         ];
         // Islands: Top-left block, middle-single, bottom-right pair = 3
-        assert_eq!(num_islands_bfs(&mut grid), 3);
+        assert_eq!(num_islands_optimized(&mut grid), 3);
     }
 
     #[test]
     fn test_empty_grid() {
         let mut grid: Vec<Vec<char>> = vec![];
-        assert_eq!(num_islands_dfs(&mut grid), 0);
-        assert_eq!(num_islands_bfs(&mut grid), 0);
+        assert_eq!(num_islands_optimal(&mut grid), 0);
+        assert_eq!(num_islands_optimized(&mut grid), 0);
+        assert_eq!(number_of_islands(vec![]), 0);
     }
 
     #[test]
     fn test_single_cell() {
         let mut grid_land = vec![vec!['1']];
-        assert_eq!(num_islands_dfs(&mut grid_land), 1);
+        assert_eq!(num_islands_optimal(&mut grid_land), 1);
 
         let mut grid_water = vec![vec!['0']];
-        assert_eq!(num_islands_bfs(&mut grid_water), 0);
+        assert_eq!(num_islands_optimized(&mut grid_water), 0);
     }
 
     #[test]
-    fn test_immutable_wrapper() {
+    fn test_brute_force_immutable() {
         let grid = vec![
             vec!['1', '0', '1'],
             vec!['0', '1', '0'],
             vec!['1', '0', '1'],
         ];
         // Checkerboard pattern = 5 islands
-        assert_eq!(num_islands_immutable(&grid), 5);
+        assert_eq!(num_islands_brute_force(&grid), 5);
 
-        // Verify original grid is unchanged
+        // Verify original grid is unchanged (non-destructive)
         assert_eq!(grid[0][0], '1');
+    }
+
+    #[test]
+    fn test_main_wrapper() {
+        let grid = vec![
+            vec!['1', '1', '1', '1', '0'],
+            vec!['1', '1', '0', '1', '0'],
+            vec!['1', '1', '0', '0', '0'],
+            vec!['0', '0', '0', '0', '0'],
+        ];
+        assert_eq!(number_of_islands(grid), 1);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement across DFS, BFS, and the immutable brute force.
+        let grids = vec![
+            vec![
+                vec!['1', '1', '0', '0', '0'],
+                vec!['1', '1', '0', '0', '0'],
+                vec!['0', '0', '1', '0', '0'],
+                vec!['0', '0', '0', '1', '1'],
+            ],
+            vec![
+                vec!['1', '0', '1'],
+                vec!['0', '1', '0'],
+                vec!['1', '0', '1'],
+            ],
+            vec![vec!['1']],
+            vec![vec!['0']],
+        ];
+
+        for grid in grids {
+            let brute = num_islands_brute_force(&grid);
+
+            let mut g_dfs = grid.clone();
+            let optimal = num_islands_optimal(&mut g_dfs);
+
+            let mut g_bfs = grid.clone();
+            let optimized = num_islands_optimized(&mut g_bfs);
+
+            let wrapped = number_of_islands(grid);
+
+            assert_eq!(brute, optimal);
+            assert_eq!(optimal, optimized);
+            assert_eq!(optimized, wrapped);
+        }
     }
 
     #[test]
@@ -233,6 +300,6 @@ mod tests {
             vec!['1', '0', '0', '1'],
             vec!['1', '1', '1', '1'],
         ];
-        assert_eq!(num_islands_dfs(&mut grid), 1);
+        assert_eq!(num_islands_optimal(&mut grid), 1);
     }
 }

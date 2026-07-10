@@ -32,6 +32,10 @@
 //! A fully iterative implementation with parent pointers requires `Rc<RefCell<Node>>` or `unsafe` pointers.
 //! For educational clarity, we implement **Left-Leaning Red-Black Trees (LLRB)** (Sedgewick variant), which simplifies the invariants by enforcing that red links are always left-leaning.
 //! This maps 1-1 to 2-3 Trees.
+//!
+//! Note: data-structure design problem; a single canonical implementation (the LLRB
+//! variant shown here) is the sensible form, so the brute/optimized/optimal progression
+//! does not apply.
 
 use std::cmp::Ordering;
 use std::fmt::Debug;

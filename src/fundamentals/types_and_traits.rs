@@ -200,7 +200,8 @@ impl From<(i32, i32)> for Point {
 // - Point::from((1, 2))
 // - (1, 2).into() // when type is known
 
-/// Implementing Into explicitly (rare - usually derive from From)
+/// Implementing From (the impl below is `From<Point>`); a matching
+/// `Into<Coordinate> for Point` is derived automatically for free.
 pub struct Coordinate {
     pub x: f64,
     pub y: f64,

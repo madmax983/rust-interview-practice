@@ -12,9 +12,12 @@ pub fn unwrap_or_example(opt: Option<i32>) -> i32 {
 }
 
 /// Pattern: Option - unwrap_or_else for computed defaults
+/// unwrap_or_else takes a closure, so the fallback is computed lazily (only
+/// when the Option is None). Prefer this over eager `unwrap_or(expensive())`.
 #[must_use]
+#[allow(clippy::unnecessary_lazy_evaluations)] // Demonstrating the lazy closure form
 pub fn unwrap_or_else_example(opt: Option<i32>) -> i32 {
-    opt.unwrap_or(42)
+    opt.unwrap_or_else(|| 6 * 7) // Closure runs only in the None case
 }
 
 /// Pattern: Option - map to transform inner value
@@ -98,8 +101,12 @@ pub fn match_option_example(opt: Option<i32>) -> i32 {
 
 /// Pattern: match on Result
 #[must_use]
+#[allow(clippy::manual_unwrap_or_default, clippy::manual_unwrap_or)] // Demonstrating an explicit match on Result
 pub fn match_result_example(res: Result<i32, String>) -> i32 {
-    res.unwrap_or_default()
+    match res {
+        Ok(value) => value, // Extract the success value
+        Err(_error) => 0,   // Handle the error case (error bound as _error)
+    }
 }
 
 /// Pattern: if let for Option

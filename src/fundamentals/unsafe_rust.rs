@@ -503,19 +503,54 @@ impl Buffer {
         }
     }
 
-    /// Safe interface - validates index.
+    /// Safe interface - validates index, then writes a `u32` at an arbitrary
+    /// byte offset.
     fn write_u32(&mut self, index: usize, value: u32) -> Result<(), String> {
-        if index + 4 > self.data.len() {
+        // Use checked arithmetic: `index + 4` can overflow `usize` for a
+        // near-`usize::MAX` index, wrapping to a small value that would let the
+        // bounds check pass incorrectly. `checked_add` turns overflow into a
+        // clean out-of-bounds error instead.
+        let end = index.checked_add(4).ok_or("Index overflow")?;
+        if end > self.data.len() {
             return Err("Index out of bounds".to_string());
         }
 
-        // SAFETY: We just checked bounds
+        // SAFETY:
+        // - `index + 4 <= self.data.len()` (checked above), so `add(index)` and
+        //   the 4 bytes written stay within the single allocation backing
+        //   `self.data`.
+        // - The pointer comes from `&mut self`, giving exclusive access, so there
+        //   is no aliasing during the store.
+        // - `index` is an arbitrary BYTE offset, so the resulting `*mut u32` is
+        //   very likely NOT 4-byte aligned. A plain aligned store (`*ptr = value`)
+        //   at a misaligned address is undefined behaviour, so we use
+        //   `write_unaligned`, which has no alignment requirement.
         unsafe {
-            let ptr = self.data.as_mut_ptr().add(index) as *mut u32;
-            *ptr = value;
+            let ptr = self.data.as_mut_ptr().add(index).cast::<u32>();
+            ptr.write_unaligned(value);
         }
 
         Ok(())
+    }
+
+    /// Safe interface - validates index, then reads a `u32` from an arbitrary
+    /// byte offset. Counterpart to [`Buffer::write_u32`].
+    fn read_u32(&self, index: usize) -> Result<u32, String> {
+        let end = index.checked_add(4).ok_or("Index overflow")?;
+        if end > self.data.len() {
+            return Err("Index out of bounds".to_string());
+        }
+
+        // SAFETY:
+        // - `index + 4 <= self.data.len()` (checked above), so the 4 bytes read
+        //   lie within the allocation backing `self.data`, which is fully
+        //   initialised (`vec![0; size]`).
+        // - `index` is an arbitrary byte offset, so the `*const u32` may be
+        //   misaligned; an aligned read would be UB, hence `read_unaligned`.
+        unsafe {
+            let ptr = self.data.as_ptr().add(index).cast::<u32>();
+            Ok(ptr.read_unaligned())
+        }
     }
 }
 
@@ -637,5 +672,33 @@ mod unsafe_tests {
         vec.push(3);
 
         assert_eq!(vec.len, 3);
+    }
+
+    #[test]
+    fn test_buffer_write_read_unaligned() {
+        let mut buf = Buffer::new(16);
+
+        // Deliberately use a NON-4-aligned index (1). An aligned store here would
+        // be UB; `write_unaligned`/`read_unaligned` make it well-defined. Run this
+        // test under Miri to confirm there is no undefined behaviour.
+        buf.write_u32(1, 0xDEAD_BEEF).unwrap();
+        assert_eq!(buf.read_u32(1).unwrap(), 0xDEAD_BEEF);
+
+        // An aligned index still works.
+        buf.write_u32(8, 0x0102_0304).unwrap();
+        assert_eq!(buf.read_u32(8).unwrap(), 0x0102_0304);
+    }
+
+    #[test]
+    fn test_buffer_bounds_and_overflow() {
+        let mut buf = Buffer::new(4);
+
+        // Exactly fits.
+        assert!(buf.write_u32(0, 1).is_ok());
+        // One byte too far.
+        assert!(buf.write_u32(1, 1).is_err());
+        // `index + 4` would overflow usize; must be rejected, not wrap.
+        assert!(buf.write_u32(usize::MAX, 1).is_err());
+        assert!(buf.read_u32(usize::MAX).is_err());
     }
 }

@@ -125,8 +125,9 @@ fn demonstrate_iterator_closures() {
     let evens: Vec<i32> = numbers.iter().filter(|&&x| x % 2 == 0).copied().collect();
     println!("Evens: {evens:?}");
 
-    // fold - accumulate a value
-    let sum = numbers.iter().sum::<i32>();
+    // fold - accumulate a value with a closure (init acc, then acc + each item)
+    #[allow(clippy::unnecessary_fold)] // Demonstrating fold explicitly; sum() would also work
+    let sum = numbers.iter().fold(0, |acc, &x| acc + x);
     println!("Sum: {sum}");
 
     // Chaining: filter then map then collect
@@ -313,9 +314,9 @@ fn demonstrate_interview_patterns() {
         .collect();
     println!("Indexed: {indexed:?}");
 
-    // Pattern 5: reduce pattern (fold from right)
+    // Pattern 5: rfold - fold from the right with a closure
     let numbers = [1, 2, 3, 4, 5];
-    let product = numbers.iter().product::<i32>();
+    let product = numbers.iter().rfold(1, |acc, &x| acc * x);
     println!("Product: {product}"); // 120
 }
 

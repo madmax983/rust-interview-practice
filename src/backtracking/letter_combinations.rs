@@ -61,14 +61,15 @@ const MAPPING: &[&[u8]] = &[
 // Brute Force / Straightforward Approach
 // ============================================================================
 
-/// Iterative approach using `Iterator::fold`
+/// Brute force approach: Iterative Cartesian product using `Iterator::fold`
 ///
 /// This approach is very concise and expressive, using Rust's iterator combinators.
 /// However, it allocates a new `Vec<String>` at every step, which creates pressure
-/// on the memory allocator.
+/// on the memory allocator. Same `O(4^N * N)` complexity as the optimal approach, but
+/// with heavier intermediate allocation.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn letter_combinations_iterative(digits: String) -> Vec<String> {
+pub fn letter_combinations_brute_force(digits: String) -> Vec<String> {
     if digits.is_empty() {
         return vec![];
     }
@@ -178,10 +179,22 @@ mod tests {
     }
 
     #[test]
-    fn test_iterative_happy_path() {
+    fn test_brute_force_happy_path() {
         let digits = "23".to_string();
         let expected = vec!["ad", "ae", "af", "bd", "be", "bf", "cd", "ce", "cf"];
-        assert_combinations_eq(letter_combinations_iterative(digits), expected);
+        assert_combinations_eq(letter_combinations_brute_force(digits), expected);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement: both approaches must produce the same set
+        // of combinations (order-independent) for a multi-digit input.
+        let digits = "79".to_string();
+        let bf: HashSet<String> = letter_combinations_brute_force(digits.clone())
+            .into_iter()
+            .collect();
+        let opt: HashSet<String> = letter_combinations_optimal(digits).into_iter().collect();
+        assert_eq!(bf, opt);
     }
 
     #[test]

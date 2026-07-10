@@ -18,7 +18,33 @@
 //! 3.  **Option Handling**: accessing the top of the stack via `last()` returns an `Option`, forcing us to safely
 //!     handle the case where the stack is empty.
 
-/// Monotonic Stack Approach
+/// Brute force approach: Nested scan
+///
+/// For each day `i`, scan forward at `j > i` until we find a strictly warmer temperature, then record
+/// the distance `j - i`. If none is found, the answer stays `0`.
+///
+/// Time Complexity: O(N²) - For each of the N days we may scan up to N later days.
+/// Space Complexity: O(1) - Ignoring the output vector, no extra space is used.
+#[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+pub fn daily_temperatures_brute_force(temperatures: Vec<i32>) -> Vec<i32> {
+    let n = temperatures.len();
+    let mut result = vec![0; n];
+
+    for i in 0..n {
+        // Look ahead for the first day strictly warmer than day `i`.
+        for j in (i + 1)..n {
+            if temperatures[j] > temperatures[i] {
+                result[i] = (j - i) as i32;
+                break;
+            }
+        }
+    }
+
+    result
+}
+
+/// Optimal approach: Monotonic Stack
 ///
 /// We iterate through the temperatures array once. We maintain a "monotonic decreasing stack" of indices.
 /// This means the temperatures corresponding to the indices in the stack are always in decreasing order.
@@ -30,7 +56,7 @@
 /// Time Complexity: O(N) - Each element is pushed onto the stack once and popped at most once.
 /// Space Complexity: O(N) - In the worst case (strictly decreasing temperatures), the stack holds all indices.
 #[must_use]
-pub fn daily_temperatures(temperatures: Vec<i32>) -> Vec<i32> {
+pub fn daily_temperatures_optimal(temperatures: Vec<i32>) -> Vec<i32> {
     let n = temperatures.len();
     // Initialize the result vector with 0s.
     // If we never find a warmer day for an index, it stays 0.
@@ -75,11 +101,11 @@ pub fn daily_temperatures(temperatures: Vec<i32>) -> Vec<i32> {
     result
 }
 
-// Alternative Approach: Brute Force
-//
-// We could use nested loops: for each day `i`, look ahead at `j > i` until we find a warmer day.
-// This would be O(N^2) time complexity, which is too slow for large inputs (N=10^5),
-// but it uses O(1) extra space (ignoring output).
+/// Main entry point - uses optimal solution
+#[must_use]
+pub fn daily_temperatures(temperatures: Vec<i32>) -> Vec<i32> {
+    daily_temperatures_optimal(temperatures)
+}
 
 #[cfg(test)]
 mod tests {
@@ -132,5 +158,42 @@ mod tests {
         let temperatures = vec![30];
         let expected = vec![0];
         assert_eq!(daily_temperatures(temperatures), expected);
+    }
+
+    #[test]
+    fn test_brute_force() {
+        assert_eq!(
+            daily_temperatures_brute_force(vec![73, 74, 75, 71, 69, 72, 76, 73]),
+            vec![1, 1, 4, 2, 1, 1, 0, 0]
+        );
+        assert_eq!(
+            daily_temperatures_brute_force(vec![30, 40, 50, 60]),
+            vec![1, 1, 1, 0]
+        );
+        assert_eq!(
+            daily_temperatures_brute_force(vec![30, 30, 30, 35]),
+            vec![3, 2, 1, 0]
+        );
+        let empty: Vec<i32> = vec![];
+        assert_eq!(daily_temperatures_brute_force(empty), Vec::<i32>::new());
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        let cases = vec![
+            vec![73, 74, 75, 71, 69, 72, 76, 73],
+            vec![30, 40, 50, 60],
+            vec![90, 80, 70, 60],
+            vec![30, 30, 30, 35],
+            vec![30],
+            vec![],
+        ];
+        for case in cases {
+            let brute = daily_temperatures_brute_force(case.clone());
+            let optimal = daily_temperatures_optimal(case.clone());
+            let entry = daily_temperatures(case);
+            assert_eq!(brute, optimal);
+            assert_eq!(entry, optimal);
+        }
     }
 }

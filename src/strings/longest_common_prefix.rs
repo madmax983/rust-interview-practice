@@ -32,15 +32,16 @@
 //! - `0 <= strs[i].length <= 200`
 //! - `strs[i]` consists of only lowercase English letters.
 
-/// Brute force approach: Vertical Scanning.
+/// Optimized approach: Vertical Scanning.
 /// Time: O(S) where S is the sum of all characters in all strings.
 /// Space: O(1) since we are just borrowing bytes.
 ///
 /// We iterate through the characters of the first string, and for each character,
 /// we check if every other string has the same character at the same position.
+/// This is linear in the total input size, faster than the sorting brute force.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn longest_common_prefix_brute_force(strs: Vec<String>) -> String {
+pub fn longest_common_prefix_optimized(strs: Vec<String>) -> String {
     if strs.is_empty() {
         return String::new();
     }
@@ -71,16 +72,17 @@ pub fn longest_common_prefix_brute_force(strs: Vec<String>) -> String {
     strs.into_iter().next().unwrap()
 }
 
-/// Optimized approach: Sorting and comparing extremes.
+/// Brute force approach: Sorting and comparing extremes.
 /// Time: O(S * log N) where N is the number of strings and S is max string length.
 /// Space: O(1) auxiliary space beyond the sorted input array.
 ///
 /// By sorting the array lexicographically, the strings that are most different
 /// will end up at the first and last positions. We then only need to compare
-/// the first and last strings to find the common prefix.
+/// the first and last strings to find the common prefix. The sort dominates,
+/// making this the slowest of the three approaches (the extra log N factor).
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn longest_common_prefix_optimized(mut strs: Vec<String>) -> String {
+pub fn longest_common_prefix_brute_force(mut strs: Vec<String>) -> String {
     if strs.is_empty() {
         return String::new();
     }

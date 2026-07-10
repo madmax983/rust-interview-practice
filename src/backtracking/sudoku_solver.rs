@@ -47,7 +47,7 @@
 
 #![allow(clippy::needless_range_loop)]
 
-/// Approach 1: Naive Backtracking
+/// Brute force approach: Naive Backtracking
 ///
 /// **Strategy**:
 /// Find the first empty cell. Try placing digits 1-9.
@@ -60,7 +60,7 @@
 ///
 /// **Pros**: Simple to implement, no extra memory for state.
 /// **Cons**: `is_valid` is O(9) = O(1), but repeated constantly. Slower than tracking state.
-pub fn solve_sudoku_naive(board: &mut Vec<Vec<char>>) {
+pub fn solve_sudoku_brute_force(board: &mut Vec<Vec<char>>) {
     solve_naive(board);
 }
 
@@ -326,12 +326,12 @@ mod tests {
     }
 
     #[test]
-    fn test_naive_solver() {
+    fn test_brute_force_solver() {
         let mut board = get_board();
-        solve_sudoku_naive(&mut board);
+        solve_sudoku_brute_force(&mut board);
         assert!(
             is_solved(&board),
-            "Naive solver failed to solve valid board"
+            "Brute force solver failed to solve valid board"
         );
     }
 
@@ -360,6 +360,22 @@ mod tests {
         let mut board = get_board();
         solve_sudoku(&mut board);
         assert!(is_solved(&board));
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // A well-formed Sudoku has a unique solution, so every approach must
+        // produce the identical solved board.
+        let mut board_bf = get_board();
+        let mut board_opt = get_board();
+        let mut board_optimal = get_board();
+
+        solve_sudoku_brute_force(&mut board_bf);
+        solve_sudoku_optimized(&mut board_opt);
+        solve_sudoku_optimal(&mut board_optimal);
+
+        assert_eq!(board_bf, board_opt);
+        assert_eq!(board_opt, board_optimal);
     }
 
     #[test]

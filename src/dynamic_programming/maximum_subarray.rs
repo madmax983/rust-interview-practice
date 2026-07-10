@@ -55,6 +55,55 @@ pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
     max_sum
 }
 
+/// Optimized Approach: Divide and Conquer
+///
+/// **Strategy**:
+/// Split the array in half. The maximum subarray is either entirely in the left half,
+/// entirely in the right half, or it crosses the midpoint. We recursively solve the two
+/// halves and compute the best crossing sum by expanding outward from the midpoint.
+///
+/// **Time**: O(N log N) - We split the array log N times, doing O(N) work (the crossing scan) per level.
+/// **Space**: O(log N) - Recursion stack depth.
+///
+/// # RUST INSIGHT
+/// Slices (`&[i32]`) let us recurse over sub-ranges without copying the underlying data,
+/// so each recursive call is a cheap fat pointer rather than a new allocation.
+#[must_use]
+#[allow(clippy::needless_pass_by_value)]
+pub fn max_sub_array_optimized(nums: Vec<i32>) -> i32 {
+    fn solve(nums: &[i32]) -> i32 {
+        // Base case: a single element is its own maximum subarray.
+        if nums.len() == 1 {
+            return nums[0];
+        }
+
+        let mid = nums.len() / 2;
+        let left_best = solve(&nums[..mid]);
+        let right_best = solve(&nums[mid..]);
+
+        // Best sum of a subarray that must include the element at `mid - 1` (expanding left).
+        let mut sum = 0;
+        let mut cross_left = i32::MIN;
+        for &v in nums[..mid].iter().rev() {
+            sum += v;
+            cross_left = cmp::max(cross_left, sum);
+        }
+
+        // Best sum of a subarray that must include the element at `mid` (expanding right).
+        sum = 0;
+        let mut cross_right = i32::MIN;
+        for &v in &nums[mid..] {
+            sum += v;
+            cross_right = cmp::max(cross_right, sum);
+        }
+
+        let cross_best = cross_left + cross_right;
+        cmp::max(cmp::max(left_best, right_best), cross_best)
+    }
+
+    solve(&nums)
+}
+
 /// Optimal Approach: Kadane's Algorithm
 ///
 /// **Strategy**:
@@ -76,7 +125,7 @@ pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
 /// but here we need to track two values (`current_max` and `global_max`).
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn max_sub_array_kadane(nums: Vec<i32>) -> i32 {
+pub fn max_sub_array_optimal(nums: Vec<i32>) -> i32 {
     // Constraint: 1 <= nums.length. Safe to access index 0.
     let mut current_sum = nums[0];
     let mut max_sum = nums[0];
@@ -95,9 +144,14 @@ pub fn max_sub_array_kadane(nums: Vec<i32>) -> i32 {
     max_sum
 }
 
-/// Functional approach using `fold`
+/// Functional-style variant of the optimal Kadane approach using `fold`.
 ///
-/// Demonstrates how to carry complex state (current_max, global_max) through an iterator chain.
+/// NOTE: This shares the same O(N) time / O(1) space profile as `max_sub_array_optimal`; it is kept
+/// under a clearly-named suffix to demonstrate carrying complex state (current_max, global_max)
+/// through an iterator chain, which is a core idiom this repository practices.
+///
+/// **Time**: O(N) - Single pass.
+/// **Space**: O(1) - Only the accumulator tuple.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn max_sub_array_functional(nums: Vec<i32>) -> i32 {
@@ -119,7 +173,7 @@ pub fn max_sub_array_functional(nums: Vec<i32>) -> i32 {
 /// Main entry point - uses optimal solution
 #[must_use]
 pub fn max_sub_array(nums: Vec<i32>) -> i32 {
-    max_sub_array_kadane(nums)
+    max_sub_array_optimal(nums)
 }
 
 #[cfg(test)]
@@ -168,6 +222,59 @@ mod tests {
         let nums = vec![10, 20, -100, 5, 5];
         assert_eq!(max_sub_array(nums.clone()), 30);
         assert_eq!(max_sub_array_brute_force(nums.clone()), 30);
+        assert_eq!(max_sub_array_optimized(nums.clone()), 30);
+        assert_eq!(max_sub_array_optimal(nums.clone()), 30);
         assert_eq!(max_sub_array_functional(nums), 30);
+    }
+
+    #[test]
+    fn test_optimized_divide_and_conquer() {
+        let nums = vec![-2, 1, -3, 4, -1, 2, 1, -5, 4];
+        assert_eq!(max_sub_array_optimized(nums), 6);
+        // Single element (base case) and all-negative behaviour.
+        assert_eq!(max_sub_array_optimized(vec![-3]), -3);
+        assert_eq!(max_sub_array_optimized(vec![-5, -2, -9, -1, -8]), -1);
+    }
+
+    #[test]
+    fn test_optimal_kadane() {
+        let nums = vec![-2, 1, -3, 4, -1, 2, 1, -5, 4];
+        assert_eq!(max_sub_array_optimal(nums), 6);
+        assert_eq!(max_sub_array_optimal(vec![1]), 1);
+    }
+
+    #[test]
+    fn test_all_approaches_agreement() {
+        let cases = vec![
+            vec![-2, 1, -3, 4, -1, 2, 1, -5, 4],
+            vec![1],
+            vec![5, 4, -1, 7, 8],
+            vec![-5, -2, -9, -1, -8],
+            vec![10, 20, -100, 5, 5],
+            vec![3, -1, -1, 3, -2, 5],
+            vec![-1, -2, -3, -4],
+        ];
+
+        for nums in cases {
+            let expected = max_sub_array_optimal(nums.clone());
+            assert_eq!(
+                max_sub_array_brute_force(nums.clone()),
+                expected,
+                "brute force mismatch for {:?}",
+                nums
+            );
+            assert_eq!(
+                max_sub_array_optimized(nums.clone()),
+                expected,
+                "divide-and-conquer mismatch for {:?}",
+                nums
+            );
+            assert_eq!(
+                max_sub_array_functional(nums.clone()),
+                expected,
+                "functional mismatch for {:?}",
+                nums
+            );
+        }
     }
 }

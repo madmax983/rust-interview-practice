@@ -113,7 +113,7 @@ pub fn merge_two_lists_brute_force(
 /// this can overflow the stack for very large lists. The constraint N <= 50
 /// makes this safe here.
 #[must_use]
-pub fn merge_two_lists_recursive(
+pub fn merge_two_lists_optimized(
     list1: Option<Box<ListNode>>,
     list2: Option<Box<ListNode>>,
 ) -> Option<Box<ListNode>> {
@@ -123,10 +123,10 @@ pub fn merge_two_lists_recursive(
         (None, Some(r)) => Some(r),
         (Some(mut l), Some(mut r)) => {
             if l.val <= r.val {
-                l.next = merge_two_lists_recursive(l.next, Some(r));
+                l.next = merge_two_lists_optimized(l.next, Some(r));
                 Some(l)
             } else {
-                r.next = merge_two_lists_recursive(Some(l), r.next);
+                r.next = merge_two_lists_optimized(Some(l), r.next);
                 Some(r)
             }
         }
@@ -208,10 +208,10 @@ mod tests {
     }
 
     #[test]
-    fn test_recursive_example_1() {
+    fn test_optimized_example_1() {
         let l1 = ListNode::from_vec(vec![1, 2, 4]);
         let l2 = ListNode::from_vec(vec![1, 3, 4]);
-        let result = merge_two_lists_recursive(l1, l2);
+        let result = merge_two_lists_optimized(l1, l2);
         assert_eq!(result.unwrap().to_vec(), vec![1, 1, 2, 3, 4, 4]);
     }
 
@@ -244,7 +244,7 @@ mod tests {
 
         let l1 = ListNode::from_vec(v1.clone());
         let l2 = ListNode::from_vec(v2.clone());
-        let res_rec = merge_two_lists_recursive(l1, l2);
+        let res_rec = merge_two_lists_optimized(l1, l2);
         assert_eq!(res_rec.unwrap().to_vec(), vec![1, 1, 1, 1, 1]);
 
         let l1 = ListNode::from_vec(v1.clone());

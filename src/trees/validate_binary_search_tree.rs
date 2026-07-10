@@ -86,14 +86,17 @@ pub fn is_valid_bst_brute_force(root: Option<Box<TreeNode>>) -> bool {
     values.windows(2).all(|w| w[0] < w[1])
 }
 
-/// Recursive approach: Valid Range Propagation
+/// Optimized approach: recursive valid-range propagation
 ///
 /// We traverse the tree, passing down the valid range (min, max) for each node.
 /// - When going left, the max value becomes the current node's value.
 /// - When going right, the min value becomes the current node's value.
 ///
+/// This improves on the brute force by using O(H) stack space instead of O(N) for a
+/// materialized value vector, and short-circuits on the first violation.
+///
 /// Time: O(N) - Visit every node once.
-/// Space: O(H) - Recursion stack depth (H = height of tree).
+/// Space: O(H) - Recursion stack depth (H = height of tree, O(N) worst case for a skewed tree).
 ///
 /// # Rust Insight
 /// We use `Option<i32>` for the bounds. `None` represents positive/negative infinity.
@@ -103,7 +106,7 @@ pub fn is_valid_bst_brute_force(root: Option<Box<TreeNode>>) -> bool {
 /// This is a classic "Top-Down" recursion where we pass state down to children.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn is_valid_bst_recursive(root: Option<Box<TreeNode>>) -> bool {
+pub fn is_valid_bst_optimized(root: Option<Box<TreeNode>>) -> bool {
     fn validate(node: Option<&Box<TreeNode>>, min: Option<i32>, max: Option<i32>) -> bool {
         match node {
             None => true,
@@ -132,12 +135,12 @@ pub fn is_valid_bst_recursive(root: Option<Box<TreeNode>>) -> bool {
 
 /// Optimal approach: Iterative In-order Traversal
 ///
-/// Instead of collecting all values (like brute force) or recursing (like recursive),
-/// we simulate the in-order traversal iteratively using a stack.
+/// Instead of collecting all values (like brute force) or recursing (like the optimized version),
+/// we simulate the in-order traversal iteratively using an explicit stack.
 /// We only need to keep track of the *previous* value visited to ensure strictly increasing order.
 ///
 /// Time: O(N) - Visit every node once.
-/// Space: O(H) - Stack size depends on tree height.
+/// Space: O(H) - Explicit stack size depends on tree height (O(N) worst case for a skewed tree).
 ///
 /// # Rust Insight
 /// We use `Vec` as a stack.
@@ -172,10 +175,10 @@ pub fn is_valid_bst_optimal(root: Option<Box<TreeNode>>) -> bool {
     true
 }
 
-/// Main entry point
+/// Main entry point - uses the optimal (iterative in-order) solution.
 #[must_use]
 pub fn is_valid_bst(root: Option<Box<TreeNode>>) -> bool {
-    is_valid_bst_recursive(root)
+    is_valid_bst_optimal(root)
 }
 
 #[cfg(test)]
@@ -198,7 +201,7 @@ mod tests {
 
         let input = Some(Box::new(root));
         assert!(is_valid_bst_brute_force(input.clone()));
-        assert!(is_valid_bst_recursive(input.clone()));
+        assert!(is_valid_bst_optimized(input.clone()));
         assert!(is_valid_bst_optimal(input));
     }
 
@@ -218,7 +221,7 @@ mod tests {
 
         let input = Some(Box::new(root));
         assert!(!is_valid_bst_brute_force(input.clone()));
-        assert!(!is_valid_bst_recursive(input.clone()));
+        assert!(!is_valid_bst_optimized(input.clone()));
         assert!(!is_valid_bst_optimal(input));
     }
 
@@ -233,7 +236,7 @@ mod tests {
 
         let input = Some(Box::new(root));
         assert!(!is_valid_bst_brute_force(input.clone()));
-        assert!(!is_valid_bst_recursive(input.clone()));
+        assert!(!is_valid_bst_optimized(input.clone()));
         assert!(!is_valid_bst_optimal(input));
     }
 
@@ -244,13 +247,13 @@ mod tests {
         root.left = leaf(i32::MAX - 1);
 
         let input = Some(Box::new(root));
-        assert!(is_valid_bst_recursive(input));
+        assert!(is_valid_bst_optimized(input));
     }
 
     #[test]
     fn test_empty_tree() {
         assert!(is_valid_bst_brute_force(None));
-        assert!(is_valid_bst_recursive(None));
+        assert!(is_valid_bst_optimized(None));
         assert!(is_valid_bst_optimal(None));
     }
 
@@ -258,7 +261,7 @@ mod tests {
     fn test_single_node() {
         let input = leaf(42);
         assert!(is_valid_bst_brute_force(input.clone()));
-        assert!(is_valid_bst_recursive(input.clone()));
+        assert!(is_valid_bst_optimized(input.clone()));
         assert!(is_valid_bst_optimal(input));
     }
 }

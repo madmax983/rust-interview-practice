@@ -13,8 +13,8 @@
 //! The problem requires finding a subset that sums up to exactly half of the total sum of the array. If the total sum is odd, it's impossible to split into two equal integer halves.
 //!
 //! We provide two approaches:
-//! 1. **2D Dynamic Programming (`can_partition_2d`)**: A straightforward approach where `dp[i][j]` means "can we form sum `j` using a subset of the first `i` items". This makes the state transitions obvious but takes O(N * Target) space.
-//! 2. **1D Space Optimized DP (`can_partition_1d`)**: We can reduce the space to O(Target) by using a 1D array. Since `dp[j]` only depends on `dp[j]` and `dp[j - num]` from the *previous* row, we must iterate backwards through the target sums to avoid using a number more than once in a single step.
+//! 1. **2D Dynamic Programming (`can_partition_optimized`)**: A straightforward approach where `dp[i][j]` means "can we form sum `j` using a subset of the first `i` items". This makes the state transitions obvious but takes O(N * Target) space.
+//! 2. **1D Space Optimized DP (`can_partition_optimal`)**: We can reduce the space to O(Target) by using a 1D array. Since `dp[j]` only depends on `dp[j]` and `dp[j - num]` from the *previous* row, we must iterate backwards through the target sums to avoid using a number more than once in a single step.
 //!
 //! Both approaches run in O(N * Target) time, where Target is the sum of all elements divided by 2.
 //!
@@ -22,11 +22,11 @@
 //! - **Bitset**: Using an integer bitmask or a crate like `bit-vec` can further optimize the 1D approach by doing parallel OR operations to shift and add sums (`dp |= dp << num`). This is extremely fast for small sums but requires managing bits explicitly.
 //! - **Memoized DFS**: A top-down recursive approach with a cache (`HashSet` or `HashMap`) is valid but has overhead from recursion and hashing.
 
-/// A straightforward 2D Dynamic Programming approach.
+/// Optimized approach: straightforward 2D Dynamic Programming (tabulation).
 ///
 /// Time: O(N * Target), where N is the number of elements and Target is sum / 2.
 /// Space: O(N * Target)
-pub fn can_partition_2d(nums: Vec<i32>) -> bool {
+pub fn can_partition_optimized(nums: Vec<i32>) -> bool {
     let total_sum: i32 = nums.iter().sum();
 
     // RUST INSIGHT: We can quickly reject odd sums using modulo arithmetic.
@@ -62,11 +62,11 @@ pub fn can_partition_2d(nums: Vec<i32>) -> bool {
     dp[n][target]
 }
 
-/// An optimal 1D Space Dynamic Programming approach.
+/// Optimal approach: 1D space-optimized Dynamic Programming (rolling row).
 ///
 /// Time: O(N * Target)
 /// Space: O(Target)
-pub fn can_partition_1d(nums: Vec<i32>) -> bool {
+pub fn can_partition_optimal(nums: Vec<i32>) -> bool {
     // RUST INSIGHT: Using iterators and closures is idiomatic and often faster than manual loops.
     // The compiler can unroll and vectorize this sum.
     let total_sum: i32 = nums.iter().sum();
@@ -94,6 +94,12 @@ pub fn can_partition_1d(nums: Vec<i32>) -> bool {
     dp[target]
 }
 
+/// Main entry point - uses the optimal 1D space-optimized solution.
+#[must_use]
+pub fn can_partition(nums: Vec<i32>) -> bool {
+    can_partition_optimal(nums)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,35 +108,67 @@ mod tests {
     fn test_can_partition_happy_path() {
         // [1, 5, 11, 5] -> subsets [1, 5, 5] and [11], both sum to 11.
         let nums = vec![1, 5, 11, 5];
-        assert!(can_partition_2d(nums.clone()));
-        assert!(can_partition_1d(nums));
+        assert!(can_partition_optimized(nums.clone()));
+        assert!(can_partition_optimal(nums.clone()));
+        assert!(can_partition(nums));
     }
 
     #[test]
     fn test_can_partition_edge_case_odd_sum() {
         // [1, 2, 3, 5] -> sum is 11, cannot be halved.
         let nums = vec![1, 2, 3, 5];
-        assert!(!can_partition_2d(nums.clone()));
-        assert!(!can_partition_1d(nums));
+        assert!(!can_partition_optimized(nums.clone()));
+        assert!(!can_partition_optimal(nums.clone()));
+        assert!(!can_partition(nums));
     }
 
     #[test]
     fn test_can_partition_boundary_case_large_numbers() {
         // [100, 100, 100, 100, 100, 100, 100, 100] -> subsets of 400.
         let nums = vec![100, 100, 100, 100, 100, 100, 100, 100];
-        assert!(can_partition_2d(nums.clone()));
-        assert!(can_partition_1d(nums));
+        assert!(can_partition_optimized(nums.clone()));
+        assert!(can_partition_optimal(nums));
     }
 
     #[test]
     fn test_can_partition_edge_case_two_elements() {
         // Only two elements, must be equal.
         let nums1 = vec![1, 1];
-        assert!(can_partition_2d(nums1.clone()));
-        assert!(can_partition_1d(nums1));
+        assert!(can_partition_optimized(nums1.clone()));
+        assert!(can_partition_optimal(nums1));
 
         let nums2 = vec![1, 2];
-        assert!(!can_partition_2d(nums2.clone()));
-        assert!(!can_partition_1d(nums2));
+        assert!(!can_partition_optimized(nums2.clone()));
+        assert!(!can_partition_optimal(nums2));
+    }
+
+    #[test]
+    fn test_all_approaches_agreement() {
+        // Both approaches (and the main entry) must agree on the same inputs.
+        let cases = vec![
+            vec![1, 5, 11, 5],
+            vec![1, 2, 3, 5],
+            vec![2, 2, 3, 5],
+            vec![1, 1],
+            vec![1, 2],
+            vec![3, 3, 3, 4, 5],
+            vec![14, 9, 8, 4, 3, 2],
+        ];
+
+        for nums in cases {
+            let expected = can_partition_optimal(nums.clone());
+            assert_eq!(
+                can_partition_optimized(nums.clone()),
+                expected,
+                "2D vs 1D mismatch for {:?}",
+                nums
+            );
+            assert_eq!(
+                can_partition(nums.clone()),
+                expected,
+                "wrapper mismatch for {:?}",
+                nums
+            );
+        }
     }
 }

@@ -470,3 +470,317 @@ fn demonstrate_interview_patterns() {
     println!("int_sqrt(8) = {}", int_sqrt(8)); // 2
     println!("int_sqrt(16) = {}", int_sqrt(16)); // 4
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ------------------------------------------------------------------------
+    // Bit manipulation basics (values demonstrated in `demonstrate_bit_basics`)
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_set_clear_toggle_bit() {
+        let mut n = 0b1010; // 10
+
+        n |= 1 << 0; // set bit 0
+        assert_eq!(n, 0b1011); // 11
+
+        n &= !(1 << 1); // clear bit 1
+        assert_eq!(n, 0b1001); // 9
+
+        n ^= 1 << 3; // toggle bit 3
+        assert_eq!(n, 0b0001); // 1
+    }
+
+    #[test]
+    fn test_check_bit_set() {
+        let n = 0b0001;
+        assert!((n & (1 << 0)) != 0);
+        assert!((n & (1 << 1)) == 0);
+    }
+
+    #[test]
+    fn test_bit_counts() {
+        assert_eq!(0b10_1101_u32.count_ones(), 4);
+        assert_eq!(0b10_1000_u32.trailing_zeros(), 3);
+        assert_eq!(0b1010_u32.leading_zeros(), 28); // 32-bit representation
+    }
+
+    #[test]
+    fn test_shifts() {
+        assert_eq!(5 << 2, 20); // multiply by 2^2
+        assert_eq!(20 >> 2, 5); // divide by 2^2
+    }
+
+    // ------------------------------------------------------------------------
+    // Bit manipulation tricks
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_is_power_of_two() {
+        assert!(is_power_of_two(16));
+        assert!(!is_power_of_two(18));
+        assert!(is_power_of_two(1));
+        assert!(!is_power_of_two(0));
+        assert!(!is_power_of_two(-8)); // negatives are never powers of two
+    }
+
+    #[test]
+    fn test_rightmost_set_bit() {
+        assert_eq!(rightmost_set_bit(12), 4); // 1100 -> 0100
+        assert_eq!(rightmost_set_bit(1), 1);
+        assert_eq!(rightmost_set_bit(0b1000_0000), 0b1000_0000);
+    }
+
+    #[test]
+    fn test_clear_rightmost_set_bit() {
+        assert_eq!(clear_rightmost_set_bit(12), 8); // 1100 -> 1000
+        assert_eq!(clear_rightmost_set_bit(0b1011), 0b1010);
+        assert_eq!(clear_rightmost_set_bit(0), 0);
+    }
+
+    #[test]
+    fn test_find_unique_element() {
+        assert_eq!(find_unique_element(&[2, 3, 2, 4, 4]), 3);
+        assert_eq!(find_unique_element(&[1, 1, 5]), 5);
+        assert_eq!(find_unique_element(&[42]), 42);
+        assert_eq!(find_unique_element(&[]), 0);
+    }
+
+    #[test]
+    fn test_create_mask() {
+        assert_eq!(create_mask(4), 0b1111); // 15
+        assert_eq!(create_mask(3), 0b111); // 7
+        assert_eq!(create_mask(0), 0);
+        assert_eq!(create_mask(1), 1);
+    }
+
+    #[test]
+    fn test_get_bits_in_range() {
+        assert_eq!(get_bits_in_range(0b1101_1010, 2, 5), 0b110); // 6
+        assert_eq!(get_bits_in_range(0b1111, 0, 4), 0b1111);
+        assert_eq!(get_bits_in_range(0b1010, 1, 2), 1);
+    }
+
+    #[test]
+    fn test_set_bits_in_range() {
+        assert_eq!(set_bits_in_range(0b1101_1010, 2, 5, 0b101), 0b1101_0110); // 214
+        // Setting a range and reading it back yields the written value.
+        let modified = set_bits_in_range(0, 4, 8, 0b1010);
+        assert_eq!(get_bits_in_range(modified, 4, 8), 0b1010);
+    }
+
+    // ------------------------------------------------------------------------
+    // Safe arithmetic
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_wrapping_arithmetic() {
+        let a: i32 = 2_000_000_000;
+        let b: i32 = 2_000_000_000;
+        assert_eq!(a.wrapping_add(b), -294_967_296);
+        assert_eq!(0i32.wrapping_sub(1), -1);
+        assert_eq!(a.wrapping_mul(2), -294_967_296);
+    }
+
+    #[test]
+    fn test_saturating_arithmetic() {
+        let a: i32 = 2_000_000_000;
+        assert_eq!(a.saturating_add(a), i32::MAX);
+        assert_eq!(0i32.saturating_sub(1), -1); // signed floor is i32::MIN, not 0
+        assert_eq!(0u32.saturating_sub(1), 0); // unsigned clamps at 0
+    }
+
+    #[test]
+    fn test_checked_arithmetic() {
+        let a: i32 = 2_000_000_000;
+        assert_eq!(a.checked_add(a), None); // overflow
+        assert_eq!(100i32.checked_add(1), Some(101));
+        assert_eq!(10i32.checked_div(0), None); // division by zero
+        assert_eq!(10i32.checked_div(2), Some(5));
+    }
+
+    #[test]
+    fn test_overflowing_arithmetic() {
+        let a: i32 = 2_000_000_000;
+        assert_eq!(a.overflowing_add(a), (-294_967_296, true));
+        assert_eq!(1i32.overflowing_add(1), (2, false));
+    }
+
+    #[test]
+    fn test_abs_operations() {
+        assert_eq!((-42i32).abs(), 42);
+        assert_eq!(10u32.abs_diff(20), 10);
+        assert_eq!(20u32.abs_diff(10), 10);
+    }
+
+    // ------------------------------------------------------------------------
+    // Common numeric operations
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_min_max_clamp() {
+        assert_eq!(5.min(10), 5);
+        assert_eq!(5.max(10), 10);
+        assert_eq!(15.clamp(5, 10), 10);
+        assert_eq!(3.clamp(5, 10), 5);
+    }
+
+    #[test]
+    fn test_pow_and_sqrt() {
+        assert_eq!(2i32.pow(10), 1024);
+        assert_eq!((17.0_f64).sqrt() as i32, 4);
+    }
+
+    #[test]
+    fn test_division_and_remainder() {
+        assert_eq!(17i32 / 5, 3);
+        assert_eq!(17i32 % 5, 2);
+        assert_eq!(17i32.div_euclid(5), 3);
+        assert_eq!(17i32.rem_euclid(5), 2);
+    }
+
+    #[test]
+    fn test_euclidean_division_negative() {
+        assert_eq!(-17i32 / 5, -3); // truncates toward zero
+        assert_eq!(-17i32 % 5, -2);
+        assert_eq!((-17i32).div_euclid(5), -4);
+        assert_eq!((-17i32).rem_euclid(5), 3); // always non-negative
+    }
+
+    // ------------------------------------------------------------------------
+    // Number algorithms
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_gcd() {
+        assert_eq!(gcd(48, 18), 6);
+        assert_eq!(gcd(17, 5), 1);
+        assert_eq!(gcd(0, 5), 5);
+        assert_eq!(gcd(-48, 18), 6); // result is absolute
+    }
+
+    #[test]
+    fn test_lcm() {
+        assert_eq!(lcm(12, 18), 36);
+        assert_eq!(lcm(4, 6), 12);
+        assert_eq!(lcm(7, 3), 21);
+    }
+
+    #[test]
+    fn test_fast_pow() {
+        assert_eq!(fast_pow(2, 20), 1_048_576);
+        assert_eq!(fast_pow(2, 0), 1);
+        assert_eq!(fast_pow(3, 4), 81);
+        assert_eq!(fast_pow(5, 1), 5);
+    }
+
+    #[test]
+    fn test_mod_pow() {
+        assert_eq!(mod_pow(2, 20, 1000), 576);
+        assert_eq!(mod_pow(2, 10, 1000), 24); // 1024 % 1000
+        assert_eq!(mod_pow(3, 3, 7), 6); // 27 % 7
+    }
+
+    #[test]
+    fn test_is_prime() {
+        assert!(is_prime(17));
+        assert!(!is_prime(18));
+        assert!(is_prime(2));
+        assert!(!is_prime(1));
+        assert!(!is_prime(0));
+        assert!(!is_prime(-5));
+        assert!(is_prime(97));
+        assert!(!is_prime(9));
+    }
+
+    // ------------------------------------------------------------------------
+    // Parsing and conversions
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_parse_and_radix() {
+        assert_eq!("42".parse::<i32>(), Ok(42));
+        assert!("abc".parse::<i32>().is_err());
+        assert_eq!(i32::from_str_radix("1010", 2), Ok(10));
+        assert_eq!(i32::from_str_radix("FF", 16), Ok(255));
+        assert_eq!(i32::from_str_radix("77", 8), Ok(63));
+    }
+
+    #[test]
+    fn test_extract_and_build_digits() {
+        let mut n = 12345;
+        let mut digits = Vec::new();
+        while n > 0 {
+            digits.push(n % 10);
+            n /= 10;
+        }
+        digits.reverse();
+        assert_eq!(digits, vec![1, 2, 3, 4, 5]);
+
+        let rebuilt = digits.iter().fold(0, |acc, &d| acc * 10 + d);
+        assert_eq!(rebuilt, 12345);
+    }
+
+    #[test]
+    fn test_number_to_string_formats() {
+        let n = 42;
+        assert_eq!(n.to_string(), "42");
+        assert_eq!(format!("{n:b}"), "101010");
+        assert_eq!(format!("{n:x}"), "2a");
+    }
+
+    // ------------------------------------------------------------------------
+    // Practical interview patterns
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_reverse_bits() {
+        assert_eq!(reverse_bits(11), 3_489_660_928); // 0b...1011 reversed
+        assert_eq!(reverse_bits(0), 0);
+        assert_eq!(reverse_bits(1), 1 << 31);
+        assert_eq!(reverse_bits(u32::MAX), u32::MAX);
+    }
+
+    #[test]
+    fn test_hamming_weight() {
+        assert_eq!(hamming_weight(0b1011), 3);
+        assert_eq!(hamming_weight(0), 0);
+        assert_eq!(hamming_weight(u32::MAX), 32);
+    }
+
+    #[test]
+    fn test_is_palindrome() {
+        assert!(is_palindrome(121));
+        assert!(!is_palindrome(123));
+        assert!(!is_palindrome(-121)); // negatives are never palindromes
+        assert!(is_palindrome(0));
+        assert!(is_palindrome(7));
+    }
+
+    #[test]
+    fn test_int_sqrt() {
+        assert_eq!(int_sqrt(8), 2); // floor(sqrt(8))
+        assert_eq!(int_sqrt(16), 4);
+        assert_eq!(int_sqrt(0), 0);
+        assert_eq!(int_sqrt(1), 1);
+        assert_eq!(int_sqrt(15), 3);
+        assert_eq!(int_sqrt(2_147_395_600), 46_340); // large value
+    }
+
+    // ------------------------------------------------------------------------
+    // Smoke tests: demonstration functions must run without panicking.
+    // ------------------------------------------------------------------------
+
+    #[test]
+    fn test_demonstrations_run() {
+        demonstrate_bit_basics();
+        demonstrate_bit_tricks();
+        demonstrate_safe_arithmetic();
+        demonstrate_numeric_operations();
+        demonstrate_number_algorithms();
+        demonstrate_parsing();
+        demonstrate_interview_patterns();
+    }
+}

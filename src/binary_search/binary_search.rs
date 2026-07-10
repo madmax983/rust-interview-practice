@@ -30,6 +30,9 @@
 //! The `std::cmp::Ordering` enum makes binary search comparisons explicit and exhaustive,
 //! avoiding nested if-else blocks. Rust's strict typing and index bounds checking prevent
 //! out-of-bounds array access that is common in binary search implementations in C++ or C.
+//!
+//! Note: beyond the standard `brute_force`/`optimized`/`optimal` triad, this file also keeps a
+//! bonus `search_std` alternative that delegates to the standard-library `slice::binary_search`.
 
 use std::cmp::Ordering;
 

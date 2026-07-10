@@ -62,6 +62,14 @@ struct EntryLocation {
 }
 
 /// The main Bitcask instance.
+///
+/// # Lock-order invariant
+///
+/// `Bitcask` holds two independent mutexes (`active_file` and `keydir`). To
+/// prevent an ABBA deadlock between the read path (`get`) and the write path
+/// (`put`/`delete`), **any code that needs both locks MUST acquire `active_file`
+/// BEFORE `keydir`**, and never the other way around. Release `keydir` as early
+/// as possible when only the file is still needed.
 pub struct Bitcask {
     /// In-memory index: Key -> Location
     keydir: Arc<Mutex<HashMap<Key, EntryLocation>>>,
@@ -244,41 +252,48 @@ impl Bitcask {
 
     /// Retrieves a value by key.
     pub fn get(&self, key: &Key) -> io::Result<Option<Value>> {
+        // LOCK ORDER: acquire `active_file` BEFORE `keydir` (see the lock-order
+        // invariant on `Bitcask`). Previously this method locked `keydir` first
+        // and then `active_file`, the opposite of `put`/`delete`, which could
+        // deadlock (ABBA) under concurrent access.
+        let mut file = self.active_file.lock().unwrap();
         let keydir = self.keydir.lock().unwrap();
-        if let Some(loc) = keydir.get(key) {
-            let mut file = self.active_file.lock().unwrap();
 
-            // Go to header position
-            file.seek(SeekFrom::Start(
-                loc.value_pos - key.len() as u64 - HEADER_SIZE as u64,
-            ))?;
+        // `EntryLocation` is `Copy`, so copy it out and release `keydir`
+        // immediately; the rest of the read only needs the file.
+        let Some(loc) = keydir.get(key).copied() else {
+            return Ok(None);
+        };
+        drop(keydir);
 
-            let mut header_buf = [0u8; HEADER_SIZE];
-            file.read_exact(&mut header_buf)?;
-            let header = decode_header(&header_buf);
+        // Go to header position
+        file.seek(SeekFrom::Start(
+            loc.value_pos - key.len() as u64 - HEADER_SIZE as u64,
+        ))?;
 
-            // Go to value position
-            file.seek(SeekFrom::Start(loc.value_pos))?;
+        let mut header_buf = [0u8; HEADER_SIZE];
+        file.read_exact(&mut header_buf)?;
+        let header = decode_header(&header_buf);
 
-            let mut value = vec![0u8; loc.value_sz as usize];
-            file.read_exact(&mut value)?;
+        // Go to value position
+        file.seek(SeekFrom::Start(loc.value_pos))?;
 
-            let mut hasher = Hasher::new();
-            hasher.update(&header.timestamp.to_be_bytes());
-            hasher.update(&header.key_sz.to_be_bytes());
-            hasher.update(&header.value_sz.to_be_bytes());
-            hasher.update(key);
-            hasher.update(&value);
-            let computed_crc = hasher.finalize();
+        let mut value = vec![0u8; loc.value_sz as usize];
+        file.read_exact(&mut value)?;
 
-            if computed_crc != header.crc {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "CRC mismatch"));
-            }
+        let mut hasher = Hasher::new();
+        hasher.update(&header.timestamp.to_be_bytes());
+        hasher.update(&header.key_sz.to_be_bytes());
+        hasher.update(&header.value_sz.to_be_bytes());
+        hasher.update(key);
+        hasher.update(&value);
+        let computed_crc = hasher.finalize();
 
-            Ok(Some(value))
-        } else {
-            Ok(None)
+        if computed_crc != header.crc {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "CRC mismatch"));
         }
+
+        Ok(Some(value))
     }
 
     /// Deletes a key (Writes a tombstone).
@@ -475,6 +490,57 @@ mod tests {
         let store = Bitcask::open(&dir).unwrap();
         // Should be None because we deleted it
         assert_eq!(store.get(&b"k1".to_vec()).unwrap(), None);
+
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    /// Stress test: many threads concurrently `put`/`get`/`delete`. Before the
+    /// lock-order fix, `get` (keydir -> active_file) and `put`/`delete`
+    /// (active_file -> keydir) formed an ABBA cycle that could deadlock. We run
+    /// the workload in a helper thread and wait on a channel with a timeout, so a
+    /// regression fails the test instead of hanging forever.
+    #[test]
+    fn test_concurrent_get_put_no_deadlock() {
+        use std::sync::mpsc;
+        use std::thread;
+        use std::time::Duration;
+
+        let dir = temp_dir();
+        let store = Arc::new(Bitcask::open(&dir).unwrap());
+
+        let (tx, rx) = mpsc::channel();
+
+        let store_for_worker = Arc::clone(&store);
+        let coordinator = thread::spawn(move || {
+            let mut handles = Vec::new();
+            for t in 0..8u32 {
+                let store = Arc::clone(&store_for_worker);
+                handles.push(thread::spawn(move || {
+                    for i in 0..250u32 {
+                        let key = format!("k{}-{}", t, i % 16).into_bytes();
+                        let val = format!("v{t}-{i}").into_bytes();
+                        store.put(key.clone(), val).unwrap();
+                        let _ = store.get(&key).unwrap();
+                        if i % 5 == 0 {
+                            store.delete(key).unwrap();
+                        }
+                    }
+                }));
+            }
+            for h in handles {
+                h.join().unwrap();
+            }
+            let _ = tx.send(());
+        });
+
+        match rx.recv_timeout(Duration::from_secs(30)) {
+            Ok(()) => {
+                coordinator.join().unwrap();
+            }
+            Err(_) => panic!(
+                "concurrent get/put/delete did not finish within timeout (possible deadlock)"
+            ),
+        }
 
         let _ = fs::remove_dir_all(dir);
     }

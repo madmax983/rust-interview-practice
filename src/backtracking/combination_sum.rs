@@ -28,7 +28,7 @@
 //!
 //! 1.  **Brute Force Backtracking**: Try all possible combinations. We maintain a `path` of numbers chosen so far.
 //!     If the sum exceeds the `target`, we backtrack. If it equals the `target`, we record the combination.
-//! 2.  **Optimized Backtracking**: By sorting the `candidates` first, we can implement early pruning.
+//! 2.  **Optimal (Pruned Backtracking)**: By sorting the `candidates` first, we can implement early pruning.
 //!     If adding the current candidate exceeds the `target`, we know that adding any subsequent (larger) candidate
 //!     will also exceed the `target`, so we can immediately break out of the loop.
 //!
@@ -98,13 +98,15 @@ pub fn combination_sum_brute_force(candidates: Vec<i32>, target: i32) -> Vec<Vec
     results
 }
 
-/// Optimized Approach: Backtracking with Early Pruning
+/// Optimal Approach: Backtracking with Early Pruning
 ///
 /// By sorting the candidates first, we can stop exploring a branch as soon as
-/// `current_sum + candidate > target`.
+/// `current_sum + candidate > target`. This is the canonical solution: the pruning
+/// makes it strictly less wasteful than the brute-force variant while sharing the same
+/// exponential worst-case complexity.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn combination_sum_optimized(mut candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
+pub fn combination_sum_optimal(mut candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
     let mut results = Vec::new();
 
     // RUST INSIGHT: `sort_unstable()` is generally faster than `sort()` and
@@ -166,10 +168,10 @@ pub fn combination_sum_optimized(mut candidates: Vec<i32>, target: i32) -> Vec<V
     results
 }
 
-/// Main entry point - uses the optimized solution
+/// Main entry point - uses the optimal solution
 #[must_use]
 pub fn combination_sum(candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
-    combination_sum_optimized(candidates, target)
+    combination_sum_optimal(candidates, target)
 }
 
 // Alternative Approaches:
@@ -213,11 +215,22 @@ mod tests {
     }
 
     #[test]
-    fn test_optimized_happy_path() {
+    fn test_optimal_happy_path() {
         let candidates = vec![2, 3, 6, 7];
         let target = 7;
         let expected = vec![vec![2, 2, 3], vec![7]];
-        assert_combinations_eq(combination_sum_optimized(candidates, target), expected);
+        assert_combinations_eq(combination_sum_optimal(candidates, target), expected);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement: both approaches must return the same
+        // combinations (order-independent) for a non-trivial input.
+        let candidates = vec![2, 3, 5, 7];
+        let target = 12;
+        let bf = combination_sum_brute_force(candidates.clone(), target);
+        let opt = combination_sum_optimal(candidates, target);
+        assert_combinations_eq(bf, opt);
     }
 
     #[test]

@@ -48,6 +48,7 @@
 //!
 
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 
 // =========================================================================================
@@ -75,11 +76,44 @@ impl ListNode {
 }
 
 // =========================================================================================
+// Brute Force Approach: HashSet of Visited Nodes
+// =========================================================================================
+
+/// Brute force approach: track visited nodes in a `HashSet`.
+///
+/// We traverse the list, recording the memory address (`Rc::as_ptr`) of each node we visit.
+/// If we ever encounter an address we've already seen, the list contains a cycle.
+///
+/// Time: O(N) - We visit each node at most once before detecting a repeat.
+/// Space: O(N) - The `HashSet` stores up to N node addresses.
+///
+/// RUST INSIGHT: `Rc::as_ptr` gives us the raw pointer to the underlying allocation,
+/// which uniquely identifies a node. We store `*const RefCell<ListNode>` (an address),
+/// so the `HashSet` compares identities, never the (potentially cyclic) inner values.
+#[must_use]
+pub fn has_cycle_brute_force(head: Option<Rc<RefCell<ListNode>>>) -> bool {
+    let mut visited: HashSet<*const RefCell<ListNode>> = HashSet::new();
+    let mut current = head;
+
+    while let Some(node) = current {
+        // `insert` returns false if the address was already present -> cycle.
+        if !visited.insert(Rc::as_ptr(&node)) {
+            return true;
+        }
+        // Clone the `Option<Rc<..>>` for the next node (cheap: bumps the refcount).
+        current = node.borrow().next.clone();
+    }
+
+    false
+}
+
+// =========================================================================================
 // Optimal Approach: Fast and Slow Pointers (Floyd's Algorithm)
 // =========================================================================================
 
-/// Determines if the linked list has a cycle using O(1) memory.
-pub fn has_cycle(head: Option<Rc<RefCell<ListNode>>>) -> bool {
+/// Optimal approach: fast and slow pointers (Floyd's cycle-finding), O(1) memory.
+#[must_use]
+pub fn has_cycle_optimal(head: Option<Rc<RefCell<ListNode>>>) -> bool {
     // GOTCHA: We must handle the empty list case gracefully.
     let Some(ref head_node) = head else {
         return false;
@@ -132,6 +166,12 @@ pub fn has_cycle(head: Option<Rc<RefCell<ListNode>>>) -> bool {
         };
         fast = next_fast;
     }
+}
+
+/// Main entry point - uses the optimal (Floyd's) solution.
+#[must_use]
+pub fn has_cycle(head: Option<Rc<RefCell<ListNode>>>) -> bool {
+    has_cycle_optimal(head)
 }
 
 // =========================================================================================
@@ -199,5 +239,54 @@ mod tests {
         n1.borrow_mut().next = Some(Rc::clone(&n1));
 
         assert!(has_cycle(Some(n1)));
+    }
+
+    /// Builds a chain of nodes from `vals`. If `cycle_to` is `Some(i)`, the tail's
+    /// `next` is linked back to node index `i` to form a cycle. Returns the head.
+    fn build(vals: &[i32], cycle_to: Option<usize>) -> Option<Rc<RefCell<ListNode>>> {
+        let nodes: Vec<_> = vals.iter().map(|&v| create_node(v)).collect();
+        for i in 0..nodes.len().saturating_sub(1) {
+            nodes[i].borrow_mut().next = Some(Rc::clone(&nodes[i + 1]));
+        }
+        if let (Some(target), Some(last)) = (cycle_to, nodes.last()) {
+            last.borrow_mut().next = Some(Rc::clone(&nodes[target]));
+        }
+        nodes.into_iter().next()
+    }
+
+    #[test]
+    fn test_brute_force_with_cycle() {
+        let head = build(&[3, 2, 0, -4], Some(1));
+        assert!(has_cycle_brute_force(head));
+    }
+
+    #[test]
+    fn test_brute_force_no_cycle() {
+        let head = build(&[1, 2, 3], None);
+        assert!(!has_cycle_brute_force(head));
+    }
+
+    #[test]
+    fn test_brute_force_edge_cases() {
+        assert!(!has_cycle_brute_force(None));
+        let single = create_node(1);
+        assert!(!has_cycle_brute_force(Some(single)));
+
+        let self_cycle = create_node(7);
+        self_cycle.borrow_mut().next = Some(Rc::clone(&self_cycle));
+        assert!(has_cycle_brute_force(Some(self_cycle)));
+    }
+
+    #[test]
+    fn test_both_approaches_agree() {
+        // Cyclic and acyclic inputs must yield identical answers from both impls.
+        assert_eq!(
+            has_cycle_brute_force(build(&[1, 2, 3, 4], Some(1))),
+            has_cycle_optimal(build(&[1, 2, 3, 4], Some(1)))
+        );
+        assert_eq!(
+            has_cycle_brute_force(build(&[1, 2, 3, 4], None)),
+            has_cycle_optimal(build(&[1, 2, 3, 4], None))
+        );
     }
 }
