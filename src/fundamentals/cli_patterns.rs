@@ -121,7 +121,7 @@ fn ui_basic(f: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .margin(1)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(f.size());
+        .split(f.area());
 
     let block = Block::default().title("Counter").borders(Borders::ALL);
     let text = Paragraph::new(format!("Count: {}", app.counter))
@@ -325,7 +325,7 @@ fn render_layout(f: &mut Frame) {
             Constraint::Min(0),    // Body
             Constraint::Length(3), // Footer
         ])
-        .split(f.size());
+        .split(f.area());
 
     // Header
     let header = Paragraph::new("My TUI App")
@@ -355,7 +355,7 @@ fn render_nested_layout(f: &mut Frame) {
     let outer = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(f.size());
+        .split(f.area());
 
     // Left side with vertical split
     let left = Layout::default()
@@ -481,7 +481,7 @@ async fn run_async_tui() -> io::Result<()> {
     // Event loop
     loop {
         terminal.draw(|f| {
-            let area = f.size();
+            let area = f.area();
             let block = Block::default()
                 .title("Async Updates")
                 .borders(Borders::ALL);
@@ -646,7 +646,7 @@ fn show_error(f: &mut Frame, error: &str) {
         .direction(Direction::Vertical)
         .margin(5)
         .constraints([Constraint::Percentage(50)])
-        .split(f.size());
+        .split(f.area());
 
     let error_text = Paragraph::new(error)
         .block(
@@ -685,7 +685,7 @@ fn render_help(f: &mut Frame) {
         .direction(Direction::Vertical)
         .margin(5)
         .constraints([Constraint::Percentage(50)])
-        .split(f.size());
+        .split(f.area());
 
     f.render_widget(paragraph, chunks[0]);
 }
