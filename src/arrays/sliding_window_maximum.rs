@@ -24,7 +24,7 @@ use std::collections::VecDeque;
 /// # RUST INSIGHT
 /// The `windows` iterator makes this implementation trivial one-liners. However, `max()` is O(K),
 /// leading to quadratic behavior in the worst case (e.g., sorted array).
-pub fn max_sliding_window_brute(nums: &[i32], k: i32) -> Vec<i32> {
+pub fn max_sliding_window_brute_force(nums: &[i32], k: i32) -> Vec<i32> {
     if nums.is_empty() || k == 0 {
         return vec![];
     }
@@ -38,7 +38,7 @@ pub fn max_sliding_window_brute(nums: &[i32], k: i32) -> Vec<i32> {
         .collect()
 }
 
-/// Optimized Approach: Monotonic Queue
+/// Optimal Approach: Monotonic Queue
 ///
 /// We use a `VecDeque` to store *indices* of elements. The deque maintains the invariant that
 /// values corresponding to the indices are in **descending order**.
@@ -52,7 +52,7 @@ pub fn max_sliding_window_brute(nums: &[i32], k: i32) -> Vec<i32> {
 ///
 /// - **Time Complexity**: O(N). Each element is added to the deque once and removed at most once.
 /// - **Space Complexity**: O(K). The deque stores at most `k` indices.
-pub fn max_sliding_window_optimized(nums: &[i32], k: i32) -> Vec<i32> {
+pub fn max_sliding_window_optimal(nums: &[i32], k: i32) -> Vec<i32> {
     if nums.is_empty() || k == 0 {
         return vec![];
     }
@@ -97,9 +97,9 @@ pub fn max_sliding_window_optimized(nums: &[i32], k: i32) -> Vec<i32> {
     result
 }
 
-/// Entry point that defaults to the optimized solution.
+/// Entry point that defaults to the optimal solution.
 pub fn max_sliding_window(nums: Vec<i32>, k: i32) -> Vec<i32> {
-    max_sliding_window_optimized(&nums, k)
+    max_sliding_window_optimal(&nums, k)
 }
 
 // Alternative Approaches:
@@ -122,15 +122,15 @@ mod tests {
         let nums = vec![1, 3, -1, -3, 5, 3, 6, 7];
         let k = 3;
         let expected = vec![3, 3, 5, 5, 6, 7];
-        assert_eq!(max_sliding_window_brute(&nums, k), expected);
+        assert_eq!(max_sliding_window_brute_force(&nums, k), expected);
     }
 
     #[test]
-    fn test_optimized_basic() {
+    fn test_optimal_basic() {
         let nums = vec![1, 3, -1, -3, 5, 3, 6, 7];
         let k = 3;
         let expected = vec![3, 3, 5, 5, 6, 7];
-        assert_eq!(max_sliding_window_optimized(&nums, k), expected);
+        assert_eq!(max_sliding_window_optimal(&nums, k), expected);
     }
 
     #[test]
@@ -138,7 +138,7 @@ mod tests {
         let nums = vec![1, -1];
         let k = 1;
         // Window size 1 means max is the element itself
-        assert_eq!(max_sliding_window_optimized(&nums, k), vec![1, -1]);
+        assert_eq!(max_sliding_window_optimal(&nums, k), vec![1, -1]);
     }
 
     #[test]
@@ -146,7 +146,7 @@ mod tests {
         let nums = vec![1, 3, -1, -3, 5, 3, 6, 7];
         let k = 8;
         // Window size 8 covers entire array, max is 7
-        assert_eq!(max_sliding_window_optimized(&nums, k), vec![7]);
+        assert_eq!(max_sliding_window_optimal(&nums, k), vec![7]);
     }
 
     #[test]
@@ -156,7 +156,7 @@ mod tests {
         let nums = vec![9, 8, 7, 6, 5];
         let k = 3;
         // Windows: [9,8,7], [8,7,6], [7,6,5] -> Max: 9, 8, 7
-        assert_eq!(max_sliding_window_optimized(&nums, k), vec![9, 8, 7]);
+        assert_eq!(max_sliding_window_optimal(&nums, k), vec![9, 8, 7]);
     }
 
     #[test]
@@ -166,13 +166,37 @@ mod tests {
         let nums = vec![1, 2, 3, 4, 5];
         let k = 3;
         // Windows: [1,2,3], [2,3,4], [3,4,5] -> Max: 3, 4, 5
-        assert_eq!(max_sliding_window_optimized(&nums, k), vec![3, 4, 5]);
+        assert_eq!(max_sliding_window_optimal(&nums, k), vec![3, 4, 5]);
     }
 
     #[test]
     fn test_empty_input() {
         let nums: Vec<i32> = vec![];
         let k = 0;
-        assert_eq!(max_sliding_window_optimized(&nums, k), Vec::<i32>::new());
+        assert_eq!(max_sliding_window_optimal(&nums, k), Vec::<i32>::new());
+    }
+
+    #[test]
+    fn test_main_entry_point() {
+        let nums = vec![1, 3, -1, -3, 5, 3, 6, 7];
+        assert_eq!(max_sliding_window(nums, 3), vec![3, 3, 5, 5, 6, 7]);
+    }
+
+    #[test]
+    fn test_all_approaches_agreement() {
+        let cases = vec![
+            (vec![1, 3, -1, -3, 5, 3, 6, 7], 3),
+            (vec![9, 8, 7, 6, 5], 3),
+            (vec![1, 2, 3, 4, 5], 2),
+            (vec![4, 4, 4, 4], 2),
+            (vec![-7, -8, 7, 5, 7, 1, 6, 0], 4),
+            (vec![1], 1),
+        ];
+
+        for (nums, k) in cases {
+            let brute = max_sliding_window_brute_force(&nums, k);
+            let optimal = max_sliding_window_optimal(&nums, k);
+            assert_eq!(brute, optimal, "mismatch for nums={nums:?}, k={k}");
+        }
     }
 }

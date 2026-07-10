@@ -194,4 +194,30 @@ mod tests {
 
         assert_eq!(nums, expected);
     }
+
+    // Cross-implementation agreement test
+    #[test]
+    fn test_all_approaches_agreement() {
+        let cases: Vec<(Vec<i32>, i32)> = vec![
+            (vec![1, 2, 3, 4, 5, 6, 7], 3),
+            (vec![-1, -100, 3, 99], 2),
+            (vec![1, 2, 3], 0),
+            (vec![1, 2, 3], 3),
+            (vec![1, 2], 3),
+            (vec![42], 100),
+            (vec![], 5),
+            (vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 25),
+        ];
+
+        for (nums, k) in cases {
+            let mut a = nums.clone();
+            let mut b = nums.clone();
+            let mut c = nums.clone();
+            rotate_brute_force(&mut a, k);
+            rotate_optimized(&mut b, k);
+            rotate_optimal(&mut c, k);
+            assert_eq!(a, b, "brute vs optimized mismatch for {nums:?}, k={k}");
+            assert_eq!(b, c, "optimized vs optimal mismatch for {nums:?}, k={k}");
+        }
+    }
 }

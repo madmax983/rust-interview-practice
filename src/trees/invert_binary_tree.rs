@@ -226,6 +226,20 @@ mod tests {
     }
 
     #[test]
+    fn test_all_approaches_single_node() {
+        for f in [
+            invert_tree_brute_force,
+            invert_tree_optimized,
+            invert_tree_optimal,
+        ] {
+            let node = f(leaf(42)).unwrap();
+            assert_eq!(node.val, 42);
+            assert!(node.left.is_none());
+            assert!(node.right.is_none());
+        }
+    }
+
+    #[test]
     fn test_all_approaches_consistency() {
         // Tree: 1 -> left: 2
         let mut root_tmpl = TreeNode::new(1);

@@ -12,10 +12,13 @@
 //! complex, stateful traversal logic into a clean, reusable `Iterator` using Rust's
 //! trait system, turning an imperative while-loop into a functional chain.
 
-/// Straightforward approach: Imperative Boundary Tracking
+/// Brute force approach: Imperative Boundary Tracking
 ///
 /// We track four boundaries (`top`, `bottom`, `left`, `right`) and simulate
-/// the spiral traversal layer by layer.
+/// the spiral traversal layer by layer. Both implementations share the same
+/// O(M * N) time / O(1) space complexity; this one is labelled "brute force" as
+/// the straightforward imperative baseline, while the optimal one encapsulates the
+/// same traversal inside a reusable custom `Iterator`.
 ///
 /// Time: O(M * N) where M and N are the dimensions of the matrix.
 /// Space: O(1) auxiliary space (excluding the output vector).
@@ -28,7 +31,7 @@
 /// to safely represent boundaries that might cross over each other and go below zero.
 #[must_use]
 #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
-pub fn spiral_order_straightforward(matrix: Vec<Vec<i32>>) -> Vec<i32> {
+pub fn spiral_order_brute_force(matrix: Vec<Vec<i32>>) -> Vec<i32> {
     if matrix.is_empty() || matrix[0].is_empty() {
         return vec![];
     }
@@ -237,7 +240,7 @@ mod tests {
     fn test_happy_path_square() {
         let matrix = vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]];
         let expected = vec![1, 2, 3, 6, 9, 8, 7, 4, 5];
-        assert_eq!(spiral_order_straightforward(matrix.clone()), expected);
+        assert_eq!(spiral_order_brute_force(matrix.clone()), expected);
         assert_eq!(spiral_order_optimal(matrix.clone()), expected);
         assert_eq!(spiral_order(matrix), expected);
     }
@@ -246,7 +249,7 @@ mod tests {
     fn test_happy_path_rectangle() {
         let matrix = vec![vec![1, 2, 3, 4], vec![5, 6, 7, 8], vec![9, 10, 11, 12]];
         let expected = vec![1, 2, 3, 4, 8, 12, 11, 10, 9, 5, 6, 7];
-        assert_eq!(spiral_order_straightforward(matrix.clone()), expected);
+        assert_eq!(spiral_order_brute_force(matrix.clone()), expected);
         assert_eq!(spiral_order_optimal(matrix), expected);
     }
 
@@ -255,16 +258,13 @@ mod tests {
         // Single row
         let matrix = vec![vec![1, 2, 3]];
         let expected = vec![1, 2, 3];
-        assert_eq!(spiral_order_straightforward(matrix.clone()), expected);
+        assert_eq!(spiral_order_brute_force(matrix.clone()), expected);
         assert_eq!(spiral_order_optimal(matrix.clone()), expected);
 
         // Single column
         let matrix_col = vec![vec![1], vec![2], vec![3]];
         let expected_col = vec![1, 2, 3];
-        assert_eq!(
-            spiral_order_straightforward(matrix_col.clone()),
-            expected_col
-        );
+        assert_eq!(spiral_order_brute_force(matrix_col.clone()), expected_col);
         assert_eq!(spiral_order_optimal(matrix_col), expected_col);
     }
 
@@ -273,21 +273,45 @@ mod tests {
         // Empty matrix
         let empty: Vec<Vec<i32>> = vec![];
         let expected_empty: Vec<i32> = vec![];
-        assert_eq!(spiral_order_straightforward(empty.clone()), expected_empty);
+        assert_eq!(spiral_order_brute_force(empty.clone()), expected_empty);
         assert_eq!(spiral_order_optimal(empty), expected_empty);
 
         // Empty inner
         let empty_inner: Vec<Vec<i32>> = vec![vec![]];
         assert_eq!(
-            spiral_order_straightforward(empty_inner.clone()),
+            spiral_order_brute_force(empty_inner.clone()),
             expected_empty
         );
         assert_eq!(spiral_order_optimal(empty_inner), expected_empty);
 
         // Single element
         let single = vec![vec![42]];
-        assert_eq!(spiral_order_straightforward(single.clone()), vec![42]);
+        assert_eq!(spiral_order_brute_force(single.clone()), vec![42]);
         assert_eq!(spiral_order_optimal(single), vec![42]);
+    }
+
+    #[test]
+    fn test_all_approaches_agreement() {
+        let cases: Vec<Vec<Vec<i32>>> = vec![
+            vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]],
+            vec![vec![1, 2, 3, 4], vec![5, 6, 7, 8], vec![9, 10, 11, 12]],
+            vec![vec![1, 2, 3]],
+            vec![vec![1], vec![2], vec![3]],
+            vec![vec![7]],
+            vec![
+                vec![1, 2, 3, 4, 5],
+                vec![16, 17, 18, 19, 6],
+                vec![15, 24, 25, 20, 7],
+                vec![14, 23, 22, 21, 8],
+                vec![13, 12, 11, 10, 9],
+            ],
+        ];
+
+        for matrix in cases {
+            let brute = spiral_order_brute_force(matrix.clone());
+            let optimal = spiral_order_optimal(matrix.clone());
+            assert_eq!(brute, optimal, "mismatch for matrix {matrix:?}");
+        }
     }
 }
 

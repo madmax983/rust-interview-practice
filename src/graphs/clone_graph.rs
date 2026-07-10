@@ -366,6 +366,21 @@ mod tests {
     }
 
     #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement: all three clones must yield the same adjacency structure.
+        let original = create_cycle_graph();
+        let expected = graph_to_adj(Some(Rc::clone(&original)));
+
+        let bf = graph_to_adj(clone_graph_brute_force(Some(Rc::clone(&original))));
+        let opt = graph_to_adj(clone_graph_optimized(Some(Rc::clone(&original))));
+        let optimal = graph_to_adj(clone_graph_optimal(Some(Rc::clone(&original))));
+
+        assert_eq!(bf, expected);
+        assert_eq!(opt, expected);
+        assert_eq!(optimal, expected);
+    }
+
+    #[test]
     fn test_deep_copy_independence() {
         let n1 = Node::new(1);
         let n2 = Node::new(2);

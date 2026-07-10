@@ -58,7 +58,8 @@ impl ListNode {
 /// **Rust Insight:**
 /// While easy to write, this approach fundamentally subverts the linked list by turning it into
 /// an array, incurring an O(N) heap allocation overhead.
-pub fn middle_node_vec(mut head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+#[must_use]
+pub fn middle_node_brute_force(mut head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     let mut nodes = Vec::new();
 
     // Consume the list to build the vector
@@ -106,7 +107,9 @@ pub fn middle_node_vec(mut head: Option<Box<ListNode>>) -> Option<Box<ListNode>>
 /// However, multiple immutable references (`&`) are perfectly fine. By taking `&head`, we can
 /// traverse the list with both pointers simultaneously. Since the function signature requires
 /// returning an owned `Option<Box<ListNode>>`, we use `.clone()` on the `slow` reference at the end.
-pub fn middle_node(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+#[must_use]
+#[allow(clippy::missing_panics_doc)] // Unwrap is safe due to loop invariants
+pub fn middle_node_optimal(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     // RUST INSIGHT: We take immutable references to the Option wrapper itself.
     // This allows both `slow` and `fast` to safely inspect the linked list simultaneously.
     let mut slow = &head;
@@ -131,6 +134,12 @@ pub fn middle_node(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     // Because `Box<T>` owns its data, we must clone the remaining sublist.
     // If the signature was `&Option<Box<ListNode>>`, this clone would be a zero-cost abstraction.
     slow.clone()
+}
+
+/// Main entry point - uses the optimal fast/slow pointer solution.
+#[must_use]
+pub fn middle_node(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
+    middle_node_optimal(head)
 }
 
 // =========================================================================================
@@ -171,8 +180,8 @@ mod tests {
         let list = to_list(&[1, 2, 3, 4, 5]);
         let expected = vec![3, 4, 5];
 
-        assert_eq!(to_vec(middle_node(list.clone())), expected);
-        assert_eq!(to_vec(middle_node_vec(list)), expected);
+        assert_eq!(to_vec(middle_node_optimal(list.clone())), expected);
+        assert_eq!(to_vec(middle_node_brute_force(list)), expected);
     }
 
     #[test]
@@ -181,8 +190,8 @@ mod tests {
         // When even, it should return the second middle node (4)
         let expected = vec![4, 5, 6];
 
-        assert_eq!(to_vec(middle_node(list.clone())), expected);
-        assert_eq!(to_vec(middle_node_vec(list)), expected);
+        assert_eq!(to_vec(middle_node_optimal(list.clone())), expected);
+        assert_eq!(to_vec(middle_node_brute_force(list)), expected);
     }
 
     #[test]
@@ -190,8 +199,8 @@ mod tests {
         let list = to_list(&[1]);
         let expected = vec![1];
 
-        assert_eq!(to_vec(middle_node(list.clone())), expected);
-        assert_eq!(to_vec(middle_node_vec(list)), expected);
+        assert_eq!(to_vec(middle_node_optimal(list.clone())), expected);
+        assert_eq!(to_vec(middle_node_brute_force(list)), expected);
     }
 
     #[test]
@@ -199,7 +208,24 @@ mod tests {
         let list = to_list(&[1, 2]);
         let expected = vec![2];
 
-        assert_eq!(to_vec(middle_node(list.clone())), expected);
-        assert_eq!(to_vec(middle_node_vec(list)), expected);
+        assert_eq!(to_vec(middle_node_optimal(list.clone())), expected);
+        assert_eq!(to_vec(middle_node_brute_force(list)), expected);
+    }
+
+    #[test]
+    fn test_middle_node_empty() {
+        // Wrapper (optimal) and brute force both handle the empty list.
+        assert_eq!(middle_node(None), None);
+        assert_eq!(middle_node_brute_force(None), None);
+    }
+
+    #[test]
+    fn test_both_approaches_agree() {
+        for len in 1..=8 {
+            let list: Vec<i32> = (0..len).collect();
+            let optimal = middle_node_optimal(to_list(&list));
+            let brute = middle_node_brute_force(to_list(&list));
+            assert_eq!(to_vec(optimal), to_vec(brute));
+        }
     }
 }

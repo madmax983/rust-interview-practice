@@ -14,6 +14,8 @@
 //! complex type signatures. Building this teaches you how to leverage Rust's trait system to compose
 //! simple operations (like matching a single character) into complex recursive descent parsers elegantly.
 //! It also demonstrates strict lifetime management, as parsers continuously borrow from the original input string.
+//!
+//! Note: single canonical implementation; the brute/optimized/optimal progression does not apply.
 
 // =========================================================================================
 // Architecture

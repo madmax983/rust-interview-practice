@@ -33,21 +33,27 @@
 //! ## Examples
 //!
 //! ```
-//! use rust_interview_practice::arrays::subarray_sum_equals_k::subarray_sum_imperative;
+//! use rust_interview_practice::arrays::subarray_sum_equals_k::subarray_sum_brute_force;
 //!
 //! let nums = vec![1, 1, 1];
 //! let k = 2;
-//! assert_eq!(subarray_sum_imperative(&nums, k), 2);
+//! assert_eq!(subarray_sum_brute_force(&nums, k), 2);
 //! ```
 
 use std::collections::HashMap;
 
-/// Straightforward imperative approach using a `for` loop and a mutable HashMap.
+/// Brute force approach: Straightforward imperative style (prefix sum + HashMap).
 ///
 /// This is the most readable and standard approach in system languages, manually tracking
-/// a running sum and counter.
+/// a running sum and counter with a `for` loop and a mutable HashMap. It is labelled
+/// "brute force" as the imperative baseline; note that it shares the same optimal
+/// O(N) time / O(N) space complexity as the functional variant — the difference is coding
+/// style, not asymptotic cost.
+///
+/// Time: O(N) - single pass; HashMap operations are O(1) average.
+/// Space: O(N) - worst case all prefix sums are distinct.
 #[must_use]
-pub fn subarray_sum_imperative(nums: &[i32], k: i32) -> i32 {
+pub fn subarray_sum_brute_force(nums: &[i32], k: i32) -> i32 {
     // Stores the frequency of prefix sums encountered so far.
     let mut counts: HashMap<i32, i32> = HashMap::new();
 
@@ -76,13 +82,16 @@ pub fn subarray_sum_imperative(nums: &[i32], k: i32) -> i32 {
     total_subarrays
 }
 
-/// Functional approach using `Iterator::fold`.
+/// Optimal approach: Functional style using `Iterator::fold` (prefix sum + HashMap).
 ///
 /// This approach avoids all external mutable state by threading the state
 /// `(HashMap, current_sum, total_subarrays)` through the fold operation.
 /// It's a great example of Rust's capability to express complex algorithms functionally.
+///
+/// Time: O(N) - single fold over the array; HashMap operations are O(1) average.
+/// Space: O(N) - worst case all prefix sums are distinct.
 #[must_use]
-pub fn subarray_sum_functional(nums: &[i32], k: i32) -> i32 {
+pub fn subarray_sum_optimal(nums: &[i32], k: i32) -> i32 {
     let mut initial_counts = HashMap::new();
     initial_counts.insert(0, 1);
 
@@ -107,10 +116,10 @@ pub fn subarray_sum_functional(nums: &[i32], k: i32) -> i32 {
     total
 }
 
-/// Main entry point - uses the functional approach to demonstrate idiomatic Rust.
+/// Main entry point - uses the optimal (functional) approach to demonstrate idiomatic Rust.
 #[must_use]
 pub fn subarray_sum(nums: &[i32], k: i32) -> i32 {
-    subarray_sum_functional(nums, k)
+    subarray_sum_optimal(nums, k)
 }
 
 // =========================================================================================
@@ -127,15 +136,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_imperative_happy_path() {
-        assert_eq!(subarray_sum_imperative(&[1, 1, 1], 2), 2);
-        assert_eq!(subarray_sum_imperative(&[1, 2, 3], 3), 2);
+    fn test_brute_force_happy_path() {
+        assert_eq!(subarray_sum_brute_force(&[1, 1, 1], 2), 2);
+        assert_eq!(subarray_sum_brute_force(&[1, 2, 3], 3), 2);
     }
 
     #[test]
-    fn test_functional_happy_path() {
-        assert_eq!(subarray_sum_functional(&[1, 1, 1], 2), 2);
-        assert_eq!(subarray_sum_functional(&[1, 2, 3], 3), 2);
+    fn test_optimal_happy_path() {
+        assert_eq!(subarray_sum_optimal(&[1, 1, 1], 2), 2);
+        assert_eq!(subarray_sum_optimal(&[1, 2, 3], 3), 2);
+    }
+
+    #[test]
+    fn test_all_approaches_agreement() {
+        let cases: Vec<(Vec<i32>, i32)> = vec![
+            (vec![1, 1, 1], 2),
+            (vec![1, 2, 3], 3),
+            (vec![1, -1, 0], 0),
+            (vec![0, 0, 0, 0, 0], 0),
+            (vec![3, 4, 7, 2, -3, 1, 4, 2], 7),
+            (vec![-1, -1, 1], 0),
+        ];
+
+        for (nums, k) in cases {
+            let brute = subarray_sum_brute_force(&nums, k);
+            let optimal = subarray_sum_optimal(&nums, k);
+            assert_eq!(brute, optimal, "mismatch for nums={nums:?}, k={k}");
+        }
     }
 
     #[test]

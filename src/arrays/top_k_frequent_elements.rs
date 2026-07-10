@@ -277,4 +277,41 @@ mod tests {
         assert_unstable_eq(top_k_frequent(vec![1, 1, 1, 2, 2, 3], 2), vec![1, 2]);
         assert_unstable_eq(top_k_frequent(vec![1, 2, 3, 4, 5], 5), vec![1, 2, 3, 4, 5]);
     }
+
+    // Cross-implementation agreement test.
+    // Uses inputs where the top-k answer is unambiguous (unique frequencies at the
+    // boundary), matching LeetCode's "answer is guaranteed unique" constraint, so the
+    // three approaches must yield the same set regardless of internal ordering.
+    #[test]
+    fn test_all_approaches_agreement() {
+        let cases: Vec<(Vec<i32>, i32)> = vec![
+            (vec![1, 1, 1, 2, 2, 3], 2),
+            (vec![1], 1),
+            (vec![-1, -1, 2, 3, 4, 4, 4], 2),
+            (vec![5, 5, 5, 5, 6, 6, 6, 7, 7, 8], 3),
+            (vec![1, 2, 3, 4, 5], 5),
+        ];
+
+        for (nums, k) in cases {
+            let brute = top_k_frequent_brute_force(nums.clone(), k);
+            let optimized = top_k_frequent_optimized(nums.clone(), k);
+            let optimal = top_k_frequent_optimal(nums.clone(), k);
+
+            let mut brute_sorted = brute.clone();
+            brute_sorted.sort_unstable();
+            let mut optimized_sorted = optimized.clone();
+            optimized_sorted.sort_unstable();
+            let mut optimal_sorted = optimal.clone();
+            optimal_sorted.sort_unstable();
+
+            assert_eq!(
+                brute_sorted, optimized_sorted,
+                "brute vs optimized mismatch for {nums:?}, k={k}"
+            );
+            assert_eq!(
+                optimized_sorted, optimal_sorted,
+                "optimized vs optimal mismatch for {nums:?}, k={k}"
+            );
+        }
+    }
 }

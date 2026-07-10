@@ -9,6 +9,11 @@
 //! 2.  **State Management**: Converting a recursive process (In-order traversal: Left -> Node -> Right) into an iterative state machine using a stack.
 //! 3.  **Ownership & Sharing**: Handling shared ownership of tree nodes (`Rc<RefCell<TreeNode>>`) to traverse without consuming the tree.
 //!
+//! Note: data-structure design problem; a single canonical implementation (the controlled
+//! recursion stack, meeting the O(1)-amortized / O(h)-memory follow-up) is the sensible form,
+//! so the brute/optimized/optimal progression does not apply. Alternative designs (upfront
+//! flattening, Morris threading, parent pointers) are discussed at the bottom of the file.
+//!
 //! ## Examples
 //!
 //! ```

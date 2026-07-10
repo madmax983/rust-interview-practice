@@ -13,6 +13,11 @@
 //! 2.  **Iterator State**: Consuming tokens from a stream during deserialization.
 //! 3.  **Recursion**: Naturally fitting the recursive structure of the tree.
 //!
+//! Note: data-structure design problem; a single canonical implementation (the recursive
+//! pre-order `Codec` with `N` null markers) is the sensible form, so the
+//! brute/optimized/optimal progression does not apply. Alternative encodings (BFS level
+//! order, binary format, parentheses notation) are discussed at the bottom of the file.
+//!
 //! ## Examples
 //!
 //! ```

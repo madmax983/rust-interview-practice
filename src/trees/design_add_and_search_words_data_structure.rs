@@ -10,6 +10,13 @@
 //! with recursive algorithms (Depth-First Search) while safely managing references and borrowing rules.
 //! It also highlights the trade-offs between different string matching approaches.
 //!
+//! Note: data-structure design problem; a single canonical implementation (or the shown
+//! design variants) is the sensible form, so the brute/optimized/optimal progression does
+//! not apply. The three types below (`WordDictionaryBruteForce` via `Vec`,
+//! `WordDictionaryOptimized` via length-bucketed `HashMap`, `WordDictionaryOptimal` via a
+//! Trie + DFS) are genuinely distinct *designs* with different trade-offs, not three tiers
+//! of the same algorithm.
+//!
 //! ## Examples
 //!
 //! ```

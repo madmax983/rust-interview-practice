@@ -54,7 +54,7 @@ impl TreeNode {
     }
 }
 
-/// Recursive Approach: Depth-First Search (DFS).
+/// Brute force approach: recursive depth-first search (DFS).
 ///
 /// This is the most intuitive solution. The depth of a node is 1 plus the maximum depth
 /// of its subtrees.
@@ -68,24 +68,26 @@ impl TreeNode {
 /// Unlike C/C++ where null pointer checks are easy to forget, `Option` forces you to handle it.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn max_depth_recursive(root: Option<Box<TreeNode>>) -> i32 {
+pub fn max_depth_brute_force(root: Option<Box<TreeNode>>) -> i32 {
     match root {
         Some(node) => {
-            let left_depth = max_depth_recursive(node.left);
-            let right_depth = max_depth_recursive(node.right);
+            let left_depth = max_depth_brute_force(node.left);
+            let right_depth = max_depth_brute_force(node.right);
             1 + cmp::max(left_depth, right_depth)
         }
         None => 0,
     }
 }
 
-/// Iterative Approach: Breadth-First Search (BFS).
+/// Optimal approach: iterative breadth-first search (BFS) with an explicit queue.
 ///
 /// We use a queue to traverse the tree level by level. Each iteration processes one full
-/// level, incrementing the depth counter.
+/// level, incrementing the depth counter. This is the most robust choice: it moves storage
+/// off the call stack, so it cannot overflow the stack on very deep trees.
 ///
 /// Time: O(n) - Visits every node.
-/// Space: O(w) - Stores the current level in the queue. `w` is the maximum width of the tree.
+/// Space: O(w) - Stores the current level in the queue. `w` is the maximum width of the tree
+///               (up to O(n) for a complete tree's bottom level).
 ///
 /// # Why this matters
 /// While recursion is elegant, it uses the call stack, which is limited (though generous in Rust).
@@ -98,7 +100,7 @@ pub fn max_depth_recursive(root: Option<Box<TreeNode>>) -> i32 {
 /// (which belong to the next level).
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn max_depth_iterative(root: Option<Box<TreeNode>>) -> i32 {
+pub fn max_depth_optimal(root: Option<Box<TreeNode>>) -> i32 {
     let mut depth = 0;
     if let Some(node) = root {
         let mut queue = VecDeque::new();
@@ -122,13 +124,14 @@ pub fn max_depth_iterative(root: Option<Box<TreeNode>>) -> i32 {
     depth
 }
 
-/// Functional Approach: Fold/Map Combinators.
+/// Optimized approach: functional recursion via `Option` combinators.
 ///
-/// This approach tries to express the recursive logic using functional combinators.
-/// While succinct, it can be harder to read for those unfamiliar with `Option` combinators.
+/// This expresses the same recursive DFS as the brute-force version, but using functional
+/// combinators (`map_or`) for a more concise, idiomatic form. Same complexity as the
+/// recursive DFS; it trades the explicit `match` for a combinator.
 ///
-/// Time: O(n)
-/// Space: O(h)
+/// Time: O(n) - visits every node once.
+/// Space: O(h) - recursion stack, height of the tree (O(n) worst case for a skewed tree).
 ///
 /// # Rust Insight
 /// `Option::map_or` is a powerful method that applies a function if the option is `Some`,
@@ -136,18 +139,19 @@ pub fn max_depth_iterative(root: Option<Box<TreeNode>>) -> i32 {
 /// recursive solution.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn max_depth_fold(root: Option<Box<TreeNode>>) -> i32 {
+pub fn max_depth_optimized(root: Option<Box<TreeNode>>) -> i32 {
     root.map_or(0, |node| {
-        1 + cmp::max(max_depth_fold(node.left), max_depth_fold(node.right))
+        1 + cmp::max(
+            max_depth_optimized(node.left),
+            max_depth_optimized(node.right),
+        )
     })
 }
 
-/// Main entry point.
-///
-/// We default to the recursive solution as it is the most idiomatic and clear for this specific problem.
+/// Main entry point - uses the optimal (iterative BFS) solution.
 #[must_use]
 pub fn max_depth(root: Option<Box<TreeNode>>) -> i32 {
-    max_depth_recursive(root)
+    max_depth_optimal(root)
 }
 
 #[cfg(test)]
@@ -159,54 +163,49 @@ mod tests {
         Some(Box::new(TreeNode::new(val)))
     }
 
-    #[test]
-    fn test_recursive_simple() {
-        //      3
-        //     / \
-        //    9  20
-        //      /  \
-        //     15   7
+    // Builds:
+    //      3
+    //     / \
+    //    9  20
+    //      /  \
+    //     15   7
+    fn sample_tree() -> Option<Box<TreeNode>> {
         let mut root = TreeNode::new(3);
         root.left = leaf(9);
         let mut right = TreeNode::new(20);
         right.left = leaf(15);
         right.right = leaf(7);
         root.right = Some(Box::new(right));
-
-        assert_eq!(max_depth_recursive(Some(Box::new(root))), 3);
+        Some(Box::new(root))
     }
 
     #[test]
-    fn test_iterative_simple() {
-        // Same tree as above
-        let mut root = TreeNode::new(3);
-        root.left = leaf(9);
-        let mut right = TreeNode::new(20);
-        right.left = leaf(15);
-        right.right = leaf(7);
-        root.right = Some(Box::new(right));
-
-        assert_eq!(max_depth_iterative(Some(Box::new(root))), 3);
+    fn test_brute_force_simple() {
+        assert_eq!(max_depth_brute_force(sample_tree()), 3);
     }
 
     #[test]
-    fn test_fold_simple() {
-        // Same tree as above
-        let mut root = TreeNode::new(3);
-        root.left = leaf(9);
-        let mut right = TreeNode::new(20);
-        right.left = leaf(15);
-        right.right = leaf(7);
-        root.right = Some(Box::new(right));
+    fn test_optimized_simple() {
+        assert_eq!(max_depth_optimized(sample_tree()), 3);
+    }
 
-        assert_eq!(max_depth_fold(Some(Box::new(root))), 3);
+    #[test]
+    fn test_optimal_simple() {
+        assert_eq!(max_depth_optimal(sample_tree()), 3);
     }
 
     #[test]
     fn test_empty_tree() {
-        assert_eq!(max_depth(None), 0);
-        assert_eq!(max_depth_iterative(None), 0);
-        assert_eq!(max_depth_fold(None), 0);
+        assert_eq!(max_depth_brute_force(None), 0);
+        assert_eq!(max_depth_optimized(None), 0);
+        assert_eq!(max_depth_optimal(None), 0);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        assert_eq!(max_depth_brute_force(sample_tree()), 3);
+        assert_eq!(max_depth_optimized(sample_tree()), 3);
+        assert_eq!(max_depth_optimal(sample_tree()), 3);
     }
 
     #[test]

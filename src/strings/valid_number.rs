@@ -41,7 +41,7 @@
 /// Brute Force Approach: Iterative boolean flags
 ///
 /// Time: O(N) where N is the length of the string
-/// Space: O(1) auxiliary space
+/// Space: O(N) for the `Vec<char>` we collect once up front
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn is_number_brute_force(s: String) -> bool {
@@ -49,18 +49,20 @@ pub fn is_number_brute_force(s: String) -> bool {
     let mut seen_exponent = false;
     let mut seen_dot = false;
 
-    // We process the string byte-by-byte (or char-by-char)
-    for (i, c) in s.chars().enumerate() {
+    // GOTCHA: Collect the chars ONCE so we can index the previous char in O(1).
+    // Calling `s.chars().nth(i - 1)` inside the loop would be O(N) per call,
+    // making the whole "brute force" secretly O(N^2). Collecting keeps it honestly O(N).
+    let chars: Vec<char> = s.chars().collect();
+
+    // We process the string char-by-char
+    for (i, &c) in chars.iter().enumerate() {
         match c {
             '0'..='9' => {
                 seen_digit = true;
             }
             '+' | '-' => {
                 // A sign is only valid at the very beginning or right after an exponent
-                if i > 0
-                    && s.chars().nth(i - 1).unwrap() != 'e'
-                    && s.chars().nth(i - 1).unwrap() != 'E'
-                {
+                if i > 0 && chars[i - 1] != 'e' && chars[i - 1] != 'E' {
                     return false;
                 }
             }
@@ -352,6 +354,23 @@ mod tests {
             assert!(
                 !is_number_optimal(s.to_string()),
                 "Optimal failed for invalid case: {}",
+                s
+            );
+        }
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation verification: all three approaches must produce
+        // identical results for every input.
+        for &s in VALID_CASES.iter().chain(INVALID_CASES.iter()) {
+            let brute = is_number_brute_force(s.to_string());
+            let optimized = is_number_optimized(s.to_string());
+            let optimal = is_number_optimal(s.to_string());
+            assert_eq!(brute, optimized, "brute vs optimized disagree on: {}", s);
+            assert_eq!(
+                optimized, optimal,
+                "optimized vs optimal disagree on: {}",
                 s
             );
         }

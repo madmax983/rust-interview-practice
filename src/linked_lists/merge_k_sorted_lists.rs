@@ -109,7 +109,33 @@ impl Ord for HeapNode {
     }
 }
 
-/// Min-Heap approach
+/// Brute force approach: Collect all values, sort, rebuild
+/// Time: O(N log N) - N is the total number of nodes; sorting dominates.
+/// Space: O(N) - We store every value in a vector before rebuilding.
+///
+/// This approach ignores the fact that each individual list is already sorted.
+/// It's the most obvious solution: flatten everything, sort, and rebuild a single list.
+#[must_use]
+#[allow(clippy::needless_pass_by_value)]
+pub fn merge_k_lists_brute_force(lists: Vec<Option<Box<ListNode>>>) -> Option<Box<ListNode>> {
+    let mut values = Vec::new();
+
+    // Flatten every list into a single vector of values.
+    // `into_iter().flatten()` yields the `Some` heads and consumes the outer vector.
+    for list in lists.into_iter().flatten() {
+        let mut current = Some(list);
+        while let Some(node) = current {
+            values.push(node.val);
+            current = node.next;
+        }
+    }
+
+    values.sort_unstable();
+
+    ListNode::from_vec(values)
+}
+
+/// Optimal approach: Min-Heap (Priority Queue)
 /// Time: O(N log k) where k is the number of linked lists.
 /// - The heap size is at most k.
 /// - Every node is pushed and popped exactly once.
@@ -123,7 +149,7 @@ impl Ord for HeapNode {
 /// - Wrapper struct (`HeapNode`) to bypass the orphan rule or implement custom trait behavior locally.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn merge_k_lists(lists: Vec<Option<Box<ListNode>>>) -> Option<Box<ListNode>> {
+pub fn merge_k_lists_optimal(lists: Vec<Option<Box<ListNode>>>) -> Option<Box<ListNode>> {
     let mut min_heap = BinaryHeap::new();
 
     // Initial population of the heap
@@ -156,16 +182,15 @@ pub fn merge_k_lists(lists: Vec<Option<Box<ListNode>>>) -> Option<Box<ListNode>>
     dummy.next
 }
 
-/// Alternative Approach: Divide and Conquer
-/// Merge lists pairwise recursively.
-/// Time: O(N log k) - same complexity but different constant factors.
-/// Space: O(log k) stack space (recursion depth).
-/// This approach avoids the overhead of a Heap but is recursive.
-///
-/// Alternative Approach: Brute Force
-/// Collect all values into a vector, sort them, and rebuild the list.
-/// Time: O(N log N) - simpler to implement but slower for large k.
-/// Space: O(N) - to store all values.
+/// Main entry point - uses the optimal min-heap solution.
+#[must_use]
+pub fn merge_k_lists(lists: Vec<Option<Box<ListNode>>>) -> Option<Box<ListNode>> {
+    merge_k_lists_optimal(lists)
+}
+
+// Alternative approach (not implemented here): Divide and Conquer.
+// Merge lists pairwise recursively for O(N log k) time and O(log k) stack space.
+// It avoids the heap's overhead but is recursive.
 
 #[cfg(test)]
 mod tests {
@@ -213,5 +238,41 @@ mod tests {
         let lists = vec![l1, l2, l3];
         let merged = merge_k_lists(lists);
         assert_eq!(merged.unwrap().to_vec(), vec![1, 2, 3, 4, 5, 10, 12]);
+    }
+
+    #[test]
+    fn test_brute_force_basic() {
+        let l1 = ListNode::from_vec(vec![1, 4, 5]);
+        let l2 = ListNode::from_vec(vec![1, 3, 4]);
+        let l3 = ListNode::from_vec(vec![2, 6]);
+
+        let merged = merge_k_lists_brute_force(vec![l1, l2, l3]);
+        assert_eq!(merged.unwrap().to_vec(), vec![1, 1, 2, 3, 4, 4, 5, 6]);
+    }
+
+    #[test]
+    fn test_brute_force_edge_cases() {
+        let empty: Vec<Option<Box<ListNode>>> = vec![];
+        assert_eq!(merge_k_lists_brute_force(empty), None);
+
+        let with_gaps = vec![None, None, ListNode::from_vec(vec![1])];
+        assert_eq!(
+            merge_k_lists_brute_force(with_gaps).unwrap().to_vec(),
+            vec![1]
+        );
+    }
+
+    #[test]
+    fn test_both_approaches_agree() {
+        let build = || {
+            vec![
+                ListNode::from_vec(vec![1, 4, 5]),
+                ListNode::from_vec(vec![1, 3, 4]),
+                ListNode::from_vec(vec![2, 6]),
+            ]
+        };
+        let brute = merge_k_lists_brute_force(build());
+        let optimal = merge_k_lists_optimal(build());
+        assert_eq!(brute, optimal);
     }
 }

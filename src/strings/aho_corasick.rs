@@ -17,6 +17,8 @@
 //! Building it from scratch teaches you how to construct deterministic finite automata (DFA),
 //! how failure links act as a fast-forward mechanism to avoid backtracking, and how to safely
 //! manage graph-like structures using arena-based indices (`Vec<State>`) to satisfy Rust's borrow checker.
+//!
+//! Note: single canonical implementation; the brute/optimized/optimal progression does not apply.
 
 use std::collections::{HashMap, VecDeque};
 

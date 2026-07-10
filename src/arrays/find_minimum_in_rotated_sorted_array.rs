@@ -120,10 +120,10 @@ pub fn find_min_optimal(nums: Vec<i32>) -> i32 {
     slice[0]
 }
 
-/// Main entry point - uses optimized solution (as it's often more readable and standard than slice manipulation)
+/// Main entry point - uses optimal solution
 #[must_use]
 pub fn find_min(nums: Vec<i32>) -> i32 {
-    find_min_optimized(nums)
+    find_min_optimal(nums)
 }
 
 // =========================================================================================
@@ -170,6 +170,24 @@ mod tests {
 
         // Two elements, not rotated
         assert_eq!(find_min(vec![1, 2]), 1);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        let cases = vec![
+            vec![3, 4, 5, 1, 2],
+            vec![4, 5, 6, 7, 0, 1, 2],
+            vec![11, 13, 15, 17],
+            vec![1],
+            vec![2, 1],
+            vec![1, 2],
+            vec![5, 1, 2, 3, 4],
+        ];
+        for case in cases {
+            let expected = find_min_brute_force(case.clone());
+            assert_eq!(find_min_optimized(case.clone()), expected);
+            assert_eq!(find_min_optimal(case.clone()), expected);
+        }
     }
 
     #[test]

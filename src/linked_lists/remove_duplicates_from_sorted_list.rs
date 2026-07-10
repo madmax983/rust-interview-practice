@@ -220,4 +220,14 @@ mod tests {
         let result = delete_duplicates(input);
         assert_eq!(result.unwrap().to_vec(), vec![1, 2, 3, 4, 5]);
     }
+
+    #[test]
+    fn test_all_approaches_consistency() {
+        // Both approaches must produce identical output. Rebuild the input for
+        // each impl since they consume/mutate the list.
+        let data = [1, 1, 2, 3, 3, 3, 4, 5, 5];
+        let brute = delete_duplicates_brute_force(list(&data));
+        let optimal = delete_duplicates_optimal(list(&data));
+        assert_eq!(brute, optimal);
+    }
 }

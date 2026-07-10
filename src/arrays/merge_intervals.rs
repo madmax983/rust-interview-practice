@@ -31,7 +31,71 @@
 //! -   `intervals[i].length == 2`
 //! -   `0 <= start_i <= end_i <= 10^4`
 
-/// Approach: Sort and Merge
+/// Brute force approach: Pairwise merge until stable.
+///
+/// Time Complexity: O(N^3) worst case - each full pass scans all O(N^2) pairs, and up to O(N)
+/// passes may be required before no further merges occur.
+/// Space Complexity: O(N) to store the working set of intervals.
+///
+/// We repeatedly scan every pair of intervals, absorbing any interval that overlaps the current
+/// group into it and expanding the group's bounds. We keep sweeping until an entire pass produces
+/// no merges, meaning the set is fully coalesced. This ignores the "sort first" insight entirely,
+/// making it a naive but correct baseline. We sort the final result only to produce the canonical
+/// ascending-by-start ordering.
+#[must_use]
+pub fn merge_brute_force(intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+    if intervals.is_empty() {
+        return vec![];
+    }
+
+    let mut current = intervals;
+
+    loop {
+        let n = current.len();
+        let mut used = vec![false; n];
+        let mut next: Vec<Vec<i32>> = Vec::with_capacity(n);
+        let mut merged_any = false;
+
+        for i in 0..n {
+            if used[i] {
+                continue;
+            }
+
+            let mut start = current[i][0];
+            let mut end = current[i][1];
+            used[i] = true;
+
+            // Absorb every remaining interval that overlaps the (growing) group.
+            for j in (i + 1)..n {
+                if used[j] {
+                    continue;
+                }
+
+                // Inclusive overlap (touching endpoints count as overlapping).
+                if current[j][0] <= end && start <= current[j][1] {
+                    start = start.min(current[j][0]);
+                    end = end.max(current[j][1]);
+                    used[j] = true;
+                    merged_any = true;
+                }
+            }
+
+            next.push(vec![start, end]);
+        }
+
+        current = next;
+
+        if !merged_any {
+            break;
+        }
+    }
+
+    // Canonical ordering: sort the coalesced intervals by start time.
+    current.sort_unstable_by(|a, b| a[0].cmp(&b[0]));
+    current
+}
+
+/// Optimal approach: Sort and Merge
 ///
 /// Time Complexity: O(N log N) dominated by sorting. The linear pass is O(N).
 /// Space Complexity: O(N) to store the result (or O(log N) stack space for sorting if we consider input modification in-place).
@@ -40,8 +104,12 @@
 /// and merge overlapping ones. Since they are sorted, if `current.start <= previous.end`, they overlap.
 ///
 /// We use `sort_unstable_by` because we don't need to preserve the relative order of equal elements (which `sort` guarantees but `sort_unstable` doesn't), and it is generally faster and allocates less memory.
+///
+/// Note: sort-then-merge is the optimal solution for this problem — its cost is bounded below by the
+/// O(N log N) sort. There is no meaningfully distinct "optimized" tier between the naive pairwise
+/// scan and this approach, so only `_brute_force` and `_optimal` are provided.
 #[must_use]
-pub fn merge(mut intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+pub fn merge_optimal(mut intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     if intervals.is_empty() {
         return vec![];
     }
@@ -84,6 +152,12 @@ pub fn merge(mut intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     merged
 }
 
+/// Main entry point - uses optimal solution
+#[must_use]
+pub fn merge(intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+    merge_optimal(intervals)
+}
+
 /// Alternative Approach: Fold
 ///
 /// While `fold` is a powerful iterator adaptor, using it here can be slightly more complex due to the need
@@ -105,48 +179,82 @@ mod tests {
     fn test_merge_basic() {
         let intervals = vec![vec![1, 3], vec![2, 6], vec![8, 10], vec![15, 18]];
         let expected = vec![vec![1, 6], vec![8, 10], vec![15, 18]];
-        assert_eq!(merge(intervals), expected);
+        assert_eq!(merge_brute_force(intervals.clone()), expected);
+        assert_eq!(merge_optimal(intervals), expected);
     }
 
     #[test]
     fn test_merge_overlap() {
         let intervals = vec![vec![1, 4], vec![4, 5]];
         let expected = vec![vec![1, 5]];
-        assert_eq!(merge(intervals), expected);
+        assert_eq!(merge_brute_force(intervals.clone()), expected);
+        assert_eq!(merge_optimal(intervals), expected);
     }
 
     #[test]
     fn test_merge_contained() {
         let intervals = vec![vec![1, 10], vec![2, 5], vec![6, 9]];
         let expected = vec![vec![1, 10]];
-        assert_eq!(merge(intervals), expected);
+        assert_eq!(merge_brute_force(intervals.clone()), expected);
+        assert_eq!(merge_optimal(intervals), expected);
     }
 
     #[test]
     fn test_merge_unsorted() {
         let intervals = vec![vec![2, 6], vec![1, 3], vec![15, 18], vec![8, 10]];
         let expected = vec![vec![1, 6], vec![8, 10], vec![15, 18]];
-        assert_eq!(merge(intervals), expected);
+        assert_eq!(merge_brute_force(intervals.clone()), expected);
+        assert_eq!(merge_optimal(intervals), expected);
     }
 
     #[test]
     fn test_merge_single() {
         let intervals = vec![vec![1, 4]];
         let expected = vec![vec![1, 4]];
-        assert_eq!(merge(intervals), expected);
+        assert_eq!(merge_brute_force(intervals.clone()), expected);
+        assert_eq!(merge_optimal(intervals), expected);
     }
 
     #[test]
     fn test_merge_empty() {
         let intervals: Vec<Vec<i32>> = vec![];
         let expected: Vec<Vec<i32>> = vec![];
-        assert_eq!(merge(intervals), expected);
+        assert_eq!(merge_brute_force(intervals.clone()), expected);
+        assert_eq!(merge_optimal(intervals), expected);
     }
 
     #[test]
     fn test_merge_touching() {
         let intervals = vec![vec![1, 2], vec![2, 3]];
         let expected = vec![vec![1, 3]];
-        assert_eq!(merge(intervals), expected);
+        assert_eq!(merge_brute_force(intervals.clone()), expected);
+        assert_eq!(merge_optimal(intervals), expected);
+    }
+
+    #[test]
+    fn test_main_entry() {
+        let intervals = vec![vec![1, 3], vec![2, 6], vec![8, 10], vec![15, 18]];
+        assert_eq!(
+            merge(intervals),
+            vec![vec![1, 6], vec![8, 10], vec![15, 18]]
+        );
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        let cases = vec![
+            vec![vec![1, 3], vec![2, 6], vec![8, 10], vec![15, 18]],
+            vec![vec![1, 4], vec![4, 5]],
+            vec![vec![1, 10], vec![2, 5], vec![6, 9]],
+            vec![vec![2, 6], vec![1, 3], vec![15, 18], vec![8, 10]],
+            vec![vec![1, 4]],
+            vec![vec![1, 2], vec![2, 3]],
+            vec![vec![5, 6], vec![1, 4], vec![3, 5], vec![10, 12]],
+            vec![vec![1, 4], vec![0, 4]],
+        ];
+        for case in cases {
+            let expected = merge_optimal(case.clone());
+            assert_eq!(merge_brute_force(case), expected);
+        }
     }
 }

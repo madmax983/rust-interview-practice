@@ -272,6 +272,18 @@ mod tests {
             sort_partitions(expected)
         );
     }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement: all three approaches must produce the same
+        // partitions (order-independent) for a non-trivial input.
+        let s = "aabaa";
+        let bf = sort_partitions(partition_brute_force(s.to_string()));
+        let opt = sort_partitions(partition_optimized(s.to_string()));
+        let optimal = sort_partitions(partition_optimal(s.to_string()));
+        assert_eq!(bf, opt);
+        assert_eq!(opt, optimal);
+    }
 }
 
 // Alternative approaches

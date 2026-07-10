@@ -85,15 +85,17 @@ impl FromStr for Token {
     }
 }
 
-/// Functional Approach: Using `try_fold`
+/// Brute force approach: Functional `try_fold`
 ///
-/// This solution treats the evaluation as a folding operation over the tokens.
-/// The state being folded is the stack of numbers.
+/// Technique: this solution treats the evaluation as a folding operation over the tokens, where the
+/// state being folded is the stack of numbers. It is labelled `_brute_force` per the repo's
+/// naming convention as the alternative implementation; its complexity is identical to the optimal
+/// loop, and it additionally returns a `Result` so parsing/underflow errors propagate instead of panicking.
 ///
 /// Time Complexity: O(N)
 /// Space Complexity: O(N)
 #[allow(clippy::needless_pass_by_value)]
-pub fn eval_rpn_functional(tokens: Vec<String>) -> Result<i32, String> {
+pub fn eval_rpn_brute_force(tokens: Vec<String>) -> Result<i32, String> {
     // BOLT OPTIMIZATION: Pre-allocate capacity for the stack.
     // In valid RPN, the maximum number of elements on the stack at any time
     // is (N / 2) + 1, where N is the number of tokens. Pre-allocating this
@@ -126,15 +128,16 @@ pub fn eval_rpn_functional(tokens: Vec<String>) -> Result<i32, String> {
         .ok_or_else(|| "Empty expression".to_string())
 }
 
-/// Iterative Approach: Standard Loop
+/// Optimal approach: Iterative standard loop
 ///
-/// This is often more readable for stack manipulations because `pop()` operations
-/// don't require passing the stack ownership in and out of a closure.
+/// Technique: a standard imperative loop. This is often more readable for stack manipulations because
+/// `pop()` operations don't require passing the stack ownership in and out of a closure. This is the
+/// canonical implementation the main entry point dispatches to.
 ///
 /// Time Complexity: O(N)
 /// Space Complexity: O(N)
 #[allow(clippy::needless_pass_by_value)]
-pub fn eval_rpn_iterative(tokens: Vec<String>) -> i32 {
+pub fn eval_rpn_optimal(tokens: Vec<String>) -> i32 {
     // BOLT OPTIMIZATION: Pre-allocate capacity for the stack.
     // In valid RPN, the maximum number of elements on the stack at any time
     // is (N / 2) + 1, where N is the number of tokens. Pre-allocating this
@@ -160,12 +163,12 @@ pub fn eval_rpn_iterative(tokens: Vec<String>) -> i32 {
     stack.pop().expect("Invalid RPN: Empty result")
 }
 
-/// Main entry point
+/// Main entry point - uses optimal solution
 #[must_use]
 pub fn eval_rpn(tokens: Vec<String>) -> i32 {
     // We default to the iterative solution as it's the standard implementation for this problem,
-    // but the functional one is available for educational comparison.
-    eval_rpn_iterative(tokens)
+    // but the functional one (`eval_rpn_brute_force`) is available for educational comparison.
+    eval_rpn_optimal(tokens)
 }
 
 #[cfg(test)]
@@ -181,7 +184,7 @@ mod tests {
         let tokens = to_string_vec(vec!["2", "1", "+", "3", "*"]);
         // (2 + 1) * 3 = 9
         assert_eq!(eval_rpn(tokens.clone()), 9);
-        assert_eq!(eval_rpn_functional(tokens).unwrap(), 9);
+        assert_eq!(eval_rpn_brute_force(tokens).unwrap(), 9);
     }
 
     #[test]
@@ -189,7 +192,7 @@ mod tests {
         let tokens = to_string_vec(vec!["4", "13", "5", "/", "+"]);
         // 4 + (13 / 5) = 4 + 2 = 6
         assert_eq!(eval_rpn(tokens.clone()), 6);
-        assert_eq!(eval_rpn_functional(tokens).unwrap(), 6);
+        assert_eq!(eval_rpn_brute_force(tokens).unwrap(), 6);
     }
 
     #[test]
@@ -204,7 +207,7 @@ mod tests {
         // = (0 + 17) + 5
         // = 22
         assert_eq!(eval_rpn(tokens.clone()), 22);
-        assert_eq!(eval_rpn_functional(tokens).unwrap(), 22);
+        assert_eq!(eval_rpn_brute_force(tokens).unwrap(), 22);
     }
 
     #[test]
@@ -223,10 +226,32 @@ mod tests {
     fn test_functional_error_handling() {
         // Invalid token
         let tokens = to_string_vec(vec!["2", "foo", "+"]);
-        assert!(eval_rpn_functional(tokens).is_err());
+        assert!(eval_rpn_brute_force(tokens).is_err());
 
         // Stack underflow
         let tokens_underflow = to_string_vec(vec!["1", "+"]);
-        assert!(eval_rpn_functional(tokens_underflow).is_err());
+        assert!(eval_rpn_brute_force(tokens_underflow).is_err());
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        let cases = vec![
+            vec!["42"],
+            vec!["2", "1", "+", "3", "*"],
+            vec!["4", "13", "5", "/", "+"],
+            vec!["3", "-4", "+"],
+            vec![
+                "10", "6", "9", "3", "+", "-11", "*", "/", "*", "17", "+", "5", "+",
+            ],
+        ];
+
+        for case in cases {
+            let tokens = to_string_vec(case);
+            let optimal = eval_rpn_optimal(tokens.clone());
+            let entry = eval_rpn(tokens.clone());
+            let brute = eval_rpn_brute_force(tokens).unwrap();
+            assert_eq!(optimal, brute);
+            assert_eq!(entry, optimal);
+        }
     }
 }

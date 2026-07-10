@@ -219,12 +219,14 @@ pub fn longest_palindrome_optimal(s: String) -> String {
     s[start..start + max_len].to_string()
 }
 
-/// Main entry point - uses the optimized `O(n^2)` approach as it's the most idiomatic
-/// balance of readability, space usage, and speed for standard string sizes.
+/// Main entry point - uses the optimal Manacher's `O(n)` approach.
+///
+/// Note: For interviews the `O(n^2)` Expand Around Center (`longest_palindrome_optimized`)
+/// is usually the expected answer for its readability; Manacher's is the theoretically optimal choice.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn longest_palindrome(s: String) -> String {
-    longest_palindrome_optimized(s)
+    longest_palindrome_optimal(s)
 }
 
 #[cfg(test)]
