@@ -53,6 +53,9 @@ pub struct RingBuffer<T> {
 
 impl<T> RingBuffer<T> {
     /// Creates a new `RingBuffer` with the specified capacity.
+    ///
+    /// # Panics
+    /// Panics if `capacity` is 0.
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");
         let mut buffer = Vec::with_capacity(capacity);
@@ -71,6 +74,9 @@ impl<T> RingBuffer<T> {
 
     /// Pushes an item into the buffer.
     /// Returns `Err(item)` if the buffer is full.
+    ///
+    /// # Errors
+    /// Returns `Err(item)` (handing the item back) if the buffer is full.
     pub fn push(&mut self, item: T) -> Result<(), T> {
         if self.count == self.capacity {
             return Err(item);

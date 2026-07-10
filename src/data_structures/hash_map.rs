@@ -16,6 +16,9 @@
 //! and open addressing (arrays). Robin Hood hashing teaches you how to minimize the variance
 //! of probe lengths, drastically reducing the worst-case lookup time.
 
+// Intentional index/word manipulation and load-factor estimation casts.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+
 use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -232,10 +235,11 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
                 Some(entry) => {
                     if entry.hash == hash && entry.key.borrow() == key {
                         // Found it. Remove it and do backward shifting to fill the gap.
-                        let old_val = self.buckets[idx].take().unwrap().value;
+                        // `take` yields Some because we just matched on Some above.
+                        let old_val = self.buckets[idx].take().map(|e| e.value);
                         self.len -= 1;
                         self.backward_shift(idx);
-                        return Some(old_val);
+                        return old_val;
                     }
                     if dib > entry.dib {
                         return None;

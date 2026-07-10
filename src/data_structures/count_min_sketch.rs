@@ -14,6 +14,9 @@
 //! Understanding Count-Min Sketch demystifies how "Big Data" systems process massive streams with tiny memory.
 //! You learn about the trade-off between space (width * depth) and accuracy (epsilon, delta).
 
+// Intentional index/byte/word manipulation and statistical estimation casts.
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::marker::PhantomData;
@@ -143,7 +146,7 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
         // Use a simple custom hasher for the second hash to ensure independence.
         // FNV-1a style is fine here as secondary mixing.
         // We seed it with h1 to add randomness from RandomState.
-        let mut hasher2 = Fnv1aHasher::new(0xcbf29ce484222325 ^ h1);
+        let mut hasher2 = Fnv1aHasher::new(0xcbf2_9ce4_8422_2325 ^ h1);
         item.hash(&mut hasher2);
         let h2 = hasher2.finish();
 
@@ -168,7 +171,7 @@ impl Hasher for Fnv1aHasher {
     }
 
     fn write(&mut self, bytes: &[u8]) {
-        let prime = 1099511628211;
+        let prime = 1_099_511_628_211;
         for byte in bytes {
             self.state ^= u64::from(*byte);
             self.state = self.state.wrapping_mul(prime);

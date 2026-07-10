@@ -79,7 +79,10 @@ pub struct Consumer<T> {
 
 /// Creates a new SPSC Ring Buffer.
 /// Returns a (Producer, Consumer) pair.
-#[must_use] 
+///
+/// # Panics
+/// Panics if `capacity` is 0.
+#[must_use]
 pub fn channel<T>(capacity: usize) -> (Producer<T>, Consumer<T>) {
     assert!(capacity > 0, "Capacity must be greater than 0");
 
@@ -126,6 +129,9 @@ pub struct Empty;
 impl<T> Producer<T> {
     /// Pushes an item into the queue.
     /// Returns `Err(item)` if the queue is full.
+    ///
+    /// # Errors
+    /// Returns `Err(Full(item))` (handing the item back) if the queue is full.
     pub fn push(&mut self, item: T) -> Result<(), Full<T>> {
         let current_tail = self.local_tail;
         let next_tail = (current_tail + 1) % self.shared.capacity;

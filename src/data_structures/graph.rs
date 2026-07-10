@@ -81,15 +81,13 @@ struct Node<N> {
 /// Internal storage for an edge.
 #[derive(Debug, Clone)]
 struct Edge<E> {
-    /// The node index where this edge originates.
-    source: NodeIndex,
     /// The node index where this edge terminates.
     target: NodeIndex,
     /// The actual data stored in the edge.
     weight: E,
     /// The index of the next edge originating from the same source node.
     /// Acts as the next pointer in the linked list of outgoing edges.
-    next_outgoing_edge: Option<EdgeIndex>,
+    next_outgoing: Option<EdgeIndex>,
 }
 
 /// Core trait defining generic graph operations.
@@ -139,10 +137,9 @@ impl<N, E> DirectedGraph<N, E> for Graph<N, E> {
         let first_outgoing = self.nodes[source.0].first_outgoing_edge;
 
         self.edges.push(Edge {
-            source,
             target,
             weight,
-            next_outgoing_edge: first_outgoing,
+            next_outgoing: first_outgoing,
         });
 
         self.nodes[source.0].first_outgoing_edge = Some(edge_idx);
@@ -224,7 +221,7 @@ impl<'a, N, E> Iterator for Neighbors<'a, N, E> {
                 .edges
                 .get(edge_idx.0)
                 .expect("Corrupted edge index");
-            self.current_edge = edge.next_outgoing_edge;
+            self.current_edge = edge.next_outgoing;
 
             let target_node = self
                 .graph

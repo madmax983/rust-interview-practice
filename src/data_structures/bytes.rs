@@ -114,7 +114,9 @@ impl Bytes {
     }
 
     /// Returns a new `Bytes` that points to a sub-slice of this one.
-    /// Panics if the range is out of bounds.
+    ///
+    /// # Panics
+    /// Panics if the range is out of bounds or `range.start > range.end`.
     #[must_use]
     pub fn slice(&self, range: std::ops::Range<usize>) -> Self {
         assert!(range.end <= self.len, "slice out of bounds");
@@ -134,6 +136,10 @@ impl Bytes {
 
     /// Splits the buffer into two at the given index.
     /// `self` becomes `[0..at]`, and the returned `Bytes` becomes `[at..len]`.
+    ///
+    /// # Panics
+    /// Panics if `at` is greater than the buffer length.
+    #[must_use]
     pub fn split_off(&mut self, at: usize) -> Self {
         assert!(at <= self.len, "split_off out of bounds");
 
@@ -160,6 +166,9 @@ impl Bytes {
     }
 
     /// Advances the start of the buffer by `cnt` bytes.
+    ///
+    /// # Panics
+    /// Panics if `cnt` is greater than the buffer length.
     pub fn advance(&mut self, cnt: usize) {
         assert!(cnt <= self.len, "advance out of bounds");
         // UNSAFE JUSTIFICATION:

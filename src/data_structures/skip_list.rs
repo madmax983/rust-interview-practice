@@ -87,8 +87,15 @@ pub struct SkipList<T> {
 unsafe impl<T: Send> Send for SkipList<T> {}
 unsafe impl<T: Sync> Sync for SkipList<T> {}
 
+impl<T: Ord> Default for SkipList<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: Ord> SkipList<T> {
     /// Creates a new empty `SkipList`.
+    #[must_use]
     pub fn new() -> Self {
         // Create head node with max level
         let head = Box::new(Node::new(None, MAX_LEVEL));
@@ -143,9 +150,7 @@ impl<T: Ord> SkipList<T> {
         // 2. Generate random level
         let new_level = self.random_level();
         if new_level > self.level {
-            for i in (self.level + 1)..=new_level {
-                update[i] = Some(self.head);
-            }
+            update[(self.level + 1)..=new_level].fill(Some(self.head));
             self.level = new_level;
         }
 
@@ -155,14 +160,19 @@ impl<T: Ord> SkipList<T> {
 
         // 4. Update pointers
         unsafe {
+            // Index by level `i`: we splice `new_node` into the parallel
+            // forward-pointer arrays of both the predecessor and the new node.
+            #[allow(clippy::needless_range_loop)]
             for i in 0..=new_level {
-                let mut prev_ptr = update[i].unwrap(); // Safe because we filled update
-                let prev_node = prev_ptr.as_mut();
+                // `update[i]` is always `Some` here (filled during traversal).
+                if let Some(mut prev_ptr) = update[i] {
+                    let prev_node = prev_ptr.as_mut();
 
-                let next_ptr = prev_node.forward[i];
-                // Explicitly dereference and borrow mutably to avoid implicit autoref of raw pointer
-                (&mut (*new_node_ptr.as_ptr()).forward)[i] = next_ptr;
-                prev_node.forward[i] = Some(new_node_ptr);
+                    let next_ptr = prev_node.forward[i];
+                    // Explicitly dereference and borrow mutably to avoid implicit autoref of raw pointer
+                    (&mut (*new_node_ptr.as_ptr()).forward)[i] = next_ptr;
+                    prev_node.forward[i] = Some(new_node_ptr);
+                }
             }
         }
 
@@ -182,7 +192,6 @@ impl<T: Ord> SkipList<T> {
                         match next_val.cmp(val) {
                             Ordering::Less => {
                                 curr = next_ptr;
-                                continue;
                             }
                             Ordering::Equal => return true,
                             Ordering::Greater => break,
@@ -226,8 +235,11 @@ impl<T: Ord> SkipList<T> {
                 {
                     // Found. Remove it.
                     // We must unlink at all levels where it exists.
+                    // Index by level `i` to unlink from each parallel forward array.
+                    #[allow(clippy::needless_range_loop)]
                     for i in 0..=self.level {
-                        let mut prev_ptr = update[i].unwrap();
+                        // `update[i]` is always `Some` here (filled during traversal).
+                        let Some(mut prev_ptr) = update[i] else { break };
                         let prev_node = prev_ptr.as_mut();
 
                         if prev_node.forward[i] != Some(target_ptr) {
@@ -270,6 +282,15 @@ impl<T: Ord> SkipList<T> {
                 _marker: PhantomData,
             }
         }
+    }
+}
+
+impl<'a, T: Ord> IntoIterator for &'a SkipList<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

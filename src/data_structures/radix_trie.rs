@@ -174,8 +174,7 @@ impl<V> RadixTrie<V> {
         let mut current = &self.root;
         let mut remaining_key = key;
 
-        while !remaining_key.is_empty() {
-            let first_char = remaining_key.chars().next().unwrap();
+        while let Some(first_char) = remaining_key.chars().next() {
             if let Some(child) = current.children.get(&first_char) {
                 if remaining_key.starts_with(&child.prefix) {
                     remaining_key = &remaining_key[child.prefix.len()..];

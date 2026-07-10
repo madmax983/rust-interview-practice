@@ -33,7 +33,7 @@
 //!     -   Update: $M[j] = \max(M[j], \text{Rank})$.
 //! 4.  **`Count()`**:
 //!     -   Compute the harmonic mean of $2^{M[j]}$.
-//!     -   Apply bias correction $\`alpha_m`$.
+//!     -   Apply bias correction (`alpha_m`).
 //!     -   Apply "Linear Counting" for small ranges (many empty registers).
 //!
 //! **Complexity:**
@@ -60,6 +60,13 @@
 //! *   **Hash Collisions**: With 64-bit hashes, collisions are negligible for cardinalities $< 2^{60}$.
 //! *   **Register Size**: $2^p$ grows exponentially. $p=16$ needs 64KB (if u8). $p=4$ needs 16 bytes.
 
+// Intentional index/byte/word manipulation and statistical estimation casts.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss
+)]
+
 use std::hash::{Hash, Hasher};
 
 /// A simple FNV-1a (64-bit) Hasher for stability.
@@ -70,7 +77,7 @@ struct Fnv1aHasher {
 impl Fnv1aHasher {
     const fn new() -> Self {
         Self {
-            state: 0xcbf29ce484222325,
+            state: 0xcbf2_9ce4_8422_2325,
         }
     }
 }
@@ -79,7 +86,7 @@ impl Hasher for Fnv1aHasher {
     fn write(&mut self, bytes: &[u8]) {
         for &byte in bytes {
             self.state ^= u64::from(byte);
-            self.state = self.state.wrapping_mul(0x100000001b3);
+            self.state = self.state.wrapping_mul(0x0100_0000_01b3);
         }
     }
 
@@ -87,9 +94,9 @@ impl Hasher for Fnv1aHasher {
         let mut x = self.state;
         // MurmurHash3 64-bit finalizer to improve avalanche
         x ^= x >> 33;
-        x = x.wrapping_mul(0xff51afd7ed558ccd);
+        x = x.wrapping_mul(0xff51_afd7_ed55_8ccd);
         x ^= x >> 33;
-        x = x.wrapping_mul(0xc4ceb9fe1a85ec53);
+        x = x.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
         x ^= x >> 33;
         x
     }

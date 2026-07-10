@@ -13,6 +13,9 @@
 //! You'll learn about "cuckoo hashing" (using multiple hash functions and relocating items on collision),
 //! fingerprinting, and how to manage partial-key collisions. It's a great example of trading computation (relocation) for space.
 
+// Intentional index/byte/word manipulation casts.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
@@ -29,8 +32,8 @@ pub struct FnvHasher {
 }
 
 impl FnvHasher {
-    const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
-    const PRIME: u64 = 0x100000001b3;
+    const OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
+    const PRIME: u64 = 0x0100_0000_01b3;
 
     #[must_use] 
     pub const fn new() -> Self {

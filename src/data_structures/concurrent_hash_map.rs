@@ -14,6 +14,9 @@
 //! Building a sharded concurrent map teaches you how to reduce lock contention by partitioning data.
 //! You'll learn how to pre-hash keys, route them to specific shards, and understand the trade-offs of returning owned values versus lock guards.
 
+// Intentional index/word manipulation casts.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -84,6 +87,9 @@ pub struct ConcurrentHashMap<K, V> {
 impl<K: Hash + Eq, V> ConcurrentHashMap<K, V> {
     /// Creates a new `ConcurrentHashMap` with the specified number of shards.
     /// A power of 2 is recommended.
+    ///
+    /// # Panics
+    /// Panics if `num_shards` is 0.
     #[must_use]
     pub fn new(num_shards: usize) -> Self {
         assert!(num_shards > 0, "Number of shards must be greater than 0");

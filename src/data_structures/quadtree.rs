@@ -143,24 +143,15 @@ impl Quadtree {
             self.subdivide();
         }
 
-        // Push to children
-        // We use if-else chain because a point on the boundary might belong to multiple?
-        // Standard convention: belong to the first one that accepts it (usually consistent boundary rules).
+        // Push to children.
+        // A point on a boundary belongs to the first child that accepts it.
         // Since children cover the space completely, at least one will accept.
-
-        let children = self.children.as_mut().unwrap();
-
-        if children[0].insert(p) {
-            return true;
-        }
-        if children[1].insert(p) {
-            return true;
-        }
-        if children[2].insert(p) {
-            return true;
-        }
-        if children[3].insert(p) {
-            return true;
+        if let Some(children) = self.children.as_mut() {
+            for child in children.iter_mut() {
+                if child.insert(p) {
+                    return true;
+                }
+            }
         }
 
         // Should be unreachable if boundary check passed and subdivide works
@@ -184,18 +175,12 @@ impl Quadtree {
         // Redistribution: Move existing points to children
         // RUST INSIGHT: We need to drain points from self.points to avoid cloning.
         while let Some(p) = self.points.pop() {
-            let children = self.children.as_mut().unwrap();
-            if children[0].insert(p) {
-                continue;
-            }
-            if children[1].insert(p) {
-                continue;
-            }
-            if children[2].insert(p) {
-                continue;
-            }
-            if children[3].insert(p) {
-                continue;
+            if let Some(children) = self.children.as_mut() {
+                for child in children.iter_mut() {
+                    if child.insert(p) {
+                        break;
+                    }
+                }
             }
         }
     }

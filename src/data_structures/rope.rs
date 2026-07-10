@@ -127,17 +127,21 @@ impl Node {
                 left,
                 right,
             } => {
-                if index < weight {
-                    // Split point is in the left child.
-                    let (l_left, l_right) = left.split(index);
-                    (l_left, Self::concat(l_right, *right))
-                } else if index > weight {
-                    // Split point is in the right child.
-                    let (r_left, r_right) = right.split(index - weight);
-                    (Self::concat(*left, r_left), r_right)
-                } else {
-                    // Split point is exactly between left and right children.
-                    (*left, *right)
+                match index.cmp(&weight) {
+                    cmp::Ordering::Less => {
+                        // Split point is in the left child.
+                        let (l_left, l_right) = left.split(index);
+                        (l_left, Self::concat(l_right, *right))
+                    }
+                    cmp::Ordering::Greater => {
+                        // Split point is in the right child.
+                        let (r_left, r_right) = right.split(index - weight);
+                        (Self::concat(*left, r_left), r_right)
+                    }
+                    cmp::Ordering::Equal => {
+                        // Split point is exactly between left and right children.
+                        (*left, *right)
+                    }
                 }
             }
         }
@@ -171,6 +175,9 @@ impl Rope {
     }
 
     /// Creates a Rope from a given string.
+    // Infallible constructor kept as an inherent `&str -> Self` method for ergonomics;
+    // the fallible `FromStr` trait signature would not fit this use.
+    #[allow(clippy::should_implement_trait)]
     #[must_use]
     pub fn from_str(s: &str) -> Self {
         if s.len() <= LEAF_MAX {
@@ -209,6 +216,9 @@ impl Rope {
     }
 
     /// Inserts a string at the given byte index.
+    ///
+    /// # Panics
+    /// Panics if `index` is greater than the rope's byte length.
     pub fn insert(&mut self, index: usize, text: &str) {
         assert!(index <= self.len(), "Index out of bounds");
 
@@ -232,6 +242,9 @@ impl Rope {
     }
 
     /// Deletes a range of bytes from the rope.
+    ///
+    /// # Panics
+    /// Panics if `start > end` or if `end` is greater than the rope's byte length.
     pub fn delete(&mut self, start: usize, end: usize) {
         assert!(start <= end, "Start index must be <= end index");
         assert!(end <= self.len(), "End index out of bounds");
@@ -249,13 +262,15 @@ impl Rope {
         self.root = Node::concat(left, right);
     }
 
+}
+
+impl std::fmt::Display for Rope {
     /// Collects the rope into a single contiguous `String`.
-    #[must_use]
-    pub fn to_string(&self) -> String {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Pre-allocate the entire capacity to avoid reallocations.
         let mut buffer = String::with_capacity(self.len());
         self.root.collect_into(&mut buffer);
-        buffer
+        f.write_str(&buffer)
     }
 }
 

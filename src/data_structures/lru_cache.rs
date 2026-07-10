@@ -39,6 +39,9 @@
 //! - `0 <= value <= 10^5`
 //! - At most `2 * 10^5` calls will be made to `get` and `put`.
 
+// LeetCode signatures pass capacity as a non-negative `i32`; casting to `usize` is intentional.
+#![allow(clippy::cast_sign_loss)]
+
 use std::collections::HashMap;
 
 // ============================================================================
@@ -78,9 +81,10 @@ impl LRUCacheNaive {
         if let Some(&val) = self.map.get(&key) {
             // RUST INSIGHT: `position` takes a closure to find the index. We must borrow `key`.
             // After finding the index, we remove it and push it to the back to mark as most recent.
-            let idx = self.order.iter().position(|&k| k == key).unwrap();
-            self.order.remove(idx);
-            self.order.push(key);
+            if let Some(idx) = self.order.iter().position(|&k| k == key) {
+                self.order.remove(idx);
+                self.order.push(key);
+            }
             val
         } else {
             -1
@@ -91,9 +95,9 @@ impl LRUCacheNaive {
         if self.map.contains_key(&key) {
             // Update existing value and mark as most recent
             self.map.insert(key, value);
-            let idx = self.order.iter().position(|&k| k == key).unwrap();
-            self.order.remove(idx);
-            self.order.push(key);
+            if let Some(idx) = self.order.iter().position(|&k| k == key) {
+                self.order.remove(idx);
+            }
         } else {
             // If at capacity, evict the least recently used (front of Vec)
             if self.map.len() == self.capacity {
@@ -102,8 +106,9 @@ impl LRUCacheNaive {
             }
             // Insert new key-value pair
             self.map.insert(key, value);
-            self.order.push(key);
         }
+        // Mark the key as most recently used.
+        self.order.push(key);
     }
 }
 

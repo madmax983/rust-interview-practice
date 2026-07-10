@@ -237,7 +237,7 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
     }
 
     fn find_all_overlapping_recursive<'a>(
-        node: &'a Box<Node<T, V>>,
+        node: &'a Node<T, V>,
         query: &Interval<T>,
         results: &mut Vec<(&'a Interval<T>, &'a V)>,
     ) {

@@ -66,15 +66,15 @@ struct Node<K, V> {
     // We use `Vec<Box<Node<K, V>>>` for children. A real production B-Tree (like standard library `BTreeMap`)
     // often uses raw pointers and allocates nodes manually or via an arena to guarantee nodes are stored
     // contiguously or strictly manage lifetimes without the overhead of `Box`.
-    children: Vec<Box<Self>>,
+    children: Vec<Self>,
 }
 
 impl<K: Ord + Clone, V: Clone> Node<K, V> {
-    const fn new(is_leaf: bool) -> Self {
+    const fn new() -> Self {
         Self {
             keys: Vec::new(),
             vals: Vec::new(),
-            children: if is_leaf { Vec::new() } else { Vec::new() },
+            children: Vec::new(),
         }
     }
 
@@ -86,8 +86,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
 
     fn delete_key(&mut self, t: usize, key: &K) -> Option<V> {
         let idx = match self.keys.binary_search(key) {
-            Ok(i) => i,
-            Err(i) => i,
+            Ok(i) | Err(i) => i,
         };
 
         if idx < self.keys.len() && &self.keys[idx] == key {
@@ -95,7 +94,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
                 self.keys.remove(idx);
                 Some(self.vals.remove(idx))
             } else {
-                self.remove_from_non_leaf(t, idx)
+                Some(self.remove_from_non_leaf(t, idx))
             }
         } else {
             // GOTCHA:
@@ -126,7 +125,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         }
     }
 
-    fn remove_from_non_leaf(&mut self, t: usize, idx: usize) -> Option<V> {
+    fn remove_from_non_leaf(&mut self, t: usize, idx: usize) -> V {
         // Key k is present in this node at index idx.
 
         // 1. If child that precedes k (children[idx]) has at least t keys...
@@ -138,7 +137,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
 
             // Recursively delete pred from the child
             self.children[idx].delete_key(t, &pred_key);
-            return Some(old_val);
+            return old_val;
         }
 
         // 2. If child that succeeds k (children[idx+1]) has at least t keys...
@@ -148,7 +147,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
             let old_val = std::mem::replace(&mut self.vals[idx], succ_val);
 
             self.children[idx + 1].delete_key(t, &succ_key);
-            return Some(old_val);
+            return old_val;
         }
 
         // 3. Both have t-1 keys. Merge k and children[idx+1] into children[idx].
@@ -156,7 +155,7 @@ impl<K: Ord + Clone, V: Clone> Node<K, V> {
         let key = self.keys[idx].clone(); // Need key for recursive delete call
         self.merge(t, idx);
         self.children[idx].delete_key(t, &key);
-        Some(old_val)
+        old_val
     }
 
     fn get_pred(&self, idx: usize) -> (K, V) {
@@ -285,11 +284,14 @@ pub struct BTree<K, V> {
 impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
     /// Creates a new B-Tree with minimum degree `t`.
     /// `t` must be >= 2.
-    #[must_use] 
+    ///
+    /// # Panics
+    /// Panics if `t < 2`.
+    #[must_use]
     pub fn new(t: usize) -> Self {
         assert!(t >= 2, "Degree must be at least 2");
         Self {
-            root: Box::new(Node::new(true)),
+            root: Box::new(Node::new()),
             t,
             len: 0,
         }
@@ -309,10 +311,10 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
 
     /// Searches for a key in the B-Tree.
     pub fn get(&self, key: &K) -> Option<&V> {
-        self.search_node(&self.root, key)
+        Self::search_node(&self.root, key)
     }
 
-    fn search_node<'a>(&'a self, node: &'a Node<K, V>, key: &K) -> Option<&'a V> {
+    fn search_node<'a>(node: &'a Node<K, V>, key: &K) -> Option<&'a V> {
         let mut i = 0;
         // Find the first key greater than or equal to k
         while i < node.keys.len() && key > &node.keys[i] {
@@ -330,7 +332,7 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
         }
 
         // Recurse to the appropriate child
-        self.search_node(&node.children[i], key)
+        Self::search_node(&node.children[i], key)
     }
 
     /// Inserts a key-value pair into the B-Tree.
@@ -338,10 +340,10 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
     pub fn insert(&mut self, key: K, val: V) -> Option<V> {
         let t = self.t;
         if Self::is_full(t, &self.root) {
-            let new_root = Box::new(Node::new(false));
+            let new_root = Box::new(Node::new());
             // Move old root to be a child of new root
             let old_root = mem::replace(&mut self.root, new_root);
-            self.root.children.push(old_root);
+            self.root.children.push(*old_root);
 
             // Split the old root (now child 0)
             Self::split_child(t, &mut self.root, 0);
@@ -355,13 +357,15 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
 
     /// Deletes a key from the B-Tree.
     /// Returns the value if the key existed.
+    // Public API takes an owned key for symmetry with `insert`; only borrowed internally.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn delete(&mut self, key: K) -> Option<V> {
         let result = self.root.delete_key(self.t, &key);
 
         // If root has 0 keys (and is not a leaf), make its first child the new root.
         if self.root.keys.is_empty() && !self.root.is_leaf() {
             let child = self.root.children.remove(0);
-            self.root = child;
+            *self.root = child;
         }
         // If leaf and empty, the tree is now empty but we keep the empty root node (as per `new`).
 
@@ -377,7 +381,7 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
 
     fn split_child(t: usize, parent: &mut Node<K, V>, i: usize) {
         let mut child = parent.children.remove(i);
-        let mut new_child = Box::new(Node::new(child.is_leaf()));
+        let mut new_child = Node::new();
 
         let split_idx = t - 1;
         let median_key = child.keys.remove(split_idx);

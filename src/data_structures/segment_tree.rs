@@ -112,6 +112,9 @@ where
     /// Updates the value at the given index `idx` to `val`.
     ///
     /// Time Complexity: O(log n)
+    ///
+    /// # Panics
+    /// Panics if `idx` is out of bounds (`idx >= n`).
     pub fn update(&mut self, mut idx: usize, val: T) {
         assert!(idx < self.n, "Index out of bounds");
 
@@ -138,6 +141,9 @@ where
     /// * `r` - Exclusive upper bound.
     ///
     /// Time Complexity: O(log n)
+    ///
+    /// # Panics
+    /// Panics if the range is invalid (`l >= n`, `r > n`, or `l > r`) and non-empty.
     pub fn query(&self, mut l: usize, mut r: usize) -> T {
         if l >= self.n || r > self.n || l > r {
             // Alternatively, return identity. But bounds checks are usually strict in Rust.
