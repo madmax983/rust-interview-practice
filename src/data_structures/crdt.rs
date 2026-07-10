@@ -116,7 +116,7 @@ pub struct OrSet<T> {
 }
 
 impl<T: Clone + Eq + Hash> OrSet<T> {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             adds: HashMap::new(),

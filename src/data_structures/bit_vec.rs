@@ -137,7 +137,7 @@ impl BitSet for BitVec {
 
 impl BitVec {
     /// Creates a new, empty bit vector.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             words: Vec::new(),
@@ -146,7 +146,7 @@ impl BitVec {
     }
 
     /// Creates a bit vector with at least the specified capacity (in bits).
-    #[must_use] 
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         let words_capacity = capacity.div_ceil(BITS_PER_WORD);
         Self {

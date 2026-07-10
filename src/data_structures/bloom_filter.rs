@@ -71,7 +71,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     /// # Arguments
     /// * `expected_items` - The number of items you expect to insert (n).
     /// * `false_positive_rate` - The desired false positive rate (p) (e.g., 0.01 for 1%).
-    #[must_use] 
+    #[must_use]
     pub fn new(expected_items: usize, false_positive_rate: f64) -> Self {
         // RUST INSIGHT:
         // Optimal m = -(n * ln(p)) / (ln(2)^2)

@@ -109,10 +109,7 @@ pub trait Parser<'a, Output> {
         Output: 'a,
         P: Parser<'a, Output> + 'a,
     {
-        BoxedParser::new(move |input| {
-            self.parse(input)
-                .map_or_else(|_| other.parse(input), Ok)
-        })
+        BoxedParser::new(move |input| self.parse(input).map_or_else(|_| other.parse(input), Ok))
     }
 }
 

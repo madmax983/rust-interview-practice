@@ -89,7 +89,7 @@ impl PartialOrd for HeapItem {
 
 impl Twitter {
     /// Creates a new, empty Twitter instance.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             tweets: HashMap::new(),
@@ -110,7 +110,7 @@ impl Twitter {
     /// Retrieve the 10 most recent tweet IDs in the user's news feed.
     /// Each item must be posted by users who the user followed or by the user themselves.
     /// Tweets must be ordered from most recent to least recent.
-    #[must_use] 
+    #[must_use]
     pub fn get_news_feed(&self, user_id: UserId) -> Vec<TweetId> {
         // 1. Identify sources: The user themselves + their followees
         // RUST INSIGHT: We can use `std::iter::once` chained with the followees iterator

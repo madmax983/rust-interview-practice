@@ -91,7 +91,7 @@ fn demonstrate_allocation_optimization() {
     let mut buffer = Vec::with_capacity(1024);
     for _ in 0..10 {
         buffer.clear(); // Doesn't deallocate
-                        // Fill buffer with new data
+        // Fill buffer with new data
         buffer.extend(0..100);
     }
 

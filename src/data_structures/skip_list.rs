@@ -111,13 +111,13 @@ impl<T: Ord> SkipList<T> {
     }
 
     /// Returns the number of elements in the list.
-    #[must_use] 
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.length
     }
 
     /// Returns true if the list is empty.
-    #[must_use] 
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.length == 0
     }
@@ -274,7 +274,7 @@ impl<T: Ord> SkipList<T> {
     }
 
     /// Returns an iterator over the values.
-    #[must_use] 
+    #[must_use]
     pub fn iter(&self) -> Iter<'_, T> {
         unsafe {
             Iter {

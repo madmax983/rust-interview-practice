@@ -68,7 +68,7 @@ impl HashedWheelTimer {
     /// # Arguments
     /// * `tick_duration` - The resolution of the timer.
     /// * `wheel_size` - Number of buckets. Must be power of 2 for efficiency (though we use % here).
-    #[must_use] 
+    #[must_use]
     pub fn new(tick_duration: Duration, wheel_size: usize) -> Self {
         // Guard degenerate configuration. A zero tick_duration would cause a
         // divide-by-zero in schedule() (and an infinite loop in tick()); a

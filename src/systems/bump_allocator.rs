@@ -57,7 +57,7 @@ impl BumpArena {
     ///
     /// # Panics
     /// Panics if allocation fails or capacity is 0.
-    #[must_use] 
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be positive");
         let layout = Layout::from_size_align(capacity, 1).expect("Invalid layout");
@@ -103,7 +103,10 @@ impl BumpArena {
 
             // Check capacity
             // Note: We cast to usize for comparison only.
-            assert!(alloc_end_addr <= self.end.as_ptr() as usize, "BumpArena out of memory");
+            assert!(
+                alloc_end_addr <= self.end.as_ptr() as usize,
+                "BumpArena out of memory"
+            );
 
             // SAFETY / PROVENANCE: Derive the result pointer from `current_ptr` (which carries
             // valid provenance for the arena allocation) by offsetting it, rather than casting

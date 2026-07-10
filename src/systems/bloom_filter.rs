@@ -96,7 +96,7 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
     /// Creates a Bloom filter with a specific number of bits (`m`) and hash functions (`k`).
     ///
     /// Note: It is usually easier to use `with_rate` to calculate these optimally.
-    #[must_use] 
+    #[must_use]
     pub fn new(m: usize, k: u32) -> Self {
         // Clamp `m` to at least 1 bit. A zero-sized filter would make the
         // `h % self.m` mapping in `insert`/`contains` a divide-by-zero panic.

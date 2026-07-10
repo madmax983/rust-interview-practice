@@ -177,7 +177,7 @@ fn bfs(grid: &mut [Vec<char>], start_r: usize, start_c: usize) {
 /// Time: O(M * N)
 /// Space: O(M * N) - explicit copy of grid plus recursion stack.
 #[allow(clippy::ptr_arg)] // Taking ownership or &Vec is a design choice here
-#[must_use] 
+#[must_use]
 pub fn num_islands_brute_force(grid: &Vec<Vec<char>>) -> i32 {
     // Clone the grid so we can mutate the copy
     let mut working_grid = grid.clone();

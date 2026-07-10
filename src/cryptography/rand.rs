@@ -97,7 +97,7 @@ impl Prng {
     /// Creates a new PRNG seeded with the given 64-bit seed.
     ///
     /// Uses `SplitMix64` to initialize the 128-bit state.
-    #[must_use] 
+    #[must_use]
     pub const fn new(seed: u64) -> Self {
         let mut sm64 = SplitMix64 { state: seed };
         let s0 = sm64.next();

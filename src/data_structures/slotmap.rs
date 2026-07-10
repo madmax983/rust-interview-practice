@@ -63,11 +63,11 @@ pub struct Key {
 
 impl Key {
     // Expose index and generation for potential external use or debugging, though typically opaque.
-    #[must_use] 
+    #[must_use]
     pub const fn index(&self) -> usize {
         self.index
     }
-    #[must_use] 
+    #[must_use]
     pub const fn generation(&self) -> u32 {
         self.generation
     }

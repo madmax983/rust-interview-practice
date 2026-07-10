@@ -72,7 +72,8 @@ pub fn longest_consecutive_brute_force(mut nums: Vec<i32>) -> i32 {
 ///       The inner loop runs at most `n` times total across all iterations.
 /// Space: O(n) - The `HashSet` stores at most `n` unique elements.
 #[must_use]
-#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::needless_pass_by_value)]
+// LeetCode signature
 // `take_while` bounds the open-ended `(num..)` range, so iteration is finite.
 #[allow(clippy::maybe_infinite_iter)]
 pub fn longest_consecutive_optimal(nums: Vec<i32>) -> i32 {

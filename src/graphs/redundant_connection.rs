@@ -87,10 +87,9 @@ fn dfs(adj: &[Vec<usize>], source: usize, target: usize, visited: &mut [bool]) -
     visited[source] = true;
 
     for &neighbor in &adj[source] {
-        if !visited[neighbor]
-            && dfs(adj, neighbor, target, visited) {
-                return true;
-            }
+        if !visited[neighbor] && dfs(adj, neighbor, target, visited) {
+            return true;
+        }
     }
     false
 }

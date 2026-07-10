@@ -35,7 +35,7 @@ impl FnvHasher {
     const OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
     const PRIME: u64 = 0x0100_0000_01b3;
 
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             state: Self::OFFSET_BASIS,
@@ -177,7 +177,7 @@ pub struct CuckooFilter<T: ?Sized> {
 impl<T: ?Sized + Hash> CuckooFilter<T> {
     /// Creates a new Cuckoo Filter with capacity for at least `capacity` items.
     /// Actual capacity will be rounded up to the next power of 2 of buckets.
-    #[must_use] 
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         // Target 95% load factor roughly.
         // capacity / 4 = num_buckets needed (since 4 slots per bucket).
@@ -197,12 +197,12 @@ impl<T: ?Sized + Hash> CuckooFilter<T> {
     }
 
     /// Returns the number of items currently in the filter.
-    #[must_use] 
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.len
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }

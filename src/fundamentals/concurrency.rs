@@ -534,15 +534,17 @@ fn pattern_worker_pool() {
     for id in 0..num_workers {
         let job_rx = Arc::clone(&job_rx);
 
-        let handle = thread::spawn(move || loop {
-            let job = job_rx.lock().unwrap().recv();
-            if let Ok(job_id) = job {
-                println!("Worker {id} processing job {job_id}");
-                thread::sleep(Duration::from_millis(100));
-                println!("Worker {id} finished job {job_id}");
-            } else {
-                println!("Worker {id} shutting down");
-                break;
+        let handle = thread::spawn(move || {
+            loop {
+                let job = job_rx.lock().unwrap().recv();
+                if let Ok(job_id) = job {
+                    println!("Worker {id} processing job {job_id}");
+                    thread::sleep(Duration::from_millis(100));
+                    println!("Worker {id} finished job {job_id}");
+                } else {
+                    println!("Worker {id} shutting down");
+                    break;
+                }
             }
         });
         workers.push(handle);

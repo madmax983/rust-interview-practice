@@ -129,7 +129,7 @@ impl Router {
 
     /// Matches a request method and path to a registered handler.
     /// Returns the handler and extracted path parameters.
-    #[must_use] 
+    #[must_use]
     pub fn match_route(
         &self,
         method: &str,

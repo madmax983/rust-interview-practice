@@ -86,7 +86,10 @@ pub fn word_ladder_brute_force(
 /// O(1) in-place byte manipulation, drastically reducing heap allocations per character mutation.
 #[must_use]
 pub fn word_ladder_optimized(begin_word: String, end_word: String, word_list: Vec<String>) -> i32 {
-    let mut word_set: HashSet<Vec<u8>> = word_list.into_iter().map(std::string::String::into_bytes).collect();
+    let mut word_set: HashSet<Vec<u8>> = word_list
+        .into_iter()
+        .map(std::string::String::into_bytes)
+        .collect();
     let end_word_bytes = end_word.into_bytes();
 
     if !word_set.contains(&end_word_bytes) {
@@ -143,7 +146,10 @@ pub fn word_ladder_optimized(begin_word: String, end_word: String, word_list: Ve
 /// search perimeters ever intersect, we've found the shortest path.
 #[must_use]
 pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<String>) -> i32 {
-    let mut word_set: HashSet<Vec<u8>> = word_list.into_iter().map(std::string::String::into_bytes).collect();
+    let mut word_set: HashSet<Vec<u8>> = word_list
+        .into_iter()
+        .map(std::string::String::into_bytes)
+        .collect();
     let end_word_bytes = end_word.into_bytes();
 
     if !word_set.contains(&end_word_bytes) {

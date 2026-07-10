@@ -573,7 +573,7 @@ mod tests {
     #[test]
     fn test_set_bits_in_range() {
         assert_eq!(set_bits_in_range(0b1101_1010, 2, 5, 0b101), 0b1101_0110); // 214
-                                                                              // Setting a range and reading it back yields the written value.
+        // Setting a range and reading it back yields the written value.
         let modified = set_bits_in_range(0, 4, 8, 0b1010);
         assert_eq!(get_bits_in_range(modified, 4, 8), 0b1010);
     }

@@ -107,7 +107,7 @@ pub struct MvccStore<K, V> {
 
 impl<K: std::cmp::Eq + std::hash::Hash + Clone, V: Clone> MvccStore<K, V> {
     /// Creates a new, empty MVCC store.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             next_tx_id: Mutex::new(1), // tx_id 0 is reserved for "no transaction" or system init

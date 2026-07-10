@@ -298,13 +298,13 @@ impl<K: Ord + Clone + Debug, V: Clone + Debug> BTree<K, V> {
     }
 
     /// Returns the number of elements in the B-Tree.
-    #[must_use] 
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the B-Tree is empty.
-    #[must_use] 
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }

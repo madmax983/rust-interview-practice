@@ -242,7 +242,7 @@ impl Default for RpcServer {
 }
 
 impl RpcServer {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             handlers: Arc::new(RwLock::new(HashMap::new())),

@@ -86,7 +86,7 @@ pub struct Claims {
 }
 
 impl Claims {
-    #[must_use] 
+    #[must_use]
     pub const fn new(sub: String, exp: Option<u64>, iat: Option<u64>) -> Self {
         Self { sub, exp, iat }
     }
@@ -235,7 +235,7 @@ pub struct Hs256Jwt {
 }
 
 impl Hs256Jwt {
-    #[must_use] 
+    #[must_use]
     pub fn new(secret: &[u8]) -> Self {
         Self {
             secret: secret.to_vec(),

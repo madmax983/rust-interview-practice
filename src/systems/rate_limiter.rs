@@ -51,7 +51,7 @@ impl RateLimiter {
     /// # Arguments
     /// * `capacity` - Maximum number of tokens the bucket can hold (burst size).
     /// * `refill_rate` - Number of tokens added per second.
-    #[must_use] 
+    #[must_use]
     pub fn new(capacity: f64, refill_rate: f64) -> Self {
         Self {
             state: Mutex::new(BucketState {
@@ -122,7 +122,7 @@ pub struct SlidingWindowRateLimiter {
 }
 
 impl SlidingWindowRateLimiter {
-    #[must_use] 
+    #[must_use]
     pub const fn new(window: Duration, limit: usize) -> Self {
         Self {
             log: Mutex::new(VecDeque::new()),
@@ -195,7 +195,7 @@ impl Default for MemoryStore {
 }
 
 impl MemoryStore {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             logs: Mutex::new(HashMap::new()),
@@ -245,7 +245,7 @@ impl<S: RateLimitStore> DistributedRateLimiter<S> {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn try_acquire(&self, key: &str, window: Duration, limit: usize) -> bool {
         match self.store.check_and_update(key, window, limit) {
             Ok(allowed) => allowed,

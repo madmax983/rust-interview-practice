@@ -112,11 +112,7 @@ pub fn match_result_example(res: Result<i32, String>) -> i32 {
 /// Pattern: if let for Option
 #[must_use]
 pub const fn if_let_option_example(opt: Option<i32>) -> i32 {
-    if let Some(x) = opt {
-        x * 2
-    } else {
-        0
-    }
+    if let Some(x) = opt { x * 2 } else { 0 }
 }
 
 /// Pattern: while let for iterating until empty
@@ -137,7 +133,7 @@ pub fn collect_results(values: Vec<i32>) -> Result<Vec<i32>, String> {
         .iter()
         .map(|&x| check_positive(x)) // Each returns Result<i32, String>
         .collect::<Result<Vec<_>, _>>() // Collects into Result<Vec<...>, ...>
-                                        // If any Result is Err, entire collection fails
+    // If any Result is Err, entire collection fails
 }
 
 /// Pattern: transpose Option<Result> to Result<Option>

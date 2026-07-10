@@ -392,9 +392,9 @@ fn decode_header(buf: &[u8; HEADER_SIZE]) -> EntryHeader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use std::env;
     use std::fs;
+    use std::path::PathBuf;
 
     // Helper to create a temp dir without external crates
     fn temp_dir() -> PathBuf {

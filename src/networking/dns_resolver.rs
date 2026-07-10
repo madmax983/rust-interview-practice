@@ -151,7 +151,7 @@ pub struct DnsPacket {
 }
 
 impl BytePacketBuffer {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             buf: [0; MAX_PACKET_SIZE],
@@ -160,7 +160,7 @@ impl BytePacketBuffer {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn pos(&self) -> usize {
         self.pos
     }
@@ -361,7 +361,7 @@ impl Default for BytePacketBuffer {
 }
 
 impl ResultCode {
-    #[must_use] 
+    #[must_use]
     pub const fn from_num(num: u8) -> Self {
         match num {
             1 => Self::FORMERR,
@@ -375,7 +375,7 @@ impl ResultCode {
 }
 
 impl DnsHeader {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             id: 0,
@@ -483,7 +483,7 @@ impl Default for DnsHeader {
 }
 
 impl QueryType {
-    #[must_use] 
+    #[must_use]
     pub const fn to_num(&self) -> u16 {
         match *self {
             Self::UNKNOWN(x) => x,
@@ -491,7 +491,7 @@ impl QueryType {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn from_num(num: u16) -> Self {
         match num {
             1 => Self::A,
@@ -501,7 +501,7 @@ impl QueryType {
 }
 
 impl DnsQuestion {
-    #[must_use] 
+    #[must_use]
     pub const fn new(name: String, qtype: QueryType) -> Self {
         Self { name, qtype }
     }
@@ -662,7 +662,7 @@ impl DnsRecord {
 }
 
 impl DnsPacket {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             header: DnsHeader::new(),
@@ -751,7 +751,7 @@ pub struct DnsResolver {
 
 impl DnsResolver {
     /// Creates a new DNS Resolver pointing to the specified server (e.g., ("8.8.8.8", 53)).
-    #[must_use] 
+    #[must_use]
     pub fn new(server_ip: &str, server_port: u16) -> Self {
         Self {
             server: (server_ip.to_string(), server_port),
@@ -789,7 +789,9 @@ impl DnsResolver {
 
         // 3. Serialize query
         let mut req_buffer = BytePacketBuffer::new();
-        packet.write(&mut req_buffer).map_err(std::string::ToString::to_string)?;
+        packet
+            .write(&mut req_buffer)
+            .map_err(std::string::ToString::to_string)?;
 
         // 4. Send query
         let socket = UdpSocket::bind(("0.0.0.0", 0)).map_err(|e| e.to_string())?;
@@ -812,7 +814,8 @@ impl DnsResolver {
         res_buffer.set_valid_len(len);
 
         // 6. Parse response
-        let res_packet = DnsPacket::from_buffer(&mut res_buffer).map_err(std::string::ToString::to_string)?;
+        let res_packet =
+            DnsPacket::from_buffer(&mut res_buffer).map_err(std::string::ToString::to_string)?;
 
         // 7. Extract A record
         for answer in res_packet.answers {

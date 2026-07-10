@@ -98,7 +98,7 @@ impl VectorClock {
     }
 
     /// Returns the logical timestamp for a specific node.
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, node_id: &str) -> u64 {
         *self.clock.get(node_id).unwrap_or(&0)
     }
@@ -109,7 +109,7 @@ impl VectorClock {
     /// - `Some(Ordering::Less)` if `self` happened before `other`.
     /// - `Some(Ordering::Greater)` if `other` happened before `self`.
     /// - `None` if they are concurrent.
-    #[must_use] 
+    #[must_use]
     pub fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let mut self_has_greater = false;
         let mut other_has_greater = false;

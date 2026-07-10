@@ -170,10 +170,11 @@ impl<T: Copy + Ord, V> IntervalMap<T, V> for IntervalTree<T, V> {
             // then there *might* be an overlapping interval in the left subtree.
             // Otherwise, we can safely skip the entire left subtree and search the right.
             if let Some(ref left) = node.left
-                && left.max >= query.low {
-                    current = node.left.as_ref();
-                    continue;
-                }
+                && left.max >= query.low
+            {
+                current = node.left.as_ref();
+                continue;
+            }
 
             // If we didn't go left, go right.
             current = node.right.as_ref();
@@ -199,13 +200,13 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
     }
 
     /// Returns the number of intervals in the tree.
-    #[must_use] 
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the tree contains no intervals.
-    #[must_use] 
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -249,9 +250,10 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
 
         // Check if left subtree might contain overlaps
         if let Some(ref left) = node.left
-            && left.max >= query.low {
-                Self::find_all_overlapping_recursive(left, query, results);
-            }
+            && left.max >= query.low
+        {
+            Self::find_all_overlapping_recursive(left, query, results);
+        }
 
         // Check the current node
         if node.interval.overlaps(query) {
@@ -263,9 +265,10 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
         // the right subtree all have `low` >= `node.interval.low`.
         if query.high >= node.interval.low
             && let Some(ref right) = node.right
-                && right.max >= query.low {
-                    Self::find_all_overlapping_recursive(right, query, results);
-                }
+            && right.max >= query.low
+        {
+            Self::find_all_overlapping_recursive(right, query, results);
+        }
     }
 }
 

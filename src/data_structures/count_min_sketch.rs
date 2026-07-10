@@ -68,7 +68,7 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
     /// # Arguments
     /// * `epsilon` - Acceptable error rate (e.g., 0.01). Error is within `epsilon * N`.
     /// * `delta` - Probability of error exceeding the bound (e.g., 0.01).
-    #[must_use] 
+    #[must_use]
     pub fn new(epsilon: f64, delta: f64) -> Self {
         // Guard against degenerate / non-finite parameters. epsilon and delta
         // must live in the open interval (0, 1); clamp anything else (including
@@ -124,7 +124,7 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
     }
 
     /// Returns the total number of items added (sum of all counts).
-    #[must_use] 
+    #[must_use]
     pub const fn total_count(&self) -> u64 {
         self.total_count
     }

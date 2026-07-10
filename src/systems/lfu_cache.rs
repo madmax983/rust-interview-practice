@@ -295,13 +295,13 @@ impl<K: Hash + Eq + Clone, V> LFUCache<K, V> {
     }
 
     /// Returns the current size of the cache.
-    #[must_use] 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.key_map.len()
     }
 
     /// Returns true if the cache is empty.
-    #[must_use] 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.key_map.is_empty()
     }

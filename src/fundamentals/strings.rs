@@ -164,11 +164,7 @@ pub fn count_char(s: &str, target: char) -> usize {
 /// Pattern: String slicing (byte-based - careful with UTF-8)
 #[must_use]
 pub fn string_slice(s: &str) -> &str {
-    if s.len() >= 5 {
-        &s[0..5]
-    } else {
-        s
-    }
+    if s.len() >= 5 { &s[0..5] } else { s }
 }
 
 /// Pattern: Checking if all chars satisfy condition

@@ -52,7 +52,7 @@ pub struct Point {
 }
 
 impl Point {
-    #[must_use] 
+    #[must_use]
     pub const fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
@@ -65,7 +65,7 @@ pub struct AABB {
 }
 
 impl AABB {
-    #[must_use] 
+    #[must_use]
     pub const fn new(center: Point, half_dimension: f32) -> Self {
         Self {
             center,
@@ -73,7 +73,7 @@ impl AABB {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn contains(&self, p: &Point) -> bool {
         p.x >= self.center.x - self.half_dimension
             && p.x <= self.center.x + self.half_dimension
@@ -81,7 +81,7 @@ impl AABB {
             && p.y <= self.center.y + self.half_dimension
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn intersects(&self, other: &Self) -> bool {
         // Separating Axis Theorem (simplified for AABB)
         let dx = (self.center.x - other.center.x).abs();
@@ -108,7 +108,7 @@ pub struct Quadtree {
 }
 
 impl Quadtree {
-    #[must_use] 
+    #[must_use]
     pub const fn new(boundary: AABB, capacity: usize) -> Self {
         Self::with_depth(boundary, capacity, 0)
     }
@@ -186,7 +186,7 @@ impl Quadtree {
     }
 
     /// Query points within a given range (AABB).
-    #[must_use] 
+    #[must_use]
     pub fn query(&self, range: &AABB) -> Vec<Point> {
         let mut results = Vec::new();
         self.query_recursive(range, &mut results);

@@ -27,7 +27,8 @@
 /// Time: O(N * Target), where N is the number of elements and Target is sum / 2.
 /// Space: O(N * Target)
 #[must_use]
-#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::needless_pass_by_value)]
+// LeetCode signature
 // LeetCode constraints (values and sums fit in i32) guarantee these casts are non-negative.
 #[allow(clippy::cast_sign_loss)]
 pub fn can_partition_optimized(nums: Vec<i32>) -> bool {
@@ -71,7 +72,8 @@ pub fn can_partition_optimized(nums: Vec<i32>) -> bool {
 /// Time: O(N * Target)
 /// Space: O(Target)
 #[must_use]
-#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::needless_pass_by_value)]
+// LeetCode signature
 // LeetCode constraints (values and sums fit in i32) guarantee these casts are non-negative.
 #[allow(clippy::cast_sign_loss)]
 pub fn can_partition_optimal(nums: Vec<i32>) -> bool {

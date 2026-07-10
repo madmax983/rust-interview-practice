@@ -235,7 +235,7 @@ pub struct VM {
 
 impl VM {
     /// Creates a new VM instance.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             stack: Vec::with_capacity(256),

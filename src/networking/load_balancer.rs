@@ -56,7 +56,7 @@ pub struct LoadBalancer<B> {
 }
 
 impl<B: Backend> LoadBalancer<B> {
-    #[must_use] 
+    #[must_use]
     pub fn new(strategy: Strategy) -> Self {
         Self {
             backends: Arc::new(Mutex::new(Vec::new())),

@@ -346,7 +346,7 @@ impl HttpRequest {
 }
 
 impl HttpResponse {
-    #[must_use] 
+    #[must_use]
     pub fn new(status_code: u16, status_text: &str, body: Option<Vec<u8>>) -> Self {
         Self {
             status_code,
@@ -356,7 +356,7 @@ impl HttpResponse {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut response = Vec::new();
 
@@ -369,9 +369,16 @@ impl HttpResponse {
         .unwrap();
 
         // Headers
-        let is_chunked = self.headers.get("Transfer-Encoding").map(std::string::String::as_str)
+        let is_chunked = self
+            .headers
+            .get("Transfer-Encoding")
+            .map(std::string::String::as_str)
             == Some("chunked")
-            || self.headers.get("transfer-encoding").map(std::string::String::as_str) == Some("chunked");
+            || self
+                .headers
+                .get("transfer-encoding")
+                .map(std::string::String::as_str)
+                == Some("chunked");
 
         for (key, value) in &self.headers {
             write!(&mut response, "{key}: {value}\r\n").unwrap();

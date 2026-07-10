@@ -183,7 +183,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    #[must_use] 
+    #[must_use]
     pub const fn new(input: &'a str) -> Self {
         Self { input, pos: 0 }
     }
@@ -250,9 +250,7 @@ impl<'a> Lexer<'a> {
             '\'' => self.read_string_literal(),
             'a'..='z' | 'A'..='Z' | '_' => Ok(self.read_identifier_or_keyword()),
             '0'..='9' | '-' => self.read_integer_literal(),
-            _ => Err(SqlError::LexerError(format!(
-                "Unexpected character: {ch}"
-            ))),
+            _ => Err(SqlError::LexerError(format!("Unexpected character: {ch}"))),
         }
     }
 
@@ -388,7 +386,7 @@ pub struct Parser {
 // Recursive descent parsing is elegant but can lead to stack overflows on deeply nested
 // expressions. Production parsers often use Pratt parsing or iterative approaches for expressions.
 impl Parser {
-    #[must_use] 
+    #[must_use]
     pub const fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, pos: 0 }
     }
@@ -667,7 +665,7 @@ impl Default for InMemoryStorage {
 }
 
 impl InMemoryStorage {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             schemas: HashMap::new(),
@@ -843,9 +841,10 @@ impl<S: StorageEngine> SqlEngine<S> {
                 let mut result_rows = Vec::new();
                 for row in rows {
                     if let Some(ref expr) = where_clause
-                        && !Self::evaluate_boolean_expr(expr, &row, &schema)? {
-                            continue;
-                        }
+                        && !Self::evaluate_boolean_expr(expr, &row, &schema)?
+                    {
+                        continue;
+                    }
 
                     let projected_values = projection_indices
                         .iter()

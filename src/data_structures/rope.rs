@@ -261,7 +261,6 @@ impl Rope {
         // 3. Concat the remaining parts.
         self.root = Node::concat(left, right);
     }
-
 }
 
 impl std::fmt::Display for Rope {

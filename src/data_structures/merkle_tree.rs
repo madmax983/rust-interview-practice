@@ -54,7 +54,7 @@ pub struct MerkleTree<T: Hash> {
 impl<T: Hash + Clone> MerkleTree<T> {
     /// Constructs a Merkle Tree from a list of items.
     // GOTCHA: If the number of items is odd, the last item is duplicated to balance the tree level.
-    #[must_use] 
+    #[must_use]
     pub fn new(data: Vec<T>) -> Self {
         if data.is_empty() {
             return Self {
@@ -81,14 +81,14 @@ impl<T: Hash + Clone> MerkleTree<T> {
     }
 
     /// Returns the root hash of the tree.
-    #[must_use] 
+    #[must_use]
     pub fn root(&self) -> Option<u64> {
         self.layers.last().and_then(|layer| layer.first().copied())
     }
 
     /// Generates a Merkle Proof for the item at the given index.
     /// The proof consists of a list of sibling hashes needed to recompute the root.
-    #[must_use] 
+    #[must_use]
     pub fn generate_proof(&self, index: usize) -> Option<Vec<u64>> {
         if index >= self.data.len() {
             return None;

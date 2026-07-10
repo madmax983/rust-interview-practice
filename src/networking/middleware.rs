@@ -233,7 +233,7 @@ impl Default for ServiceBuilder<IdentityLayer> {
 }
 
 impl ServiceBuilder<IdentityLayer> {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             layer: IdentityLayer,
@@ -294,7 +294,7 @@ impl<Req> Clone for BoxLayer<Req> {
 }
 
 impl<Req> BoxLayer<Req> {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             _phantom: std::marker::PhantomData,

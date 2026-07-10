@@ -123,7 +123,7 @@ impl HyperLogLog {
     /// # Panics
     ///
     /// Panics if `p` is not in the range [4, 16].
-    #[must_use] 
+    #[must_use]
     pub fn new(p: u8) -> Self {
         assert!(
             (4..=16).contains(&p),
@@ -171,7 +171,7 @@ impl HyperLogLog {
     }
 
     /// Estimates the cardinality of the set.
-    #[must_use] 
+    #[must_use]
     pub fn count(&self) -> u64 {
         let m = self.m as f64;
         let alpha = self.get_alpha();
@@ -236,7 +236,7 @@ impl HyperLogLog {
     }
 
     /// Returns the precision parameter `p`.
-    #[must_use] 
+    #[must_use]
     pub const fn p(&self) -> u8 {
         self.p
     }

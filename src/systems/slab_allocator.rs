@@ -96,7 +96,7 @@ impl<T> Slab<T> {
     }
 
     /// Creates a new Slab with specified capacity.
-    #[must_use] 
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             entries: Vec::with_capacity(capacity),
@@ -179,7 +179,7 @@ impl<T> Slab<T> {
     }
 
     /// Returns a reference to the value associated with the key.
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, key: Key) -> Option<&T> {
         if key.index >= self.entries.len() {
             return None;
@@ -216,13 +216,13 @@ impl<T> Slab<T> {
     }
 
     /// Returns the number of elements in the slab.
-    #[must_use] 
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the slab is empty.
-    #[must_use] 
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }

@@ -80,10 +80,11 @@ pub fn max_path_sum_brute_force(root: Option<Box<TreeNode>>) -> i32 {
     // Best downward path sum that starts at `node` and descends (always includes `node`).
     fn max_down(node: Option<&TreeNode>) -> i32 {
         node.map_or(0, |n| {
-            n.val + cmp::max(
-                0,
-                cmp::max(max_down(n.left.as_deref()), max_down(n.right.as_deref())),
-            )
+            n.val
+                + cmp::max(
+                    0,
+                    cmp::max(max_down(n.left.as_deref()), max_down(n.right.as_deref())),
+                )
         })
     }
 

@@ -48,7 +48,11 @@ pub fn sort_colors_brute_force(nums: &mut Vec<i32>) {
 /// This approach counts the frequencies of `0`, `1`, and `2`, and then sequentially
 /// overwrites the elements in the vector based on the counts.
 #[allow(clippy::ptr_arg)]
-#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
+#[allow(
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)] // LeetCode constraints guarantee it fits
 pub fn sort_colors_optimized(nums: &mut Vec<i32>) {
     // We could use a hash map, but an array is O(1) and specifically fits the constraint (0, 1, 2).
     let mut counts = [0, 0, 0];

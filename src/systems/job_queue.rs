@@ -268,10 +268,11 @@ impl JobQueue {
 
             // Try to pop a job from the active queue.
             if let Some(queue) = state.queues.get_mut(queue_name)
-                && let Some(mut job) = queue.pop_front() {
-                    job.status = JobStatus::Processing;
-                    return Some(job);
-                }
+                && let Some(mut job) = queue.pop_front()
+            {
+                job.status = JobStatus::Processing;
+                return Some(job);
+            }
 
             // No jobs available. We need to sleep.
             if let Some(wake_at) = next_scheduled_time {

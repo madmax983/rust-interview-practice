@@ -123,7 +123,7 @@ impl<T> RingBuffer<T> {
     }
 
     /// Peeks at the oldest item without removing it.
-    #[must_use] 
+    #[must_use]
     pub fn peek(&self) -> Option<&T> {
         if self.count == 0 {
             None
@@ -132,22 +132,22 @@ impl<T> RingBuffer<T> {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.count == 0
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn is_full(&self) -> bool {
         self.count == self.capacity
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.count
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn capacity(&self) -> usize {
         self.capacity
     }

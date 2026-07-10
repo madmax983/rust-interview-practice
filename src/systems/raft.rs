@@ -149,7 +149,7 @@ impl<T: Clone> Consensus<T> for RaftNode<T> {
 
 impl<T: Clone> RaftNode<T> {
     /// Creates a new Raft node.
-    #[must_use] 
+    #[must_use]
     pub fn new(
         id: u64,
         peers: Vec<u64>,

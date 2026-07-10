@@ -273,7 +273,7 @@ pub fn percent_decode(input: &str) -> Result<String, ParseError> {
 use std::fmt::Write;
 
 /// Percent-encodes a string.
-#[must_use] 
+#[must_use]
 pub fn percent_encode(input: &str) -> String {
     // PRODUCTION NOTE: A production encoder uses a static lookup table (`[bool; 256]`)
     // to determine if a byte needs encoding, which is significantly faster than calling multiple

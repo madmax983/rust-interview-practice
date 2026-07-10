@@ -85,7 +85,7 @@ impl Default for CliParser {
 }
 
 impl CliParser {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             configs: Vec::new(),

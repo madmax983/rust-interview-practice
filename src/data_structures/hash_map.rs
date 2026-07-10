@@ -99,13 +99,13 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
     }
 
     /// Returns the number of elements in the map.
-    #[must_use] 
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the map contains no elements.
-    #[must_use] 
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }

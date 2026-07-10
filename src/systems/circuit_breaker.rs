@@ -73,7 +73,7 @@ impl CircuitBreaker {
     /// # Arguments
     /// * `failure_threshold` - Number of failures before opening the circuit.
     /// * `reset_timeout` - Duration to wait before attempting recovery (Open -> Half-Open).
-    #[must_use] 
+    #[must_use]
     pub fn new(failure_threshold: usize, reset_timeout: Duration) -> Self {
         Self {
             state: Arc::new(Mutex::new(InnerState {

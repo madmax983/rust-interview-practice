@@ -96,7 +96,7 @@ pub struct SparseSet<V> {
 
 impl<V> SparseSet<V> {
     /// Creates a new, empty Sparse Set.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             sparse: Vec::new(),
@@ -105,7 +105,7 @@ impl<V> SparseSet<V> {
     }
 
     /// Creates a new, empty Sparse Set with the given capacities.
-    #[must_use] 
+    #[must_use]
     pub fn with_capacity(sparse_cap: usize, dense_cap: usize) -> Self {
         Self {
             sparse: Vec::with_capacity(sparse_cap),
@@ -115,7 +115,7 @@ impl<V> SparseSet<V> {
 
     /// Returns a slice of all tightly packed entries.
     /// This is the killer feature: O(N) cache-friendly iteration.
-    #[must_use] 
+    #[must_use]
     pub fn entries(&self) -> &[Entry<V>] {
         &self.dense
     }

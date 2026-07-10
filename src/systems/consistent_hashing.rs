@@ -65,7 +65,7 @@ impl ConsistentHashRing {
     /// * `virtual_nodes` - Number of points on the ring each node is responsible for.
     ///   Higher values provide better distribution balance but increase memory/lookup cost.
     ///   (e.g., 100-200 is common in production).
-    #[must_use] 
+    #[must_use]
     pub const fn new(virtual_nodes: usize) -> Self {
         Self {
             ring: BTreeMap::new(),
@@ -118,7 +118,7 @@ impl ConsistentHashRing {
     }
 
     /// Returns the node responsible for the given key.
-    #[must_use] 
+    #[must_use]
     pub fn get_node(&self, key: &str) -> Option<&String> {
         if self.ring.is_empty() {
             return None;
@@ -148,7 +148,7 @@ impl ConsistentHashRing {
     /// Returns the number of physical nodes.
     /// Note: ⚡ BOLT OPTIMIZATION: Explicitly tracking `physical_node_count`
     /// changes this operation from `O(N*V)` to `O(1)` and eliminates a `HashSet` allocation.
-    #[must_use] 
+    #[must_use]
     pub const fn node_count(&self) -> usize {
         self.physical_node_count
     }

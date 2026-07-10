@@ -88,7 +88,11 @@ pub fn combine_brute_force(n: i32, k: i32) -> Vec<Vec<i32>> {
 /// the exact capacity for the `results` vector, completely preventing dynamic heap reallocations.
 #[must_use]
 // LeetCode constraints (1 <= k <= n <= 20) guarantee these casts fit.
-#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+#[allow(
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 pub fn combine_optimal(n: i32, k: i32) -> Vec<Vec<i32>> {
     fn backtrack(start: i32, n: i32, k: i32, path: &mut Vec<i32>, results: &mut Vec<Vec<i32>>) {
         if path.len() == k as usize {

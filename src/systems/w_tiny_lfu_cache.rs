@@ -311,9 +311,10 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
 
                 // If Protected is over capacity, demote its LRU to Probation
                 if self.protected_len > self.protected_cap
-                    && let Some(demoted_idx) = self.pop_tail(Region::Protected) {
-                        self.add_node_to_head(demoted_idx, Region::Probation);
-                    }
+                    && let Some(demoted_idx) = self.pop_tail(Region::Protected)
+                {
+                    self.add_node_to_head(demoted_idx, Region::Probation);
+                }
             } else {
                 // For Window and Protected, just move to head (MRU)
                 self.move_to_head(idx);
@@ -345,9 +346,10 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
                 self.add_node_to_head(idx, Region::Protected);
 
                 if self.protected_len > self.protected_cap
-                    && let Some(demoted_idx) = self.pop_tail(Region::Protected) {
-                        self.add_node_to_head(demoted_idx, Region::Probation);
-                    }
+                    && let Some(demoted_idx) = self.pop_tail(Region::Protected)
+                {
+                    self.add_node_to_head(demoted_idx, Region::Probation);
+                }
             }
             return;
         }
@@ -359,12 +361,13 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
 
         // Enforce Window capacity
         if self.window_len > self.window_cap
-            && let Some(window_victim_idx) = self.pop_tail(Region::Window) {
-                // ⚡ BOLT OPTIMIZATION: Avoid `.clone()` allocation overhead.
-                // We pass only the `window_victim_idx` to `admit_to_probation` and look up the key by reference inside the method.
-                // Attempt to admit Window Victim to Probation (Main Cache)
-                self.admit_to_probation(window_victim_idx);
-            }
+            && let Some(window_victim_idx) = self.pop_tail(Region::Window)
+        {
+            // ⚡ BOLT OPTIMIZATION: Avoid `.clone()` allocation overhead.
+            // We pass only the `window_victim_idx` to `admit_to_probation` and look up the key by reference inside the method.
+            // Attempt to admit Window Victim to Probation (Main Cache)
+            self.admit_to_probation(window_victim_idx);
+        }
     }
 
     /// Admission Policy: Compares the Window Victim against the Probation Victim using Sketch frequencies.
@@ -384,10 +387,12 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
 
         // Otherwise, find the LRU of the Probation segment
         // If Probation is empty, we must demote from Protected first
-        if self.probation_len == 0 && self.protected_len > 0
-            && let Some(demoted_idx) = self.pop_tail(Region::Protected) {
-                self.add_node_to_head(demoted_idx, Region::Probation);
-            }
+        if self.probation_len == 0
+            && self.protected_len > 0
+            && let Some(demoted_idx) = self.pop_tail(Region::Protected)
+        {
+            self.add_node_to_head(demoted_idx, Region::Probation);
+        }
 
         // Peek at the Probation Victim
         let probation_tail = Self::tail_idx(Region::Probation);

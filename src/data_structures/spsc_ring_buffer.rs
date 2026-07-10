@@ -166,7 +166,7 @@ impl<T> Producer<T> {
     }
 
     /// Returns the capacity of the queue.
-    #[must_use] 
+    #[must_use]
     pub fn capacity(&self) -> usize {
         self.shared.capacity - 1
     }

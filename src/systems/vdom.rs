@@ -79,7 +79,7 @@ impl VElement {
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn with_child(mut self, child: VNode) -> Self {
         self.children.push(child);
         self
@@ -121,7 +121,7 @@ pub enum Patch<'a> {
 ///
 /// Note: In a real implementation, patches need to be tied to specific DOM node indices or paths.
 /// For simplicity, we just collect patches for the current node and its children.
-#[must_use] 
+#[must_use]
 pub fn diff<'a>(old: &'a VNode, new: &'a VNode) -> Vec<Patch<'a>> {
     let mut patches = Vec::new();
     diff_into(old, new, &mut patches);

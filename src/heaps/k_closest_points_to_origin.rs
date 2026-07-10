@@ -145,7 +145,7 @@ pub fn k_closest_optimal(mut points: Vec<Vec<i32>>, k: i32) -> Vec<Vec<i32>> {
         let pivot_idx = i;
 
         match pivot_idx.cmp(&k_usize) {
-            Ordering::Equal => break, // We found exactly K elements
+            Ordering::Equal => break,               // We found exactly K elements
             Ordering::Less => left = pivot_idx + 1, // Look in the right half
             Ordering::Greater => {
                 // RUST INSIGHT: To avoid underflow when pivot_idx is 0

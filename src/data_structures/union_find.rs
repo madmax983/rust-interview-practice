@@ -51,7 +51,7 @@ pub struct UnionFind {
 impl UnionFind {
     /// Creates a new Union-Find structure with `n` elements (0 to n-1).
     /// Initially, each element is in its own set.
-    #[must_use] 
+    #[must_use]
     pub fn new(n: usize) -> Self {
         let mut parent = Vec::with_capacity(n);
         for i in 0..n {
@@ -125,7 +125,7 @@ impl UnionFind {
     }
 
     /// Returns the number of disjoint sets.
-    #[must_use] 
+    #[must_use]
     pub const fn count(&self) -> usize {
         self.count
     }

@@ -26,7 +26,7 @@ pub fn mutable_borrow_example(nums: &mut Vec<i32>) {
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub fn borrow_scope_example(nums: &mut Vec<i32>) -> i32 {
     let len = nums.len(); // Immutable borrow (for len())
-                          // Immutable borrow ends here (len is Copy)
+    // Immutable borrow ends here (len is Copy)
 
     nums.push(42); // Mutable borrow - OK, no active immutable borrows
 
@@ -108,7 +108,7 @@ pub fn take_ownership(mut nums: Vec<i32>) -> Vec<i32> {
 pub fn borrow_instead(nums: &mut Vec<i32>) {
     // Function borrows nums mutably
     nums.push(1); // Can mutate the borrowed value
-                  // Ownership stays with caller
+    // Ownership stays with caller
 }
 
 /// Pattern: Iterator borrowing - iter() vs into_iter()
@@ -117,7 +117,7 @@ pub fn iter_vs_into_iter(nums: Vec<i32>) -> (Vec<i32>, i32) {
     // iter() borrows, into_iter() takes ownership
 
     let sum: i32 = nums.iter().sum(); // Borrows each element as &i32
-                                      // nums is still valid here!
+    // nums is still valid here!
 
     (nums, sum) // Can return nums because we only borrowed it
 }
@@ -125,7 +125,7 @@ pub fn iter_vs_into_iter(nums: Vec<i32>) -> (Vec<i32>, i32) {
 /// Pattern: Dereferencing with *
 pub const fn deref_example(x: &mut i32) {
     *x += 1; // Dereference to access/modify the value
-             // x is &mut i32, *x is i32
+    // x is &mut i32, *x is i32
 }
 
 /// Pattern: Reference in struct requires lifetime
