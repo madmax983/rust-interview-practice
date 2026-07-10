@@ -123,12 +123,10 @@ impl Command for DeleteText {
         // Use `get` so a range that lands mid-char (non char boundary) yields
         // `None` instead of panicking on the slice. Guards against caller-supplied
         // byte indices that split a multibyte UTF-8 char.
-        if start < end {
-            if let Some(slice) = target.get(start..end) {
-                // Capture the text before deleting
-                self.deleted_text = Some(slice.to_string());
-                target.replace_range(start..end, "");
-            }
+        if start < end && let Some(slice) = target.get(start..end) {
+            // Capture the text before deleting
+            self.deleted_text = Some(slice.to_string());
+            target.replace_range(start..end, "");
         }
     }
 

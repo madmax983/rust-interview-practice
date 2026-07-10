@@ -80,14 +80,13 @@ impl Editor {
         // `cursor_position` is a byte offset, so we must step back to the
         // previous char boundary rather than assuming one byte per char.
         // Otherwise `String::remove` panics on multibyte chars (e.g. "é").
-        if self.cursor_position > 0 {
-            if let Some((idx, ch)) = self.content[..self.cursor_position]
+        if self.cursor_position > 0
+            && let Some((idx, ch)) = self.content[..self.cursor_position]
                 .char_indices()
                 .next_back()
-            {
-                self.content.remove(idx);
-                self.cursor_position -= ch.len_utf8();
-            }
+        {
+            self.content.remove(idx);
+            self.cursor_position -= ch.len_utf8();
         }
     }
 
