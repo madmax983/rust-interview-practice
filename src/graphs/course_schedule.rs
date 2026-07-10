@@ -32,15 +32,20 @@
 use std::collections::VecDeque;
 
 // =========================================================================================
-// DFS Approach (Recursive)
+// Optimized Approach: DFS with 3-Coloring (Recursive)
 // =========================================================================================
 
-/// DFS with 3-Coloring (State Machine)
+/// Optimized approach: DFS with 3-Coloring (State Machine)
 ///
 /// We use three states for each node:
 /// - `Unvisited`: Not yet processed.
 /// - `Visiting`: Currently in the recursion stack (part of the current path). If we encounter a `Visiting` node, there is a cycle.
 /// - `Visited`: Already processed and confirmed acyclic.
+///
+/// NOTE: DFS and BFS (Kahn's) are equivalent-complexity alternatives here (both O(V + E)).
+/// This DFS version is labeled `_optimized` and the Kahn's BFS version `_optimal` only to fit
+/// the standard suffix scheme; neither is asymptotically superior. The BFS version is chosen as
+/// the default (optimal) because it is iterative and avoids recursion-depth limits.
 ///
 /// Time: O(V + E) - We visit every vertex and edge once.
 /// Space: O(V + E) - Adjacency list O(V+E), Recursion stack O(V), State array O(V).
@@ -52,7 +57,7 @@ enum State {
 }
 
 #[must_use]
-pub fn can_finish_dfs(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
+pub fn can_finish_optimized(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
     // GOTCHA: Casting i32 to usize is generally safe for indices if verified positive,
     // but in competitive programming inputs are usually valid within constraints.
     // In production, you'd want `try_into()` or bounds checking.
@@ -104,23 +109,23 @@ fn has_cycle_dfs(node: usize, adj: &[Vec<usize>], state: &mut [State]) -> bool {
 }
 
 // =========================================================================================
-// BFS Approach (Kahn's Algorithm)
+// Optimal Approach: BFS with in-degree queue (Kahn's Algorithm)
 // =========================================================================================
 
-/// BFS (Kahn's Algorithm)
+/// Optimal approach: BFS with in-degree queue (Kahn's Algorithm)
 ///
 /// Uses in-degree counting. Nodes with in-degree 0 are "free" (dependencies met).
 /// We process them, decrement neighbors' in-degrees, and add new 0-in-degree nodes to the queue.
 /// If we process all nodes, there is no cycle.
 ///
+/// NOTE: This is an equivalent-complexity alternative to the DFS 3-coloring approach above
+/// (both O(V + E)). It is picked as the default because it is iterative and therefore has no
+/// recursion-depth limit, and it extends naturally to producing the actual topological order.
+///
 /// Time: O(V + E)
 /// Space: O(V + E)
-///
-/// # Why prefer this?
-/// - Iterative (no recursion depth limit).
-/// - Easier to extend to return the actual topological sort order.
 #[must_use]
-pub fn can_finish_bfs(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
+pub fn can_finish_optimal(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
     let num_courses = num_courses as usize;
     let mut adj = vec![vec![]; num_courses];
     let mut in_degree = vec![0; num_courses];
@@ -154,10 +159,10 @@ pub fn can_finish_bfs(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
     processed_count == num_courses
 }
 
-/// Main entry point - uses BFS (Kahn's) by default as it's generally more robust.
+/// Main entry point - uses the optimal solution (Kahn's BFS, iterative and robust).
 #[must_use]
 pub fn can_finish(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
-    can_finish_bfs(num_courses, prerequisites)
+    can_finish_optimal(num_courses, prerequisites)
 }
 
 #[cfg(test)]
@@ -195,10 +200,38 @@ mod tests {
     }
 
     #[test]
-    fn test_dfs_implementation() {
-        // Explicitly test DFS version
+    fn test_optimized_dfs_implementation() {
+        // Explicitly test the DFS (optimized) version
         let num_courses = 2;
         let prerequisites = vec![vec![1, 0], vec![0, 1]];
-        assert!(!can_finish_dfs(num_courses, prerequisites));
+        assert!(!can_finish_optimized(num_courses, prerequisites));
+    }
+
+    #[test]
+    fn test_optimal_bfs_implementation() {
+        // Explicitly test the BFS/Kahn's (optimal) version
+        let num_courses = 2;
+        let prerequisites = vec![vec![1, 0], vec![0, 1]];
+        assert!(!can_finish_optimal(num_courses, prerequisites));
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        // Cross-implementation agreement on both an acyclic and a cyclic input.
+        let acyclic = vec![vec![1, 0], vec![2, 1], vec![3, 2]];
+        assert!(can_finish_optimized(4, acyclic.clone()));
+        assert!(can_finish_optimal(4, acyclic.clone()));
+        assert_eq!(
+            can_finish_optimized(4, acyclic.clone()),
+            can_finish_optimal(4, acyclic)
+        );
+
+        let cyclic = vec![vec![1, 0], vec![2, 1], vec![0, 2]];
+        assert!(!can_finish_optimized(3, cyclic.clone()));
+        assert!(!can_finish_optimal(3, cyclic.clone()));
+        assert_eq!(
+            can_finish_optimized(3, cyclic.clone()),
+            can_finish_optimal(3, cyclic)
+        );
     }
 }

@@ -23,6 +23,16 @@
 //! | Find Path | O(E + V log V) | O(V) |
 //!
 //! where E is edges, V is vertices.
+//!
+//! ## Single-implementation note
+//! Unlike the LeetCode problems in this crate, this file intentionally provides a *single*
+//! implementation rather than the brute-force / optimized / optimal trio. The binary-heap
+//! Dijkstra shown here is the canonical, textbook-optimal shortest-path algorithm for graphs
+//! with non-negative edge weights: O(E + V log V). Plausible "alternatives" are either the same
+//! algorithm with a different priority-queue (an O(V^2) array-based Dijkstra is strictly worse and
+//! only wins on dense graphs) or solve a different problem (Bellman-Ford handles negative edges,
+//! Floyd-Warshall computes all-pairs). None represents a meaningful brute→optimal *progression* of
+//! this exact routine, so a single canonical implementation is the honest choice here.
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
