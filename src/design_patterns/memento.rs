@@ -77,9 +77,17 @@ impl Editor {
     }
 
     pub fn delete_char(&mut self) {
+        // `cursor_position` is a byte offset, so we must step back to the
+        // previous char boundary rather than assuming one byte per char.
+        // Otherwise `String::remove` panics on multibyte chars (e.g. "é").
         if self.cursor_position > 0 {
-            self.content.remove(self.cursor_position - 1);
-            self.cursor_position -= 1;
+            if let Some((idx, ch)) = self.content[..self.cursor_position]
+                .char_indices()
+                .next_back()
+            {
+                self.content.remove(idx);
+                self.cursor_position -= ch.len_utf8();
+            }
         }
     }
 
@@ -191,5 +199,40 @@ mod tests {
         // Try to redo (should do nothing since it was cleared)
         history.redo(&mut editor);
         assert_eq!(editor.content(), "Hello Rust");
+    }
+
+    #[test]
+    fn test_delete_char_non_ascii_no_panic() {
+        // Regression: cursor_position is a byte offset; deleting a multibyte
+        // char used to panic ("not a char boundary").
+        let mut editor = Editor::new();
+        editor.type_text("é");
+        editor.delete_char();
+        assert_eq!(editor.content(), "");
+        assert_eq!(editor.cursor_position, 0);
+    }
+
+    #[test]
+    fn test_delete_char_mixed_ascii_multibyte() {
+        let mut editor = Editor::new();
+        editor.type_text("aé");
+        editor.delete_char();
+        assert_eq!(editor.content(), "a");
+        editor.delete_char();
+        assert_eq!(editor.content(), "");
+    }
+
+    #[test]
+    fn test_delete_char_ascii_round_trip() {
+        let mut editor = Editor::new();
+        editor.type_text("abc");
+        editor.delete_char();
+        assert_eq!(editor.content(), "ab");
+        editor.delete_char();
+        editor.delete_char();
+        assert_eq!(editor.content(), "");
+        // Deleting on empty is a no-op (no underflow / no panic).
+        editor.delete_char();
+        assert_eq!(editor.content(), "");
     }
 }
