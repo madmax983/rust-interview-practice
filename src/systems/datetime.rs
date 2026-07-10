@@ -1,4 +1,4 @@
-//! # DateTime Implementation
+//! # `DateTime` Implementation
 //!
 //! Implements a minimal custom Date and Time library to handle epoch conversions, leap year logic,
 //! and ISO-8601 string formatting without external dependencies.
@@ -14,6 +14,9 @@
 //! Building a datetime library teaches you about the Proleptic Gregorian Calendar, epoch arithmetic,
 //! leap year rules, and how to safely cast and calculate complex offsets. It exposes the hidden
 //! complexity of what seems like simple "time math".
+
+// Truncation and sign reinterpretation are intentional in this calendar/epoch bit math.
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -70,10 +73,10 @@ impl DateTime {
     const SECONDS_IN_HOUR: i64 = 3600;
     const SECONDS_IN_DAY: i64 = 86400;
 
-    /// Creates a new DateTime, validating the inputs.
+    /// Creates a new `DateTime`, validating the inputs.
     #[must_use]
     pub fn new(year: i32, month: u8, day: u8, hour: u8, minute: u8, second: u8) -> Option<Self> {
-        if month < 1 || month > 12 {
+        if !(1..=12).contains(&month) {
             return None;
         }
         if day < 1 || day > Self::days_in_month(year, month) {
@@ -93,7 +96,10 @@ impl DateTime {
         })
     }
 
-    /// Returns the current UTC DateTime using system time.
+    /// Returns the current UTC `DateTime` using system time.
+    ///
+    /// # Panics
+    /// Panics if the system clock is set before the UNIX epoch (1970-01-01).
     #[must_use]
     pub fn now() -> Self {
         // RUST INSIGHT: `SystemTime` handles the OS-level interaction to get the current time,
@@ -107,7 +113,7 @@ impl DateTime {
         Self::from_timestamp(duration.as_secs() as i64)
     }
 
-    /// Converts a UNIX timestamp (seconds since 1970-01-01T00:00:00Z) to a DateTime.
+    /// Converts a UNIX timestamp (seconds since 1970-01-01T00:00:00Z) to a `DateTime`.
     #[must_use]
     pub fn from_timestamp(timestamp: i64) -> Self {
         // GOTCHA: Epoch arithmetic is tricky with negative timestamps (before 1970).
@@ -149,7 +155,7 @@ impl DateTime {
 
         let mut month = 1;
         loop {
-            let dim = Self::days_in_month(year, month) as i64;
+            let dim = i64::from(Self::days_in_month(year, month));
             if days < dim {
                 break;
             }
@@ -169,7 +175,7 @@ impl DateTime {
         }
     }
 
-    /// Converts the DateTime to a UNIX timestamp.
+    /// Converts the `DateTime` to a UNIX timestamp.
     #[must_use]
     pub fn to_timestamp(&self) -> i64 {
         let mut days = 0;
@@ -187,11 +193,11 @@ impl DateTime {
 
         // Months
         for m in 1..self.month {
-            days += Self::days_in_month(self.year, m) as i64;
+            days += i64::from(Self::days_in_month(self.year, m));
         }
 
         // Days
-        days += (self.day - 1) as i64;
+        days += i64::from(self.day - 1);
 
         days * Self::SECONDS_IN_DAY
             + i64::from(self.hour) * Self::SECONDS_IN_HOUR
@@ -210,13 +216,13 @@ impl DateTime {
 
     /// Checks if a year is a leap year in the Gregorian calendar.
     #[must_use]
-    pub fn is_leap_year(year: i32) -> bool {
+    pub const fn is_leap_year(year: i32) -> bool {
         (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
     }
 
     /// Returns the number of days in a given month of a given year.
     #[must_use]
-    pub fn days_in_month(year: i32, month: u8) -> u8 {
+    pub const fn days_in_month(year: i32, month: u8) -> u8 {
         match month {
             4 | 6 | 9 | 11 => 30,
             2 => {
@@ -299,7 +305,7 @@ mod tests {
     #[test]
     fn test_epoch_conversion_positive() {
         // 2023-10-27T12:30:45Z
-        let ts = 1698409845;
+        let ts = 1_698_409_845;
         let dt = DateTime::from_timestamp(ts);
         assert_eq!(dt.year, 2023);
         assert_eq!(dt.month, 10);

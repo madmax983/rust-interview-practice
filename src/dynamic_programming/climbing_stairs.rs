@@ -29,7 +29,7 @@
 ///
 /// This approach explores every possible combination recursively. It calculates the same
 /// subproblems repeatedly (e.g., `climb_stairs(n-2)` is calculated in both branches).
-/// This will Time Limit Exceed (TLE) on LeetCode for large N.
+/// This will Time Limit Exceed (TLE) on `LeetCode` for large N.
 #[must_use]
 pub fn climb_stairs_brute_force(n: i32) -> i32 {
     if n <= 2 {
@@ -45,6 +45,8 @@ pub fn climb_stairs_brute_force(n: i32) -> i32 {
 /// We build a 1D DP table from the bottom up. `dp[i]` stores the number of ways
 /// to reach step `i`. This eliminates the redundant calculations of the brute force method.
 #[must_use]
+// LeetCode constraints (1 <= n <= 45) guarantee these casts fit.
+#[allow(clippy::cast_sign_loss)]
 pub fn climb_stairs_optimized(n: i32) -> i32 {
     if n <= 2 {
         return n;
@@ -128,11 +130,11 @@ mod tests {
         // The brute force approach takes too long for n=45, so we skip it in the stress test
         // or just test it with a smaller "large" number if we strictly need to test it.
         // We'll test up to 30 for brute force to keep test times reasonable.
-        assert_eq!(climb_stairs_brute_force(30), 1346269);
+        assert_eq!(climb_stairs_brute_force(30), 1_346_269);
 
         // For optimized and optimal, we can easily test the max constraint (n=45)
         // 45th Fibonacci-like number for stairs is 1836311903
-        assert_eq!(climb_stairs_optimized(45), 1836311903);
-        assert_eq!(climb_stairs_optimal(45), 1836311903);
+        assert_eq!(climb_stairs_optimized(45), 1_836_311_903);
+        assert_eq!(climb_stairs_optimal(45), 1_836_311_903);
     }
 }

@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_brute_force_empty() {
-        assert_eq!(length_of_longest_substring_brute_force("".to_string()), 0);
+        assert_eq!(length_of_longest_substring_brute_force(String::new()), 0);
     }
 
     // Test cases for optimized approach
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_optimized_empty() {
-        assert_eq!(length_of_longest_substring_optimized("".to_string()), 0);
+        assert_eq!(length_of_longest_substring_optimized(String::new()), 0);
     }
 
     // Test cases for optimal approach
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn test_optimal_empty() {
-        assert_eq!(length_of_longest_substring_optimal("".to_string()), 0);
+        assert_eq!(length_of_longest_substring_optimal(String::new()), 0);
     }
 
     // Test all approaches with edge cases
@@ -235,7 +235,7 @@ mod tests {
         let input = "a".to_string();
         assert_eq!(length_of_longest_substring_brute_force(input.clone()), 1);
         assert_eq!(length_of_longest_substring_optimized(input.clone()), 1);
-        assert_eq!(length_of_longest_substring_optimal(input.clone()), 1);
+        assert_eq!(length_of_longest_substring_optimal(input), 1);
     }
 
     #[test]
@@ -243,7 +243,7 @@ mod tests {
         let input = "abcdef".to_string();
         assert_eq!(length_of_longest_substring_brute_force(input.clone()), 6);
         assert_eq!(length_of_longest_substring_optimized(input.clone()), 6);
-        assert_eq!(length_of_longest_substring_optimal(input.clone()), 6);
+        assert_eq!(length_of_longest_substring_optimal(input), 6);
     }
 
     #[test]
@@ -251,7 +251,7 @@ mod tests {
         let input = "a b".to_string();
         assert_eq!(length_of_longest_substring_brute_force(input.clone()), 3);
         assert_eq!(length_of_longest_substring_optimized(input.clone()), 3);
-        assert_eq!(length_of_longest_substring_optimal(input.clone()), 3);
+        assert_eq!(length_of_longest_substring_optimal(input), 3);
     }
 
     // Main function tests (uses optimal)

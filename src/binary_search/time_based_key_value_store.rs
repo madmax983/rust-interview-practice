@@ -1,7 +1,7 @@
 //! # 981. Time Based Key-Value Store
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/time-based-key-value-store/
+//! Link: <https://leetcode.com/problems/time-based-key-value-store>/
 //!
 //! This problem is a natural fit for Rust's `std::collections::BTreeMap` and demonstrates why iterator adapters eliminate off-by-one errors.
 //! It teaches how to compose collections (`HashMap` containing `BTreeMap` or `Vec`) and how to leverage `range` queries or `partition_point` for efficient O(log N) lookups without manual binary search implementation.
@@ -10,11 +10,12 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-/// Approach 1: BTreeMap (Straightforward & Idiomatic)
+/// Approach 1: `BTreeMap` (Straightforward & Idiomatic)
 ///
 /// Time Complexity:
-///   - `set`: O(log N) for BTreeMap insertion.
-///   - `get`: O(log N) for BTreeMap range query.
+///   - `set`: O(log N) for `BTreeMap` insertion.
+///   - `get`: O(log N) for `BTreeMap` range query.
+///
 /// Space Complexity: O(K * N) where K is number of keys and N is number of timestamps.
 ///
 /// Why this is idiomatic Rust:
@@ -61,12 +62,13 @@ impl TimeMapBTree {
 /// Approach 2: Vector + Binary Search (Optimized & Cache Friendly)
 ///
 /// Time Complexity:
-///   - `set`: O(1) amortized, since timestamps are strictly increasing per LeetCode constraints.
+///   - `set`: O(1) amortized, since timestamps are strictly increasing per `LeetCode` constraints.
 ///   - `get`: O(log N) using binary search (`partition_point`).
+///
 /// Space Complexity: O(K * N)
 ///
-/// Why prefer this over BTreeMap?
-/// BTreeMap nodes are heap-allocated individually, which can cause memory fragmentation.
+/// Why prefer this over `BTreeMap`?
+/// `BTreeMap` nodes are heap-allocated individually, which can cause memory fragmentation.
 /// If we know timestamps arrive in strictly increasing order (as the problem states),
 /// a `Vec` is much more cache-friendly and `set` becomes O(1) instead of O(log N).
 #[derive(Default)]
@@ -105,10 +107,10 @@ impl TimeMapVec {
     }
 }
 
-/// Alternative approaches:
-/// 1. `binary_search_by_key`: You could use `values.binary_search_by_key(&timestamp, |&(ts, _)| ts)`.
-///    However, it returns `Result<usize, usize>`, which requires a `match` to handle `Ok` (exact match)
-///    and `Err` (insertion point). `partition_point` expresses the "less than or equal to" intent more cleanly.
+// Alternative approaches:
+// 1. `binary_search_by_key`: You could use `values.binary_search_by_key(&timestamp, |&(ts, _)| ts)`.
+//    However, it returns `Result<usize, usize>`, which requires a `match` to handle `Ok` (exact match)
+//    and `Err` (insertion point). `partition_point` expresses the "less than or equal to" intent more cleanly.
 
 #[cfg(test)]
 mod tests {
@@ -158,7 +160,7 @@ mod tests {
         let mut time_map = TimeMapVec::new();
 
         for i in 1..=100 {
-            time_map.set(format!("key{}", i % 5), format!("val{}", i), i);
+            time_map.set(format!("key{}", i % 5), format!("val{i}"), i);
         }
 
         assert_eq!(time_map.get("key0", 50), "val50");

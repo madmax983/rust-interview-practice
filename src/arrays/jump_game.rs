@@ -42,10 +42,10 @@ use std::cmp;
 /// Space: O(N) - The reachability table.
 ///
 /// **Rust Insight:**
-/// A `Vec<bool>` is a compact, cache-friendly way to memoize reachability without a HashMap.
+/// A `Vec<bool>` is a compact, cache-friendly way to memoize reachability without a `HashMap`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn can_jump_brute_force(nums: Vec<i32>) -> bool {
     let n = nums.len();
     if n == 0 {
@@ -77,7 +77,7 @@ pub fn can_jump_brute_force(nums: Vec<i32>) -> bool {
 ///
 /// This achieves the greedy logic entirely functionally, eliminating mutable variables.
 /// `try_fold` (via `ControlFlow`) allows us to short-circuit the fold as soon as we discover we
-/// are stuck (index > max_reachable) or have proven the target reachable.
+/// are stuck (index > `max_reachable`) or have proven the target reachable.
 ///
 /// Time: O(N) - We process elements linearly, stopping early if stuck.
 /// Space: O(1) - Purely accumulator state.
@@ -87,7 +87,7 @@ pub fn can_jump_brute_force(nums: Vec<i32>) -> bool {
 /// `Continue(acc)` keeps folding, while `Break(res)` breaks it immediately.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn can_jump_optimized(nums: Vec<i32>) -> bool {
     let target = nums.len().saturating_sub(1);
 
@@ -136,7 +136,7 @@ pub fn can_jump_optimized(nums: Vec<i32>) -> bool {
 /// risking manual out-of-bounds array indexing or maintaining separate counter variables.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // LeetCode constraints guarantee it fits
 pub fn can_jump_optimal(nums: Vec<i32>) -> bool {
     let mut max_reachable = 0;
 
@@ -181,23 +181,23 @@ mod tests {
 
     #[test]
     fn test_can_jump_happy_path() {
-        assert_eq!(can_jump(vec![2, 3, 1, 1, 4]), true);
-        assert_eq!(can_jump_brute_force(vec![2, 3, 1, 1, 4]), true);
-        assert_eq!(can_jump_optimized(vec![2, 3, 1, 1, 4]), true);
-        assert_eq!(can_jump_optimal(vec![2, 3, 1, 1, 4]), true);
+        assert!(can_jump(vec![2, 3, 1, 1, 4]));
+        assert!(can_jump_brute_force(vec![2, 3, 1, 1, 4]));
+        assert!(can_jump_optimized(vec![2, 3, 1, 1, 4]));
+        assert!(can_jump_optimal(vec![2, 3, 1, 1, 4]));
     }
 
     #[test]
     fn test_can_jump_edge_cases() {
         // Failing path
-        assert_eq!(can_jump_brute_force(vec![3, 2, 1, 0, 4]), false);
-        assert_eq!(can_jump_optimized(vec![3, 2, 1, 0, 4]), false);
-        assert_eq!(can_jump_optimal(vec![3, 2, 1, 0, 4]), false);
+        assert!(!can_jump_brute_force(vec![3, 2, 1, 0, 4]));
+        assert!(!can_jump_optimized(vec![3, 2, 1, 0, 4]));
+        assert!(!can_jump_optimal(vec![3, 2, 1, 0, 4]));
 
         // Single element
-        assert_eq!(can_jump_brute_force(vec![0]), true);
-        assert_eq!(can_jump_optimized(vec![0]), true);
-        assert_eq!(can_jump_optimal(vec![0]), true);
+        assert!(can_jump_brute_force(vec![0]));
+        assert!(can_jump_optimized(vec![0]));
+        assert!(can_jump_optimal(vec![0]));
     }
 
     #[test]
@@ -224,13 +224,13 @@ mod tests {
         // Vector of 10,000 ones ending in 0.
         let mut nums = vec![1; 10000];
         nums.push(0);
-        assert_eq!(can_jump(nums.clone()), true);
-        assert_eq!(can_jump_optimized(nums), true);
+        assert!(can_jump(nums.clone()));
+        assert!(can_jump_optimized(nums));
 
         // Vector of 10,000 zeros (except first element). Should fail immediately.
         let mut fail_nums = vec![0; 10000];
         fail_nums[0] = 0;
-        assert_eq!(can_jump(fail_nums.clone()), false);
-        assert_eq!(can_jump_optimized(fail_nums), false);
+        assert!(!can_jump(fail_nums.clone()));
+        assert!(!can_jump_optimized(fail_nums));
     }
 }

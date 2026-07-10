@@ -160,12 +160,13 @@ mod tests {
 
     #[test]
     fn test_trait_object_prototype() {
-        let mut shapes: Vec<Box<dyn Shape>> = Vec::new();
-        shapes.push(Box::new(Circle { radius: 2.0 }));
-        shapes.push(Box::new(Rectangle {
-            width: 3.0,
-            height: 4.0,
-        }));
+        let shapes: Vec<Box<dyn Shape>> = vec![
+            Box::new(Circle { radius: 2.0 }),
+            Box::new(Rectangle {
+                width: 3.0,
+                height: 4.0,
+            }),
+        ];
 
         // COMPILE-TIME WIN: We can now clone the entire vector of trait objects!
         // Without the `BoxCloneShape` pattern, `shapes.clone()` would fail to compile.

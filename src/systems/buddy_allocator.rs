@@ -8,7 +8,7 @@
 //!
 //! **Real-world Usage:**
 //! - Linux kernel physical page allocation.
-//! - Embedded systems (no_std) memory management.
+//! - Embedded systems (`no_std`) memory management.
 //! - High-performance custom memory arenas.
 //!
 //! **Why build it yourself?**
@@ -47,7 +47,7 @@
 //! - Deallocation: O(log N) (due to coalescing).
 //!
 //! **Space Complexity:**
-//! - Overhead: O(N/min_block_size) nodes in the free lists.
+//! - Overhead: `O(N/min_block_size)` nodes in the free lists.
 
 use std::collections::HashSet;
 
@@ -89,6 +89,9 @@ impl BuddyAllocator {
     /// Creates a new Buddy Allocator.
     ///
     /// Both `total_size` and `min_block_size` must be powers of two.
+    ///
+    /// # Panics
+    /// Panics if `total_size` or `min_block_size` is not a power of two.
     #[must_use]
     pub fn new(total_size: usize, min_block_size: usize) -> Self {
         assert!(
@@ -126,7 +129,7 @@ impl BuddyAllocator {
     }
 
     /// Converts an order index to its block size in bytes.
-    fn order_to_size(&self, order: usize) -> usize {
+    const fn order_to_size(&self, order: usize) -> usize {
         self.min_block_size << order
     }
 }

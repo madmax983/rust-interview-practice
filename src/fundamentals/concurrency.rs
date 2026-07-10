@@ -209,7 +209,9 @@ fn demonstrate_deadlock_prevention() {
 // RwLock<T> - Reader-Writer Lock
 // ============================================================================
 
-#[allow(dead_code)]
+// Guards are intentionally held across the sleep/print to demonstrate reader-writer
+// lock semantics for gittype practice; tightening the drop would defeat the demo.
+#[allow(dead_code, clippy::significant_drop_tightening)]
 fn demonstrate_rwlock() {
     let data = Arc::new(RwLock::new(vec![1, 2, 3]));
 
@@ -243,7 +245,7 @@ fn demonstrate_rwlock() {
     println!("Final: {:?}", data.read().unwrap());
 }
 
-/// RwLock vs Mutex: Use RwLock for read-heavy workloads.
+/// `RwLock` vs Mutex: Use `RwLock` for read-heavy workloads.
 #[allow(dead_code)]
 fn demonstrate_rwlock_vs_mutex() {
     println!("=== RwLock vs Mutex ===");
@@ -304,7 +306,7 @@ fn demonstrate_multiple_producers() {
     }
 }
 
-/// Non-blocking receive with try_recv.
+/// Non-blocking receive with `try_recv`.
 #[allow(dead_code)]
 fn demonstrate_try_recv() {
     let (tx, rx) = mpsc::channel();
@@ -333,7 +335,7 @@ fn demonstrate_try_recv() {
     }
 }
 
-/// Bounded channel with sync_channel.
+/// Bounded channel with `sync_channel`.
 #[allow(dead_code)]
 fn demonstrate_bounded_channel() {
     // Channel with capacity of 2
@@ -535,16 +537,13 @@ fn pattern_worker_pool() {
         let handle = thread::spawn(move || {
             loop {
                 let job = job_rx.lock().unwrap().recv();
-                match job {
-                    Ok(job_id) => {
-                        println!("Worker {id} processing job {job_id}");
-                        thread::sleep(Duration::from_millis(100));
-                        println!("Worker {id} finished job {job_id}");
-                    }
-                    Err(_) => {
-                        println!("Worker {id} shutting down");
-                        break;
-                    }
+                if let Ok(job_id) = job {
+                    println!("Worker {id} processing job {job_id}");
+                    thread::sleep(Duration::from_millis(100));
+                    println!("Worker {id} finished job {job_id}");
+                } else {
+                    println!("Worker {id} shutting down");
+                    break;
                 }
             }
         });
@@ -605,7 +604,7 @@ struct ThreadSafeQueue<T> {
 
 impl<T> ThreadSafeQueue<T> {
     fn new() -> Self {
-        ThreadSafeQueue {
+        Self {
             data: Arc::new(Mutex::new(Vec::new())),
         }
     }
@@ -625,7 +624,7 @@ impl<T> ThreadSafeQueue<T> {
 
 impl<T> Clone for ThreadSafeQueue<T> {
     fn clone(&self) -> Self {
-        ThreadSafeQueue {
+        Self {
             data: Arc::clone(&self.data),
         }
     }

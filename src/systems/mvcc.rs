@@ -5,7 +5,7 @@
 //! to read from a consistent snapshot without blocking writers, and writers to write without blocking readers.
 //!
 //! **Replaces Crates:** The transactional core of crates like `sled`, `rocksdb`, `fjall`
-//! **Real-world systems:** PostgreSQL, MySQL (InnoDB), CockroachDB, RocksDB
+//! **Real-world systems:** `PostgreSQL`, `MySQL` (`InnoDB`), `CockroachDB`, `RocksDB`
 //!
 //! **Why build it yourself?**
 //! Understanding MVCC is essential for distributed systems and database engineering. It shifts
@@ -46,6 +46,9 @@
 //! - Readers never block writers. Writers never block readers.
 //! - Write-Write conflicts abort the transaction that commits second (First-Commiter-Wins).
 
+// The global-store lock is intentionally held across conflict detection and write application.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, RwLock};
 
@@ -68,6 +71,10 @@ pub trait MvccTransactionApi<K, V> {
     fn set(&mut self, key: K, val: V);
 
     /// Attempts to commit the transaction. Returns `Err` on write-write conflicts.
+    ///
+    /// # Errors
+    /// Returns `Err` if a write-write conflict is detected (another transaction committed
+    /// a change to a key in this transaction's write set after this transaction started).
     fn commit(self) -> Result<(), &'static str>;
 }
 
@@ -100,6 +107,7 @@ pub struct MvccStore<K, V> {
 
 impl<K: std::cmp::Eq + std::hash::Hash + Clone, V: Clone> MvccStore<K, V> {
     /// Creates a new, empty MVCC store.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             next_tx_id: Mutex::new(1), // tx_id 0 is reserved for "no transaction" or system init
@@ -157,7 +165,7 @@ pub struct Transaction<'a, K, V> {
     store: &'a MvccStore<K, V>,
     /// The unique ID of this transaction.
     tx_id: u64,
-    /// The ID defining our snapshot visibility. We can only see writes committed <= snapshot_id.
+    /// The ID defining our snapshot visibility. We can only see writes committed <= `snapshot_id`.
     snapshot_id: u64,
     /// The snapshot of active transactions when this transaction started.
     start_active_txs: HashSet<u64>,
@@ -167,8 +175,8 @@ pub struct Transaction<'a, K, V> {
     committed: bool,
 }
 
-impl<'a, K: std::cmp::Eq + std::hash::Hash + Clone, V: Clone> MvccTransactionApi<K, V>
-    for Transaction<'a, K, V>
+impl<K: std::cmp::Eq + std::hash::Hash + Clone, V: Clone> MvccTransactionApi<K, V>
+    for Transaction<'_, K, V>
 {
     fn get(&self, key: &K) -> Option<V> {
         // 1. Check local writes first (Read-Your-Own-Writes consistency).
@@ -249,7 +257,7 @@ impl<'a, K: std::cmp::Eq + std::hash::Hash + Clone, V: Clone> MvccTransactionApi
 // If a transaction panics, returns early via `?`, or explicitly aborts, it will be Dropped.
 // The `Drop` trait guarantees that we clean up the active transactions set, effectively
 // rolling back the transaction and preventing resource leaks or global deadlocks.
-impl<'a, K, V> Drop for Transaction<'a, K, V> {
+impl<K, V> Drop for Transaction<'_, K, V> {
     fn drop(&mut self) {
         // ALWAYS remove from active transactions on drop.
         // Even if committed, we must clean up.

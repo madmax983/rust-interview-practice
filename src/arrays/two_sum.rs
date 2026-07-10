@@ -29,6 +29,7 @@ use std::collections::HashMap;
 /// Space: O(1) - no extra space needed
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn two_sum_brute_force(nums: Vec<i32>, target: i32) -> Vec<i32> {
     let n = nums.len();
 
@@ -50,6 +51,7 @@ pub fn two_sum_brute_force(nums: Vec<i32>, target: i32) -> Vec<i32> {
 /// Space: O(n) - hash map stores all elements
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn two_sum_optimized(nums: Vec<i32>, target: i32) -> Vec<i32> {
     let mut map = HashMap::with_capacity(nums.len()); // Maps value -> index
 
@@ -117,8 +119,8 @@ mod tests {
         if result.len() != 2 {
             return false;
         }
-        let i = result[0] as usize;
-        let j = result[1] as usize;
+        let i = usize::try_from(result[0]).unwrap();
+        let j = usize::try_from(result[1]).unwrap();
         i < nums.len() && j < nums.len() && i != j && nums[i] + nums[j] == target
     }
 
@@ -196,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_all_approaches_large_numbers() {
-        let nums = vec![1000000000, -1000000000, 999999999];
+        let nums = vec![1_000_000_000, -1_000_000_000, 999_999_999];
         let target = 0;
 
         let result1 = two_sum_brute_force(nums.clone(), target);

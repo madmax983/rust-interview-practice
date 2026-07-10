@@ -5,7 +5,7 @@
 //! **Replaces Crates:** `ropey`, `xi-rope`
 //!
 //! **Real-world Usage:**
-//! - Core text buffer for modern text editors (Zed, Alacritty, VSCode, Sublime Text).
+//! - Core text buffer for modern text editors (Zed, Alacritty, `VSCode`, Sublime Text).
 //! - Large JSON or log file viewers where loading the entire string into contiguous memory is impossible or inefficient.
 //!
 //! **Why build it yourself?**
@@ -63,8 +63,8 @@ enum Node {
     /// An internal node containing the weight of its left child, and pointers to left/right children.
     Internal {
         weight: usize,
-        left: Box<Node>,
-        right: Box<Node>,
+        left: Box<Self>,
+        right: Box<Self>,
     },
 }
 
@@ -72,13 +72,13 @@ impl Node {
     /// Returns the total byte length of the string represented by this node.
     fn len(&self) -> usize {
         match self {
-            Node::Leaf(s) => s.len(),
-            Node::Internal { weight, right, .. } => weight + right.len(),
+            Self::Leaf(s) => s.len(),
+            Self::Internal { weight, right, .. } => weight + right.len(),
         }
     }
 
     /// Concatenates two nodes into a new internal node.
-    fn concat(left: Node, right: Node) -> Node {
+    fn concat(left: Self, right: Self) -> Self {
         // If either is empty, return the other.
         if left.len() == 0 {
             return right;
@@ -90,7 +90,7 @@ impl Node {
         // RUST INSIGHT: We take ownership of `left` and `right` and box them.
         // This avoids deep copies of the underlying strings, achieving O(1) concatenation.
         let weight = left.len();
-        Node::Internal {
+        Self::Internal {
             weight,
             left: Box::new(left),
             right: Box::new(right),
@@ -99,16 +99,16 @@ impl Node {
 
     /// Splits the node into two nodes at the given byte index.
     /// Returns a tuple of (Left Node, Right Node).
-    fn split(self, index: usize) -> (Node, Node) {
+    fn split(self, index: usize) -> (Self, Self) {
         if index == 0 {
-            return (Node::Leaf(String::new()), self);
+            return (Self::Leaf(String::new()), self);
         }
         if index == self.len() {
-            return (self, Node::Leaf(String::new()));
+            return (self, Self::Leaf(String::new()));
         }
 
         match self {
-            Node::Leaf(s) => {
+            Self::Leaf(s) => {
                 // GOTCHA: Splitting a string slice must happen at a valid UTF-8 character boundary.
                 // Rust will panic if we split `s` at an invalid byte index.
                 // A production rope would enforce character boundaries during insertion/deletion.
@@ -118,26 +118,30 @@ impl Node {
                 );
                 let (left_str, right_str) = s.split_at(index);
                 (
-                    Node::Leaf(left_str.to_string()),
-                    Node::Leaf(right_str.to_string()),
+                    Self::Leaf(left_str.to_string()),
+                    Self::Leaf(right_str.to_string()),
                 )
             }
-            Node::Internal {
+            Self::Internal {
                 weight,
                 left,
                 right,
             } => {
-                if index < weight {
-                    // Split point is in the left child.
-                    let (l_left, l_right) = left.split(index);
-                    (l_left, Node::concat(l_right, *right))
-                } else if index > weight {
-                    // Split point is in the right child.
-                    let (r_left, r_right) = right.split(index - weight);
-                    (Node::concat(*left, r_left), r_right)
-                } else {
-                    // Split point is exactly between left and right children.
-                    (*left, *right)
+                match index.cmp(&weight) {
+                    cmp::Ordering::Less => {
+                        // Split point is in the left child.
+                        let (l_left, l_right) = left.split(index);
+                        (l_left, Self::concat(l_right, *right))
+                    }
+                    cmp::Ordering::Greater => {
+                        // Split point is in the right child.
+                        let (r_left, r_right) = right.split(index - weight);
+                        (Self::concat(*left, r_left), r_right)
+                    }
+                    cmp::Ordering::Equal => {
+                        // Split point is exactly between left and right children.
+                        (*left, *right)
+                    }
                 }
             }
         }
@@ -146,8 +150,8 @@ impl Node {
     /// Recursively collects the strings from all leaves into a single String.
     fn collect_into(&self, buffer: &mut String) {
         match self {
-            Node::Leaf(s) => buffer.push_str(s),
-            Node::Internal { left, right, .. } => {
+            Self::Leaf(s) => buffer.push_str(s),
+            Self::Internal { left, right, .. } => {
                 left.collect_into(buffer);
                 right.collect_into(buffer);
             }
@@ -164,13 +168,16 @@ pub struct Rope {
 impl Rope {
     /// Creates a new, empty Rope.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             root: Node::Leaf(String::new()),
         }
     }
 
     /// Creates a Rope from a given string.
+    // Infallible constructor kept as an inherent `&str -> Self` method for ergonomics;
+    // the fallible `FromStr` trait signature would not fit this use.
+    #[allow(clippy::should_implement_trait)]
     #[must_use]
     pub fn from_str(s: &str) -> Self {
         if s.len() <= LEAF_MAX {
@@ -209,6 +216,9 @@ impl Rope {
     }
 
     /// Inserts a string at the given byte index.
+    ///
+    /// # Panics
+    /// Panics if `index` is greater than the rope's byte length.
     pub fn insert(&mut self, index: usize, text: &str) {
         assert!(index <= self.len(), "Index out of bounds");
 
@@ -232,6 +242,9 @@ impl Rope {
     }
 
     /// Deletes a range of bytes from the rope.
+    ///
+    /// # Panics
+    /// Panics if `start > end` or if `end` is greater than the rope's byte length.
     pub fn delete(&mut self, start: usize, end: usize) {
         assert!(start <= end, "Start index must be <= end index");
         assert!(end <= self.len(), "End index out of bounds");
@@ -248,14 +261,15 @@ impl Rope {
         // 3. Concat the remaining parts.
         self.root = Node::concat(left, right);
     }
+}
 
+impl std::fmt::Display for Rope {
     /// Collects the rope into a single contiguous `String`.
-    #[must_use]
-    pub fn to_string(&self) -> String {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Pre-allocate the entire capacity to avoid reallocations.
         let mut buffer = String::with_capacity(self.len());
         self.root.collect_into(&mut buffer);
-        buffer
+        f.write_str(&buffer)
     }
 }
 

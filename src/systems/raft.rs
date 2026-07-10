@@ -3,11 +3,11 @@
 //! Implements a deterministic state machine for the Raft consensus algorithm.
 //! It isolates the core logic from networking and storage, making it fully testable.
 //!
-//! **Replaces Crates:** `raft` (TiKV), `async-raft`, `openraft`
+//! **Replaces Crates:** `raft` (`TiKV`), `async-raft`, `openraft`
 //!
 //! **Real-world Usage:**
-//! - Distributed key-value stores (etcd, TiKV, Consul).
-//! - Database replication and leader election (CockroachDB).
+//! - Distributed key-value stores (etcd, `TiKV`, Consul).
+//! - Database replication and leader election (`CockroachDB`).
 //! - Message queues and event streaming (Kafka/KRaft).
 //!
 //! **Why build it yourself?**
@@ -50,13 +50,13 @@ use std::collections::{HashMap, HashSet};
 // Design Decisions:
 // - Functional Core, Imperative Shell: The node does not do IO. It takes `msg` and `tick` inputs and produces a queue of `messages` to be sent by the caller.
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LogEntry<T> {
     pub term: u64,
     pub data: Option<T>, // Option allows us to have dummy entries or no-op commands
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Message<T> {
     RequestVote {
         term: u64,
@@ -83,7 +83,7 @@ pub enum Message<T> {
     },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Envelope<T> {
     pub to: u64,
     pub from: u64,
@@ -149,6 +149,7 @@ impl<T: Clone> Consensus<T> for RaftNode<T> {
 
 impl<T: Clone> RaftNode<T> {
     /// Creates a new Raft node.
+    #[must_use]
     pub fn new(
         id: u64,
         peers: Vec<u64>,
@@ -208,10 +209,10 @@ impl<T: Clone> RaftNode<T> {
 
         // Extract term from message to check if we need to step down
         let msg_term = match &env.msg {
-            Message::RequestVote { term, .. } => *term,
-            Message::RequestVoteResponse { term, .. } => *term,
-            Message::AppendEntries { term, .. } => *term,
-            Message::AppendEntriesResponse { term, .. } => *term,
+            Message::RequestVote { term, .. }
+            | Message::RequestVoteResponse { term, .. }
+            | Message::AppendEntries { term, .. }
+            | Message::AppendEntriesResponse { term, .. } => *term,
         };
 
         // RUST INSIGHT: We handle the common term-checking logic up front.
@@ -250,7 +251,7 @@ impl<T: Clone> RaftNode<T> {
                     leader_id,
                     prev_log_index,
                     prev_log_term,
-                    entries,
+                    &entries,
                     leader_commit,
                 );
             }
@@ -280,7 +281,7 @@ impl<T: Clone> RaftNode<T> {
         self.votes_received.insert(self.id);
         self.election_elapsed = 0;
 
-        if self.votes_received.len() >= (self.peers.len() + 1) / 2 + 1 {
+        if self.votes_received.len() > self.peers.len().div_ceil(2) {
             self.become_leader();
             return;
         }
@@ -365,13 +366,15 @@ impl<T: Clone> RaftNode<T> {
         if vote_granted {
             self.votes_received.insert(from);
             // Majority requires self + strictly greater than half peers
-            let majority = (self.peers.len() + 1) / 2 + 1;
+            let majority = self.peers.len().div_ceil(2) + 1;
             if self.votes_received.len() >= majority {
                 self.become_leader();
             }
         }
     }
 
+    // Arguments mirror the fields of the `AppendEntries` RPC message.
+    #[allow(clippy::too_many_arguments)]
     fn handle_append_entries(
         &mut self,
         from: u64,
@@ -379,7 +382,7 @@ impl<T: Clone> RaftNode<T> {
         _leader_id: u64,
         prev_log_index: usize,
         prev_log_term: u64,
-        entries: Vec<LogEntry<T>>,
+        entries: &[LogEntry<T>],
         leader_commit: usize,
     ) {
         // If we are a candidate and we receive an AppendEntries with a term >= current_term,
@@ -479,7 +482,7 @@ impl<T: Clone> RaftNode<T> {
                         }
                     }
 
-                    let majority = (self.peers.len() + 1) / 2 + 1;
+                    let majority = self.peers.len().div_ceil(2) + 1;
                     if count >= majority {
                         self.commit_index = n;
                         // Once we update commit_index, broadcast AppendEntries to update followers

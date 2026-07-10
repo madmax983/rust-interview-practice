@@ -7,7 +7,7 @@
 
 /// Pattern: Basic match with exhaustive cases
 #[must_use]
-pub fn basic_match(value: i32) -> &'static str {
+pub const fn basic_match(value: i32) -> &'static str {
     match value {
         0 => "zero",
         1 => "one",
@@ -18,7 +18,7 @@ pub fn basic_match(value: i32) -> &'static str {
 
 /// Pattern: Match with ranges
 #[must_use]
-pub fn match_ranges(value: i32) -> &'static str {
+pub const fn match_ranges(value: i32) -> &'static str {
     match value {
         i32::MIN..=0 => "negative",
         1..=10 => "small",
@@ -29,7 +29,7 @@ pub fn match_ranges(value: i32) -> &'static str {
 
 /// Pattern: Match with guards
 #[must_use]
-pub fn match_with_guard(value: i32) -> &'static str {
+pub const fn match_with_guard(value: i32) -> &'static str {
     match value {
         x if x < 0 => "negative",  // Guard: 'if' adds extra condition
         x if x % 2 == 0 => "even", // Guards checked in order
@@ -39,7 +39,7 @@ pub fn match_with_guard(value: i32) -> &'static str {
 
 /// Pattern: Match on tuples
 #[must_use]
-pub fn match_tuple(pair: (i32, i32)) -> i32 {
+pub const fn match_tuple(pair: (i32, i32)) -> i32 {
     match pair {
         (0, 0) => 0,     // Match exact values
         (x, 0) => x,     // Bind first element to x, match 0 for second
@@ -51,7 +51,7 @@ pub fn match_tuple(pair: (i32, i32)) -> i32 {
 /// Pattern: Match with destructuring
 #[must_use]
 #[allow(clippy::match_wildcard_for_single_variants)]
-pub fn match_enum(value: Option<i32>) -> i32 {
+pub const fn match_enum(value: Option<i32>) -> i32 {
     match value {
         Some(x) => x * 2,
         None => 0,
@@ -60,7 +60,7 @@ pub fn match_enum(value: Option<i32>) -> i32 {
 
 /// Pattern: if let for single variant
 #[must_use]
-pub fn if_let_single(value: Option<i32>) -> i32 {
+pub const fn if_let_single(value: Option<i32>) -> i32 {
     // if let: cleaner than match when you only care about one pattern
     if let Some(x) = value {
         x * 2 // Extract and use value
@@ -71,7 +71,12 @@ pub fn if_let_single(value: Option<i32>) -> i32 {
 
 /// Pattern: if let with multiple patterns
 #[must_use]
-#[allow(clippy::manual_unwrap_or_default, clippy::manual_unwrap_or)] // Demonstrating if let / else on Result
+// Demonstrating if let / else on Result for gittype practice
+#[allow(
+    clippy::manual_unwrap_or_default,
+    clippy::manual_unwrap_or,
+    clippy::option_if_let_else
+)]
 pub fn if_let_multiple(value: Result<i32, String>) -> i32 {
     // A Result is exhaustive: if the Ok arm does not match, it must be Err,
     // so the else branch covers every remaining case (no dead arm needed).
@@ -90,19 +95,21 @@ pub fn while_let_iteration(mut stack: Vec<i32>) -> Vec<i32> {
 
 /// Pattern: Destructuring in function parameters
 #[must_use]
-pub fn destructure_params((x, y): (i32, i32)) -> i32 {
+pub const fn destructure_params((x, y): (i32, i32)) -> i32 {
     x + y
 }
 
 /// Pattern: Destructuring in let bindings
 #[must_use]
-pub fn destructure_let(pair: (i32, i32)) -> i32 {
+pub const fn destructure_let(pair: (i32, i32)) -> i32 {
     let (x, y) = pair;
     x * y
 }
 
 /// Pattern: Match on slices
 #[must_use]
+// Distinct slice-pattern arms kept separate to demonstrate the syntax for gittype practice
+#[allow(clippy::match_same_arms)]
 pub fn match_slice(slice: &[i32]) -> i32 {
     match slice {
         [] => 0,             // Empty slice
@@ -124,7 +131,7 @@ pub fn match_at_binding(value: i32) -> String {
 
 /// Pattern: Match on references
 #[must_use]
-pub fn match_reference(opt: &Option<i32>) -> i32 {
+pub const fn match_reference(opt: &Option<i32>) -> i32 {
     match opt {
         Some(x) => *x,
         None => 0,
@@ -133,7 +140,7 @@ pub fn match_reference(opt: &Option<i32>) -> i32 {
 
 /// Pattern: Nested match
 #[must_use]
-pub fn nested_match(outer: Option<Option<i32>>) -> i32 {
+pub const fn nested_match(outer: Option<Option<i32>>) -> i32 {
     match outer {
         Some(Some(x)) => x,
         Some(None) => -1,
@@ -143,7 +150,7 @@ pub fn nested_match(outer: Option<Option<i32>>) -> i32 {
 
 /// Pattern: Match multiple values with or patterns
 #[must_use]
-pub fn match_or_pattern(ch: char) -> bool {
+pub const fn match_or_pattern(ch: char) -> bool {
     matches!(ch, 'a' | 'e' | 'i' | 'o' | 'u')
 }
 

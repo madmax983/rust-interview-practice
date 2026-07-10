@@ -233,7 +233,7 @@ mod tests {
 
         let res1 = remove_nth_from_end_brute_force(ListNode::from_vec(v.clone()), n);
         let res2 = remove_nth_from_end_optimized(ListNode::from_vec(v.clone()), n);
-        let res3 = remove_nth_from_end_optimal(ListNode::from_vec(v.clone()), n);
+        let res3 = remove_nth_from_end_optimal(ListNode::from_vec(v), n);
 
         assert_eq!(res1, res2);
         assert_eq!(res2, res3);

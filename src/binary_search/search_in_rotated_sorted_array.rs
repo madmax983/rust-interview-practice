@@ -1,7 +1,7 @@
 //! # 33. Search in Rotated Sorted Array
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/search-in-rotated-sorted-array/
+//! Link: <https://leetcode.com/problems/search-in-rotated-sorted-array>/
 //!
 //! This problem tests your ability to adapt standard binary search to arrays that
 //! are partially sorted. It demonstrates careful boundary checking and understanding

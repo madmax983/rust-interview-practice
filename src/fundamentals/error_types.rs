@@ -3,6 +3,16 @@
 //! Comprehensive error handling patterns: custom error types, thiserror for
 //! libraries, anyhow for applications, and error design best practices.
 
+// intentional bit/byte/word manipulation for the demo
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+// Demo helpers deliberately return Result even when infallible so the surrounding
+// `?` / `map_err` error-propagation patterns can be demonstrated for gittype practice.
+#![allow(clippy::unnecessary_wraps)]
+
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -12,7 +22,19 @@ use std::num::ParseIntError;
 // Error Fundamentals Recap
 // ============================================================================
 
-#[allow(dead_code)]
+// Error trait - all errors implement this
+fn handle_error(err: &dyn Error) {
+    println!("Error: {err}");
+    println!("Debug: {err:?}");
+
+    // Error source chain
+    if let Some(source) = err.source() {
+        println!("Caused by: {source}");
+    }
+}
+
+// `unwrap_or` on a literal `Some` intentionally demonstrates the combinator for gittype practice
+#[allow(dead_code, clippy::unnecessary_literal_unwrap)]
 fn demonstrate_error_basics() {
     // Option - represents presence or absence
     let opt: Option<i32> = Some(42);
@@ -23,17 +45,6 @@ fn demonstrate_error_basics() {
     match res {
         Ok(val) => println!("Success: {val}"),
         Err(e) => println!("Error: {e}"),
-    }
-
-    // Error trait - all errors implement this
-    fn handle_error(err: &dyn Error) {
-        println!("Error: {err}");
-        println!("Debug: {err:?}");
-
-        // Error source chain
-        if let Some(source) = err.source() {
-            println!("Caused by: {source}");
-        }
     }
 
     let err = io::Error::new(io::ErrorKind::NotFound, "file not found");
@@ -49,6 +60,8 @@ fn demonstrate_error_basics() {
 enum MyError {
     Io(io::Error),
     Parse(ParseIntError),
+    // Demonstrates a free-form error variant for gittype practice
+    #[allow(dead_code)]
     Custom(String),
 }
 
@@ -56,9 +69,9 @@ enum MyError {
 impl fmt::Display for MyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MyError::Io(err) => write!(f, "I/O error: {err}"),
-            MyError::Parse(err) => write!(f, "Parse error: {err}"),
-            MyError::Custom(msg) => write!(f, "Error: {msg}"),
+            Self::Io(err) => write!(f, "I/O error: {err}"),
+            Self::Parse(err) => write!(f, "Parse error: {err}"),
+            Self::Custom(msg) => write!(f, "Error: {msg}"),
         }
     }
 }
@@ -67,9 +80,9 @@ impl fmt::Display for MyError {
 impl Error for MyError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            MyError::Io(err) => Some(err),
-            MyError::Parse(err) => Some(err),
-            MyError::Custom(_) => None,
+            Self::Io(err) => Some(err),
+            Self::Parse(err) => Some(err),
+            Self::Custom(_) => None,
         }
     }
 }
@@ -77,13 +90,13 @@ impl Error for MyError {
 // From conversions for ergonomic ? operator usage
 impl From<io::Error> for MyError {
     fn from(err: io::Error) -> Self {
-        MyError::Io(err)
+        Self::Io(err)
     }
 }
 
 impl From<ParseIntError> for MyError {
     fn from(err: ParseIntError) -> Self {
-        MyError::Parse(err)
+        Self::Parse(err)
     }
 }
 
@@ -134,14 +147,14 @@ pub enum DatabaseError {
 impl fmt::Display for DatabaseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DatabaseError::ConnectionFailed(msg) => {
+            Self::ConnectionFailed(msg) => {
                 write!(f, "Connection failed: {msg}")
             }
-            DatabaseError::QueryFailed { query } => {
+            Self::QueryFailed { query } => {
                 write!(f, "Query failed: {query}")
             }
-            DatabaseError::Io(err) => write!(f, "I/O error: {err}"),
-            DatabaseError::Timeout => write!(f, "Operation timed out"),
+            Self::Io(err) => write!(f, "I/O error: {err}"),
+            Self::Timeout => write!(f, "Operation timed out"),
         }
     }
 }
@@ -149,7 +162,7 @@ impl fmt::Display for DatabaseError {
 impl Error for DatabaseError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            DatabaseError::Io(err) => Some(err),
+            Self::Io(err) => Some(err),
             _ => None,
         }
     }
@@ -157,13 +170,13 @@ impl Error for DatabaseError {
 
 impl From<io::Error> for DatabaseError {
     fn from(err: io::Error) -> Self {
-        DatabaseError::Io(err)
+        Self::Io(err)
     }
 }
 
 /// thiserror patterns demonstration (pseudo-code).
 #[allow(dead_code)]
-fn demonstrate_thiserror_patterns() {
+const fn demonstrate_thiserror_patterns() {
     // Pattern 1: Simple message
     // #[error("Something went wrong")]
 
@@ -222,7 +235,7 @@ fn demonstrate_thiserror_patterns() {
 /// }
 /// ```
 #[allow(dead_code)]
-fn demonstrate_anyhow_patterns() {
+const fn demonstrate_anyhow_patterns() {
     // Pattern 1: .context() - static string
     // result.context("Operation failed")?
 
@@ -273,28 +286,28 @@ pub enum AppError {
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AppError::NetworkTimeout => write!(f, "Network operation timed out"),
-            AppError::ConnectionRefused { host, port } => {
+            Self::NetworkTimeout => write!(f, "Network operation timed out"),
+            Self::ConnectionRefused { host, port } => {
                 write!(f, "Connection refused: {host}:{port}")
             }
-            AppError::InvalidInput { field, reason } => {
+            Self::InvalidInput { field, reason } => {
                 write!(f, "Invalid input for field '{field}': {reason}")
             }
-            AppError::MissingField(field) => {
+            Self::MissingField(field) => {
                 write!(f, "Missing required field: {field}")
             }
-            AppError::InsufficientBalance {
+            Self::InsufficientBalance {
                 required,
                 available,
             } => {
                 write!(f, "Insufficient balance: need {required}, have {available}")
             }
-            AppError::Unauthorized { user_id } => {
+            Self::Unauthorized { user_id } => {
                 write!(f, "Unauthorized: user {user_id}")
             }
-            AppError::Database(err) => write!(f, "Database error: {err}"),
-            AppError::Io(err) => write!(f, "I/O error: {err}"),
-            AppError::Internal(msg) => write!(f, "Internal error: {msg}"),
+            Self::Database(err) => write!(f, "Database error: {err}"),
+            Self::Io(err) => write!(f, "I/O error: {err}"),
+            Self::Internal(msg) => write!(f, "Internal error: {msg}"),
         }
     }
 }
@@ -302,8 +315,8 @@ impl fmt::Display for AppError {
 impl Error for AppError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            AppError::Database(err) => Some(err),
-            AppError::Io(err) => Some(err),
+            Self::Database(err) => Some(err),
+            Self::Io(err) => Some(err),
             _ => None,
         }
     }
@@ -311,13 +324,13 @@ impl Error for AppError {
 
 impl From<DatabaseError> for AppError {
     fn from(err: DatabaseError) -> Self {
-        AppError::Database(err)
+        Self::Database(err)
     }
 }
 
 impl From<io::Error> for AppError {
     fn from(err: io::Error) -> Self {
-        AppError::Io(err)
+        Self::Io(err)
     }
 }
 
@@ -345,19 +358,21 @@ pub enum ErrorCode {
 
 impl DetailedError {
     pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
-        DetailedError {
+        Self {
             code,
             message: message.into(),
             context: Vec::new(),
         }
     }
 
+    #[must_use]
     pub fn with_context(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.context.push((key.into(), value.into()));
         self
     }
 
-    pub fn code(&self) -> ErrorCode {
+    #[must_use]
+    pub const fn code(&self) -> ErrorCode {
         self.code
     }
 }
@@ -393,23 +408,24 @@ fn demonstrate_error_propagation() -> Result<i32, AppError> {
     let _result = some_fallible_operation()?;
 
     // Pattern 2: map_err - transform error type
-    let _result2 = other_operation().map_err(|e| AppError::Internal(e.to_string()))?;
+    let _result2 = other_operation().map_err(AppError::Internal)?;
 
     // Pattern 3: Wrapping with context
-    let _result3 = another_operation().map_err(|_| AppError::MissingField("config".to_string()))?;
+    let _result3 =
+        another_operation().map_err(|()| AppError::MissingField("config".to_string()))?;
 
     Ok(42)
 }
 
-fn some_fallible_operation() -> Result<i32, AppError> {
+const fn some_fallible_operation() -> Result<i32, AppError> {
     Ok(42)
 }
 
-fn other_operation() -> Result<i32, String> {
+const fn other_operation() -> Result<i32, String> {
     Ok(42)
 }
 
-fn another_operation() -> Result<i32, ()> {
+const fn another_operation() -> Result<i32, ()> {
     Ok(42)
 }
 
@@ -441,7 +457,7 @@ fn thread_safe_error() -> Result<i32, Box<dyn Error + Send + Sync>> {
 ///
 /// Libraries should:
 /// - Define specific error types for their domain
-/// - Implement std::error::Error
+/// - Implement `std::error::Error`
 /// - Provide From conversions for common error sources
 /// - Document error variants in API docs
 /// - Never use panic! in public APIs (use Result)
@@ -461,10 +477,10 @@ mod library_pattern {
     impl fmt::Display for LibraryError {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
-                LibraryError::InvalidConfiguration(msg) => {
+                Self::InvalidConfiguration(msg) => {
                     write!(f, "Invalid configuration: {msg}")
                 }
-                LibraryError::OperationFailed => {
+                Self::OperationFailed => {
                     write!(f, "Operation failed")
                 }
             }
@@ -473,7 +489,7 @@ mod library_pattern {
 
     impl Error for LibraryError {}
 
-    pub fn library_function() -> Result<(), LibraryError> {
+    pub const fn library_function() -> Result<(), LibraryError> {
         Ok(())
     }
 }
@@ -543,7 +559,7 @@ fn demonstrate_error_recovery() {
     let _ = operation_with_degradation();
 }
 
-fn attempt_operation() -> Result<i32, AppError> {
+const fn attempt_operation() -> Result<i32, AppError> {
     Ok(42)
 }
 
@@ -570,9 +586,7 @@ fn demonstrate_panic_vs_error() {
     // - Error is unrecoverable
     // - During development/testing
     fn get_element(vec: &[i32], index: usize) -> i32 {
-        if index >= vec.len() {
-            panic!("Index {index} out of bounds");
-        }
+        assert!(index < vec.len(), "Index {index} out of bounds");
         vec[index]
     }
 
@@ -611,13 +625,15 @@ fn process_request() -> Result<(), AppError> {
     Ok(())
 }
 
+// Variants demonstrate validation error shapes for gittype practice
+#[allow(dead_code)]
 #[derive(Debug)]
 enum ValidationError {
     Missing(String),
     Invalid(String, String),
 }
 
-fn validate_request() -> Result<(), ValidationError> {
+const fn validate_request() -> Result<(), ValidationError> {
     Ok(())
 }
 
@@ -639,7 +655,7 @@ fn logged_operation() -> Result<i32, AppError> {
     }
 }
 
-fn risky_operation() -> Result<i32, AppError> {
+const fn risky_operation() -> Result<i32, AppError> {
     Ok(42)
 }
 
@@ -657,11 +673,11 @@ fn interview_patterns() {
         Ok(a + b)
     }
 
-    fn step1() -> Result<i32, String> {
+    const fn step1() -> Result<i32, String> {
         Ok(1)
     }
 
-    fn step2() -> Result<i32, String> {
+    const fn step2() -> Result<i32, String> {
         Ok(2)
     }
 

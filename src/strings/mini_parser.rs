@@ -50,14 +50,17 @@ use std::str::Chars;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NestedInteger {
     Int(i32),
-    List(Vec<NestedInteger>),
+    List(Vec<Self>),
 }
 
 impl NestedInteger {
     /// Helper method to add an element to the list variant.
+    ///
+    /// # Panics
+    ///
     /// Panics if called on an `Int` variant.
-    pub fn add(&mut self, elem: NestedInteger) {
-        if let NestedInteger::List(list) = self {
+    pub fn add(&mut self, elem: Self) {
+        if let Self::List(list) = self {
             list.push(elem);
         } else {
             panic!("Called add on Int variant");
@@ -86,7 +89,13 @@ impl NestedInteger {
 /// Parsing negative numbers and multi-digit numbers manually requires careful tracking of
 /// whether we are currently "building" a number. We must also handle the edge case where
 /// the string is just a single integer without brackets.
+///
+/// # Panics
+///
+/// Panics if the input is malformed (an unparseable integer, invalid UTF-8 in a number
+/// span, or an empty stack at the end). The problem guarantees well-formed input.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn deserialize_brute_force(s: String) -> NestedInteger {
     if !s.starts_with('[') {
         return NestedInteger::Int(s.parse().unwrap());
@@ -148,6 +157,7 @@ pub fn deserialize_brute_force(s: String) -> NestedInteger {
 /// same underlying stream. `Peekable::peek()` lets us make decisions without advancing
 /// the iterator, eliminating the need to track indices or backtrack.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn deserialize_optimal(s: String) -> NestedInteger {
     let mut iter = s.chars().peekable();
     parse_nested_integer(&mut iter)
@@ -173,11 +183,11 @@ fn parse_list(iter: &mut Peekable<Chars>) -> NestedInteger {
     let mut list = Vec::new();
 
     // Check for empty list '[]'
-    if let Some(&c) = iter.peek() {
-        if c == ']' {
-            iter.next(); // Consume ']'
-            return NestedInteger::List(list);
-        }
+    if let Some(&c) = iter.peek()
+        && c == ']'
+    {
+        iter.next(); // Consume ']'
+        return NestedInteger::List(list);
     }
 
     loop {
@@ -185,8 +195,8 @@ fn parse_list(iter: &mut Peekable<Chars>) -> NestedInteger {
         list.push(parse_nested_integer(iter));
 
         match iter.next() {
-            Some(',') => continue, // More elements follow
-            Some(']') => break,    // End of the list
+            Some(',') => {}     // More elements follow
+            Some(']') => break, // End of the list
             _ => panic!("Invalid serialization format"),
         }
     }

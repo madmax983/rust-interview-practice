@@ -42,10 +42,10 @@ use std::str::Chars;
 pub enum TomlValue {
     String(String),
     Integer(i64),
-    Table(HashMap<String, TomlValue>),
+    Table(HashMap<String, Self>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -53,7 +53,7 @@ pub struct Span {
     pub col: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
     Identifier(String),
     StringLiteral(String),
@@ -114,6 +114,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    #[must_use]
     pub fn new(input: &'a str) -> Self {
         Self {
             _input: input,
@@ -142,6 +143,12 @@ impl<'a> Lexer<'a> {
         self.chars.peek()
     }
 
+    /// Lexes and returns the next token from the input stream.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ParseError`] if the input contains an unexpected character,
+    /// an unterminated string, or a malformed number.
     pub fn next_token(&mut self) -> Result<Token, ParseError> {
         self.skip_whitespace_and_comments();
 
@@ -152,14 +159,11 @@ impl<'a> Lexer<'a> {
             col: self.col,
         };
 
-        let c = match self.advance() {
-            Some(c) => c,
-            None => {
-                return Ok(Token {
-                    kind: TokenKind::EOF,
-                    span: start_span,
-                });
-            }
+        let Some(c) = self.advance() else {
+            return Ok(Token {
+                kind: TokenKind::EOF,
+                span: start_span,
+            });
         };
 
         let kind = match c {
@@ -224,10 +228,10 @@ impl<'a> Lexer<'a> {
             }
         }
 
-        match s.parse::<i64>() {
-            Ok(n) => Ok(TokenKind::IntegerLiteral(n)),
-            Err(_) => Err(ParseError::InvalidNumber(s, start_span)),
-        }
+        s.parse::<i64>().map_or_else(
+            |_| Err(ParseError::InvalidNumber(s, start_span)),
+            |n| Ok(TokenKind::IntegerLiteral(n)),
+        )
     }
 
     fn read_ident(&mut self, first: char) -> TokenKind {
@@ -265,6 +269,11 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    /// Creates a new parser, priming it with the first token.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ParseError`] if the very first token cannot be lexed.
     pub fn new(input: &'a str) -> Result<Self, ParseError> {
         let mut lexer = Lexer::new(input);
         let current_token = lexer.next_token()?;
@@ -279,25 +288,18 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expect(&mut self, expected_kind: TokenKind) -> Result<(), ParseError> {
-        // Simple comparison ignoring internal data for Identifier/Literal
-        // This requires implementing PartialEq manually or matching carefully.
-        // For simplicity, we match enum discriminant logic or use strict equality if strict matches needed.
-        // Here strict equality is tricky because TokenKind::Identifier(String) needs string match.
-        // We generally use `expect` for symbols like Equals, LBracket.
-
-        // Let's rely on PartialEq which matches contents.
-        // BUT for expect(Identifier(_)), we can't construct generic Identifier.
-        // So we just check discriminant.
-
-        let matches = match (&self.current_token.kind, &expected_kind) {
-            (TokenKind::Equals, TokenKind::Equals) => true,
-            (TokenKind::LBracket, TokenKind::LBracket) => true,
-            (TokenKind::RBracket, TokenKind::RBracket) => true,
-            (TokenKind::EOF, TokenKind::EOF) => true,
-            // For data carriers, we probably don't use expect() except maybe for testing.
-            _ => false,
-        };
+    fn expect(&mut self, expected_kind: &TokenKind) -> Result<(), ParseError> {
+        // Simple comparison ignoring internal data for Identifier/Literal.
+        // We only use `expect` for the symbol tokens (Equals, brackets, EOF), so a
+        // structural `matches!` over the paired discriminants is sufficient and
+        // avoids the manual PartialEq needed for the data-carrying variants.
+        let matches = matches!(
+            (&self.current_token.kind, expected_kind),
+            (TokenKind::Equals, TokenKind::Equals)
+                | (TokenKind::LBracket, TokenKind::LBracket)
+                | (TokenKind::RBracket, TokenKind::RBracket)
+                | (TokenKind::EOF, TokenKind::EOF)
+        );
 
         if matches {
             self.advance()
@@ -309,6 +311,17 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Parses the token stream into a [`TomlValue`] table hierarchy.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ParseError`] on any malformed input: unexpected tokens,
+    /// duplicate keys, or lexing failures encountered while advancing.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the internal root section is missing, which cannot happen
+    /// because it is inserted unconditionally at the start of parsing.
     pub fn parse(&mut self) -> Result<TomlValue, ParseError> {
         let mut current_section = String::new(); // Empty string = root section
 
@@ -333,9 +346,9 @@ impl<'a> Parser<'a> {
                     // Section header: [name]
                     self.advance()?;
                     if let TokenKind::Identifier(name) = &self.current_token.kind {
-                        current_section = name.clone();
+                        current_section.clone_from(name);
                         self.advance()?;
-                        self.expect(TokenKind::RBracket)?;
+                        self.expect(&TokenKind::RBracket)?;
 
                         // Ensure section exists
                         sections.entry(current_section.clone()).or_default();
@@ -350,14 +363,14 @@ impl<'a> Parser<'a> {
                     // Key = Value
                     let key = key.clone();
                     self.advance()?;
-                    self.expect(TokenKind::Equals)?;
+                    self.expect(&TokenKind::Equals)?;
 
                     let value = self.parse_value()?;
 
                     if let Some(table) = sections.get_mut(&current_section) {
                         if table.contains_key(&key) {
                             return Err(ParseError::Generic(
-                                format!("Duplicate key '{}'", key),
+                                format!("Duplicate key '{key}'"),
                                 self.current_token.span,
                             ));
                         }
@@ -491,10 +504,10 @@ mod tests {
 
     #[test]
     fn test_comments() {
-        let input = r#"
+        let input = r"
             # This is a comment
             key = 1 # Inline comment
-        "#;
+        ";
         let mut parser = Parser::new(input).unwrap();
         let result = parser.parse().unwrap();
 

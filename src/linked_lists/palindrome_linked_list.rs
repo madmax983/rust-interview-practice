@@ -39,7 +39,7 @@
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct ListNode {
     pub val: i32,
-    pub next: Option<Box<ListNode>>,
+    pub next: Option<Box<Self>>,
 }
 
 impl ListNode {
@@ -52,10 +52,10 @@ impl ListNode {
     /// Helper to create a list from a vector (useful for tests and brute force)
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
-    pub fn from_vec(vec: Vec<i32>) -> Option<Box<ListNode>> {
+    pub fn from_vec(vec: Vec<i32>) -> Option<Box<Self>> {
         let mut current = None;
         for &val in vec.iter().rev() {
-            let mut node = ListNode::new(val);
+            let mut node = Self::new(val);
             node.next = current;
             current = Some(Box::new(node));
         }
@@ -118,7 +118,7 @@ pub fn is_palindrome_brute_force(head: Option<Box<ListNode>>) -> bool {
 /// 3. Split the list into two halves using `Option::take`.
 /// 4. Reverse the second half.
 /// 5. Compare the two halves node-by-node.
-/// 6. (Optional) Restore the list, though usually not required for LeetCode.
+/// 6. (Optional) Restore the list, though usually not required for `LeetCode`.
 ///
 /// # Rust Insight
 /// We use `Option::take()` to split the list. This avoids the need for raw pointers
@@ -128,8 +128,13 @@ pub fn is_palindrome_brute_force(head: Option<Box<ListNode>>) -> bool {
 /// # Gotcha
 /// Be careful with odd vs even lengths. If length is odd (e.g., 5), we skip the middle
 /// element (index 2) and compare `[0, 1]` with `reverse([3, 4])`.
+///
+/// # Panics
+///
+/// Does not panic in practice: the `unwrap` calls walk only `split_idx < len` nodes,
+/// so every node reached is guaranteed to exist.
 #[must_use]
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn is_palindrome_optimal(head: Option<Box<ListNode>>) -> bool {
     if head.is_none() {
         return true;

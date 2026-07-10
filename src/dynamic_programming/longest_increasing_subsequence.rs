@@ -33,19 +33,15 @@
 ///
 /// We define `helper(prev_index, curr_index)` as the length of the LIS starting at `curr_index`
 /// given that the previous element included in the LIS was at `prev_index`.
-/// To make this runnable on LeetCode constraints (N=2500), we add memoization.
+/// To make this runnable on `LeetCode` constraints (N=2500), we add memoization.
 ///
 /// Time: O(N²) - There are N * N states.
 /// Space: O(N²) - For the memoization table.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn length_of_lis_brute_force(nums: Vec<i32>) -> i32 {
-    let n = nums.len();
-    // Memoization table initialized with -1 (indicating uncomputed).
-    // `memo[prev_index + 1][curr_index]` stores the result.
-    // We offset prev_index by 1 because it can be -1 (initial state).
-    let mut memo = vec![vec![-1; n]; n + 1];
-
+    // `prev_index + 1` is always >= 0 and `curr_index` fits an isize for LeetCode sizes.
+    #[allow(clippy::cast_sign_loss, clippy::cast_possible_wrap)]
     fn helper(nums: &[i32], prev_index: isize, curr_index: usize, memo: &mut Vec<Vec<i32>>) -> i32 {
         if curr_index == nums.len() {
             return 0;
@@ -72,6 +68,12 @@ pub fn length_of_lis_brute_force(nums: Vec<i32>) -> i32 {
         memo[memo_prev_idx][curr_index] = result;
         result
     }
+
+    let n = nums.len();
+    // Memoization table initialized with -1 (indicating uncomputed).
+    // `memo[prev_index + 1][curr_index]` stores the result.
+    // We offset prev_index by 1 because it can be -1 (initial state).
+    let mut memo = vec![vec![-1; n]; n + 1];
 
     helper(&nums, -1, 0, &mut memo)
 }
@@ -121,6 +123,8 @@ pub fn length_of_lis_optimized(nums: Vec<i32>) -> i32 {
 /// Space: O(N) - For the `tails` vector.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// LeetCode constraints (nums.len() <= 2500) guarantee this cast fits.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub fn length_of_lis_optimal(nums: Vec<i32>) -> i32 {
     // ⚡ BOLT OPTIMIZATION: Pre-allocate capacity to eliminate dynamic heap reallocations.
     let mut tails = Vec::with_capacity(nums.len());
@@ -162,14 +166,14 @@ pub fn length_of_lis(nums: Vec<i32>) -> i32 {
     length_of_lis_optimal(nums)
 }
 
-/// Alternative Approach: Segment Tree
-/// We can use a Segment Tree or Fenwick Tree (Binary Indexed Tree) to query the maximum LIS length
-/// for values smaller than current `nums[i]` in O(log M) time, where M is the range of values.
-/// This is useful if we need to count the number of LIS or handle updates.
-///
-/// Alternative Approach: Printing the Subsequence
-/// To reconstruct the actual LIS, we need to store the `predecessor` index for each element
-/// in the DP or Patience Sort approach, then backtrack from the end.
+// Alternative Approach: Segment Tree
+// We can use a Segment Tree or Fenwick Tree (Binary Indexed Tree) to query the maximum LIS length
+// for values smaller than current `nums[i]` in O(log M) time, where M is the range of values.
+// This is useful if we need to count the number of LIS or handle updates.
+//
+// Alternative Approach: Printing the Subsequence
+// To reconstruct the actual LIS, we need to store the `predecessor` index for each element
+// in the DP or Patience Sort approach, then backtrack from the end.
 
 #[cfg(test)]
 mod tests {
@@ -199,31 +203,31 @@ mod tests {
         let empty: Vec<i32> = vec![];
         assert_eq!(length_of_lis_brute_force(empty.clone()), 0);
         assert_eq!(length_of_lis_optimized(empty.clone()), 0);
-        assert_eq!(length_of_lis_optimal(empty.clone()), 0);
+        assert_eq!(length_of_lis_optimal(empty), 0);
 
         // Case 2: Sorted
         let sorted = vec![1, 2, 3, 4, 5];
         assert_eq!(length_of_lis_brute_force(sorted.clone()), 5);
         assert_eq!(length_of_lis_optimized(sorted.clone()), 5);
-        assert_eq!(length_of_lis_optimal(sorted.clone()), 5);
+        assert_eq!(length_of_lis_optimal(sorted), 5);
 
         // Case 3: Reverse Sorted
         let reverse = vec![5, 4, 3, 2, 1];
         assert_eq!(length_of_lis_brute_force(reverse.clone()), 1);
         assert_eq!(length_of_lis_optimized(reverse.clone()), 1);
-        assert_eq!(length_of_lis_optimal(reverse.clone()), 1);
+        assert_eq!(length_of_lis_optimal(reverse), 1);
 
         // Case 4: Duplicates
         let dups = vec![7, 7, 7, 7];
         assert_eq!(length_of_lis_brute_force(dups.clone()), 1);
         assert_eq!(length_of_lis_optimized(dups.clone()), 1);
-        assert_eq!(length_of_lis_optimal(dups.clone()), 1);
+        assert_eq!(length_of_lis_optimal(dups), 1);
 
         // Case 5: Wiggle
         let wiggle = vec![1, 3, 6, 7, 9, 4, 10, 5, 6];
         // LIS: [1, 3, 6, 7, 9, 10] -> 6
         assert_eq!(length_of_lis_brute_force(wiggle.clone()), 6);
         assert_eq!(length_of_lis_optimized(wiggle.clone()), 6);
-        assert_eq!(length_of_lis_optimal(wiggle.clone()), 6);
+        assert_eq!(length_of_lis_optimal(wiggle), 6);
     }
 }

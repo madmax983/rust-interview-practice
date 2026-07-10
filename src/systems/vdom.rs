@@ -7,7 +7,7 @@
 //!
 //! **Real-world Usage:**
 //! - Frontend web frameworks (React, Vue, Yew, Dioxus).
-//! - Declarative UI systems (SwiftUI, Jetpack Compose, Flutter).
+//! - Declarative UI systems (`SwiftUI`, Jetpack Compose, Flutter).
 //! - Server-Side Rendering (SSR) systems.
 //!
 //! **Why build it yourself?**
@@ -73,11 +73,13 @@ impl VElement {
         }
     }
 
+    #[must_use]
     pub fn with_attr(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.attributes.insert(key.into(), value.into());
         self
     }
 
+    #[must_use]
     pub fn with_child(mut self, child: VNode) -> Self {
         self.children.push(child);
         self
@@ -116,8 +118,10 @@ pub enum Patch<'a> {
 }
 
 /// Recursively diffs two Virtual DOM nodes and returns a list of patches.
+///
 /// Note: In a real implementation, patches need to be tied to specific DOM node indices or paths.
 /// For simplicity, we just collect patches for the current node and its children.
+#[must_use]
 pub fn diff<'a>(old: &'a VNode, new: &'a VNode) -> Vec<Patch<'a>> {
     let mut patches = Vec::new();
     diff_into(old, new, &mut patches);
@@ -125,6 +129,7 @@ pub fn diff<'a>(old: &'a VNode, new: &'a VNode) -> Vec<Patch<'a>> {
 }
 
 /// Recursively diffs two Virtual DOM nodes, pushing patches into the provided vector.
+///
 /// ⚡ BOLT OPTIMIZATION: Passing `&mut Vec<Patch<'a>>` prevents intermediate O(P) allocations
 /// from bubbling up the recursive call tree, acting as a zero-cost abstraction for tree traversals.
 pub fn diff_into<'a>(old: &'a VNode, new: &'a VNode, patches: &mut Vec<Patch<'a>>) {
@@ -314,8 +319,8 @@ mod tests {
     impl VNode {
         fn to_element(&self) -> &VElement {
             match self {
-                VNode::Element(e) => e,
-                _ => panic!("Not an element"),
+                Self::Element(e) => e,
+                Self::Text(_) => panic!("Not an element"),
             }
         }
     }

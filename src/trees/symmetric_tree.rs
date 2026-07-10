@@ -61,6 +61,7 @@ impl TreeNode {
 }
 
 /// Brute force approach: Collect nodes into vectors and compare
+///
 /// Time: O(N) - visits each node once for traversal, then O(N) to compare vectors
 /// Space: O(N) - stores node values (and None markers) in a vector
 ///
@@ -156,24 +157,23 @@ pub fn is_symmetric_optimized(root: Option<Box<TreeNode>>) -> bool {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn is_symmetric_optimal(root: Option<Box<TreeNode>>) -> bool {
-    fn is_mirror(left: &Option<Box<TreeNode>>, right: &Option<Box<TreeNode>>) -> bool {
+    fn is_mirror(left: Option<&TreeNode>, right: Option<&TreeNode>) -> bool {
         match (left, right) {
             // Both are empty: symmetric
             (None, None) => true,
             // Both have nodes: check values and recurse on mirrored children
             (Some(l), Some(r)) => {
-                l.val == r.val && is_mirror(&l.left, &r.right) && is_mirror(&l.right, &r.left)
+                l.val == r.val
+                    && is_mirror(l.left.as_deref(), r.right.as_deref())
+                    && is_mirror(l.right.as_deref(), r.left.as_deref())
             }
             // Structure mismatch (one is Some, one is None)
             _ => false,
         }
     }
 
-    if let Some(node) = &root {
-        is_mirror(&node.left, &node.right)
-    } else {
-        true
-    }
+    root.as_ref()
+        .is_none_or(|node| is_mirror(node.left.as_deref(), node.right.as_deref()))
 }
 
 /// Main entry point
@@ -196,6 +196,9 @@ pub fn is_symmetric(root: Option<Box<TreeNode>>) -> bool {
 
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     fn build_symmetric_tree() -> Option<Box<TreeNode>> {

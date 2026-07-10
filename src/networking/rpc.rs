@@ -86,6 +86,10 @@ pub struct RpcResponse {
 
 /// A handler trait for dynamic dispatch on the server.
 pub trait RpcHandler: Send + Sync + 'static {
+    /// Handles a request payload and produces a response payload.
+    ///
+    /// # Errors
+    /// Returns an error string if the handler fails to process the request.
     fn handle(&self, payload: &[u8]) -> Result<Vec<u8>, String>;
 }
 
@@ -165,7 +169,7 @@ impl RpcResponse {
     fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         // Format: ID\nIS_ERROR\nPAYLOAD_LEN\nPAYLOAD
-        let err_flag = if self.is_error { 1 } else { 0 };
+        let err_flag = i32::from(self.is_error);
         write!(
             &mut buf,
             "{}\n{}\n{}\n",
@@ -238,6 +242,7 @@ impl Default for RpcServer {
 }
 
 impl RpcServer {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             handlers: Arc::new(RwLock::new(HashMap::new())),
@@ -245,6 +250,9 @@ impl RpcServer {
     }
 
     /// Registers a new handler for a specific method name.
+    ///
+    /// # Panics
+    /// Panics if the internal handler lock is poisoned by another thread.
     pub fn register<H: RpcHandler>(&self, method: &str, handler: H) {
         self.handlers
             .write()
@@ -253,33 +261,32 @@ impl RpcServer {
     }
 
     /// Starts the server on the given address, blocking the current thread.
+    ///
+    /// # Errors
+    /// Returns an error if the listener cannot bind to the given address.
     pub fn run<A: ToSocketAddrs>(&self, addr: A) -> io::Result<()> {
         let listener = TcpListener::bind(addr)?;
 
-        for stream in listener.incoming() {
-            match stream {
-                Ok(stream) => {
-                    let handlers = Arc::clone(&self.handlers);
+        // Ignore connections that fail to accept; keep serving the rest.
+        for stream in listener.incoming().flatten() {
+            let handlers = Arc::clone(&self.handlers);
 
-                    // GOTCHA: Unbounded thread spawning can lead to exhaustion.
-                    // PRODUCTION NOTE: A production RPC server uses a bounded thread pool or async tasks.
-                    thread::spawn(move || {
-                        if let Err(e) = Self::handle_client(stream, handlers) {
-                            if e.kind() != io::ErrorKind::UnexpectedEof {
-                                // Ignore standard disconnects, log others
-                            }
-                        }
-                    });
+            // GOTCHA: Unbounded thread spawning can lead to exhaustion.
+            // PRODUCTION NOTE: A production RPC server uses a bounded thread pool or async tasks.
+            thread::spawn(move || {
+                if let Err(e) = Self::handle_client(stream, &handlers)
+                    && e.kind() != io::ErrorKind::UnexpectedEof
+                {
+                    // Ignore standard disconnects, log others
                 }
-                Err(_) => continue,
-            }
+            });
         }
         Ok(())
     }
 
     fn handle_client(
         mut stream: TcpStream,
-        handlers: Arc<RwLock<HashMap<String, Box<dyn RpcHandler>>>>,
+        handlers: &Arc<RwLock<HashMap<String, Box<dyn RpcHandler>>>>,
     ) -> io::Result<()> {
         let mut reader = BufReader::new(stream.try_clone()?);
 
@@ -344,6 +351,13 @@ pub struct RpcClient {
 
 impl RpcClient {
     /// Connects to an RPC server at the given address.
+    ///
+    /// # Errors
+    /// Returns an error if the TCP connection cannot be established or the
+    /// stream cannot be cloned for the background reader thread.
+    ///
+    /// # Panics
+    /// The background reader thread panics if the internal callbacks lock is poisoned.
     pub fn connect<A: ToSocketAddrs>(addr: A) -> io::Result<Self> {
         let stream = TcpStream::connect(addr)?;
         let read_stream = stream.try_clone()?;
@@ -357,16 +371,11 @@ impl RpcClient {
         let closed_clone = Arc::clone(&closed);
         thread::spawn(move || {
             let mut reader = BufReader::new(read_stream);
-            loop {
-                match RpcResponse::parse(&mut reader) {
-                    Ok(Some(response)) => {
-                        let mut map = callbacks_clone.lock().unwrap();
-                        if let Some(sender) = map.remove(&response.id) {
-                            let _ = sender.send(response); // Ignore if caller hung up
-                        }
-                    }
-                    Ok(None) => break, // EOF
-                    Err(_) => break,   // Connection error
+            // Loop until EOF (`Ok(None)`) or a connection error stops the parse.
+            while let Ok(Some(response)) = RpcResponse::parse(&mut reader) {
+                let mut map = callbacks_clone.lock().unwrap();
+                if let Some(sender) = map.remove(&response.id) {
+                    let _ = sender.send(response); // Ignore if caller hung up
                 }
             }
 
@@ -389,6 +398,14 @@ impl RpcClient {
     }
 
     /// Calls a remote method synchronously.
+    ///
+    /// # Errors
+    /// Returns an error if the connection is closed, the request cannot be
+    /// written, the connection drops before a response arrives, or the remote
+    /// handler returns an error.
+    ///
+    /// # Panics
+    /// Panics if the internal callbacks or write-stream lock is poisoned.
     pub fn call(&self, method: &str, payload: &[u8]) -> Result<Vec<u8>, String> {
         // Fail fast if the reader thread has already observed a closed connection.
         if self.closed.load(Ordering::Acquire) {
@@ -540,7 +557,7 @@ mod tests {
 
         match done_rx.recv_timeout(Duration::from_secs(5)) {
             Ok(result) => assert!(result.is_err(), "call() must error on a closed connection"),
-            Err(_) => panic!("call() hung: reader exit did not wake the blocked caller"),
+            Err(err) => panic!("call() hung: reader exit did not wake the blocked caller: {err}"),
         }
     }
 
@@ -574,7 +591,7 @@ mod tests {
                 let stream = stream.unwrap();
                 let handlers = Arc::clone(&server_clone.handlers);
                 thread::spawn(move || {
-                    let _ = RpcServer::handle_client(stream, handlers);
+                    let _ = RpcServer::handle_client(stream, &handlers);
                 });
             }
         });
@@ -607,9 +624,9 @@ mod tests {
         for i in 0..10 {
             let c = Arc::clone(&client);
             handles.push(thread::spawn(move || {
-                let payload = format!("val:{}", i);
+                let payload = format!("val:{i}");
                 let res = c.call("uppercase", payload.as_bytes()).unwrap();
-                let expected = format!("VAL:{}", i);
+                let expected = format!("VAL:{i}");
                 assert_eq!(String::from_utf8(res).unwrap(), expected);
             }));
         }

@@ -45,7 +45,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
-/// A trait representing a State-based CRDT (CvRDT).
+/// A trait representing a State-based CRDT (`CvRDT`).
 pub trait Crdt {
     /// Merges another state into this state.
     /// The merge operation must be Commutative, Associative, and Idempotent.
@@ -65,7 +65,7 @@ pub struct LwwRegister<T> {
 }
 
 impl<T> LwwRegister<T> {
-    pub fn new(value: T, timestamp: u64, node_id: String) -> Self {
+    pub const fn new(value: T, timestamp: u64, node_id: String) -> Self {
         Self {
             value,
             timestamp,
@@ -116,6 +116,7 @@ pub struct OrSet<T> {
 }
 
 impl<T: Clone + Eq + Hash> OrSet<T> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             adds: HashMap::new(),

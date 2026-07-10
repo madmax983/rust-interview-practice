@@ -42,8 +42,8 @@ use std::collections::VecDeque;
 #[derive(Debug, PartialEq, Eq)]
 pub struct TreeNode {
     pub val: i32,
-    pub left: Option<Box<TreeNode>>,
-    pub right: Option<Box<TreeNode>>,
+    pub left: Option<Box<Self>>,
+    pub right: Option<Box<Self>>,
 }
 
 impl TreeNode {
@@ -127,26 +127,27 @@ impl Iterator for LevelOrderIterator {
 pub fn level_order(root: Option<Box<TreeNode>>) -> Vec<Vec<i32>> {
     // Handle the empty case explicitly or let the iterator handle it.
     // Here, if root is None, we return an empty vec immediately or use the iterator.
-    if let Some(node) = root {
+    root.map_or_else(Vec::new, |node| {
         let mut queue = VecDeque::new();
         queue.push_back(node);
         LevelOrderIterator { queue }.collect()
-    } else {
-        Vec::new()
-    }
+    })
 }
 
-/// # Alternative Approaches
-///
-/// 1. **Recursive DFS**: Pass the level index as an argument to a recursive function.
-///    Push values into `result[level]`. This is often shorter but uses stack space O(h)
-///    instead of queue space O(w).
-/// 2. **Two Vectors**: Use two vectors `current_level` and `next_level` instead of a queue.
-///    Swap them at the end of each level. This avoids `VecDeque` but is functionally equivalent.
-///    It can be slightly more cache-friendly for very large levels.
+// # Alternative Approaches
+//
+// 1. **Recursive DFS**: Pass the level index as an argument to a recursive function.
+//    Push values into `result[level]`. This is often shorter but uses stack space O(h)
+//    instead of queue space O(w).
+// 2. **Two Vectors**: Use two vectors `current_level` and `next_level` instead of a queue.
+//    Swap them at the end of each level. This avoids `VecDeque` but is functionally equivalent.
+//    It can be slightly more cache-friendly for very large levels.
 
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     // Helper to create a leaf node

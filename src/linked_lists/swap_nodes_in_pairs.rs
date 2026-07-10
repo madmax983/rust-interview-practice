@@ -1,7 +1,7 @@
 //! # 24. Swap Nodes in Pairs
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/swap-nodes-in-pairs/
+//! Link: <https://leetcode.com/problems/swap-nodes-in-pairs>/
 //!
 //! Given a linked list, swap every two adjacent nodes and return its head. You must solve the problem
 //! without modifying the values in the list's nodes (i.e., only nodes themselves may be changed.)
@@ -17,14 +17,14 @@
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct ListNode {
     pub val: i32,
-    pub next: Option<Box<ListNode>>,
+    pub next: Option<Box<Self>>,
 }
 
 impl ListNode {
     #[inline]
     #[must_use]
     pub const fn new(val: i32) -> Self {
-        ListNode { next: None, val }
+        Self { next: None, val }
     }
 }
 
@@ -126,6 +126,11 @@ pub fn swap_pairs_optimized(head: Option<Box<ListNode>>) -> Option<Box<ListNode>
 /// In Rust, manipulating linked list pointers iteratively means you have to maintain a mutable reference
 /// (`&mut Option<Box<ListNode>>`) that traverses down the list. Getting the lifetimes right for this
 /// traversing pointer without running into "cannot borrow as mutable more than once" errors is the core challenge.
+///
+/// # Panics
+///
+/// Does not panic in practice: each `unwrap` follows an assignment that sets the
+/// corresponding `next` link to `Some(..)`, and `dummy` is seeded with a node up front.
 #[must_use]
 pub fn swap_pairs_optimal(mut head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     let mut dummy = Some(Box::new(ListNode { val: 0, next: None }));

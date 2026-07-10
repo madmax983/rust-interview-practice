@@ -1,4 +1,4 @@
-//! # IndexMap (Linked Hash Map) Implementation
+//! # `IndexMap` (Linked Hash Map) Implementation
 //!
 //! An ordered hash map that preserves insertion order while maintaining `O(1)` average
 //! time complexity for lookups, insertions, and removals.

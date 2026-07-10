@@ -16,6 +16,9 @@
 //! to terms (the inverted index itself), and how relevance is calculated mathematically using TF-IDF
 //! so that rare words carry more weight than common ones.
 
+// Precision loss is acceptable in TF-IDF floating-point scoring math.
+#![allow(clippy::cast_precision_loss)]
+
 use std::collections::{HashMap, HashSet};
 
 // =========================================================================================
@@ -69,7 +72,7 @@ use std::collections::{HashMap, HashSet};
 pub type DocId = u32;
 
 /// Postings list entry representing a term's occurrence in a specific document.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Posting {
     pub doc_id: DocId,
     pub term_frequency: usize, // Raw count of the term in the document
@@ -115,7 +118,7 @@ impl InvertedIndex {
             "are", "was", "were", "it", "this", "that", "of", "by", "as", "be",
         ]
         .iter()
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
         .collect();
 
         Self {
@@ -134,7 +137,7 @@ impl InvertedIndex {
                 // ⚡ BOLT OPTIMIZATION: Avoid intermediate `.collect::<String>()` allocation by using `.flat_map(|c| c.to_lowercase())`.
                 word.chars()
                     .filter(|c| c.is_alphanumeric())
-                    .flat_map(|c| c.to_lowercase())
+                    .flat_map(char::to_lowercase)
                     .collect::<String>()
             })
             .filter(|term| !term.is_empty() && !self.stop_words.contains(term))
@@ -146,7 +149,6 @@ impl InvertedIndex {
         let doc_meta = self.documents.get(&posting.doc_id).unwrap();
 
         // Term Frequency (TF): Term occurrences / Total terms in document
-        #[allow(clippy::cast_precision_loss)]
         let tf = (posting.term_frequency as f64) / (doc_meta.total_terms as f64);
 
         // Inverse Document Frequency (IDF): ln(Total docs / Docs containing term)
@@ -391,8 +393,8 @@ mod tests {
         assert_eq!(engine.documents.get(&1).unwrap().total_terms, 1);
 
         // Stale terms must no longer reference doc 1 (Invariant #2).
-        assert!(engine.index.get("a").is_none());
-        assert!(engine.index.get("b").is_none());
+        assert!(!engine.index.contains_key("a"));
+        assert!(!engine.index.contains_key("b"));
 
         // The new term references doc 1 exactly once (no duplicate postings).
         let c_postings = engine.index.get("c").unwrap();

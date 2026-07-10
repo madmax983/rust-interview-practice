@@ -27,6 +27,8 @@
 /// Space Complexity: O(1) - Ignoring the output vector, no extra space is used.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn daily_temperatures_brute_force(temperatures: Vec<i32>) -> Vec<i32> {
     let n = temperatures.len();
     let mut result = vec![0; n];
@@ -56,6 +58,9 @@ pub fn daily_temperatures_brute_force(temperatures: Vec<i32>) -> Vec<i32> {
 /// Time Complexity: O(N) - Each element is pushed onto the stack once and popped at most once.
 /// Space Complexity: O(N) - In the worst case (strictly decreasing temperatures), the stack holds all indices.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn daily_temperatures_optimal(temperatures: Vec<i32>) -> Vec<i32> {
     let n = temperatures.len();
     // Initialize the result vector with 0s.

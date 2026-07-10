@@ -36,6 +36,7 @@
 /// This approach iterates through every cell in the matrix.
 /// Idiomatic Rust replaces manual looping with iterator chaining `.iter().flatten().any()`.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn search_matrix_brute_force(matrix: Vec<Vec<i32>>, target: i32) -> bool {
     // RUST INSIGHT: `.flatten()` seamlessly transforms our `Vec<Vec<i32>>`
     // (an iterator of iterators) into a single flat iterator of `&i32`.
@@ -51,6 +52,7 @@ pub fn search_matrix_brute_force(matrix: Vec<Vec<i32>>, target: i32) -> bool {
 /// Conceptually flatten the matrix and use binary search. We find the elements by
 /// converting the mid index of our imaginary 1D array back to `row` and `col` of the 2D matrix.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn search_matrix_optimal(matrix: Vec<Vec<i32>>, target: i32) -> bool {
     if matrix.is_empty() || matrix[0].is_empty() {
         return false;
@@ -76,19 +78,19 @@ pub fn search_matrix_optimal(matrix: Vec<Vec<i32>>, target: i32) -> bool {
 
         let mid_val = matrix[row][col];
 
-        if mid_val == target {
-            return true;
-        } else if mid_val < target {
+        match mid_val.cmp(&target) {
+            std::cmp::Ordering::Equal => return true,
             // Target is greater, search the right half
-            left = mid + 1;
-        } else {
-            // Target is smaller, search the left half.
-            // RUST INSIGHT: Since `mid` is `usize`, `mid - 1` could underflow if `mid == 0`.
-            // We use `checked_sub` or break manually if `mid == 0`.
-            if mid == 0 {
-                break;
+            std::cmp::Ordering::Less => left = mid + 1,
+            std::cmp::Ordering::Greater => {
+                // Target is smaller, search the left half.
+                // RUST INSIGHT: Since `mid` is `usize`, `mid - 1` could underflow if `mid == 0`.
+                // We break manually if `mid == 0` to avoid underflow.
+                if mid == 0 {
+                    break;
+                }
+                right = mid - 1;
             }
-            right = mid - 1;
         }
     }
 
@@ -109,14 +111,14 @@ mod tests {
     fn test_brute_force_happy_path() {
         let matrix = vec![vec![1, 3, 5, 7], vec![10, 11, 16, 20], vec![23, 30, 34, 60]];
         assert!(search_matrix_brute_force(matrix.clone(), 3));
-        assert!(!search_matrix_brute_force(matrix.clone(), 13));
+        assert!(!search_matrix_brute_force(matrix, 13));
     }
 
     #[test]
     fn test_optimal_happy_path() {
         let matrix = vec![vec![1, 3, 5, 7], vec![10, 11, 16, 20], vec![23, 30, 34, 60]];
         assert!(search_matrix_optimal(matrix.clone(), 3));
-        assert!(!search_matrix_optimal(matrix.clone(), 13));
+        assert!(!search_matrix_optimal(matrix, 13));
     }
 
     #[test]
@@ -140,12 +142,12 @@ mod tests {
         // Single row
         let row_matrix = vec![vec![1, 3, 5, 7, 9]];
         assert!(search_matrix_optimal(row_matrix.clone(), 5));
-        assert!(!search_matrix_optimal(row_matrix.clone(), 4));
+        assert!(!search_matrix_optimal(row_matrix, 4));
 
         // Single column
         let col_matrix = vec![vec![1], vec![3], vec![5], vec![7], vec![9]];
         assert!(search_matrix_optimal(col_matrix.clone(), 5));
-        assert!(!search_matrix_optimal(col_matrix.clone(), 4));
+        assert!(!search_matrix_optimal(col_matrix, 4));
     }
 
     #[test]

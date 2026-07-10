@@ -1,7 +1,7 @@
 //! # 62. Unique Paths
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/unique-paths/
+//! Link: <https://leetcode.com/problems/unique-paths>/
 //!
 //! A robot is located at the top-left corner of a `m x n` grid.
 //! The robot can only move either down or right at any point in time.
@@ -38,7 +38,7 @@
 /// Space: O(m+n) - Max depth of the recursion stack.
 ///
 /// # GOTCHA:
-/// This solution will Time Out on LeetCode for large grids because we repeatedly compute
+/// This solution will Time Out on `LeetCode` for large grids because we repeatedly compute
 /// the same subproblems. It is solely here to demonstrate the mathematical base structure.
 #[must_use]
 pub fn unique_paths_brute_force(m: i32, n: i32) -> i32 {
@@ -196,13 +196,11 @@ mod tests {
 
             assert_eq!(
                 bf, opt,
-                "Mismatch between brute force and optimized for ({}, {})",
-                m, n
+                "Mismatch between brute force and optimized for ({m}, {n})"
             );
             assert_eq!(
                 opt, optimal,
-                "Mismatch between optimized and optimal for ({}, {})",
-                m, n
+                "Mismatch between optimized and optimal for ({m}, {n})"
             );
         }
     }

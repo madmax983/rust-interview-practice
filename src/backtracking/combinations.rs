@@ -40,18 +40,9 @@
 /// ⚡ BOLT OPTIMIZATION: We pre-calculate the mathematical combinations `C(n, k)` to pre-allocate
 /// the exact capacity for the `results` vector, completely preventing dynamic heap reallocations.
 #[must_use]
+// LeetCode constraints (1 <= k <= n <= 20) guarantee these casts fit.
+#[allow(clippy::cast_sign_loss)]
 pub fn combine_brute_force(n: i32, k: i32) -> Vec<Vec<i32>> {
-    let capacity = {
-        let k_min = k.min(n - k);
-        let mut res = 1;
-        for i in 1..=k_min {
-            res = res * (n - k_min + i) as usize / i as usize;
-        }
-        res
-    };
-    let mut results = Vec::with_capacity(capacity);
-    let mut current_path = Vec::with_capacity(k as usize);
-
     fn backtrack(start: i32, n: i32, k: i32, path: &mut Vec<i32>, results: &mut Vec<Vec<i32>>) {
         // Base case: we have selected exactly `k` elements.
         // RUST INSIGHT: path.len() returns a `usize`, so we cast `k` to `usize` for a safe comparison.
@@ -71,6 +62,17 @@ pub fn combine_brute_force(n: i32, k: i32) -> Vec<Vec<i32>> {
         }
     }
 
+    let capacity = {
+        let k_min = k.min(n - k);
+        let mut res = 1;
+        for i in 1..=k_min {
+            res = res * (n - k_min + i) as usize / i as usize;
+        }
+        res
+    };
+    let mut results = Vec::with_capacity(capacity);
+    let mut current_path = Vec::with_capacity(k as usize);
+
     backtrack(1, n, k, &mut current_path, &mut results);
     results
 }
@@ -85,19 +87,13 @@ pub fn combine_brute_force(n: i32, k: i32) -> Vec<Vec<i32>> {
 /// ⚡ BOLT OPTIMIZATION: We pre-calculate the mathematical combinations `C(n, k)` to pre-allocate
 /// the exact capacity for the `results` vector, completely preventing dynamic heap reallocations.
 #[must_use]
+// LeetCode constraints (1 <= k <= n <= 20) guarantee these casts fit.
+#[allow(
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)]
 pub fn combine_optimal(n: i32, k: i32) -> Vec<Vec<i32>> {
-    let capacity = {
-        let k_min = k.min(n - k);
-        let mut res = 1;
-        for i in 1..=k_min {
-            res = res * (n - k_min + i) as usize / i as usize;
-        }
-        res
-    };
-    let mut results = Vec::with_capacity(capacity);
-    // Mathematically pre-allocate to eliminate dynamic reallocations of our active path
-    let mut current_path = Vec::with_capacity(k as usize);
-
     fn backtrack(start: i32, n: i32, k: i32, path: &mut Vec<i32>, results: &mut Vec<Vec<i32>>) {
         if path.len() == k as usize {
             results.push(path.clone());
@@ -118,6 +114,18 @@ pub fn combine_optimal(n: i32, k: i32) -> Vec<Vec<i32>> {
             path.pop();
         }
     }
+
+    let capacity = {
+        let k_min = k.min(n - k);
+        let mut res = 1;
+        for i in 1..=k_min {
+            res = res * (n - k_min + i) as usize / i as usize;
+        }
+        res
+    };
+    let mut results = Vec::with_capacity(capacity);
+    // Mathematically pre-allocate to eliminate dynamic reallocations of our active path
+    let mut current_path = Vec::with_capacity(k as usize);
 
     backtrack(1, n, k, &mut current_path, &mut results);
     results

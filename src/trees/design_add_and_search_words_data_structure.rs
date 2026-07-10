@@ -54,6 +54,7 @@ use std::collections::{HashMap, HashSet};
 /// Time:
 /// - `add_word`: O(1) - Just pushing to a vector.
 /// - `search`: O(N * L) where N is the number of words and L is the length of the word.
+///
 /// Space: O(N * L) to store all words.
 #[derive(Default)]
 pub struct WordDictionaryBruteForce {
@@ -62,7 +63,7 @@ pub struct WordDictionaryBruteForce {
 
 impl WordDictionaryBruteForce {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { words: Vec::new() }
     }
 
@@ -70,6 +71,8 @@ impl WordDictionaryBruteForce {
         self.words.push(word);
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         let search_bytes = word.as_bytes();
 
@@ -106,8 +109,9 @@ impl WordDictionaryBruteForce {
 /// It dramatically reduces the search space by only comparing against words of the exact same length.
 ///
 /// Time:
-/// - `add_word`: O(L) to compute hash and insert into HashSet.
+/// - `add_word`: O(L) to compute hash and insert into `HashSet`.
 /// - `search`: O(M * L) where M is the number of words with the *same length*.
+///
 /// Space: O(N * L) to store all words in the hash map.
 #[derive(Default)]
 pub struct WordDictionaryOptimized {
@@ -126,6 +130,8 @@ impl WordDictionaryOptimized {
         self.length_map.entry(word.len()).or_default().insert(word);
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         // If there are no words of this length, return early.
         let Some(words) = self.length_map.get(&word.len()) else {
@@ -161,7 +167,7 @@ impl WordDictionaryOptimized {
 /// Trie Node representation using a fixed array.
 #[derive(Default)]
 struct TrieNode {
-    children: [Option<Box<TrieNode>>; 26],
+    children: [Option<Box<Self>>; 26],
     is_end: bool,
 }
 
@@ -182,6 +188,7 @@ impl TrieNode {
 /// Time:
 /// - `add_word`: O(L) where L is the length of the word.
 /// - `search`: O(26^dots * L) in the worst case (if everything matches the prefix).
+///
 /// Space: O(N * L * 26) in the worst case, but nodes are heavily shared.
 ///
 /// # Rust Insight
@@ -201,6 +208,7 @@ impl WordDictionaryOptimal {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `add_word(word: String)`
     pub fn add_word(&mut self, word: String) {
         let mut curr = &mut self.root;
         for b in word.bytes() {
@@ -212,6 +220,8 @@ impl WordDictionaryOptimal {
         curr.is_end = true;
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         // Delegate to the recursive helper function
         Self::search_dfs(&self.root, word.as_bytes())
@@ -234,11 +244,9 @@ impl WordDictionaryOptimal {
             false
         } else {
             let idx = (ch - b'a') as usize;
-            if let Some(child) = &node.children[idx] {
-                Self::search_dfs(child, &chars[1..])
-            } else {
-                false
-            }
+            node.children[idx]
+                .as_ref()
+                .is_some_and(|child| Self::search_dfs(child, &chars[1..]))
         }
     }
 }
@@ -345,20 +353,17 @@ mod tests {
             assert_eq!(
                 d1.search(query.to_string()),
                 expected,
-                "Failed BruteForce for {}",
-                query
+                "Failed BruteForce for {query}"
             );
             assert_eq!(
                 d2.search(query.to_string()),
                 expected,
-                "Failed Optimized for {}",
-                query
+                "Failed Optimized for {query}"
             );
             assert_eq!(
                 d3.search(query.to_string()),
                 expected,
-                "Failed Optimal for {}",
-                query
+                "Failed Optimal for {query}"
             );
         }
     }

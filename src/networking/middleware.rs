@@ -60,6 +60,10 @@ pub trait Service<Req> {
     type Res;
     type Err;
 
+    /// Processes a request and produces a response.
+    ///
+    /// # Errors
+    /// Returns [`Self::Err`] if the service fails to handle the request.
     fn call(&self, req: Req) -> Result<Self::Res, Self::Err>;
 }
 
@@ -81,7 +85,7 @@ pub struct Stack<Inner, Outer> {
 }
 
 impl<Inner, Outer> Stack<Inner, Outer> {
-    pub fn new(inner: Inner, outer: Outer) -> Self {
+    pub const fn new(inner: Inner, outer: Outer) -> Self {
         Self { inner, outer }
     }
 }
@@ -134,7 +138,7 @@ where
     fn call(&self, req: Req) -> Result<Self::Res, Self::Err> {
         // RUST INSIGHT: We can do pre-processing before calling inner.
         // We require Req to be Debug to print it.
-        println!("--> Request: {:?}", req);
+        println!("--> Request: {req:?}");
         let start = Instant::now();
 
         // Call the inner service
@@ -143,8 +147,8 @@ where
         // Post-processing
         let duration = start.elapsed();
         match &result {
-            Ok(res) => println!("<-- Response: {:?} (took {:?})", res, duration),
-            Err(err) => println!("<-- Error: {:?} (took {:?})", err, duration),
+            Ok(res) => println!("<-- Response: {res:?} (took {duration:?})"),
+            Err(err) => println!("<-- Error: {err:?} (took {duration:?})"),
         }
 
         result
@@ -161,7 +165,7 @@ pub struct MapResponseLayer<F> {
 }
 
 impl<F> MapResponseLayer<F> {
-    pub fn new(f: F) -> Self {
+    pub const fn new(f: F) -> Self {
         Self { f }
     }
 }
@@ -210,7 +214,7 @@ pub struct ServiceBuilder<L> {
     layer: L,
 }
 
-/// An identity layer that does nothing, used as the starting point for ServiceBuilder.
+/// An identity layer that does nothing, used as the starting point for `ServiceBuilder`.
 #[derive(Default, Clone)]
 pub struct IdentityLayer;
 
@@ -229,7 +233,8 @@ impl Default for ServiceBuilder<IdentityLayer> {
 }
 
 impl ServiceBuilder<IdentityLayer> {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             layer: IdentityLayer,
         }
@@ -289,6 +294,7 @@ impl<Req> Clone for BoxLayer<Req> {
 }
 
 impl<Req> BoxLayer<Req> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             _phantom: std::marker::PhantomData,
@@ -348,7 +354,7 @@ mod tests {
         type Err = ();
 
         fn call(&self, req: String) -> Result<Self::Res, Self::Err> {
-            Ok(format!("ECHO: {}", req))
+            Ok(format!("ECHO: {req}"))
         }
     }
 

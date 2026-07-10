@@ -77,20 +77,19 @@ impl ActiveRecordUser {
 
     pub fn save(&mut self) {
         let pool = self.db.lock().unwrap();
-        if self.id.is_none() {
+        if let Some(id) = self.id {
+            // "Update" logic
+            pool.execute(&format!(
+                "UPDATE users SET name = '{}' WHERE id = {id}",
+                self.name,
+            ));
+        } else {
             // "Insert" logic
             pool.execute(&format!(
                 "INSERT INTO users (name) VALUES ('{}')",
                 self.name
             ));
             self.id = Some(1); // Mock generated ID
-        } else {
-            // "Update" logic
-            pool.execute(&format!(
-                "UPDATE users SET name = '{}' WHERE id = {}",
-                self.name,
-                self.id.unwrap()
-            ));
         }
     }
 }
@@ -219,7 +218,7 @@ mod tests {
 
     #[test]
     fn test_repository_pattern_in_memory() {
-        let repo = DefaultUserRepository::default();
+        let repo = DefaultUserRepository;
 
         let new_user = NewUser {
             name: "Alice".to_string(),

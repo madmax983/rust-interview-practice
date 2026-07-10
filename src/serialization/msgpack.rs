@@ -1,49 +1,57 @@
-/// MessagePack Serialization Format
-///
-/// What this implements and what crate(s) it replaces:
-/// This implements a robust encoder and decoder for the MessagePack binary serialization format.
-/// It replaces canonical crates like `rmp` and `rmp-serde` to demonstrate how self-describing
-/// binary formats achieve minimal overhead compared to JSON while retaining dynamic typing.
-///
-/// Real-world systems that use this:
-/// - Redis (as an alternative to raw JSON for faster internal parsing and caching)
-/// - Fluentd (log data streaming)
-/// - Various RPC frameworks (Neovim uses MsgPack-RPC)
-///
-/// Why build it yourself?
-/// Implementing MessagePack teaches you byte-level protocol design, masking/bit-shifting for
-/// space optimization (like storing a tiny integer and its type tag in a single byte), and how
-/// zero-copy deserialization works in Rust by borrowing from the input buffer.
-///
-/// Architecture
-/// ------------
-///
-/// MessagePack packs types tightly. A single byte often contains both the type information
-/// (the "tag") and the value itself if it's small enough.
-///
-/// Example Layouts:
-/// - `FixInt` (0..127): Tag is `0xxxxxxx`. The byte *is* the value.
-/// - `FixStr` (length up to 31): Tag is `101xxxxx`. The 5 bits are the length, followed by utf-8 bytes.
-/// - `Uint8`: Tag is `0xcc`, followed by 1 byte value.
-///
-/// Invariants:
-/// - Parsed sizes (for strings, arrays, maps) must not exceed the remaining buffer length.
-/// - String deserialization must yield valid UTF-8.
-/// - The encoder must always choose the most compact representation possible for integers.
-///
-/// Complexity:
-/// - Encoding/Decoding Time: O(N) where N is the size of the data structure.
-/// - Space: O(N) for encoding. O(1) extra space for decoding if zero-copy (yielding `&str`).
-///
-/// Design Decisions:
-/// - We use an explicit `Value` enum for the AST representation, allowing completely dynamic types.
-/// - We borrow strings (`&'a str`) from the input byte slice to demonstrate zero-copy deserialization.
-/// - We implement `std::io::Write` for encoding to support streams, but decoding operates on `&[u8]` for zero-copy.
+//! `MessagePack` Serialization Format
+//!
+//! What this implements and what crate(s) it replaces:
+//! This implements a robust encoder and decoder for the `MessagePack` binary serialization format.
+//! It replaces canonical crates like `rmp` and `rmp-serde` to demonstrate how self-describing
+//! binary formats achieve minimal overhead compared to JSON while retaining dynamic typing.
+//!
+//! Real-world systems that use this:
+//! - Redis (as an alternative to raw JSON for faster internal parsing and caching)
+//! - Fluentd (log data streaming)
+//! - Various RPC frameworks (Neovim uses MsgPack-RPC)
+//!
+//! Why build it yourself?
+//! Implementing `MessagePack` teaches you byte-level protocol design, masking/bit-shifting for
+//! space optimization (like storing a tiny integer and its type tag in a single byte), and how
+//! zero-copy deserialization works in Rust by borrowing from the input buffer.
+//!
+//! Architecture
+//! ------------
+//!
+//! `MessagePack` packs types tightly. A single byte often contains both the type information
+//! (the "tag") and the value itself if it's small enough.
+//!
+//! Example Layouts:
+//! - `FixInt` (0..127): Tag is `0xxxxxxx`. The byte *is* the value.
+//! - `FixStr` (length up to 31): Tag is `101xxxxx`. The 5 bits are the length, followed by utf-8 bytes.
+//! - `Uint8`: Tag is `0xcc`, followed by 1 byte value.
+//!
+//! Invariants:
+//! - Parsed sizes (for strings, arrays, maps) must not exceed the remaining buffer length.
+//! - String deserialization must yield valid UTF-8.
+//! - The encoder must always choose the most compact representation possible for integers.
+//!
+//! Complexity:
+//! - Encoding/Decoding Time: O(N) where N is the size of the data structure.
+//! - Space: O(N) for encoding. O(1) extra space for decoding if zero-copy (yielding `&str`).
+//!
+//! Design Decisions:
+//! - We use an explicit `Value` enum for the AST representation, allowing completely dynamic types.
+//! - We borrow strings (`&'a str`) from the input byte slice to demonstrate zero-copy deserialization.
+//! - We implement `std::io::Write` for encoding to support streams, but decoding operates on `&[u8]` for zero-copy.
+
+// Byte/word truncation and reinterpretation are intentional in this serialization code.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use std::convert::TryInto;
 use std::io::{self, Write};
 use std::str;
 
-/// Represents a dynamically typed MessagePack value.
+/// Represents a dynamically typed `MessagePack` value.
 /// The `&'a str` lifetime binds the string values to the original byte slice.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value<'a> {
@@ -58,9 +66,9 @@ pub enum Value<'a> {
     /// Borrowed UTF-8 string (zero-copy)
     String(&'a str),
     /// Array of values
-    Array(Vec<Value<'a>>),
+    Array(Vec<Self>),
     /// Map of key-value pairs (using Vec to preserve order and simplify dynamic keys)
-    Map(Vec<(Value<'a>, Value<'a>)>),
+    Map(Vec<(Self, Self)>),
 }
 
 /// Errors that can occur during decoding.
@@ -88,6 +96,13 @@ pub enum DecodeError {
 const MAX_DEPTH: usize = 128;
 
 /// Encodes a `Value` into a writer using the most compact representation.
+///
+/// # Errors
+///
+/// Returns an [`io::Error`] if the writer fails or a string/array/map exceeds
+/// the maximum length representable by the `MessagePack` format.
+// The match covers every marker family, so the line count is inherent to the format.
+#[allow(clippy::too_many_lines)]
 pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
     match value {
         Value::Nil => {
@@ -104,12 +119,12 @@ pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
             // MessagePack requires us to use the smallest possible integer format.
             match *val {
                 v if v <= 127 => writer.write_all(&[v as u8])?,
-                v if v <= u8::MAX as u64 => writer.write_all(&[0xcc, v as u8])?,
-                v if v <= u16::MAX as u64 => {
+                v if u8::try_from(v).is_ok() => writer.write_all(&[0xcc, v as u8])?,
+                v if u16::try_from(v).is_ok() => {
                     writer.write_all(&[0xcd])?;
                     writer.write_all(&(v as u16).to_be_bytes())?;
                 }
-                v if v <= u32::MAX as u64 => {
+                v if u32::try_from(v).is_ok() => {
                     writer.write_all(&[0xce])?;
                     writer.write_all(&(v as u32).to_be_bytes())?;
                 }
@@ -125,14 +140,14 @@ pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
                     // Negative FixInt: 111xxxxx
                     writer.write_all(&[(v as i8) as u8])?;
                 }
-                v if v >= i8::MIN as i64 => {
+                v if v >= i64::from(i8::MIN) => {
                     writer.write_all(&[0xd0, (v as i8) as u8])?;
                 }
-                v if v >= i16::MIN as i64 => {
+                v if v >= i64::from(i16::MIN) => {
                     writer.write_all(&[0xd1])?;
                     writer.write_all(&(v as i16).to_be_bytes())?;
                 }
-                v if v >= i32::MIN as i64 => {
+                v if v >= i64::from(i32::MIN) => {
                     writer.write_all(&[0xd2])?;
                     writer.write_all(&(v as i32).to_be_bytes())?;
                 }
@@ -152,12 +167,12 @@ pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
             if len <= 31 {
                 // FixStr
                 writer.write_all(&[0xa0 | (len as u8)])?;
-            } else if len <= u8::MAX as usize {
+            } else if u8::try_from(len).is_ok() {
                 writer.write_all(&[0xd9, len as u8])?;
-            } else if len <= u16::MAX as usize {
+            } else if u16::try_from(len).is_ok() {
                 writer.write_all(&[0xda])?;
                 writer.write_all(&(len as u16).to_be_bytes())?;
-            } else if len <= u32::MAX as usize {
+            } else if u32::try_from(len).is_ok() {
                 writer.write_all(&[0xdb])?;
                 writer.write_all(&(len as u32).to_be_bytes())?;
             } else {
@@ -172,10 +187,10 @@ pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
             let len = arr.len();
             if len <= 15 {
                 writer.write_all(&[0x90 | (len as u8)])?;
-            } else if len <= u16::MAX as usize {
+            } else if u16::try_from(len).is_ok() {
                 writer.write_all(&[0xdc])?;
                 writer.write_all(&(len as u16).to_be_bytes())?;
-            } else if len <= u32::MAX as usize {
+            } else if u32::try_from(len).is_ok() {
                 writer.write_all(&[0xdd])?;
                 writer.write_all(&(len as u32).to_be_bytes())?;
             } else {
@@ -192,10 +207,10 @@ pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
             let len = map.len();
             if len <= 15 {
                 writer.write_all(&[0x80 | (len as u8)])?;
-            } else if len <= u16::MAX as usize {
+            } else if u16::try_from(len).is_ok() {
                 writer.write_all(&[0xde])?;
                 writer.write_all(&(len as u16).to_be_bytes())?;
-            } else if len <= u32::MAX as usize {
+            } else if u32::try_from(len).is_ok() {
                 writer.write_all(&[0xdf])?;
                 writer.write_all(&(len as u32).to_be_bytes())?;
             } else {
@@ -210,13 +225,20 @@ pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
     Ok(())
 }
 
-/// Decodes a MessagePack value from a byte slice.
+/// Decodes a `MessagePack` value from a byte slice.
 /// Returns a tuple of the parsed `Value` and the remaining unparsed bytes.
+///
+/// # Errors
+///
+/// Returns a [`DecodeError`] if the buffer ends early, contains an invalid
+/// marker or non-UTF-8 string, or exceeds the maximum nesting depth.
 pub fn decode(input: &[u8]) -> Result<(Value<'_>, &[u8]), DecodeError> {
     decode_depth(input, 0)
 }
 
 /// Internal decode that tracks the current nesting depth to bound recursion.
+// One match arm per marker family; the length is inherent to the wire format.
+#[allow(clippy::too_many_lines)]
 fn decode_depth(input: &[u8], depth: usize) -> Result<(Value<'_>, &[u8]), DecodeError> {
     if depth > MAX_DEPTH {
         return Err(DecodeError::DepthLimitExceeded);
@@ -242,10 +264,10 @@ fn decode_depth(input: &[u8], depth: usize) -> Result<(Value<'_>, &[u8]), Decode
 
     match marker {
         // Positive FixInt: 0xxxxxxx
-        0x00..=0x7f => Ok((Value::Integer(marker as u64), rest)),
+        0x00..=0x7f => Ok((Value::Integer(u64::from(marker)), rest)),
 
         // Negative FixInt: 111xxxxx
-        0xe0..=0xff => Ok((Value::NegativeInteger((marker as i8) as i64), rest)),
+        0xe0..=0xff => Ok((Value::NegativeInteger(i64::from(marker as i8)), rest)),
 
         // FixMap: 1000xxxx
         0x80..=0x8f => {
@@ -275,18 +297,18 @@ fn decode_depth(input: &[u8], depth: usize) -> Result<(Value<'_>, &[u8]), Decode
 
         // Uint 8
         0xcc => {
-            let val = read_bytes!(1)[0] as u64;
+            let val = u64::from(read_bytes!(1)[0]);
             Ok((Value::Integer(val), rest))
         }
         // Uint 16
         0xcd => {
             let bytes = read_bytes!(2).try_into().unwrap();
-            Ok((Value::Integer(u16::from_be_bytes(bytes) as u64), rest))
+            Ok((Value::Integer(u64::from(u16::from_be_bytes(bytes))), rest))
         }
         // Uint 32
         0xce => {
             let bytes = read_bytes!(4).try_into().unwrap();
-            Ok((Value::Integer(u32::from_be_bytes(bytes) as u64), rest))
+            Ok((Value::Integer(u64::from(u32::from_be_bytes(bytes))), rest))
         }
         // Uint 64
         0xcf => {
@@ -296,14 +318,14 @@ fn decode_depth(input: &[u8], depth: usize) -> Result<(Value<'_>, &[u8]), Decode
 
         // Int 8
         0xd0 => {
-            let val = read_bytes!(1)[0] as i8 as i64;
+            let val = i64::from(read_bytes!(1)[0] as i8);
             Ok((Value::NegativeInteger(val), rest))
         }
         // Int 16
         0xd1 => {
             let bytes = read_bytes!(2).try_into().unwrap();
             Ok((
-                Value::NegativeInteger(i16::from_be_bytes(bytes) as i64),
+                Value::NegativeInteger(i64::from(i16::from_be_bytes(bytes))),
                 rest,
             ))
         }
@@ -311,7 +333,7 @@ fn decode_depth(input: &[u8], depth: usize) -> Result<(Value<'_>, &[u8]), Decode
         0xd2 => {
             let bytes = read_bytes!(4).try_into().unwrap();
             Ok((
-                Value::NegativeInteger(i32::from_be_bytes(bytes) as i64),
+                Value::NegativeInteger(i64::from(i32::from_be_bytes(bytes))),
                 rest,
             ))
         }
@@ -324,7 +346,7 @@ fn decode_depth(input: &[u8], depth: usize) -> Result<(Value<'_>, &[u8]), Decode
         // Float 32 (we promote to f64 for simplicity in AST)
         0xca => {
             let bytes = read_bytes!(4).try_into().unwrap();
-            Ok((Value::Float(f32::from_be_bytes(bytes) as f64), rest))
+            Ok((Value::Float(f64::from(f32::from_be_bytes(bytes))), rest))
         }
         // Float 64
         0xcb => {
@@ -408,11 +430,14 @@ fn decode_array(
     Ok((arr, input))
 }
 
+/// Key/value entries produced by decoding a `MessagePack` map.
+type MapEntries<'a> = Vec<(Value<'a>, Value<'a>)>;
+
 fn decode_map(
     len: usize,
     mut input: &[u8],
     depth: usize,
-) -> Result<(Vec<(Value<'_>, Value<'_>)>, &[u8]), DecodeError> {
+) -> Result<(MapEntries<'_>, &[u8]), DecodeError> {
     let cap = std::cmp::min(len, 1024);
     let mut map = Vec::with_capacity(cap);
     for _ in 0..len {
@@ -438,6 +463,8 @@ fn decode_map(
 mod tests {
     use super::*;
 
+    // test helper: takes owned values so call sites can pass constructed `Value`s directly.
+    #[allow(clippy::needless_pass_by_value)]
     fn assert_roundtrip(value: Value<'_>) {
         let mut buf = Vec::new();
         encode(&mut buf, &value).unwrap();
@@ -459,7 +486,7 @@ mod tests {
         assert_roundtrip(Value::Integer(127)); // FixInt
         assert_roundtrip(Value::Integer(200)); // Uint8
         assert_roundtrip(Value::Integer(60000)); // Uint16
-        assert_roundtrip(Value::Integer(u32::MAX as u64)); // Uint32
+        assert_roundtrip(Value::Integer(u64::from(u32::MAX))); // Uint32
 
         assert_roundtrip(Value::NegativeInteger(-1)); // FixInt
         assert_roundtrip(Value::NegativeInteger(-32)); // FixInt

@@ -9,21 +9,27 @@
 
 /// Basic function to test.
 #[allow(dead_code)]
-fn add(a: i32, b: i32) -> i32 {
+const fn add(a: i32, b: i32) -> i32 {
     a + b
 }
 
 /// Function that might panic.
 #[allow(dead_code)]
 fn divide(a: i32, b: i32) -> i32 {
-    if b == 0 {
-        panic!("Division by zero!");
-    }
+    assert!(b != 0, "Division by zero!");
     a / b
 }
 
 #[cfg(test)]
 mod basic_tests {
+    // test-code: this module demonstrates assertion/panic/ignore syntax itself, so bare
+    // `assert!(true)`, `#[should_panic]`, and `#[ignore]` are intentional illustrations.
+    #![allow(
+        clippy::assertions_on_constants,
+        clippy::should_panic_without_expect,
+        clippy::ignore_without_reason
+    )]
+
     use super::*;
 
     #[test]
@@ -34,6 +40,8 @@ mod basic_tests {
     }
 
     #[test]
+    // This test intentionally contrasts `assert!` with `assert_eq!`, so keep the boolean form.
+    #[allow(clippy::manual_assert_eq)]
     fn test_assertions() {
         // assert! - boolean condition
         assert!(2 + 2 == 4);
@@ -85,16 +93,16 @@ mod basic_tests {
 
 #[allow(dead_code)]
 mod calculator {
-    pub fn add(a: i32, b: i32) -> i32 {
+    pub const fn add(a: i32, b: i32) -> i32 {
         a + b
     }
 
-    pub fn multiply(a: i32, b: i32) -> i32 {
+    pub const fn multiply(a: i32, b: i32) -> i32 {
         a * b
     }
 
     // Private function - only testable from tests module
-    fn internal_helper(x: i32) -> i32 {
+    const fn internal_helper(x: i32) -> i32 {
         x * 2
     }
 
@@ -168,12 +176,14 @@ mod fixture_tests {
     // Struct-based fixture for complex setup
     struct TestContext {
         data: Vec<i32>,
+        // demonstrates a fixture field held for RAII/teardown; not read in the example.
+        #[allow(dead_code)]
         temp_file: String,
     }
 
     impl TestContext {
         fn new() -> Self {
-            TestContext {
+            Self {
                 data: vec![1, 2, 3],
                 temp_file: "/tmp/test.txt".to_string(),
             }
@@ -358,6 +368,8 @@ mod mock_tests {
     }
 
     // Real implementation
+    // demonstrates the production impl contrasted with the mock; only the mock is exercised.
+    #[allow(dead_code)]
     struct RealDataStore;
 
     impl DataStore for RealDataStore {
@@ -378,7 +390,7 @@ mod mock_tests {
 
     impl MockDataStore {
         fn new() -> Self {
-            MockDataStore {
+            Self {
                 data: std::collections::HashMap::new(),
             }
         }
@@ -415,6 +427,8 @@ mod mock_tests {
 #[cfg(test)]
 mod async_tests {
     // Async function to test
+    // demonstrates testing an async fn; the `async` is the subject under test, not incidental.
+    #[allow(clippy::unused_async, dead_code)]
     async fn fetch_data(id: u32) -> String {
         // Simulate async operation
         format!("Data for ID {id}")
@@ -442,7 +456,7 @@ mod async_tests {
 // Benchmark Patterns (doc examples - use criterion for real benchmarks)
 // ============================================================================
 
-/// Benchmark pattern using std::time.
+/// Benchmark pattern using `std::time`.
 /// For production, use criterion crate.
 #[cfg(test)]
 mod benchmark_patterns {
@@ -457,7 +471,7 @@ mod benchmark_patterns {
     }
 
     #[test]
-    #[ignore] // Benchmarks are slow
+    #[ignore = "benchmarks are slow"]
     fn bench_fibonacci() {
         let iterations = 100;
         let start = Instant::now();
@@ -488,7 +502,7 @@ mod golden_file_tests {
     }
 
     #[test]
-    #[ignore] // Requires golden file
+    #[ignore = "requires golden file"]
     fn test_golden_file() {
         let data = vec![1, 2, 3, 4, 5];
         let output = render_output(&data);
@@ -554,7 +568,7 @@ mod tdd_example {
 
     impl<T> Stack<T> {
         fn new() -> Self {
-            Stack { items: Vec::new() }
+            Self { items: Vec::new() }
         }
 
         fn push(&mut self, item: T) {
@@ -655,7 +669,7 @@ mod error_tests {
 /// assert!(parse_number("not a number").is_err());
 /// ```
 #[allow(dead_code)]
-fn documented_add(a: i32, b: i32) -> i32 {
+const fn documented_add(a: i32, b: i32) -> i32 {
     a + b
 }
 
@@ -663,47 +677,47 @@ fn documented_add(a: i32, b: i32) -> i32 {
 // Integration Test Patterns (documented here, run from tests/ directory)
 // ============================================================================
 
-/// Integration tests live in tests/ directory:
-///
-/// ```text
-/// tests/
-/// ├── common/
-/// │   └── mod.rs      # Shared test utilities
-/// ├── integration_test.rs
-/// └── another_test.rs
-/// ```
-///
-/// Example integration test:
-///
-/// ```rust,ignore
-/// // tests/integration_test.rs
-/// use my_crate::public_function;
-///
-/// #[test]
-/// fn test_public_api() {
-///     assert_eq!(public_function(), expected_value);
-/// }
-/// ```
-///
-/// Common module pattern:
-///
-/// ```rust,ignore
-/// // tests/common/mod.rs
-/// pub fn setup() -> TestContext {
-///     // Shared setup code
-/// }
-/// ```
-///
-/// ```rust,ignore
-/// // tests/integration_test.rs
-/// mod common;
-///
-/// #[test]
-/// fn test_with_common() {
-///     let ctx = common::setup();
-///     // Use ctx
-/// }
-/// ```
+// Integration tests live in tests/ directory:
+//
+// ```text
+// tests/
+// ├── common/
+// │   └── mod.rs      # Shared test utilities
+// ├── integration_test.rs
+// └── another_test.rs
+// ```
+//
+// Example integration test:
+//
+// ```rust,ignore
+// // tests/integration_test.rs
+// use my_crate::public_function;
+//
+// #[test]
+// fn test_public_api() {
+//     assert_eq!(public_function(), expected_value);
+// }
+// ```
+//
+// Common module pattern:
+//
+// ```rust,ignore
+// // tests/common/mod.rs
+// pub fn setup() -> TestContext {
+//     // Shared setup code
+// }
+// ```
+//
+// ```rust,ignore
+// // tests/integration_test.rs
+// mod common;
+//
+// #[test]
+// fn test_with_common() {
+//     let ctx = common::setup();
+//     // Use ctx
+// }
+// ```
 
 // ============================================================================
 // Testing Best Practices

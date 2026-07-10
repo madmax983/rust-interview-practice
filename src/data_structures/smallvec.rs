@@ -1,4 +1,4 @@
-//! # SmallVec Implementation
+//! # `SmallVec` Implementation
 //!
 //! A vector-like contiguous container that stores its elements inline on the stack up to a certain capacity,
 //! and falls back to a heap allocation when it grows beyond that capacity.
@@ -77,7 +77,7 @@ pub struct SmallVec<T, const N: usize> {
 impl<T, const N: usize> SmallVec<T, N> {
     /// Creates a new, empty `SmallVec` backed by stack storage initially.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             len: 0,
             storage: Storage::Inline(unsafe { MaybeUninit::uninit().assume_init() }),
@@ -104,7 +104,7 @@ impl<T, const N: usize> SmallVec<T, N> {
 
     /// Returns the capacity of the vector (inline or heap).
     #[must_use]
-    pub fn capacity(&self) -> usize {
+    pub const fn capacity(&self) -> usize {
         match &self.storage {
             Storage::Inline(_) => N,
             Storage::Heap(v) => v.capacity(),

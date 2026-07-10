@@ -32,6 +32,9 @@
 //! | Reset | O(1) | O(1) |
 //! | Drop | O(1) | O(N) |
 
+// Sign reinterpretation is intentional in this low-level allocator pointer arithmetic.
+#![allow(clippy::cast_sign_loss)]
+
 use std::alloc::{Layout, alloc, dealloc};
 use std::cell::UnsafeCell;
 use std::ptr::NonNull;
@@ -54,6 +57,7 @@ impl BumpArena {
     ///
     /// # Panics
     /// Panics if allocation fails or capacity is 0.
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be positive");
         let layout = Layout::from_size_align(capacity, 1).expect("Invalid layout");
@@ -68,7 +72,7 @@ impl BumpArena {
         // Calculate end pointer. `ptr.add(capacity)` is safe because we just allocated it.
         let end = NonNull::new(unsafe { ptr.add(capacity) }).unwrap();
 
-        BumpArena {
+        Self {
             start,
             end,
             next: UnsafeCell::new(start),
@@ -99,9 +103,10 @@ impl BumpArena {
 
             // Check capacity
             // Note: We cast to usize for comparison only.
-            if alloc_end_addr > self.end.as_ptr() as usize {
-                panic!("BumpArena out of memory");
-            }
+            assert!(
+                alloc_end_addr <= self.end.as_ptr() as usize,
+                "BumpArena out of memory"
+            );
 
             // SAFETY / PROVENANCE: Derive the result pointer from `current_ptr` (which carries
             // valid provenance for the arena allocation) by offsetting it, rather than casting
@@ -136,12 +141,12 @@ impl BumpArena {
     /// This is unsafe because it invalidates all references previously handed out.
     /// The caller must ensure that no references to allocated objects are used after calling reset.
     /// Note: This does NOT run destructors (`Drop`) for allocated objects. They are simply forgotten.
-    pub unsafe fn reset(&mut self) {
+    pub const unsafe fn reset(&mut self) {
         *self.next.get_mut() = self.start;
     }
 
     /// Returns the total capacity of the arena.
-    pub fn capacity(&self) -> usize {
+    pub const fn capacity(&self) -> usize {
         unsafe { self.end.as_ptr().offset_from(self.start.as_ptr()) as usize }
     }
 
@@ -202,8 +207,8 @@ mod tests {
         let val = arena.alloc(100u32);
 
         // Check alignment
-        let ptr_addr = val as *const _ as usize;
-        assert_eq!(ptr_addr % 4, 0, "Address {} is not aligned to 4", ptr_addr);
+        let ptr_addr = std::ptr::from_ref(val) as usize;
+        assert_eq!(ptr_addr % 4, 0, "Address {ptr_addr} is not aligned to 4");
     }
 
     #[test]

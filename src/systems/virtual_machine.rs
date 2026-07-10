@@ -7,7 +7,7 @@
 /// a highly customized, minimal execution engine without external dependencies.
 ///
 /// Real-world systems that use this:
-/// - Python (CPython uses a stack-based bytecode interpreter)
+/// - Python (`CPython` uses a stack-based bytecode interpreter)
 /// - Java (JVM is a stack-based machine)
 /// - Lua (Uses a register-based VM, but earlier versions were stack-based; both concepts apply)
 /// - WebAssembly (Wasm execution engines)
@@ -71,8 +71,8 @@ pub enum Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Number(n) => write!(f, "{}", n),
-            Self::Bool(b) => write!(f, "{}", b),
+            Self::Number(n) => write!(f, "{n}"),
+            Self::Bool(b) => write!(f, "{b}"),
             Self::Nil => write!(f, "nil"),
         }
     }
@@ -166,9 +166,16 @@ pub struct Chunk {
     pub constants: Vec<Value>,
 }
 
+impl Default for Chunk {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Chunk {
     /// Creates a new, empty chunk.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             code: Vec::new(),
             constants: Vec::new(),
@@ -201,6 +208,11 @@ impl Chunk {
     }
 
     /// Patches a previously written jump instruction placeholder with the actual offset.
+    ///
+    /// # Errors
+    /// Returns `Err(InterpretError::CompileError)` if the jump distance exceeds `u16::MAX`.
+    // Truncating the checked jump distance into two bytes is intentional.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn patch_jump(&mut self, offset: usize) -> Result<(), InterpretError> {
         let jump = self.code.len() - offset - 2;
         if jump > u16::MAX as usize {
@@ -223,6 +235,7 @@ pub struct VM {
 
 impl VM {
     /// Creates a new VM instance.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             stack: Vec::with_capacity(256),
@@ -255,6 +268,12 @@ impl VM {
     }
 
     /// Executes the provided chunk.
+    ///
+    /// # Errors
+    /// Returns `Err(InterpretError::RuntimeError)` on invalid bytecode, stack underflow, or a
+    /// type error, and `Err(InterpretError::CompileError)` for malformed jump targets.
+    // The bytecode dispatch loop is a single large match; splitting it would hurt readability.
+    #[allow(clippy::too_many_lines)]
     pub fn interpret(&mut self, chunk: &Chunk) -> Result<Value, InterpretError> {
         let mut ip = 0;
 
@@ -285,8 +304,8 @@ impl VM {
 
         macro_rules! read_short {
             () => {{
-                let high = read_byte!() as u16;
-                let low = read_byte!() as u16;
+                let high = u16::from(read_byte!());
+                let low = u16::from(read_byte!());
                 (high << 8) | low
             }};
         }
@@ -393,7 +412,7 @@ impl VM {
         match value {
             Value::Nil => true,
             Value::Bool(b) => !b,
-            _ => false,
+            Value::Number(_) => false,
         }
     }
 }
@@ -418,6 +437,9 @@ impl Default for VM {
 
 #[cfg(test)]
 mod tests {
+    // test-code: constant indices are small and cast to u8 bytecode operands by design.
+    #![allow(clippy::cast_possible_truncation)]
+
     use super::*;
 
     #[test]

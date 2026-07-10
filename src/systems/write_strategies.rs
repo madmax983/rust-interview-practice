@@ -45,7 +45,7 @@ pub trait BackingStore<K, V> {
     fn save(&mut self, key: K, value: V);
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WritePolicy {
     WriteThrough,
     WriteBack,

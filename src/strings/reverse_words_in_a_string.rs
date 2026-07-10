@@ -69,6 +69,7 @@
 /// Time: O(N) where N is the length of `s`.
 /// Space: O(N) for the returned String plus an intermediate `Vec<&str>`.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn reverse_words_brute_force(s: String) -> String {
     // RUST INSIGHT: `split_whitespace()` is incredibly powerful.
     // It automatically handles leading, trailing, and multiple internal spaces.
@@ -89,6 +90,7 @@ pub fn reverse_words_brute_force(s: String) -> String {
 /// Time: O(N) where N is the length of `s`.
 /// Space: O(N) for the returned String, with zero intermediate allocations.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn reverse_words_optimal(s: String) -> String {
     // We know the result cannot be longer than the original string.
     // By pre-allocating, we avoid dynamic re-allocations during `push_str`.
@@ -183,7 +185,7 @@ mod tests {
         for &s in &inputs {
             let brute = reverse_words_brute_force(s.to_string());
             let optimal = reverse_words_optimal(s.to_string());
-            assert_eq!(brute, optimal, "brute vs optimal disagree on: {:?}", s);
+            assert_eq!(brute, optimal, "brute vs optimal disagree on: {s:?}");
             // Main entry point must match the optimal it dispatches to.
             assert_eq!(reverse_words(s.to_string()), optimal);
         }

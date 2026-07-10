@@ -74,7 +74,7 @@ impl Node {
 
 /// Brute Force: DFS with Linear Scan for Visited Nodes.
 ///
-/// Instead of a HashMap, we use a simple `Vec` to track visited nodes.
+/// Instead of a `HashMap`, we use a simple `Vec` to track visited nodes.
 /// To check if a node has been visited, we iterate through the `Vec`.
 ///
 /// Time: O(V * V + E) - For each node, we scan the visited list (O(V)). Total O(V^2).
@@ -85,6 +85,8 @@ impl Node {
 /// but for large N, the O(V) lookup kills performance.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// Signature must match the three-implementation convention (Option in / Option out).
+#[allow(clippy::single_option_map)]
 pub fn clone_graph_brute_force(node: Option<Rc<RefCell<Node>>>) -> Option<Rc<RefCell<Node>>> {
     node.map(|start_node| {
         // Track visited: (original_val, cloned_node)
@@ -141,6 +143,8 @@ fn clone_dfs_brute(
 /// - We use `i32` keys instead of `Rc` keys to avoid pointer hashing complexity.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// Signature must match the three-implementation convention (Option in / Option out).
+#[allow(clippy::single_option_map)]
 pub fn clone_graph_optimized(node: Option<Rc<RefCell<Node>>>) -> Option<Rc<RefCell<Node>>> {
     node.map(|start_node| {
         let mut visited = HashMap::new();
@@ -267,6 +271,8 @@ pub fn clone_graph(node: Option<Rc<RefCell<Node>>>) -> Option<Rc<RefCell<Node>>>
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
 
     // Helper to extract adjacency list from graph for easy comparison
@@ -274,15 +280,14 @@ mod tests {
     fn graph_to_adj(node: Option<Rc<RefCell<Node>>>) -> HashMap<i32, Vec<i32>> {
         let mut adj = HashMap::new();
         if let Some(n) = node {
-            let mut visited = HashMap::new();
+            let mut visited = HashSet::new();
             let mut stack = vec![n];
 
             while let Some(curr) = stack.pop() {
                 let val = curr.borrow().val;
-                if visited.contains_key(&val) {
+                if !visited.insert(val) {
                     continue;
                 }
-                visited.insert(val, ());
 
                 let neighbors: Vec<i32> = curr
                     .borrow()

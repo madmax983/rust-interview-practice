@@ -2,7 +2,7 @@
 //!
 //! A high-performance, thread-safe, lock-free queue for one producer and one consumer.
 //!
-//! **Replaces Crates:** `rigtorp-spsc`, `heapless::spsc`, `crossbeam-queue` (ArrayQueue)
+//! **Replaces Crates:** `rigtorp-spsc`, `heapless::spsc`, `crossbeam-queue` (`ArrayQueue`)
 //!
 //! **Real-world Usage:**
 //! - Audio processing callbacks (real-time thread to UI thread).
@@ -79,6 +79,10 @@ pub struct Consumer<T> {
 
 /// Creates a new SPSC Ring Buffer.
 /// Returns a (Producer, Consumer) pair.
+///
+/// # Panics
+/// Panics if `capacity` is 0.
+#[must_use]
 pub fn channel<T>(capacity: usize) -> (Producer<T>, Consumer<T>) {
     assert!(capacity > 0, "Capacity must be greater than 0");
 
@@ -125,6 +129,9 @@ pub struct Empty;
 impl<T> Producer<T> {
     /// Pushes an item into the queue.
     /// Returns `Err(item)` if the queue is full.
+    ///
+    /// # Errors
+    /// Returns `Err(Full(item))` (handing the item back) if the queue is full.
     pub fn push(&mut self, item: T) -> Result<(), Full<T>> {
         let current_tail = self.local_tail;
         let next_tail = (current_tail + 1) % self.shared.capacity;
@@ -159,6 +166,7 @@ impl<T> Producer<T> {
     }
 
     /// Returns the capacity of the queue.
+    #[must_use]
     pub fn capacity(&self) -> usize {
         self.shared.capacity - 1
     }
@@ -278,8 +286,8 @@ mod tests {
 
     #[test]
     fn test_concurrent() {
-        let (mut p, mut c) = channel(128);
         const COUNT: usize = 100_000;
+        let (mut p, mut c) = channel(128);
 
         let producer = thread::spawn(move || {
             for i in 0..COUNT {

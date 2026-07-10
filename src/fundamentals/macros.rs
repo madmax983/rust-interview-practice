@@ -1,6 +1,6 @@
 //! # Macro Patterns
 //!
-//! Declarative macros (macro_rules!) for compile-time metaprogramming.
+//! Declarative macros (`macro_rules`!) for compile-time metaprogramming.
 //! Master these patterns to write DSLs and eliminate boilerplate.
 
 // ============================================================================
@@ -49,7 +49,8 @@ macro_rules! fragment_types {
     };
 }
 
-#[allow(dead_code)]
+// `_y` demonstrates the `stmt` fragment specifier for gittype practice
+#[allow(dead_code, clippy::no_effect_underscore_binding)]
 fn demonstrate_basic_macros() {
     say_hello!();
 
@@ -120,7 +121,8 @@ macro_rules! create_struct {
     };
 }
 
-#[allow(dead_code)]
+// The my_vec! macro deliberately expands to Vec::new()+push to demonstrate macro repetition
+#[allow(dead_code, clippy::vec_init_then_push)]
 fn demonstrate_repetition() {
     // sum macro
     let total = sum!(1, 2, 3, 4, 5);
@@ -184,7 +186,7 @@ macro_rules! type_of {
 macro_rules! create_function {
     // With explicit return type
     ($name:ident ( $($param:ident : $ptype:ty),* ) -> $rtype:ty $body:block) => {
-        fn $name($($param: $ptype),*) -> $rtype $body
+        const fn $name($($param: $ptype),*) -> $rtype $body
     };
 
     // Without return type (defaults to unit)
@@ -219,7 +221,7 @@ fn demonstrate_multiple_branches() {
 // Practical Macro Patterns
 // ============================================================================
 
-/// HashMap literal macro (like serde_json::json!).
+/// `HashMap` literal macro (like `serde_json::json`!).
 macro_rules! hashmap {
     ($($key:expr => $value:expr),* $(,)?) => {
         {
@@ -264,7 +266,7 @@ macro_rules! string_enum {
         }
 
         impl $name {
-            fn as_str(&self) -> &'static str {
+            const fn as_str(&self) -> &'static str {
                 match self {
                     $(
                         $name::$variant => stringify!($variant),
@@ -272,7 +274,7 @@ macro_rules! string_enum {
                 }
             }
 
-            fn variants() -> &'static [$name] {
+            const fn variants() -> &'static [$name] {
                 &[$($name::$variant),*]
             }
         }
@@ -424,7 +426,7 @@ fn demonstrate_recursive_macros() {
     #[derive(Debug)]
     enum Node {
         Leaf(i32),
-        Branch { value: i32, children: Vec<Node> },
+        Branch { value: i32, children: Vec<Self> },
     }
 
     let reversed = reverse!(1, 2, 3, 4, 5);
@@ -483,12 +485,11 @@ macro_rules! debug_macro {
     }};
 }
 
-/// Use case for cargo expand:
-/// ```bash
-/// cargo install cargo-expand
-/// cargo expand --lib fundamentals::macros
-/// ```
-
+// Use case for cargo expand:
+// ```bash
+// cargo install cargo-expand
+// cargo expand --lib fundamentals::macros
+// ```
 #[allow(dead_code)]
 fn demonstrate_debugging() {
     let v = debug_macro!(1, 2, 3);
@@ -504,12 +505,12 @@ fn demonstrate_debugging() {
 // When to Use Macros vs Alternatives
 // ============================================================================
 
-/// Example: This could be a macro OR a generic function.
-/// Use macro when you need:
-/// - Compile-time evaluation
-/// - Variable number of arguments
-/// - Code generation based on types
-/// - DSLs and syntax extensions
+// Example: This could be a macro OR a generic function.
+// Use macro when you need:
+// - Compile-time evaluation
+// - Variable number of arguments
+// - Code generation based on types
+// - DSLs and syntax extensions
 
 // As a macro:
 macro_rules! max_macro {
@@ -522,10 +523,7 @@ macro_rules! max_macro {
 
 // As a generic function (better for simple cases):
 #[allow(dead_code)]
-fn max_function<T: Ord>(first: T, rest: &[T]) -> T
-where
-    T: Copy,
-{
+fn max_function<T: Ord + Copy>(first: T, rest: &[T]) -> T {
     let mut max = first;
     for &item in rest {
         if item > max {
@@ -562,7 +560,7 @@ fn demonstrate_macro_vs_function() {
 // Common Macro Patterns from std
 // ============================================================================
 
-/// Recreating common std macros for learning.
+// Recreating common std macros for learning.
 
 // vec!-like
 macro_rules! my_vec_full {
@@ -594,7 +592,8 @@ macro_rules! my_matches {
     };
 }
 
-#[allow(dead_code)]
+// my_vec_full! deliberately expands to Vec::new()+push to demonstrate std-macro recreation
+#[allow(dead_code, clippy::vec_init_then_push)]
 fn demonstrate_std_patterns() {
     let v = my_vec_full![1, 2, 3];
     println!("Vec: {v:?}");
@@ -626,7 +625,8 @@ macro_rules! parse_list {
     }};
 }
 
-#[allow(dead_code)]
+// parse_list! deliberately expands to Vec::new()+push to demonstrate TT munching
+#[allow(dead_code, clippy::vec_init_then_push)]
 fn demonstrate_tt_munching() {
     let numbers = parse_list!(1, 2, 3, 4, 5);
     println!("Parsed: {numbers:?}");
@@ -636,7 +636,7 @@ fn demonstrate_tt_munching() {
 // Interview Patterns
 // ============================================================================
 
-/// Common macro patterns you'll see in interviews or production.
+// Common macro patterns you'll see in interviews or production.
 
 // 1. Variadic assertions
 macro_rules! assert_all {
@@ -692,7 +692,7 @@ fn demonstrate_interview_patterns() {
 
 // `test_cases!` generates `#[test]` functions from a table of inputs/outputs.
 #[allow(dead_code)]
-fn square_for_demo(x: i32) -> i32 {
+const fn square_for_demo(x: i32) -> i32 {
     x * x
 }
 
@@ -771,7 +771,7 @@ mod tests {
         #[derive(Debug, PartialEq)]
         enum Node {
             Leaf(i32),
-            Branch { value: i32, children: Vec<Node> },
+            Branch { value: i32, children: Vec<Self> },
         }
 
         let leaf = tree!(7);

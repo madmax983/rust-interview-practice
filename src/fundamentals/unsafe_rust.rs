@@ -5,6 +5,13 @@
 //!
 //! **WARNING:** Unsafe code requires extra care. Always document safety invariants.
 
+// intentional bit/byte/word manipulation for the demo
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 // ============================================================================
 // The Five Unsafe Superpowers
 // ============================================================================
@@ -13,7 +20,7 @@
 fn demonstrate_unsafe_superpowers() {
     // 1. Dereference raw pointers
     let x = 5;
-    let ptr = &x as *const i32;
+    let ptr = &raw const x;
     unsafe {
         println!("Value: {}", *ptr);
     }
@@ -46,6 +53,8 @@ unsafe fn dangerous_function() {
 
 static mut COUNTER: i32 = 0;
 
+// `f` demonstrates reinterpreting the same bytes as another type for gittype practice
+#[allow(dead_code)]
 union MyUnion {
     i: i32,
     f: f32,
@@ -60,8 +69,8 @@ fn demonstrate_raw_pointers() {
     let mut x = 42;
 
     // Creating raw pointers is safe
-    let ptr_const: *const i32 = &x;
-    let ptr_mut: *mut i32 = &mut x;
+    let ptr_const: *const i32 = &raw const x;
+    let ptr_mut: *mut i32 = &raw mut x;
 
     // Dereferencing is unsafe
     unsafe {
@@ -81,7 +90,7 @@ fn demonstrate_raw_pointers() {
     unsafe {
         println!("First: {}", *ptr);
         println!("Second: {}", *ptr.add(1)); // Pointer arithmetic
-        println!("Third: {}", *ptr.offset(2)); // Same as add
+        println!("Third: {}", *ptr.add(2)); // Same as add
     }
 
     // Casting between pointer types
@@ -97,8 +106,8 @@ fn raw_pointers_from_references() {
     let y = 10;
 
     // Both mutable and immutable raw pointers (allowed!)
-    let ptr1 = &x as *const i32;
-    let ptr2 = &x as *const i32;
+    let ptr1 = &raw const x;
+    let ptr2 = &raw const x;
 
     // This is fine - raw pointers ignore aliasing rules
     unsafe {
@@ -120,19 +129,19 @@ fn raw_pointers_from_references() {
 /// - `ptr` must point to an initialized `i32`
 /// - The memory `ptr` points to must not be accessed through any other pointer
 ///   for the duration of the lifetime returned
-unsafe fn read_value(ptr: *const i32) -> i32 {
+const unsafe fn read_value(ptr: *const i32) -> i32 {
     // SAFETY: Caller guarantees ptr is valid, aligned, and initialized
     unsafe { *ptr }
 }
 
 /// Safe wrapper around unsafe function.
 #[allow(dead_code)]
-fn safe_read_value(value: &i32) -> i32 {
+const fn safe_read_value(value: &i32) -> i32 {
     // Safe because we have a valid reference
-    unsafe { read_value(value as *const i32) }
+    unsafe { read_value(std::ptr::from_ref::<i32>(value)) }
 }
 
-/// slice::from_raw_parts - classic unsafe function.
+/// `slice::from_raw_parts` - classic unsafe function.
 #[allow(dead_code)]
 fn demonstrate_from_raw_parts() {
     let values = [1, 2, 3, 4, 5];
@@ -157,13 +166,15 @@ unsafe extern "C" {
     // fn strlen(s: *const u8) -> usize;
 }
 
-/// Exposing Rust functions to C (no_mangle is unsafe in Rust 2024).
+/// Exposing Rust functions to C (`no_mangle` is unsafe in Rust 2024).
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_function(x: i32) -> i32 {
+pub const extern "C" fn rust_function(x: i32) -> i32 {
     x * 2
 }
 
 /// C-compatible struct.
+// Demonstrates a `repr(C)` FFI layout for gittype practice
+#[allow(dead_code)]
 #[repr(C)]
 struct CPoint {
     x: i32,
@@ -189,6 +200,8 @@ fn demonstrate_ffi_strings() {
 }
 
 /// Opaque C types.
+// Demonstrates the opaque-type FFI idiom for gittype practice
+#[allow(dead_code)]
 #[repr(C)]
 struct OpaqueType {
     _private: [u8; 0],
@@ -202,7 +215,8 @@ struct OpaqueType {
 /// Sync - type can be shared between threads.
 ///
 /// These are unsafe traits because implementing them incorrectly can cause data races.
-
+// Demonstrates hand-implementing Send/Sync for a raw-pointer type for gittype practice
+#[allow(dead_code)]
 struct MyType {
     data: *mut i32, // Raw pointer - not Send/Sync by default
 }
@@ -211,16 +225,19 @@ struct MyType {
 unsafe impl Send for MyType {}
 unsafe impl Sync for MyType {}
 
-/// UnsafeCell - interior mutability primitive.
+/// `UnsafeCell` - interior mutability primitive.
 use std::cell::UnsafeCell;
 
+// Demonstrates building an interior-mutability cell with UnsafeCell for gittype practice
+#[allow(dead_code)]
 struct MyCell<T> {
     value: UnsafeCell<T>,
 }
 
+#[allow(dead_code)]
 impl<T> MyCell<T> {
-    fn new(value: T) -> Self {
-        MyCell {
+    const fn new(value: T) -> Self {
+        Self {
             value: UnsafeCell::new(value),
         }
     }
@@ -264,8 +281,9 @@ fn demonstrate_transmute() {
     let _ = safe_cast;
 }
 
-/// Uninitialized memory with MaybeUninit.
-#[allow(dead_code)]
+/// Uninitialized memory with `MaybeUninit`.
+// Indexed loop writes each MaybeUninit slot by position; index form keeps the demo clear
+#[allow(dead_code, clippy::needless_range_loop)]
 fn demonstrate_maybe_uninit() {
     use std::mem::MaybeUninit;
 
@@ -331,16 +349,19 @@ fn safe_split_at_mut<T>(slice: &mut [T], mid: usize) -> (&mut [T], &mut [T]) {
 // ============================================================================
 
 /// Vector with unsafe internal implementation.
+// Demonstrates a hand-rolled Vec over raw pointers for gittype practice
+#[allow(dead_code)]
 struct MyVec<T> {
     ptr: *mut T,
     len: usize,
     capacity: usize,
 }
 
+#[allow(dead_code)]
 impl<T> MyVec<T> {
     /// Creates a new empty vector.
-    fn new() -> Self {
-        MyVec {
+    const fn new() -> Self {
+        Self {
             ptr: std::ptr::NonNull::dangling().as_ptr(),
             len: 0,
             capacity: 0,
@@ -377,13 +398,13 @@ impl<T> MyVec<T> {
 
         let new_layout = std::alloc::Layout::array::<T>(new_capacity).unwrap();
 
-        let new_ptr = unsafe { std::alloc::alloc(new_layout) as *mut T };
+        let new_ptr = unsafe { std::alloc::alloc(new_layout).cast::<T>() };
 
         if self.capacity > 0 {
             unsafe {
                 std::ptr::copy_nonoverlapping(self.ptr, new_ptr, self.len);
                 std::alloc::dealloc(
-                    self.ptr as *mut u8,
+                    self.ptr.cast::<u8>(),
                     std::alloc::Layout::array::<T>(self.capacity).unwrap(),
                 );
             }
@@ -405,7 +426,7 @@ impl<T> Drop for MyVec<T> {
 
                 // Deallocate memory
                 std::alloc::dealloc(
-                    self.ptr as *mut u8,
+                    self.ptr.cast::<u8>(),
                     std::alloc::Layout::array::<T>(self.capacity).unwrap(),
                 );
             }
@@ -492,13 +513,18 @@ const UNSAFE_GUIDELINES: &str = "See module docs";
 // ============================================================================
 
 /// Pattern 1: Safe wrapper around unsafe operation.
+// Demonstrates a safe wrapper over unaligned pointer access for gittype practice
+#[allow(dead_code)]
 struct Buffer {
     data: Vec<u8>,
 }
 
+// The `*u8 -> *u32` casts are deliberate: access goes through read/write_unaligned,
+// so the alignment lint does not apply here.
+#[allow(dead_code, clippy::cast_ptr_alignment)]
 impl Buffer {
     fn new(size: usize) -> Self {
-        Buffer {
+        Self {
             data: vec![0; size],
         }
     }
@@ -554,17 +580,21 @@ impl Buffer {
     }
 }
 
-/// Pattern 2: NonNull for non-null raw pointers.
+/// Pattern 2: `NonNull` for non-null raw pointers.
 use std::ptr::NonNull;
 
+// Demonstrates a NonNull-based linked node for gittype practice
+#[allow(dead_code)]
 struct LinkedNode {
     value: i32,
-    next: Option<NonNull<LinkedNode>>,
+    next: Option<NonNull<Self>>,
 }
 
-/// Pattern 3: PhantomData for unused lifetime parameters.
+/// Pattern 3: `PhantomData` for unused lifetime parameters.
 use std::marker::PhantomData;
 
+// Demonstrates PhantomData tying a raw-pointer iterator to a lifetime for gittype practice
+#[allow(dead_code)]
 struct Iter<'a, T> {
     ptr: *const T,
     end: *const T,
@@ -594,10 +624,10 @@ fn demonstrate_pin() {
 
 /// Mistake 1: Dangling pointers.
 #[allow(dead_code)]
-fn dangling_pointer_mistake() {
+const fn dangling_pointer_mistake() {
     let ptr = {
         let x = 42;
-        &x as *const i32
+        &raw const x
     }; // x dropped here
 
     // DON'T DO THIS - ptr is now dangling!
@@ -622,7 +652,7 @@ fn aliasing_mistake() {
 
 /// Mistake 3: Uninitialized memory.
 #[allow(dead_code)]
-fn uninitialized_mistake() {
+const fn uninitialized_mistake() {
     use std::mem::MaybeUninit;
 
     let mut x: MaybeUninit<i32> = MaybeUninit::uninit();

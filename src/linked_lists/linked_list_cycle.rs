@@ -26,7 +26,7 @@
 //!
 //! ## Approaches
 //!
-//! ### Approach 1: HashSet (Visited Nodes)
+//! ### Approach 1: `HashSet` (Visited Nodes)
 //! We can traverse the list, putting the pointer (or memory address) of each node into a `HashSet`.
 //! If we ever see a pointer we've already stored, there's a cycle.
 //! - **Time Complexity:** O(N)
@@ -65,13 +65,14 @@ use std::rc::Rc;
 #[derive(Debug)]
 pub struct ListNode {
     pub val: i32,
-    pub next: Option<Rc<RefCell<ListNode>>>,
+    pub next: Option<Rc<RefCell<Self>>>,
 }
 
 impl ListNode {
     #[inline]
-    pub fn new(val: i32) -> Self {
-        ListNode { val, next: None }
+    #[must_use]
+    pub const fn new(val: i32) -> Self {
+        Self { val, next: None }
     }
 }
 
@@ -100,8 +101,8 @@ pub fn has_cycle_brute_force(head: Option<Rc<RefCell<ListNode>>>) -> bool {
         if !visited.insert(Rc::as_ptr(&node)) {
             return true;
         }
-        // Clone the `Option<Rc<..>>` for the next node (cheap: bumps the refcount).
-        current = node.borrow().next.clone();
+        // Advance to the next node (cheap: bumps the refcount).
+        current = node.borrow().next.as_ref().map(Rc::clone);
     }
 
     false
@@ -112,7 +113,13 @@ pub fn has_cycle_brute_force(head: Option<Rc<RefCell<ListNode>>>) -> bool {
 // =========================================================================================
 
 /// Optimal approach: fast and slow pointers (Floyd's cycle-finding), O(1) memory.
+///
+/// # Panics
+///
+/// Does not panic in practice: the `unwrap` on `slow`'s `next` runs only after the
+/// fast pointer has already proven a further node exists, so a successor is guaranteed.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn has_cycle_optimal(head: Option<Rc<RefCell<ListNode>>>) -> bool {
     // GOTCHA: We must handle the empty list case gracefully.
     let Some(ref head_node) = head else {

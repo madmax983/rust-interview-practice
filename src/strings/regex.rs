@@ -45,7 +45,7 @@
 //! Note: single canonical implementation; the brute/optimized/optimal progression does not apply.
 
 /// Represents a state in the NFA.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum State {
     /// Match a specific character and transition to the next state index.
     Literal(char, usize),
@@ -68,6 +68,11 @@ pub struct Regex {
 
 impl Regex {
     /// Compiles a regex pattern into an NFA.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` with a diagnostic message if the pattern is malformed (for example,
+    /// unbalanced parentheses or a dangling operator).
     pub fn new(pattern: &str) -> Result<Self, String> {
         let postfix = infix_to_postfix(pattern)?;
         compile(&postfix)
@@ -75,6 +80,7 @@ impl Regex {
 
     /// Returns true if the text matches the regex pattern.
     /// Note: This performs a full string match (anchored).
+    #[must_use]
     pub fn is_match(&self, text: &str) -> bool {
         let mut clist = Vec::with_capacity(self.nfa.len());
         let mut nlist = Vec::with_capacity(self.nfa.len());
@@ -311,7 +317,7 @@ fn handle_concat(output: &mut String, operators: &mut Vec<char>) {
     operators.push(OP_CONCAT);
 }
 
-fn precedence(op: char) -> u8 {
+const fn precedence(op: char) -> u8 {
     match op {
         OP_UNION => 1,
         OP_CONCAT => 2,

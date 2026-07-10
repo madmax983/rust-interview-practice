@@ -51,6 +51,7 @@ pub struct UnionFind {
 impl UnionFind {
     /// Creates a new Union-Find structure with `n` elements (0 to n-1).
     /// Initially, each element is in its own set.
+    #[must_use]
     pub fn new(n: usize) -> Self {
         let mut parent = Vec::with_capacity(n);
         for i in 0..n {
@@ -66,10 +67,11 @@ impl UnionFind {
 
     /// Returns the representative (root) of the set containing element `i`.
     /// Performs path compression.
+    ///
+    /// # Panics
+    /// Panics if `i` is out of bounds (`i >= len()`).
     pub fn find(&mut self, i: usize) -> usize {
-        if i >= self.parent.len() {
-            panic!("Index out of bounds");
-        }
+        assert!(i < self.parent.len(), "Index out of bounds");
 
         let mut root = i;
         // Find root
@@ -104,13 +106,13 @@ impl UnionFind {
         // Union by Rank
         // RUST INSIGHT: Merging the shorter tree into the taller one guarantees the tree height
         // grows only logarithmically (before path compression flattens it).
-        if self.rank[root_i] < self.rank[root_j] {
-            self.parent[root_i] = root_j;
-        } else if self.rank[root_i] > self.rank[root_j] {
-            self.parent[root_j] = root_i;
-        } else {
-            self.parent[root_j] = root_i;
-            self.rank[root_i] += 1;
+        match self.rank[root_i].cmp(&self.rank[root_j]) {
+            std::cmp::Ordering::Less => self.parent[root_i] = root_j,
+            std::cmp::Ordering::Greater => self.parent[root_j] = root_i,
+            std::cmp::Ordering::Equal => {
+                self.parent[root_j] = root_i;
+                self.rank[root_i] += 1;
+            }
         }
 
         self.count -= 1;
@@ -123,13 +125,21 @@ impl UnionFind {
     }
 
     /// Returns the number of disjoint sets.
-    pub fn count(&self) -> usize {
+    #[must_use]
+    pub const fn count(&self) -> usize {
         self.count
     }
 
     /// Returns the total number of elements.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.parent.len()
+    }
+
+    /// Returns `true` if the structure contains no elements.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.parent.is_empty()
     }
 }
 
@@ -191,7 +201,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Index out of bounds")]
     fn test_out_of_bounds() {
         let mut uf = UnionFind::new(5);
         uf.find(10);

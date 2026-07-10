@@ -59,6 +59,9 @@ use std::fmt;
 /// Trait defining the core interface for a URL parser.
 pub trait UrlParser: Sized {
     /// Parses a URL string into a URL object.
+    ///
+    /// # Errors
+    /// Returns a [`ParseError`] if the input is not a well-formed URL.
     fn parse(input: &str) -> Result<Self, ParseError>;
 }
 
@@ -84,7 +87,7 @@ pub enum ParseError {
 
 impl UrlParser for Url {
     fn parse(input: &str) -> Result<Self, ParseError> {
-        let mut url = Url {
+        let mut url = Self {
             scheme: String::new(),
             username: None,
             password: None,
@@ -145,7 +148,7 @@ impl UrlParser for Url {
 }
 
 impl Url {
-    fn parse_authority(url: &mut Url, authority: &str) -> Result<(), ParseError> {
+    fn parse_authority(url: &mut Self, authority: &str) -> Result<(), ParseError> {
         let mut host_port = authority;
 
         // userinfo
@@ -208,22 +211,22 @@ impl fmt::Display for Url {
             if let Some(host) = &self.host {
                 // Technically, we should encode only non-host characters, but
                 // this simple implementation encodes everything not safe.
-                write!(f, "{}", host)?;
+                write!(f, "{host}")?;
             }
 
             if let Some(port) = self.port {
-                write!(f, ":{}", port)?;
+                write!(f, ":{port}")?;
             }
         }
 
         write!(f, "{}", self.path)?;
 
         if let Some(query) = &self.query {
-            write!(f, "?{}", query)?;
+            write!(f, "?{query}")?;
         }
 
         if let Some(fragment) = &self.fragment {
-            write!(f, "#{}", fragment)?;
+            write!(f, "#{fragment}")?;
         }
 
         Ok(())
@@ -231,6 +234,10 @@ impl fmt::Display for Url {
 }
 
 /// Decodes a percent-encoded string.
+///
+/// # Errors
+/// Returns a [`ParseError`] if the input contains an invalid percent-escape
+/// sequence or decodes to invalid UTF-8.
 pub fn percent_decode(input: &str) -> Result<String, ParseError> {
     // ⚡ Bolt Optimization: Fast path to avoid parsing overhead when no decoding is necessary.
     if !input.contains('%') {
@@ -266,6 +273,7 @@ pub fn percent_decode(input: &str) -> Result<String, ParseError> {
 use std::fmt::Write;
 
 /// Percent-encodes a string.
+#[must_use]
 pub fn percent_encode(input: &str) -> String {
     // PRODUCTION NOTE: A production encoder uses a static lookup table (`[bool; 256]`)
     // to determine if a byte needs encoding, which is significantly faster than calling multiple
@@ -282,7 +290,7 @@ pub fn percent_encode(input: &str) -> String {
         } else {
             // ⚡ BOLT OPTIMIZATION: Avoid intermediate string allocations during percent encoding.
             // Replaced `result.push_str(&format!("%{:02X}", byte))` with `write!(result, ...)`.
-            let _ = write!(result, "%{:02X}", byte);
+            let _ = write!(result, "%{byte:02X}");
         }
     }
     result

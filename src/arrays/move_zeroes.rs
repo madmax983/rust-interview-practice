@@ -1,7 +1,7 @@
 //! # 283. Move Zeroes
 //!
 //! Difficulty: Easy
-//! Link: https://leetcode.com/problems/move-zeroes/
+//! Link: <https://leetcode.com/problems/move-zeroes>/
 //!
 //! Given an integer array `nums`, move all `0`s to the end of it while maintaining the relative order of the non-zero elements.
 //!
@@ -42,9 +42,7 @@ pub fn move_zeroes_brute_force(nums: &mut Vec<i32>) {
     }
 
     // Append the zeroes
-    for _ in 0..zero_count {
-        non_zeroes.push(0);
-    }
+    non_zeroes.resize(non_zeroes.len() + zero_count, 0);
 
     // Replace the original contents
     // GOTCHA: `*nums = non_zeroes` clones the entire vector if it wasn't moved.
@@ -61,6 +59,8 @@ pub fn move_zeroes_brute_force(nums: &mut Vec<i32>) {
 ///
 /// RUST INSIGHT: Mutable slice operations like `.swap()` make in-place modifications
 /// safe and bounds-checked.
+// Signature kept as `&mut Vec<i32>` to match the sibling implementations' LeetCode signature.
+#[allow(clippy::ptr_arg)]
 pub fn move_zeroes_optimized(nums: &mut Vec<i32>) {
     let mut write_idx = 0;
 

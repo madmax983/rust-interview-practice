@@ -59,7 +59,7 @@ pub fn top_k_frequent_brute_force(nums: Vec<i32>, k: i32) -> Vec<i32> {
 
     let mut freq_vec: Vec<(i32, usize)> = counts.into_iter().collect();
     // Sort descending by frequency (the `.1` element of the tuple)
-    freq_vec.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+    freq_vec.sort_unstable_by_key(|b| std::cmp::Reverse(b.1));
 
     freq_vec
         .into_iter()

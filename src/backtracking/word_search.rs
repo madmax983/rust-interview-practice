@@ -12,7 +12,7 @@
 //! ## Why this matters in Rust
 //! This problem is a classic example of **Backtracking** and **Depth-First Search (DFS)** on a grid.
 //! It demonstrates three distinct memory management strategies for tracking visited nodes:
-//! 1.  **HashSet**: Using a standard collection (easiest to reason about, worst performance).
+//! 1.  **`HashSet`**: Using a standard collection (easiest to reason about, worst performance).
 //! 2.  **Boolean Matrix**: Using a dedicated grid (faster access, O(MN) space).
 //! 3.  **In-Place Mutation**: Modifying the input temporarily (fastest, O(1) space, requires exclusive ownership).
 //!
@@ -42,11 +42,11 @@
 
 use std::collections::HashSet;
 
-/// Brute Force Approach: DFS with HashSet
+/// Brute Force Approach: DFS with `HashSet`
 ///
 /// We use a `HashSet` to keep track of visited coordinates `(r, c)`.
 /// - **Time**: O(M * N * 3^L) - Standard DFS complexity.
-/// - **Space**: O(L) for recursion stack + O(L) for HashSet entries (where L is word length).
+/// - **Space**: O(L) for recursion stack + O(L) for `HashSet` entries (where L is word length).
 ///
 /// **Why it's "Brute Force"**: Hashing coordinates is computationally expensive compared to direct array indexing.
 /// The overhead of `HashSet` operations (hashing, bucket lookup) makes this significantly slower in practice.
@@ -116,7 +116,7 @@ fn dfs_hashset(
 /// - **Time**: O(M * N * 3^L).
 /// - **Space**: O(M * N) for the visited matrix + O(L) for recursion stack.
 ///
-/// **Trade-off**: Much faster access than HashSet (O(1) index vs hashing), but requires O(M*N) allocation
+/// **Trade-off**: Much faster access than `HashSet` (O(1) index vs hashing), but requires O(M*N) allocation
 /// regardless of path length. This is safer than in-place mutation if we only have read access to `board`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
@@ -241,15 +241,15 @@ pub fn exist(board: Vec<Vec<char>>, word: String) -> bool {
     exist_optimal(board, word)
 }
 
-/// ## Alternative approaches
-///
-/// 1. **Trie (Prefix Tree)**: If searching for *multiple* words (Word Search II), building a Trie of the words allows checking for all words simultaneously during a single DFS traversal.
-///    - *Pros*: O(M * N * 3^L) total for W words, instead of O(W * M * N * 3^L).
-///    - *Cons*: Implementation complexity; overkill for a single word.
-///
-/// 2. **Bitmasking**: If the board size is small (e.g., < 64 cells), a `u64` bitmask can track visited status.
-///    - *Pros*: Faster than `Vec<bool>` or `HashSet`, O(1) space.
-///    - *Cons*: Strictly limited by board size (cannot handle arbitrary N).
+// ## Alternative approaches
+//
+// 1. **Trie (Prefix Tree)**: If searching for *multiple* words (Word Search II), building a Trie of the words allows checking for all words simultaneously during a single DFS traversal.
+//    - *Pros*: O(M * N * 3^L) total for W words, instead of O(W * M * N * 3^L).
+//    - *Cons*: Implementation complexity; overkill for a single word.
+//
+// 2. **Bitmasking**: If the board size is small (e.g., < 64 cells), a `u64` bitmask can track visited status.
+//    - *Pros*: Faster than `Vec<bool>` or `HashSet`, O(1) space.
+//    - *Cons*: Strictly limited by board size (cannot handle arbitrary N).
 
 #[cfg(test)]
 mod tests {

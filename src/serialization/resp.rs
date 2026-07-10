@@ -1,4 +1,4 @@
-//! # RESP (REdis Serialization Protocol) Parser
+//! # RESP (`REdis` Serialization Protocol) Parser
 //!
 //! Implements a parser and serializer for RESP2/RESP3, the underlying protocol used by Redis.
 //!
@@ -14,6 +14,13 @@
 //! Building this teaches you how to handle network streams where messages might be fragmented,
 //! how to parse prefix-length arrays recursively, and how to represent heterogeneous data (strings,
 //! integers, nested arrays) in a unified Rust enum safely without excessive memory copying.
+
+// Byte/word truncation and reinterpretation are intentional in this serialization code.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
 // =========================================================================================
 // Architecture
@@ -57,8 +64,8 @@ pub enum RespValue {
     SimpleString(String),
     Error(String),
     Integer(i64),
-    BulkString(Option<Vec<u8>>),   // None represents Null bulk string
-    Array(Option<Vec<RespValue>>), // None represents Null array
+    BulkString(Option<Vec<u8>>), // None represents Null bulk string
+    Array(Option<Vec<Self>>),    // None represents Null array
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -73,32 +80,32 @@ impl RespValue {
         // RUST INSIGHT: Matching over enums is exhaustive and fast.
         // We match recursively here to serialize complex structures like Arrays.
         match self {
-            RespValue::SimpleString(s) => {
+            Self::SimpleString(s) => {
                 buf.push(b'+');
                 buf.extend_from_slice(s.as_bytes());
                 buf.extend_from_slice(b"\r\n");
             }
-            RespValue::Error(err) => {
+            Self::Error(err) => {
                 buf.push(b'-');
                 buf.extend_from_slice(err.as_bytes());
                 buf.extend_from_slice(b"\r\n");
             }
-            RespValue::Integer(i) => {
+            Self::Integer(i) => {
                 buf.push(b':');
                 buf.extend_from_slice(i.to_string().as_bytes());
                 buf.extend_from_slice(b"\r\n");
             }
-            RespValue::BulkString(Some(data)) => {
+            Self::BulkString(Some(data)) => {
                 buf.push(b'$');
                 buf.extend_from_slice(data.len().to_string().as_bytes());
                 buf.extend_from_slice(b"\r\n");
                 buf.extend_from_slice(data);
                 buf.extend_from_slice(b"\r\n");
             }
-            RespValue::BulkString(None) => {
+            Self::BulkString(None) => {
                 buf.extend_from_slice(b"$-1\r\n");
             }
-            RespValue::Array(Some(arr)) => {
+            Self::Array(Some(arr)) => {
                 buf.push(b'*');
                 buf.extend_from_slice(arr.len().to_string().as_bytes());
                 buf.extend_from_slice(b"\r\n");
@@ -106,7 +113,7 @@ impl RespValue {
                     item.serialize(buf);
                 }
             }
-            RespValue::Array(None) => {
+            Self::Array(None) => {
                 buf.extend_from_slice(b"*-1\r\n");
             }
         }
@@ -114,6 +121,12 @@ impl RespValue {
 
     /// Attempts to parse a RESP value from the given buffer.
     /// Returns `Ok((value, bytes_consumed))` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RespError::Incomplete`] if the buffer does not yet contain a
+    /// full message, or [`RespError::InvalidProtocol`] if the bytes violate the
+    /// RESP grammar.
     pub fn parse(buf: &[u8]) -> Result<(Self, usize), RespError> {
         // GOTCHA: Always handle incomplete or empty buffers gracefully without panicking.
         if buf.is_empty() {
@@ -156,7 +169,7 @@ impl RespValue {
         let s = str::from_utf8(line)
             .map_err(|_| RespError::InvalidProtocol("Invalid UTF-8 in Simple String".into()))?
             .to_string();
-        Ok((RespValue::SimpleString(s), consumed + 1))
+        Ok((Self::SimpleString(s), consumed + 1))
     }
 
     fn parse_error(buf: &[u8]) -> Result<(Self, usize), RespError> {
@@ -164,7 +177,7 @@ impl RespValue {
         let s = str::from_utf8(line)
             .map_err(|_| RespError::InvalidProtocol("Invalid UTF-8 in Error".into()))?
             .to_string();
-        Ok((RespValue::Error(s), consumed + 1))
+        Ok((Self::Error(s), consumed + 1))
     }
 
     fn parse_integer(buf: &[u8]) -> Result<(Self, usize), RespError> {
@@ -176,7 +189,7 @@ impl RespValue {
         let val = s
             .parse::<i64>()
             .map_err(|_| RespError::InvalidProtocol("Failed to parse integer".into()))?;
-        Ok((RespValue::Integer(val), consumed + 1))
+        Ok((Self::Integer(val), consumed + 1))
     }
 
     fn parse_bulk_string(buf: &[u8]) -> Result<(Self, usize), RespError> {
@@ -189,7 +202,7 @@ impl RespValue {
             .map_err(|_| RespError::InvalidProtocol("Failed to parse bulk string length".into()))?;
 
         if len == -1 {
-            return Ok((RespValue::BulkString(None), consumed + 1));
+            return Ok((Self::BulkString(None), consumed + 1));
         }
 
         if len < 0 {
@@ -214,7 +227,7 @@ impl RespValue {
         }
 
         let data = buf[data_start..data_end].to_vec();
-        Ok((RespValue::BulkString(Some(data)), data_end + 2))
+        Ok((Self::BulkString(Some(data)), data_end + 2))
     }
 
     fn parse_array(buf: &[u8]) -> Result<(Self, usize), RespError> {
@@ -226,7 +239,7 @@ impl RespValue {
             .map_err(|_| RespError::InvalidProtocol("Failed to parse array length".into()))?;
 
         if len == -1 {
-            return Ok((RespValue::Array(None), consumed + 1));
+            return Ok((Self::Array(None), consumed + 1));
         }
 
         if len < 0 {
@@ -244,7 +257,7 @@ impl RespValue {
             offset += read;
         }
 
-        Ok((RespValue::Array(Some(elements)), offset))
+        Ok((Self::Array(Some(elements)), offset))
     }
 }
 

@@ -14,6 +14,9 @@
 //! It teaches you about `std::thread_local!`, RAII guards for state management,
 //! and how to decouple event emission from event collection using the `Subscriber` pattern.
 
+// Truncating a 128-bit millisecond timestamp to u64 is intentional.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -82,11 +85,11 @@ pub enum Level {
 impl fmt::Display for Level {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Level::Trace => write!(f, "TRACE"),
-            Level::Debug => write!(f, "DEBUG"),
-            Level::Info => write!(f, "INFO "),
-            Level::Warn => write!(f, "WARN "),
-            Level::Error => write!(f, "ERROR"),
+            Self::Trace => write!(f, "TRACE"),
+            Self::Debug => write!(f, "DEBUG"),
+            Self::Info => write!(f, "INFO "),
+            Self::Warn => write!(f, "WARN "),
+            Self::Error => write!(f, "ERROR"),
         }
     }
 }
@@ -112,12 +115,18 @@ thread_local! {
 }
 
 /// Sets the global subscriber.
+///
+/// # Panics
+/// Panics if the global subscriber mutex is poisoned.
 pub fn set_global_subscriber(subscriber: impl Subscriber + 'static) {
     let mut global = GLOBAL_SUBSCRIBER.lock().unwrap();
     *global = Some(Arc::new(subscriber));
 }
 
 /// Emits an event to the global subscriber, attaching the current thread's span context.
+///
+/// # Panics
+/// Panics if the global subscriber mutex is poisoned.
 pub fn dispatch_event(level: Level, message: impl Into<String>, fields: Vec<Field>) {
     // RUST INSIGHT: Clone the `Arc<dyn Subscriber>` out and drop the guard BEFORE
     // invoking the subscriber. `std::sync::Mutex` is not reentrant, so holding the
@@ -163,7 +172,7 @@ impl SpanGuard {
         CURRENT_SPANS.with(|spans| {
             let mut stack = spans.borrow_mut();
             stack.push(span);
-            SpanGuard { depth: stack.len() }
+            Self { depth: stack.len() }
         })
     }
 }
@@ -245,7 +254,7 @@ impl Subscriber for FmtSubscriber {
 
         let _ = write!(output, " {}", event.timestamp);
 
-        println!("{}", output);
+        println!("{output}");
     }
 }
 

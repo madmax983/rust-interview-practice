@@ -1,7 +1,7 @@
 //! # 560. Subarray Sum Equals K
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/subarray-sum-equals-k/
+//! Link: <https://leetcode.com/problems/subarray-sum-equals-k>/
 //!
 //! Given an array of integers `nums` and an integer `k`, return the total number of subarrays whose sum equals to `k`.
 //!
@@ -42,15 +42,15 @@
 
 use std::collections::HashMap;
 
-/// Brute force approach: Straightforward imperative style (prefix sum + HashMap).
+/// Brute force approach: Straightforward imperative style (prefix sum + `HashMap`).
 ///
 /// This is the most readable and standard approach in system languages, manually tracking
-/// a running sum and counter with a `for` loop and a mutable HashMap. It is labelled
+/// a running sum and counter with a `for` loop and a mutable `HashMap`. It is labelled
 /// "brute force" as the imperative baseline; note that it shares the same optimal
 /// O(N) time / O(N) space complexity as the functional variant — the difference is coding
 /// style, not asymptotic cost.
 ///
-/// Time: O(N) - single pass; HashMap operations are O(1) average.
+/// Time: O(N) - single pass; `HashMap` operations are O(1) average.
 /// Space: O(N) - worst case all prefix sums are distinct.
 #[must_use]
 pub fn subarray_sum_brute_force(nums: &[i32], k: i32) -> i32 {
@@ -82,13 +82,13 @@ pub fn subarray_sum_brute_force(nums: &[i32], k: i32) -> i32 {
     total_subarrays
 }
 
-/// Optimal approach: Functional style using `Iterator::fold` (prefix sum + HashMap).
+/// Optimal approach: Functional style using `Iterator::fold` (prefix sum + `HashMap`).
 ///
 /// This approach avoids all external mutable state by threading the state
 /// `(HashMap, current_sum, total_subarrays)` through the fold operation.
 /// It's a great example of Rust's capability to express complex algorithms functionally.
 ///
-/// Time: O(N) - single fold over the array; HashMap operations are O(1) average.
+/// Time: O(N) - single fold over the array; `HashMap` operations are O(1) average.
 /// Space: O(N) - worst case all prefix sums are distinct.
 #[must_use]
 pub fn subarray_sum_optimal(nums: &[i32], k: i32) -> i32 {

@@ -1,7 +1,7 @@
 //! # 39. Combination Sum
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/combination-sum/
+//! Link: <https://leetcode.com/problems/combination-sum>/
 //!
 //! Given an array of distinct integers `candidates` and a target integer `target`,
 //! return a list of all unique combinations of `candidates` where the chosen numbers sum to `target`.
@@ -46,9 +46,6 @@
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn combination_sum_brute_force(candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
-    let mut results = Vec::new();
-    let mut path = Vec::new();
-
     fn backtrack(
         candidates: &[i32],
         target: i32,
@@ -94,6 +91,8 @@ pub fn combination_sum_brute_force(candidates: Vec<i32>, target: i32) -> Vec<Vec
         }
     }
 
+    let mut results = Vec::new();
+    let mut path = Vec::new();
     backtrack(&candidates, target, 0, 0, &mut path, &mut results);
     results
 }
@@ -106,24 +105,9 @@ pub fn combination_sum_brute_force(candidates: Vec<i32>, target: i32) -> Vec<Vec
 /// exponential worst-case complexity.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// LeetCode constraints guarantee target and candidate values fit in usize.
+#[allow(clippy::cast_sign_loss)]
 pub fn combination_sum_optimal(mut candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {
-    let mut results = Vec::new();
-
-    // RUST INSIGHT: `sort_unstable()` is generally faster than `sort()` and
-    // is perfectly fine here since we are dealing with primitive integers (i32)
-    // where elements with the same value are indistinguishable anyway.
-    candidates.sort_unstable();
-
-    if candidates.is_empty() {
-        return results;
-    }
-
-    // RUST INSIGHT: We pre-allocate `path` with exact maximum depth `target / candidates[0]`
-    // to eliminate heap reallocations. Since we sorted `candidates`, index 0 holds the minimum value.
-    // GOTCHA: We must protect against division by zero or negative targets to prevent panic/underflow.
-    let max_depth = (target.max(0) / candidates[0].max(1)) as usize;
-    let mut path = Vec::with_capacity(max_depth);
-
     fn backtrack(
         candidates: &[i32],
         target: i32,
@@ -163,6 +147,23 @@ pub fn combination_sum_optimal(mut candidates: Vec<i32>, target: i32) -> Vec<Vec
             path.pop();
         }
     }
+
+    let mut results = Vec::new();
+
+    // RUST INSIGHT: `sort_unstable()` is generally faster than `sort()` and
+    // is perfectly fine here since we are dealing with primitive integers (i32)
+    // where elements with the same value are indistinguishable anyway.
+    candidates.sort_unstable();
+
+    if candidates.is_empty() {
+        return results;
+    }
+
+    // RUST INSIGHT: We pre-allocate `path` with exact maximum depth `target / candidates[0]`
+    // to eliminate heap reallocations. Since we sorted `candidates`, index 0 holds the minimum value.
+    // GOTCHA: We must protect against division by zero or negative targets to prevent panic/underflow.
+    let max_depth = (target.max(0) / candidates[0].max(1)) as usize;
+    let mut path = Vec::with_capacity(max_depth);
 
     backtrack(&candidates, target, 0, 0, &mut path, &mut results);
     results

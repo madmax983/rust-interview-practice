@@ -7,7 +7,7 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-/// Pattern: HashMap - counting frequency
+/// Pattern: `HashMap` - counting frequency
 #[must_use]
 pub fn frequency_map(nums: Vec<i32>) -> HashMap<i32, usize> {
     let mut freq = HashMap::with_capacity(nums.len());
@@ -19,25 +19,25 @@ pub fn frequency_map(nums: Vec<i32>) -> HashMap<i32, usize> {
     freq
 }
 
-/// Pattern: HashMap - get with default
+/// Pattern: `HashMap` - get with default
 #[must_use]
 pub fn get_or_default(map: &HashMap<i32, i32>, key: i32) -> i32 {
     *map.get(&key).unwrap_or(&0)
 }
 
-/// Pattern: HashMap - insert if absent
+/// Pattern: `HashMap` - insert if absent
 pub fn insert_if_absent(map: &mut HashMap<i32, String>, key: i32, value: String) {
     map.entry(key).or_insert(value);
 }
 
-/// Pattern: HashMap - update or insert
+/// Pattern: `HashMap` - update or insert
 pub fn update_or_insert(map: &mut HashMap<i32, i32>, key: i32, value: i32) {
     map.entry(key)
         .and_modify(|v| *v += value) // If key exists, modify the value
         .or_insert(value); // If key doesn't exist, insert it
 }
 
-/// Pattern: HashSet - check membership
+/// Pattern: `HashSet` - check membership
 #[must_use]
 pub fn has_duplicates(nums: Vec<i32>) -> bool {
     let mut seen = HashSet::with_capacity(nums.len());
@@ -50,7 +50,7 @@ pub fn has_duplicates(nums: Vec<i32>) -> bool {
     false // No duplicates found
 }
 
-/// Pattern: HashSet - set operations (union, intersection, difference)
+/// Pattern: `HashSet` - set operations (union, intersection, difference)
 #[must_use]
 pub fn set_operations(nums1: Vec<i32>, nums2: Vec<i32>) -> (HashSet<i32>, HashSet<i32>) {
     let set1: HashSet<_> = nums1.iter().copied().collect();
@@ -62,7 +62,7 @@ pub fn set_operations(nums1: Vec<i32>, nums2: Vec<i32>) -> (HashSet<i32>, HashSe
     (union, intersection)
 }
 
-/// Pattern: VecDeque - use as queue (FIFO)
+/// Pattern: `VecDeque` - use as queue (FIFO)
 #[must_use]
 pub fn queue_example(nums: Vec<i32>) -> Vec<i32> {
     let mut queue = VecDeque::new();
@@ -83,7 +83,7 @@ pub fn queue_example(nums: Vec<i32>) -> Vec<i32> {
     result
 }
 
-/// Pattern: VecDeque - use as stack (LIFO)
+/// Pattern: `VecDeque` - use as stack (LIFO)
 #[must_use]
 pub fn stack_example(nums: Vec<i32>) -> Vec<i32> {
     let mut stack = VecDeque::new();

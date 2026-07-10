@@ -1,14 +1,14 @@
-//! # HyperLogLog Implementation
+//! # `HyperLogLog` Implementation
 //!
 //! # Header
 //!
-//! *   **Problem Name**: HyperLogLog (HLL) Cardinality Estimator
+//! *   **Problem Name**: `HyperLogLog` (HLL) Cardinality Estimator
 //! *   **Difficulty**: Medium (Probabilistic Data Structures)
 //! *   **Link**: <http://algo.inria.fr/flajolet/Publications/FlajoletFusyGandouetMeunier07.pdf>
 //! *   **Replaces Crates**: `hyperloglog`, `amadeus-streaming` (partially), custom Redis implementations.
 //! *   **Real-world Usage**:
 //!     *   **Redis**: `PFADD`, `PFCOUNT` commands use HLL for distinct counts.
-//!     *   **Big Data**: Google BigQuery, Amazon Redshift for `COUNT(DISTINCT)`.
+//!     *   **Big Data**: Google `BigQuery`, Amazon Redshift for `COUNT(DISTINCT)`.
 //!     *   **Networking**: Counting unique IP addresses in traffic streams.
 //! *   **Why build it yourself?**
 //!     Implementing HLL demystifies how databases count billions of unique items with only ~12KB of memory.
@@ -18,7 +18,7 @@
 //!
 //! # Architecture
 //!
-//! HyperLogLog uses randomized hashing to estimate the cardinality (number of unique elements) of a set.
+//! `HyperLogLog` uses randomized hashing to estimate the cardinality (number of unique elements) of a set.
 //! It relies on the observation that the cardinality of a set of uniformly distributed random numbers can be estimated
 //! by calculating the maximum number of leading zeros in the binary representation of each number.
 //!
@@ -31,9 +31,9 @@
 //!         -   **Index**: First $p$ bits determine the register index $j$.
 //!         -   **Rank**: Remaining $w-p$ bits determine the run-length of zeros $\rho(w) + 1$.
 //!     -   Update: $M[j] = \max(M[j], \text{Rank})$.
-//! 4.  **Count()**:
+//! 4.  **`Count()`**:
 //!     -   Compute the harmonic mean of $2^{M[j]}$.
-//!     -   Apply bias correction $\alpha_m$.
+//!     -   Apply bias correction (`alpha_m`).
 //!     -   Apply "Linear Counting" for small ranges (many empty registers).
 //!
 //! **Complexity:**
@@ -60,6 +60,13 @@
 //! *   **Hash Collisions**: With 64-bit hashes, collisions are negligible for cardinalities $< 2^{60}$.
 //! *   **Register Size**: $2^p$ grows exponentially. $p=16$ needs 64KB (if u8). $p=4$ needs 16 bytes.
 
+// Intentional index/byte/word manipulation and statistical estimation casts.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss
+)]
+
 use std::hash::{Hash, Hasher};
 
 /// A simple FNV-1a (64-bit) Hasher for stability.
@@ -68,9 +75,9 @@ struct Fnv1aHasher {
 }
 
 impl Fnv1aHasher {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
-            state: 0xcbf29ce484222325,
+            state: 0xcbf2_9ce4_8422_2325,
         }
     }
 }
@@ -78,8 +85,8 @@ impl Fnv1aHasher {
 impl Hasher for Fnv1aHasher {
     fn write(&mut self, bytes: &[u8]) {
         for &byte in bytes {
-            self.state ^= byte as u64;
-            self.state = self.state.wrapping_mul(0x100000001b3);
+            self.state ^= u64::from(byte);
+            self.state = self.state.wrapping_mul(0x0100_0000_01b3);
         }
     }
 
@@ -87,15 +94,15 @@ impl Hasher for Fnv1aHasher {
         let mut x = self.state;
         // MurmurHash3 64-bit finalizer to improve avalanche
         x ^= x >> 33;
-        x = x.wrapping_mul(0xff51afd7ed558ccd);
+        x = x.wrapping_mul(0xff51_afd7_ed55_8ccd);
         x ^= x >> 33;
-        x = x.wrapping_mul(0xc4ceb9fe1a85ec53);
+        x = x.wrapping_mul(0xc4ce_b9fe_1a85_ec53);
         x ^= x >> 33;
         x
     }
 }
 
-/// A HyperLogLog probabilistic counter.
+/// A `HyperLogLog` probabilistic counter.
 #[derive(Debug, Clone)]
 pub struct HyperLogLog {
     p: u8,    // Precision parameter (4..16)
@@ -104,7 +111,7 @@ pub struct HyperLogLog {
 }
 
 impl HyperLogLog {
-    /// Creates a new HyperLogLog with precision `p`.
+    /// Creates a new `HyperLogLog` with precision `p`.
     ///
     /// # Arguments
     ///
@@ -116,20 +123,21 @@ impl HyperLogLog {
     /// # Panics
     ///
     /// Panics if `p` is not in the range [4, 16].
+    #[must_use]
     pub fn new(p: u8) -> Self {
         assert!(
             (4..=16).contains(&p),
             "Precision p must be between 4 and 16"
         );
         let m = 1 << p;
-        HyperLogLog {
+        Self {
             p,
             m,
             registers: vec![0; m],
         }
     }
 
-    /// Adds an item to the HyperLogLog.
+    /// Adds an item to the `HyperLogLog`.
     pub fn add<T: Hash + ?Sized>(&mut self, item: &T) {
         let mut hasher = Fnv1aHasher::new();
         item.hash(&mut hasher);
@@ -163,6 +171,7 @@ impl HyperLogLog {
     }
 
     /// Estimates the cardinality of the set.
+    #[must_use]
     pub fn count(&self) -> u64 {
         let m = self.m as f64;
         let alpha = self.get_alpha();
@@ -172,7 +181,7 @@ impl HyperLogLog {
         let mut zero_count = 0;
 
         for &val in &self.registers {
-            sum_inv_pow += 2.0_f64.powi(-(val as i32));
+            sum_inv_pow += 2.0_f64.powi(-i32::from(val));
             if val == 0 {
                 zero_count += 1;
             }
@@ -185,7 +194,7 @@ impl HyperLogLog {
         if raw_estimate <= 2.5 * m {
             // Small Range Correction (Linear Counting)
             if zero_count > 0 {
-                (m * (m / zero_count as f64).ln()) as u64
+                (m * (m / f64::from(zero_count)).ln()) as u64
             } else {
                 raw_estimate as u64
             }
@@ -201,12 +210,12 @@ impl HyperLogLog {
         }
     }
 
-    /// Merges another HyperLogLog into this one.
+    /// Merges another `HyperLogLog` into this one.
     ///
     /// # Panics
     ///
     /// Panics if the precision `p` of the two HLLs does not match.
-    pub fn merge(&mut self, other: &HyperLogLog) {
+    pub fn merge(&mut self, other: &Self) {
         assert_eq!(
             self.p, other.p,
             "Cannot merge HLLs with different precision"
@@ -219,7 +228,7 @@ impl HyperLogLog {
         }
     }
 
-    /// Clears the HyperLogLog.
+    /// Clears the `HyperLogLog`.
     pub fn clear(&mut self) {
         for x in &mut self.registers {
             *x = 0;
@@ -227,7 +236,8 @@ impl HyperLogLog {
     }
 
     /// Returns the precision parameter `p`.
-    pub fn p(&self) -> u8 {
+    #[must_use]
+    pub const fn p(&self) -> u8 {
         self.p
     }
 
@@ -258,6 +268,9 @@ impl HyperLogLog {
 
 #[cfg(test)]
 mod tests {
+    // test-code: counts are small in tests, so the u64->i64 error-margin casts cannot wrap.
+    #![allow(clippy::cast_possible_wrap)]
+
     use super::*;
 
     #[test]
@@ -269,7 +282,7 @@ mod tests {
 
         let count = hll.count();
         // For very small N, Linear Counting should be exact if no collisions
-        assert!(count == 3, "Count should be 3, got {}", count);
+        assert!(count == 3, "Count should be 3, got {count}");
     }
 
     #[test]
@@ -293,7 +306,7 @@ mod tests {
         }
 
         let count = hll.count();
-        let error = (count as i64 - n as i64).abs() as f64 / n as f64;
+        let error = (count as i64 - i64::from(n)).abs() as f64 / f64::from(n);
 
         println!(
             "Expected: {}, Got: {}, Error: {:.4}%",
@@ -341,20 +354,19 @@ mod tests {
         let count = hll.count();
         assert!(
             (9..=11).contains(&count),
-            "Expected 10 (+/- 1), got {}",
-            count
+            "Expected 10 (+/- 1), got {count}"
         );
     }
 
     #[test]
     #[should_panic(expected = "Precision p must be between 4 and 16")]
     fn test_invalid_p_low() {
-        HyperLogLog::new(3);
+        let _ = HyperLogLog::new(3);
     }
 
     #[test]
     #[should_panic(expected = "Precision p must be between 4 and 16")]
     fn test_invalid_p_high() {
-        HyperLogLog::new(17);
+        let _ = HyperLogLog::new(17);
     }
 }

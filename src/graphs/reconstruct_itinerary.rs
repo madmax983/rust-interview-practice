@@ -40,6 +40,10 @@ use std::collections::HashMap;
 /// Finds the itinerary with the smallest lexical order.
 ///
 /// Note: The problem guarantees a valid itinerary exists starting from "JFK".
+///
+/// # Panics
+/// Panics if any ticket does not contain exactly a departure and a destination airport.
+/// The problem constraints guarantee every `tickets[i]` has both.
 #[must_use]
 pub fn find_itinerary(tickets: Vec<Vec<String>>) -> Vec<String> {
     // Build adjacency list
@@ -89,11 +93,7 @@ fn dfs(u: &str, adj: &mut HashMap<String, Vec<String>>, route: &mut Vec<String>)
     loop {
         // Attempt to pop the next destination.
         // We use a scoped block or just a simple statement to ensure the mutable borrow of `adj` ends immediately.
-        let next_dest = if let Some(neighbors) = adj.get_mut(u) {
-            neighbors.pop()
-        } else {
-            None
-        };
+        let next_dest = adj.get_mut(u).and_then(Vec::pop);
 
         if let Some(v) = next_dest {
             dfs(&v, adj, route);

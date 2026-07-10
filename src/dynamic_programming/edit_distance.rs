@@ -42,9 +42,8 @@ use std::cmp;
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn min_distance_brute_force(word1: String, word2: String) -> i32 {
-    let s1: Vec<char> = word1.chars().collect();
-    let s2: Vec<char> = word2.chars().collect();
-
+    // LeetCode constraints (word lengths <= 500) guarantee these casts fit.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn solve(i: usize, j: usize, s1: &[char], s2: &[char]) -> i32 {
         // Base cases: if one string is empty, we must insert/delete all remaining chars of the other
         if i == 0 {
@@ -69,6 +68,8 @@ pub fn min_distance_brute_force(word1: String, word2: String) -> i32 {
         }
     }
 
+    let s1: Vec<char> = word1.chars().collect();
+    let s2: Vec<char> = word2.chars().collect();
     solve(s1.len(), s2.len(), &s1, &s2)
 }
 
@@ -82,16 +83,8 @@ pub fn min_distance_brute_force(word1: String, word2: String) -> i32 {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn min_distance_optimized(word1: String, word2: String) -> i32 {
-    // GOTCHA: `word1.len()` gives byte length, not char count. Using it for array sizing with Unicode would be wrong.
-    // We collect chars to handle Unicode correctly and get O(1) access.
-    let s1: Vec<char> = word1.chars().collect();
-    let s2: Vec<char> = word2.chars().collect();
-    let m = s1.len();
-    let n = s2.len();
-
-    // Initialize memo table with None
-    let mut memo = vec![vec![None; n + 1]; m + 1];
-
+    // LeetCode constraints (word lengths <= 500) guarantee these casts fit.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn solve(
         i: usize,
         j: usize,
@@ -124,6 +117,16 @@ pub fn min_distance_optimized(word1: String, word2: String) -> i32 {
         res
     }
 
+    // GOTCHA: `word1.len()` gives byte length, not char count. Using it for array sizing with Unicode would be wrong.
+    // We collect chars to handle Unicode correctly and get O(1) access.
+    let s1: Vec<char> = word1.chars().collect();
+    let s2: Vec<char> = word2.chars().collect();
+    let m = s1.len();
+    let n = s2.len();
+
+    // Initialize memo table with None
+    let mut memo = vec![vec![None; n + 1]; m + 1];
+
     solve(m, n, &s1, &s2, &mut memo)
 }
 
@@ -136,6 +139,8 @@ pub fn min_distance_optimized(word1: String, word2: String) -> i32 {
 /// Space: O(min(m, n)) - We only store one row.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// LeetCode constraints (word lengths <= 500) guarantee these casts fit.
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub fn min_distance_optimal(word1: String, word2: String) -> i32 {
     let s1: Vec<char> = word1.chars().collect();
     let s2: Vec<char> = word2.chars().collect();
@@ -227,9 +232,9 @@ mod tests {
 
     #[test]
     fn test_edge_case_empty() {
-        assert_eq!(min_distance_optimal("".to_string(), "".to_string()), 0);
-        assert_eq!(min_distance_optimal("a".to_string(), "".to_string()), 1);
-        assert_eq!(min_distance_optimal("".to_string(), "abc".to_string()), 3);
+        assert_eq!(min_distance_optimal(String::new(), String::new()), 0);
+        assert_eq!(min_distance_optimal("a".to_string(), String::new()), 1);
+        assert_eq!(min_distance_optimal(String::new(), "abc".to_string()), 3);
     }
 
     #[test]

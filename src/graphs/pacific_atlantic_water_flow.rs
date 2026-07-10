@@ -46,6 +46,63 @@ use std::collections::VecDeque;
 // Brute Force Approach
 // =========================================================================================
 
+/// Recursive DFS helper for the brute-force approach: floods from `(r, c)` marking `visited`
+/// and recording whether the current component touches the Pacific/Atlantic borders.
+// Grid indices are bounded by rows/cols and stay non-negative, so i32<->usize casts are in range.
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+fn dfs_brute(
+    r: usize,
+    c: usize,
+    rows: usize,
+    cols: usize,
+    heights: &[Vec<i32>],
+    visited: &mut [Vec<bool>],
+    can_reach_pacific: &mut bool,
+    can_reach_atlantic: &mut bool,
+) {
+    if visited[r][c] {
+        return;
+    }
+    visited[r][c] = true;
+
+    if r == 0 || c == 0 {
+        *can_reach_pacific = true;
+    }
+    if r == rows - 1 || c == cols - 1 {
+        *can_reach_atlantic = true;
+    }
+
+    if *can_reach_pacific && *can_reach_atlantic {
+        return;
+    }
+
+    let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+    for (dr, dc) in directions {
+        let nr = r as i32 + dr;
+        let nc = c as i32 + dc;
+
+        if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
+            let nr = nr as usize;
+            let nc = nc as usize;
+            if heights[nr][nc] <= heights[r][c] {
+                dfs_brute(
+                    nr,
+                    nc,
+                    rows,
+                    cols,
+                    heights,
+                    visited,
+                    can_reach_pacific,
+                    can_reach_atlantic,
+                );
+            }
+        }
+    }
+}
+
 /// Brute Force: DFS from every cell
 ///
 /// For every cell in the grid, perform a DFS to check if we can find a path to both
@@ -55,8 +112,14 @@ use std::collections::VecDeque;
 /// Space: O(M*N) - Recursion stack for DFS.
 ///
 /// # Gotcha
-/// This approach will likely TLE (Time Limit Exceeded) on LeetCode for larger grids.
+/// This approach will likely TLE (Time Limit Exceeded) on `LeetCode` for larger grids.
 #[must_use]
+// LeetCode signature: three implementations share `heights: Vec<Vec<i32>>` by value.
+#[allow(clippy::needless_pass_by_value)]
+// Grid indices are bounded by rows/cols and stay non-negative, so i32<->usize casts are in range.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
 pub fn pacific_atlantic_brute_force(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     let rows = heights.len();
     if rows == 0 {
@@ -71,58 +134,7 @@ pub fn pacific_atlantic_brute_force(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
             let mut can_reach_pacific = false;
             let mut can_reach_atlantic = false;
 
-            #[allow(clippy::too_many_arguments)]
-            fn dfs(
-                r: usize,
-                c: usize,
-                rows: usize,
-                cols: usize,
-                heights: &[Vec<i32>],
-                visited: &mut [Vec<bool>],
-                can_reach_pacific: &mut bool,
-                can_reach_atlantic: &mut bool,
-            ) {
-                if visited[r][c] {
-                    return;
-                }
-                visited[r][c] = true;
-
-                if r == 0 || c == 0 {
-                    *can_reach_pacific = true;
-                }
-                if r == rows - 1 || c == cols - 1 {
-                    *can_reach_atlantic = true;
-                }
-
-                if *can_reach_pacific && *can_reach_atlantic {
-                    return;
-                }
-
-                let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
-                for (dr, dc) in directions {
-                    let nr = r as i32 + dr;
-                    let nc = c as i32 + dc;
-
-                    if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
-                        let nr = nr as usize;
-                        let nc = nc as usize;
-                        if heights[nr][nc] <= heights[r][c] {
-                            dfs(
-                                nr,
-                                nc,
-                                rows,
-                                cols,
-                                heights,
-                                visited,
-                                can_reach_pacific,
-                                can_reach_atlantic,
-                            );
-                        }
-                    }
-                }
-            }
-
-            dfs(
+            dfs_brute(
                 r,
                 c,
                 rows,
@@ -146,6 +158,46 @@ pub fn pacific_atlantic_brute_force(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 // Optimal Approach: Reverse DFS
 // =========================================================================================
 
+/// Recursive reverse-DFS helper: floods uphill from `(r, c)`, marking every cell that can reach
+/// the ocean whose `reachable` matrix is passed in.
+// Grid indices are bounded by rows/cols and stay non-negative, so i32<->usize casts are in range.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+fn dfs_reverse(
+    r: usize,
+    c: usize,
+    reachable: &mut [Vec<bool>],
+    prev_height: i32,
+    heights: &[Vec<i32>],
+    rows: usize,
+    cols: usize,
+) {
+    if reachable[r][c] || heights[r][c] < prev_height {
+        return;
+    }
+
+    reachable[r][c] = true;
+
+    let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+    for (dr, dc) in directions {
+        let nr = r as i32 + dr;
+        let nc = c as i32 + dc;
+
+        if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
+            dfs_reverse(
+                nr as usize,
+                nc as usize,
+                reachable,
+                heights[r][c],
+                heights,
+                rows,
+                cols,
+            );
+        }
+    }
+}
+
 /// Optimal approach: Reverse DFS from the Ocean
 ///
 /// Instead of starting from each cell and checking if it can reach the ocean,
@@ -166,6 +218,12 @@ pub fn pacific_atlantic_brute_force(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 /// a dynamically sized, fast lookup set across multiple recursive calls. Alternatively,
 /// a `vec![vec![false; cols]; rows]` matrix is generally faster and uses less memory overhead.
 #[must_use]
+// LeetCode signature: three implementations share `heights: Vec<Vec<i32>>` by value.
+#[allow(clippy::needless_pass_by_value)]
+// Grid indices are bounded by rows/cols and stay non-negative, so i32<->usize casts are in range.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
 pub fn pacific_atlantic_optimal(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     let rows = heights.len();
     if rows == 0 {
@@ -176,43 +234,9 @@ pub fn pacific_atlantic_optimal(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     let mut pacific_reachable = vec![vec![false; cols]; rows];
     let mut atlantic_reachable = vec![vec![false; cols]; rows];
 
-    fn dfs(
-        r: usize,
-        c: usize,
-        reachable: &mut [Vec<bool>],
-        prev_height: i32,
-        heights: &[Vec<i32>],
-        rows: usize,
-        cols: usize,
-    ) {
-        if reachable[r][c] || heights[r][c] < prev_height {
-            return;
-        }
-
-        reachable[r][c] = true;
-
-        let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
-        for (dr, dc) in directions {
-            let nr = r as i32 + dr;
-            let nc = c as i32 + dc;
-
-            if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
-                dfs(
-                    nr as usize,
-                    nc as usize,
-                    reachable,
-                    heights[r][c],
-                    heights,
-                    rows,
-                    cols,
-                );
-            }
-        }
-    }
-
     // Top and Bottom edges
     for c in 0..cols {
-        dfs(
+        dfs_reverse(
             0,
             c,
             &mut pacific_reachable,
@@ -221,7 +245,7 @@ pub fn pacific_atlantic_optimal(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
             rows,
             cols,
         );
-        dfs(
+        dfs_reverse(
             rows - 1,
             c,
             &mut atlantic_reachable,
@@ -234,7 +258,7 @@ pub fn pacific_atlantic_optimal(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 
     // Left and Right edges
     for r in 0..rows {
-        dfs(
+        dfs_reverse(
             r,
             0,
             &mut pacific_reachable,
@@ -243,7 +267,7 @@ pub fn pacific_atlantic_optimal(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
             rows,
             cols,
         );
-        dfs(
+        dfs_reverse(
             r,
             cols - 1,
             &mut atlantic_reachable,
@@ -272,6 +296,38 @@ pub fn pacific_atlantic_optimal(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 // Optimized Approach: Reverse BFS
 // =========================================================================================
 
+/// Iterative reverse-BFS helper: drains `queue`, marking every cell that can flow into the ocean
+/// tracked by `reachable`.
+// Grid indices are bounded by rows/cols and stay non-negative, so i32<->usize casts are in range.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+fn bfs_reverse(
+    queue: &mut VecDeque<(usize, usize)>,
+    reachable: &mut [Vec<bool>],
+    heights: &[Vec<i32>],
+    rows: usize,
+    cols: usize,
+) {
+    let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+    while let Some((r, c)) = queue.pop_front() {
+        for (dr, dc) in directions {
+            let nr = r as i32 + dr;
+            let nc = c as i32 + dc;
+
+            if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
+                let nr = nr as usize;
+                let nc = nc as usize;
+
+                if !reachable[nr][nc] && heights[nr][nc] >= heights[r][c] {
+                    reachable[nr][nc] = true;
+                    queue.push_back((nr, nc));
+                }
+            }
+        }
+    }
+}
+
 /// Optimized approach: Reverse BFS from the Ocean
 ///
 /// Same logic as the optimal reverse-DFS approach, but using Breadth-First Search.
@@ -286,6 +342,12 @@ pub fn pacific_atlantic_optimal(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 /// Time: O(M*N)
 /// Space: O(M*N)
 #[must_use]
+// LeetCode signature: three implementations share `heights: Vec<Vec<i32>>` by value.
+#[allow(clippy::needless_pass_by_value)]
+// Grid indices are bounded by rows/cols and stay non-negative, so i32<->usize casts are in range.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
 pub fn pacific_atlantic_optimized(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     let rows = heights.len();
     if rows == 0 {
@@ -319,40 +381,14 @@ pub fn pacific_atlantic_optimized(heights: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
         }
     }
 
-    fn bfs(
-        queue: &mut VecDeque<(usize, usize)>,
-        reachable: &mut [Vec<bool>],
-        heights: &[Vec<i32>],
-        rows: usize,
-        cols: usize,
-    ) {
-        let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
-        while let Some((r, c)) = queue.pop_front() {
-            for (dr, dc) in directions {
-                let nr = r as i32 + dr;
-                let nc = c as i32 + dc;
-
-                if nr >= 0 && nr < rows as i32 && nc >= 0 && nc < cols as i32 {
-                    let nr = nr as usize;
-                    let nc = nc as usize;
-
-                    if !reachable[nr][nc] && heights[nr][nc] >= heights[r][c] {
-                        reachable[nr][nc] = true;
-                        queue.push_back((nr, nc));
-                    }
-                }
-            }
-        }
-    }
-
-    bfs(
+    bfs_reverse(
         &mut pacific_queue,
         &mut pacific_reachable,
         &heights,
         rows,
         cols,
     );
-    bfs(
+    bfs_reverse(
         &mut atlantic_queue,
         &mut atlantic_reachable,
         &heights,

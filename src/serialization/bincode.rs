@@ -1,12 +1,12 @@
 //! # Binary Serialization Engine
 //!
 //! **What this implements:** A custom binary serialization format and traits.
-//! **Replaces Crates:** `bincode`, `rmp` (MessagePack), `postcard`.
+//! **Replaces Crates:** `bincode`, `rmp` (`MessagePack`), `postcard`.
 //!
 //! **Real-world Usage:**
 //! - Fast Inter-Process Communication (IPC).
 //! - Game state saves and network replication (where bandwidth/storage is premium).
-//! - Storing structured data in embedded databases (like RocksDB or LMDB).
+//! - Storing structured data in embedded databases (like `RocksDB` or LMDB).
 //!
 //! **Why build it yourself?**
 //! Text formats like JSON are slow to parse and bulky. Building a binary serializer teaches you
@@ -38,12 +38,19 @@
 //! - **Cursor-less deserialization:** We use `&mut &[u8]` as the reader. Advancing the slice is an incredibly cheap and ergonomic way to consume bytes.
 //! - **Pre-allocation:** Length prefixes allow the deserializer to pre-allocate exact capacities for vectors and strings, avoiding dynamic reallocation.
 
+// Byte/word truncation and reinterpretation are intentional in this serialization code.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use std::convert::TryInto;
 use std::fmt;
 use std::string::FromUtf8Error;
 
 /// Errors that can occur during deserialization.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum DecodeError {
     /// The buffer did not contain enough bytes.
     UnexpectedEof,
@@ -84,6 +91,11 @@ pub trait Serialize {
 /// Any type implementing this can be decoded from a binary stream.
 pub trait Deserialize: Sized {
     /// Attempts to read `Self` from the given byte slice, advancing the slice.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DecodeError`] if the buffer is too short, contains invalid
+    /// UTF-8, or reports a corrupted length.
     fn deserialize(bytes: &mut &[u8]) -> Result<Self, DecodeError>;
 }
 
@@ -134,7 +146,7 @@ impl_serialize_for_num!(f64);
 
 impl Serialize for bool {
     fn serialize(&self, buffer: &mut Vec<u8>) {
-        buffer.push(if *self { 1 } else { 0 });
+        buffer.push(u8::from(*self));
     }
 }
 
@@ -176,7 +188,7 @@ impl Deserialize for String {
         *bytes = rest;
 
         // Zero-copy validation -> Allocation
-        String::from_utf8(chunk.to_vec()).map_err(Into::into)
+        Self::from_utf8(chunk.to_vec()).map_err(Into::into)
     }
 }
 
@@ -207,7 +219,7 @@ impl<T: Deserialize> Deserialize for Vec<T> {
         // an 8-byte payload forces a multi-hundred-MB allocation. The vector still
         // grows as needed if the input genuinely contains more elements.
         let cap = len.min(bytes.len());
-        let mut vec = Vec::with_capacity(cap);
+        let mut vec = Self::with_capacity(cap);
         for _ in 0..len {
             vec.push(T::deserialize(bytes)?);
         }
@@ -263,6 +275,9 @@ impl<T: Deserialize> Deserialize for Option<T> {
 
 #[cfg(test)]
 mod tests {
+    // test-code: serialization roundtrips are bit-exact, so exact float equality is correct.
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[test]
@@ -367,7 +382,7 @@ mod tests {
 
         impl Deserialize for Player {
             fn deserialize(bytes: &mut &[u8]) -> Result<Self, DecodeError> {
-                Ok(Player {
+                Ok(Self {
                     id: u32::deserialize(bytes)?,
                     name: String::deserialize(bytes)?,
                     score: f32::deserialize(bytes)?,

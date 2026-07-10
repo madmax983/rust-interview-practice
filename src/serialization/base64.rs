@@ -74,7 +74,7 @@ pub fn encode<T: AsRef<[u8]>>(input: T) -> String {
         // Combine 3 bytes (24 bits) into a u32
         // RUST INSIGHT: Bitwise Operations
         // We shift and OR to pack the bits.
-        let combined: u32 = ((b1 as u32) << 16) | ((b2 as u32) << 8) | (b3 as u32);
+        let combined: u32 = (u32::from(b1) << 16) | (u32::from(b2) << 8) | u32::from(b3);
 
         // Extract four 6-bit indices
         let i1 = (combined >> 18) & 0x3F;
@@ -103,6 +103,11 @@ pub fn encode<T: AsRef<[u8]>>(input: T) -> String {
 }
 
 /// Decodes a Base64 string into binary data.
+///
+/// # Errors
+///
+/// Returns an `Err` with a descriptive message if the input length is not a
+/// multiple of four, contains an invalid character, or has malformed padding.
 pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
     let input = input.as_ref();
     // Filter out whitespace/newlines if we want to be robust, but RFC 4648 implies strictness.
@@ -155,7 +160,7 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
             // i=1: next 6 bits (12..18)
             // i=2: next 6 bits (6..12)
             // i=3: low 6 bits (0..6)
-            combined |= (val as u32) << (18 - i * 6);
+            combined |= u32::from(val) << (18 - i * 6);
         }
 
         // Padding is only permitted in the terminal quantum. `Zg==Zg==` (padding in a

@@ -1,7 +1,7 @@
 //! # 17. Letter Combinations of a Phone Number
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/letter-combinations-of-a-phone-number/
+//! Link: <https://leetcode.com/problems/letter-combinations-of-a-phone-number>/
 //!
 //! Given a string containing digits from `2-9` inclusive, return all possible letter
 //! combinations that the number could represent. Return the answer in any order.
@@ -13,7 +13,7 @@
 //! This problem elegantly contrasts two different Rust paradigms: Iterator-based combinatorics
 //! and recursive backtracking with mutable buffers. It showcases how to use zero-cost
 //! abstractions like static arrays of string slices (`&[&str]`) instead of heap-allocated
-//! HashMaps for mappings. Furthermore, it demonstrates Rust's strict but powerful mutable
+//! `HashMaps` for mappings. Furthermore, it demonstrates Rust's strict but powerful mutable
 //! borrowing (`&mut String`), ensuring that a single path buffer can be manipulated safely
 //! across recursive calls without triggering unnecessary heap allocations or garbage collection.
 //!
@@ -106,6 +106,8 @@ pub fn letter_combinations_brute_force(digits: String) -> Vec<String> {
 /// `String` buffer and pass a mutable reference down the recursive call stack.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// LeetCode constraints (0 <= digits.len() <= 4) guarantee this cast fits.
+#[allow(clippy::cast_possible_truncation)]
 pub fn letter_combinations_optimal(digits: String) -> Vec<String> {
     if digits.is_empty() {
         return vec![];
@@ -206,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_empty_input() {
-        let digits = "".to_string();
+        let digits = String::new();
         let expected: Vec<&str> = vec![];
         assert_combinations_eq(letter_combinations(digits), expected);
     }

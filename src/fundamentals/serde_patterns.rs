@@ -6,6 +6,9 @@
 //! **Enable with:** `cargo build --features serde-patterns`
 
 #![cfg(feature = "serde-patterns")]
+// demonstrates serde struct/field attributes; fields are populated by deserialization
+// and exist to illustrate the derive, so they are never read directly.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -85,7 +88,7 @@ struct Config {
     server_address: String,
 }
 
-fn default_timeout() -> u64 {
+const fn default_timeout() -> u64 {
     30
 }
 
@@ -138,9 +141,9 @@ fn demonstrate_container_attributes() {
     // Output: {"userId": 42, "firstName": "Alice", ...}
 }
 
-/// Other rename_all options.
+/// Other `rename_all` options.
 #[allow(dead_code)]
-fn demonstrate_rename_all_options() {
+const fn demonstrate_rename_all_options() {
     // rename_all options:
     // - "lowercase"
     // - "UPPERCASE"
@@ -308,6 +311,8 @@ struct Person {
     age: u32,
 }
 
+// serde's `serialize_with` contract requires the value be taken by reference.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn serialize_age<S>(age: &u32, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -359,7 +364,7 @@ fn demonstrate_custom_serialization() {
 /// }
 /// ```
 #[allow(dead_code)]
-fn demonstrate_remote_derive() {
+const fn demonstrate_remote_derive() {
     // Example pattern only - requires matching third-party type structure
 }
 
@@ -523,7 +528,7 @@ struct AppConfig {
     max_connections: u32,
 }
 
-fn default_max_connections() -> u32 {
+const fn default_max_connections() -> u32 {
     10
 }
 
@@ -649,8 +654,8 @@ fn demonstrate_performance_tips() {
 ///
 /// Common serde crates:
 /// - serde: Core traits
-/// - serde_json: JSON support
-/// - serde_yaml: YAML support
+/// - `serde_json`: JSON support
+/// - `serde_yaml`: YAML support
 /// - toml: TOML support
 /// - bincode: Binary encoding (fastest)
 /// - ron: Rusty Object Notation

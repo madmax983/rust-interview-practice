@@ -73,12 +73,12 @@ pub fn contains_duplicate_optimized(mut nums: Vec<i32>) -> bool {
     nums.windows(2).any(|w| w[0] == w[1])
 }
 
-/// Optimal approach: HashSet (one pass)
+/// Optimal approach: `HashSet` (one pass)
 ///
-/// Time: O(n) - Inserting into a HashSet is O(1) on average, giving O(n) total time.
+/// Time: O(n) - Inserting into a `HashSet` is O(1) on average, giving O(n) total time.
 /// Space: O(n) - In the worst case (all elements unique), we store all `n` elements.
 ///
-/// The HashSet is perfect here. We iterate through the array and try to insert each
+/// The `HashSet` is perfect here. We iterate through the array and try to insert each
 /// number into the set. If `insert` returns `false`, it means the number was already
 /// in the set, proving a duplicate exists.
 #[must_use]

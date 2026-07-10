@@ -48,6 +48,9 @@ use std::collections::VecDeque;
 /// Space: O(M * N) - we need a copy of the grid for each iteration.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// Grid indices are bounded by rows/cols and stay non-negative, so isize<->usize casts are in range.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_sign_loss)]
 pub fn oranges_rotting_brute_force(mut grid: Vec<Vec<i32>>) -> i32 {
     let rows = grid.len();
     if rows == 0 {
@@ -89,12 +92,8 @@ pub fn oranges_rotting_brute_force(mut grid: Vec<Vec<i32>>) -> i32 {
     }
 
     // Check if any fresh oranges are left
-    for r in 0..rows {
-        for c in 0..cols {
-            if grid[r][c] == 1 {
-                return -1;
-            }
-        }
+    if grid.iter().flatten().any(|&cell| cell == 1) {
+        return -1;
     }
 
     minutes
@@ -116,8 +115,17 @@ pub fn oranges_rotting_brute_force(mut grid: Vec<Vec<i32>>) -> i32 {
 /// ## Rust Insight
 /// We use `std::collections::VecDeque` for efficient front-popping in our BFS queue.
 /// A queue size variable helps us track levels (minutes).
+///
+/// # Panics
+/// Does not panic on valid input: the inner `pop_front().unwrap()` runs exactly `queue.len()`
+/// times per level, so the queue is always non-empty when it is called.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+// Grid indices are bounded by rows/cols and stay non-negative, so isize<->usize casts are in range;
+// `nr_isize`/`nc_isize` are the standard new-row/new-col names.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::similar_names)]
 pub fn oranges_rotting_optimal(mut grid: Vec<Vec<i32>>) -> i32 {
     let rows = grid.len();
     if rows == 0 {
@@ -129,10 +137,10 @@ pub fn oranges_rotting_optimal(mut grid: Vec<Vec<i32>>) -> i32 {
     let mut fresh_count = 0;
 
     // 1. Initial scan: enqueue all rotten oranges and count fresh ones
-    for r in 0..rows {
-        for c in 0..cols {
+    for (r, row) in grid.iter().enumerate() {
+        for (c, &cell) in row.iter().enumerate() {
             // RUST INSIGHT: Match is exhaustive. If grid values were an enum, this would be even safer.
-            match grid[r][c] {
+            match cell {
                 2 => queue.push_back((r, c)),
                 1 => fresh_count += 1,
                 _ => {} // Empty cell

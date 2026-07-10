@@ -79,9 +79,9 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Custom(msg) => write!(f, "{}", msg),
-            Error::TypeMismatch => write!(f, "type mismatch"),
-            Error::EndOfStream => write!(f, "end of stream"),
+            Self::Custom(msg) => write!(f, "{msg}"),
+            Self::TypeMismatch => write!(f, "type mismatch"),
+            Self::EndOfStream => write!(f, "end of stream"),
         }
     }
 }
@@ -90,8 +90,23 @@ impl fmt::Display for Error {
 pub trait Serializer {
     type Error: Into<Error>;
 
+    /// Serializes a boolean value.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the underlying format fails to write the value.
     fn serialize_bool(self, v: bool) -> Result<(), Self::Error>;
+    /// Serializes a 32-bit signed integer.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the underlying format fails to write the value.
     fn serialize_i32(self, v: i32) -> Result<(), Self::Error>;
+    /// Serializes a string slice.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the underlying format fails to write the value.
     fn serialize_str(self, v: &str) -> Result<(), Self::Error>;
 
     // RUST INSIGHT:
@@ -101,11 +116,21 @@ pub trait Serializer {
 
 /// A data structure that can be serialized into any data format supported by a Serializer.
 pub trait Serialize {
+    /// Serializes `self` using the given serializer.
+    ///
+    /// # Errors
+    ///
+    /// Returns `S::Error` if the serializer fails to write any part of `self`.
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<(), S::Error>;
 }
 
 /// A data structure that can be deserialized from any data format supported by a Deserializer.
 pub trait Deserialize<'de>: Sized {
+    /// Deserializes an instance of `Self` from the given deserializer.
+    ///
+    /// # Errors
+    ///
+    /// Returns `D::Error` if the input is malformed or does not match `Self`.
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error>;
 }
 
@@ -114,15 +139,34 @@ pub trait Deserializer<'de>: Sized {
     type Error: Into<Error>;
 
     /// The deserializer inspects the format and decides which `Visitor` method to call.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the input cannot be read or driven into the visitor.
     fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V::Error: From<Error>;
+    /// Drives the visitor with a 32-bit integer read from the format.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the input is not a valid `i32` for this format.
     fn deserialize_i32<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V::Error: From<Error>;
+    /// Drives the visitor with a string read from the format.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the input is not a valid string for this format.
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V::Error: From<Error>;
+    /// Drives the visitor with a boolean read from the format.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Self::Error` if the input is not a valid boolean for this format.
     fn deserialize_bool<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V::Error: From<Error>;
@@ -133,6 +177,11 @@ pub trait Visitor<'de>: Sized {
     type Value;
     type Error: Into<Error>;
 
+    /// Visits a boolean value.
+    ///
+    /// # Errors
+    ///
+    /// Returns a type-mismatch error unless the implementer overrides this method.
     fn visit_bool(self, _v: bool) -> Result<Self::Value, Self::Error>
     where
         Self::Error: From<Error>,
@@ -140,6 +189,11 @@ pub trait Visitor<'de>: Sized {
         Err(Error::TypeMismatch.into())
     }
 
+    /// Visits a 32-bit integer value.
+    ///
+    /// # Errors
+    ///
+    /// Returns a type-mismatch error unless the implementer overrides this method.
     fn visit_i32(self, _v: i32) -> Result<Self::Value, Self::Error>
     where
         Self::Error: From<Error>,
@@ -147,6 +201,11 @@ pub trait Visitor<'de>: Sized {
         Err(Error::TypeMismatch.into())
     }
 
+    /// Visits a string value.
+    ///
+    /// # Errors
+    ///
+    /// Returns a type-mismatch error unless the implementer overrides this method.
     fn visit_str(self, _v: &str) -> Result<Self::Value, Self::Error>
     where
         Self::Error: From<Error>,
@@ -185,7 +244,7 @@ impl Serialize for bool {
 
 struct I32Visitor;
 
-impl<'de> Visitor<'de> for I32Visitor {
+impl Visitor<'_> for I32Visitor {
     type Value = i32;
     type Error = Error;
 
@@ -203,7 +262,7 @@ impl<'de> Deserialize<'de> for i32 {
 
 struct StringVisitor;
 
-impl<'de> Visitor<'de> for StringVisitor {
+impl Visitor<'_> for StringVisitor {
     type Value = String;
     type Error = Error;
 
@@ -228,12 +287,12 @@ pub struct SimpleStringSerializer<'a> {
 }
 
 impl<'a> SimpleStringSerializer<'a> {
-    pub fn new(output: &'a mut String) -> Self {
+    pub const fn new(output: &'a mut String) -> Self {
         Self { output }
     }
 }
 
-impl<'a> Serializer for SimpleStringSerializer<'a> {
+impl Serializer for SimpleStringSerializer<'_> {
     type Error = Error;
 
     fn serialize_bool(self, v: bool) -> Result<(), Self::Error> {
@@ -246,7 +305,7 @@ impl<'a> Serializer for SimpleStringSerializer<'a> {
         // Allocations can happen during serialization. Using `std::fmt::Write` directly
         // on strings avoids some allocations.
         use std::fmt::Write;
-        write!(self.output, "{}", v).map_err(|_| Error::Custom("Format error".into()))
+        write!(self.output, "{v}").map_err(|_| Error::Custom("Format error".into()))
     }
 
     fn serialize_str(self, v: &str) -> Result<(), Self::Error> {
@@ -261,7 +320,8 @@ pub struct SimpleStringDeserializer<'de> {
 }
 
 impl<'de> SimpleStringDeserializer<'de> {
-    pub fn new(input: &'de str) -> Self {
+    #[must_use]
+    pub const fn new(input: &'de str) -> Self {
         Self { input }
     }
 }
@@ -281,7 +341,7 @@ impl<'de> Deserializer<'de> for SimpleStringDeserializer<'de> {
         V::Error: From<Error>,
     {
         let val = self.input.parse::<i32>().map_err(|_| Error::TypeMismatch)?;
-        visitor.visit_i32(val).map_err(|e| e.into())
+        visitor.visit_i32(val).map_err(std::convert::Into::into)
     }
 
     fn deserialize_str<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -290,7 +350,9 @@ impl<'de> Deserializer<'de> for SimpleStringDeserializer<'de> {
     {
         // Zero-copy string deserialization could return a borrowed `&'de str`, but our
         // string visitor currently allocates a `String`.
-        visitor.visit_str(self.input).map_err(|e| e.into())
+        visitor
+            .visit_str(self.input)
+            .map_err(std::convert::Into::into)
     }
 
     fn deserialize_bool<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -302,7 +364,7 @@ impl<'de> Deserializer<'de> for SimpleStringDeserializer<'de> {
             "false" => false,
             _ => return Err(Error::TypeMismatch),
         };
-        visitor.visit_bool(val).map_err(|e| e.into())
+        visitor.visit_bool(val).map_err(std::convert::Into::into)
     }
 }
 

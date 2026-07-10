@@ -29,10 +29,12 @@
 /// - `.` or empty string: Ignore (current directory or redundant slash).
 /// - `..`: Pop from the stack (go up one level) if not empty.
 /// - Any other name: Push onto the stack.
+///
 /// Finally, we join the stack with `/` and prepend a root `/`.
 ///
 /// This approach is idiomatic Rust because it uses the iterator `split` combined with
 /// pattern matching, avoiding C-style manual character scanning.
+#[must_use]
 pub fn simplify_path_optimal(path: &str) -> String {
     // RUST INSIGHT: `Vec` is the idiomatic stack in Rust.
     // It has O(1) amortized push/pop and contiguous memory layout.
@@ -85,6 +87,7 @@ pub fn simplify_path_optimal(path: &str) -> String {
 /// It is labelled `_brute_force` per the repo's naming convention as the alternative implementation;
 /// its complexity is identical to the optimal loop. While more "functional", it can be slightly harder
 /// to read for those new to combinators due to the `mut` accumulator.
+#[must_use]
 pub fn simplify_path_brute_force(path: &str) -> String {
     let stack = path.split('/').fold(
         Vec::with_capacity(path.len() / 2),

@@ -1,4 +1,4 @@
-//! # OnceCell Implementation
+//! # `OnceCell` Implementation
 //!
 //! Implements a thread-safe initialization primitive that allows a value to be initialized exactly once.
 //!
@@ -67,6 +67,12 @@ pub struct OnceCell<T> {
 // and `Send` (since it might be sent to another thread for dropping).
 unsafe impl<T: Sync + Send> Sync for OnceCell<T> {}
 unsafe impl<T: Send> Send for OnceCell<T> {}
+
+impl<T> Default for OnceCell<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl<T> OnceCell<T> {
     /// Creates a new, empty `OnceCell`.
@@ -300,8 +306,6 @@ mod tests {
 
     #[test]
     fn test_drop() {
-        let drop_count = Arc::new(AtomicUsize::new(0));
-
         struct DropDetector {
             count: Arc<AtomicUsize>,
         }
@@ -311,6 +315,8 @@ mod tests {
                 self.count.fetch_add(1, Ordering::SeqCst);
             }
         }
+
+        let drop_count = Arc::new(AtomicUsize::new(0));
 
         {
             let cell = OnceCell::new();

@@ -42,6 +42,7 @@
 /// At each element in the input array, we have two choices:
 /// 1. Include the element in the current subset.
 /// 2. Exclude the element from the current subset.
+///
 /// We use recursion to explore both branches. To avoid allocating a new `Vec` for every step,
 /// we maintain a single `current` path and push/pop elements as we recurse and backtrack.
 ///
@@ -169,10 +170,10 @@ pub fn subsets(nums: Vec<i32>) -> Vec<Vec<i32>> {
     subsets_optimal(nums)
 }
 
-/// Approach notes (all `O(N * 2^N)`; differ only in constant factor / readability):
-/// - **Backtracking** (`subsets_brute_force`): Best when we need to add constraints (like `subsets_with_dup` where we prune branches).
-/// - **Functional/Cascading** (`subsets_optimized`): Most readable and idiomatic in Rust when just building combinations.
-/// - **Bitwise** (`subsets_optimal`): Fastest due to avoiding recursion overhead, but only works if N is small (<= 64 for `u64`, <= 32 for `i32`).
+// Approach notes (all `O(N * 2^N)`; differ only in constant factor / readability):
+// - **Backtracking** (`subsets_brute_force`): Best when we need to add constraints (like `subsets_with_dup` where we prune branches).
+// - **Functional/Cascading** (`subsets_optimized`): Most readable and idiomatic in Rust when just building combinations.
+// - **Bitwise** (`subsets_optimal`): Fastest due to avoiding recursion overhead, but only works if N is small (<= 64 for `u64`, <= 32 for `i32`).
 
 #[cfg(test)]
 mod tests {
@@ -255,7 +256,7 @@ mod tests {
         let bf = subsets_brute_force(nums.clone());
         let opt = subsets_optimized(nums.clone());
         let optimal = subsets_optimal(nums);
-        assert_subsets_eq(bf.clone(), opt.clone());
+        assert_subsets_eq(bf, opt.clone());
         assert_subsets_eq(opt, optimal);
     }
 

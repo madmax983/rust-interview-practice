@@ -1,7 +1,7 @@
 //! # 704. Binary Search
 //!
 //! Difficulty: Easy
-//! Link: https://leetcode.com/problems/binary-search/
+//! Link: <https://leetcode.com/problems/binary-search>/
 //!
 //! Given an array of integers `nums` which is sorted in ascending order, and an integer `target`,
 //! write a function to search `target` in `nums`. If `target` exists, then return its index.
@@ -84,16 +84,16 @@ pub fn search_optimized(nums: Vec<i32>, target: i32) -> i32 {
         // Using `left + (right - left) / 2` avoids integer overflow that can occur with `(left + right) / 2`.
         let mid = left + (right - left) / 2;
 
-        if nums[mid] == target {
-            return mid as i32;
-        } else if nums[mid] < target {
-            left = mid + 1;
-        } else {
-            // Check to avoid underflow
-            if mid == 0 {
-                break;
+        match nums[mid].cmp(&target) {
+            Ordering::Equal => return mid as i32,
+            Ordering::Less => left = mid + 1,
+            Ordering::Greater => {
+                // Check to avoid underflow
+                if mid == 0 {
+                    break;
+                }
+                right = mid - 1;
             }
-            right = mid - 1;
         }
     }
 
@@ -139,6 +139,9 @@ pub fn search_optimal(nums: Vec<i32>, target: i32) -> i32 {
 /// Rust provides a built-in `binary_search` for slices.
 /// In a real-world scenario, you would just use `nums.binary_search(&target)`.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)]
 pub fn search_std(nums: Vec<i32>, target: i32) -> i32 {
     // RUST INSIGHT:
     // `binary_search` returns `Result<usize, usize>`.
@@ -181,7 +184,7 @@ mod tests {
         let target = 2;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     #[test]
@@ -190,7 +193,7 @@ mod tests {
         let target = 5;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     #[test]
@@ -199,7 +202,7 @@ mod tests {
         let target = 5;
         assert_eq!(search_brute_force(nums.clone(), target), 0);
         assert_eq!(search_optimized(nums.clone(), target), 0);
-        assert_eq!(search_optimal(nums.clone(), target), 0);
+        assert_eq!(search_optimal(nums, target), 0);
     }
 
     #[test]
@@ -208,7 +211,7 @@ mod tests {
         let target = 2;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     // Stress / Boundary Cases
@@ -218,7 +221,7 @@ mod tests {
         let target = 1;
         assert_eq!(search_brute_force(nums.clone(), target), 0);
         assert_eq!(search_optimized(nums.clone(), target), 0);
-        assert_eq!(search_optimal(nums.clone(), target), 0);
+        assert_eq!(search_optimal(nums, target), 0);
     }
 
     #[test]
@@ -227,7 +230,7 @@ mod tests {
         let target = 5;
         assert_eq!(search_brute_force(nums.clone(), target), 4);
         assert_eq!(search_optimized(nums.clone(), target), 4);
-        assert_eq!(search_optimal(nums.clone(), target), 4);
+        assert_eq!(search_optimal(nums, target), 4);
     }
 
     #[test]
@@ -236,7 +239,7 @@ mod tests {
         let target = 0;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     #[test]
@@ -245,7 +248,7 @@ mod tests {
         let target = 6;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     #[test]

@@ -26,6 +26,11 @@
 ///
 /// Time: O(N * Target), where N is the number of elements and Target is sum / 2.
 /// Space: O(N * Target)
+#[must_use]
+#[allow(clippy::needless_pass_by_value)]
+// LeetCode signature
+// LeetCode constraints (values and sums fit in i32) guarantee these casts are non-negative.
+#[allow(clippy::cast_sign_loss)]
 pub fn can_partition_optimized(nums: Vec<i32>) -> bool {
     let total_sum: i32 = nums.iter().sum();
 
@@ -42,8 +47,8 @@ pub fn can_partition_optimized(nums: Vec<i32>) -> bool {
     let mut dp = vec![vec![false; target + 1]; n + 1];
 
     // Base case: A sum of 0 is always achievable with an empty subset.
-    for i in 0..=n {
-        dp[i][0] = true;
+    for row in &mut dp {
+        row[0] = true;
     }
 
     for i in 1..=n {
@@ -66,6 +71,11 @@ pub fn can_partition_optimized(nums: Vec<i32>) -> bool {
 ///
 /// Time: O(N * Target)
 /// Space: O(Target)
+#[must_use]
+#[allow(clippy::needless_pass_by_value)]
+// LeetCode signature
+// LeetCode constraints (values and sums fit in i32) guarantee these casts are non-negative.
+#[allow(clippy::cast_sign_loss)]
 pub fn can_partition_optimal(nums: Vec<i32>) -> bool {
     // RUST INSIGHT: Using iterators and closures is idiomatic and often faster than manual loops.
     // The compiler can unroll and vectorize this sum.
@@ -160,14 +170,12 @@ mod tests {
             assert_eq!(
                 can_partition_optimized(nums.clone()),
                 expected,
-                "2D vs 1D mismatch for {:?}",
-                nums
+                "2D vs 1D mismatch for {nums:?}"
             );
             assert_eq!(
                 can_partition(nums.clone()),
                 expected,
-                "wrapper mismatch for {:?}",
-                nums
+                "wrapper mismatch for {nums:?}"
             );
         }
     }

@@ -7,8 +7,8 @@
 //! You may assume all four edges of the grid are all surrounded by water.
 //!
 //! Difficulty: Medium
-//! LeetCode: 200. Number of Islands
-//! Link: https://leetcode.com/problems/number-of-islands/
+//! `LeetCode`: 200. Number of Islands
+//! Link: <https://leetcode.com/problems/number-of-islands>/
 //!
 //! ## Why this matters in Rust
 //! This problem is a classic example of **Graph Traversal** (DFS/BFS) on a grid. In Rust, it highlights:
@@ -102,7 +102,7 @@ fn dfs(grid: &mut Vec<Vec<char>>, r: usize, c: usize) {
 ///
 /// Time: O(M * N)
 /// Space: O(min(M, N)) - worst case queue size is proportional to the smaller dimension (diagonal traversal).
-pub fn num_islands_optimized(grid: &mut Vec<Vec<char>>) -> i32 {
+pub fn num_islands_optimized(grid: &mut [Vec<char>]) -> i32 {
     if grid.is_empty() {
         return 0;
     }
@@ -123,7 +123,12 @@ pub fn num_islands_optimized(grid: &mut Vec<Vec<char>>) -> i32 {
     count
 }
 
-fn bfs(grid: &mut Vec<Vec<char>>, start_r: usize, start_c: usize) {
+// Grid indices are bounded by rows/cols and stay non-negative after the guard, so isize<->usize
+// casts are in range; `nr_isize`/`nc_isize` are the standard new-row/new-col names.
+#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::similar_names)]
+fn bfs(grid: &mut [Vec<char>], start_r: usize, start_c: usize) {
     let rows = grid.len();
     let cols = grid[0].len();
 
@@ -172,6 +177,7 @@ fn bfs(grid: &mut Vec<Vec<char>>, start_r: usize, start_c: usize) {
 /// Time: O(M * N)
 /// Space: O(M * N) - explicit copy of grid plus recursion stack.
 #[allow(clippy::ptr_arg)] // Taking ownership or &Vec is a design choice here
+#[must_use]
 pub fn num_islands_brute_force(grid: &Vec<Vec<char>>) -> i32 {
     // Clone the grid so we can mutate the copy
     let mut working_grid = grid.clone();
@@ -180,7 +186,7 @@ pub fn num_islands_brute_force(grid: &Vec<Vec<char>>) -> i32 {
 
 /// Main entry point - uses the optimal (DFS) solution.
 ///
-/// Takes ownership of the grid so callers get the canonical LeetCode signature; the grid is
+/// Takes ownership of the grid so callers get the canonical `LeetCode` signature; the grid is
 /// consumed and sunk in place internally.
 #[must_use]
 pub fn number_of_islands(mut grid: Vec<Vec<char>>) -> i32 {
@@ -278,11 +284,11 @@ mod tests {
         for grid in grids {
             let brute = num_islands_brute_force(&grid);
 
-            let mut g_dfs = grid.clone();
-            let optimal = num_islands_optimal(&mut g_dfs);
+            let mut dfs_grid = grid.clone();
+            let optimal = num_islands_optimal(&mut dfs_grid);
 
-            let mut g_bfs = grid.clone();
-            let optimized = num_islands_optimized(&mut g_bfs);
+            let mut bfs_grid = grid.clone();
+            let optimized = num_islands_optimized(&mut bfs_grid);
 
             let wrapped = number_of_islands(grid);
 

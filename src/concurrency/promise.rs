@@ -15,6 +15,10 @@
 //! Building a Promise/Future pair from scratch using `Mutex` and `Condvar` demonstrates exactly how
 //! wait queues work under the hood, stripping away the magic of async/await to reveal the raw OS primitives.
 
+// Lock guards are intentionally held across condvar waits/notifications;
+// do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
@@ -85,6 +89,10 @@ pub trait AsyncFuture<T> {
 pub trait AsyncPromise<T> {
     /// Resolves the promise with the given value.
     /// Returns `Ok(())` if the value was set, or `Err(value)` if it was already resolved.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(value)` if the promise has already been resolved.
     fn set(self, value: T) -> Result<(), T>;
 }
 
@@ -170,7 +178,7 @@ impl<T> AsyncPromise<T> for CondvarPromise<T> {
 impl<T> Drop for CondvarPromise<T> {
     fn drop(&mut self) {
         let mut guard = self.shared.state.lock().unwrap();
-        if let State::Empty = *guard {
+        if matches!(*guard, State::Empty) {
             // GOTCHA: Producer is dropping without providing a value!
             // We must wake up the consumer to prevent a deadlock, and we must do it
             // while holding the *same* lock that the consumer waits on to avoid a lost wakeup.
@@ -230,7 +238,7 @@ impl<T> AsyncFuture<T> for CondvarFuture<T> {
                         // Check one last time before giving up
                         if let State::Set(_) = *guard {
                             // Let the loop handle it
-                        } else if let State::Dropped = *guard {
+                        } else if matches!(*guard, State::Dropped) {
                             *guard = State::Dropped;
                             return Err(FutureError::PromiseDropped);
                         } else {

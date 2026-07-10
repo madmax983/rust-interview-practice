@@ -1,13 +1,15 @@
 //! # 74. Search a 2D Matrix
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/search-a-2d-matrix/
+//! Link: <https://leetcode.com/problems/search-a-2d-matrix>/
 //!
 //! This problem extends 1D binary search over to a 2D matrix, demonstrating
 //! index math and safe indexing. It highlights Rust's `as` casting for handling calculations
 //! securely across array dimensions while ensuring no overflow or out-of-bounds panics happen.
 //!
 //! Note: single canonical implementation; the brute/optimized/optimal progression does not apply here.
+
+use std::cmp::Ordering;
 
 /// Approach: 1D Binary Search
 ///
@@ -44,15 +46,15 @@ impl Solution {
 
             let mid_val = matrix[row][col];
 
-            if mid_val == target {
-                return true;
-            } else if mid_val < target {
-                left = mid + 1;
-            } else {
-                if mid == 0 {
-                    break;
+            match mid_val.cmp(&target) {
+                Ordering::Equal => return true,
+                Ordering::Less => left = mid + 1,
+                Ordering::Greater => {
+                    if mid == 0 {
+                        break;
+                    }
+                    right = mid - 1;
                 }
-                right = mid - 1;
             }
         }
 
@@ -68,7 +70,7 @@ mod tests {
     fn test_happy_path() {
         let matrix = vec![vec![1, 3, 5, 7], vec![10, 11, 16, 20], vec![23, 30, 34, 60]];
         assert!(Solution::search_matrix(matrix.clone(), 3));
-        assert!(!Solution::search_matrix(matrix.clone(), 13));
+        assert!(!Solution::search_matrix(matrix, 13));
     }
 
     #[test]
@@ -83,10 +85,10 @@ mod tests {
     fn test_stress_boundaries() {
         let row_matrix = vec![vec![1, 3, 5, 7, 9]];
         assert!(Solution::search_matrix(row_matrix.clone(), 5));
-        assert!(!Solution::search_matrix(row_matrix.clone(), 4));
+        assert!(!Solution::search_matrix(row_matrix, 4));
 
         let col_matrix = vec![vec![1], vec![3], vec![5], vec![7], vec![9]];
         assert!(Solution::search_matrix(col_matrix.clone(), 5));
-        assert!(!Solution::search_matrix(col_matrix.clone(), 4));
+        assert!(!Solution::search_matrix(col_matrix, 4));
     }
 }

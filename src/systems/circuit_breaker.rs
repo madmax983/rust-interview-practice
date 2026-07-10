@@ -15,6 +15,9 @@
 //! You learn how to balance "failing fast" (Open state) with "self-healing" (Half-Open state),
 //! and how to handle time-based transitions safely.
 
+// The state lock is intentionally held across the state-machine inspect/mutate blocks.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -70,6 +73,7 @@ impl CircuitBreaker {
     /// # Arguments
     /// * `failure_threshold` - Number of failures before opening the circuit.
     /// * `reset_timeout` - Duration to wait before attempting recovery (Open -> Half-Open).
+    #[must_use]
     pub fn new(failure_threshold: usize, reset_timeout: Duration) -> Self {
         Self {
             state: Arc::new(Mutex::new(InnerState {
@@ -86,6 +90,13 @@ impl CircuitBreaker {
     /// The closure must return a `Result<T, E>`.
     /// - `Ok(T)` is considered a success.
     /// - `Err(E)` is considered a failure.
+    ///
+    /// # Errors
+    /// Returns `Err(Error::CircuitOpen)` if the circuit is open and rejecting calls, or
+    /// `Err(Error::OperationFailed(_))` if the closure `f` itself returns an error.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned (a thread panicked while holding the lock).
     pub fn call<T, E, F>(&self, f: F) -> Result<T, Error<E>>
     where
         F: FnOnce() -> Result<T, E>,
@@ -93,6 +104,8 @@ impl CircuitBreaker {
         // 1. Check State
         {
             let mut inner = self.state.lock().unwrap();
+            // Closed and HalfOpen both proceed, but are kept distinct for documentation clarity.
+            #[allow(clippy::match_same_arms)]
             match inner.state {
                 State::Closed => {
                     // Allowed to proceed.
@@ -126,11 +139,11 @@ impl CircuitBreaker {
         let mut inner = self.state.lock().unwrap();
         match result {
             Ok(val) => {
-                if let State::HalfOpen = inner.state {
+                if inner.state == State::HalfOpen {
                     // Success in Half-Open -> Reset to Closed
                     inner.state = State::Closed;
                     inner.failure_count = 0;
-                } else if let State::Closed = inner.state {
+                } else if inner.state == State::Closed {
                     // Success in Closed -> Reset failure count (sliding window or consecutive)
                     // Here we implement "consecutive failures", so success resets count.
                     inner.failure_count = 0;
@@ -162,6 +175,10 @@ impl CircuitBreaker {
     }
 
     /// Returns true if the circuit is currently accepting requests (Closed or Half-Open).
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned (a thread panicked while holding the lock).
+    #[must_use]
     pub fn is_accepting(&self) -> bool {
         let inner = self.state.lock().unwrap();
         match inner.state {
@@ -171,7 +188,7 @@ impl CircuitBreaker {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error<E> {
     CircuitOpen,
     OperationFailed(E),

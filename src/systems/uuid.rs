@@ -141,8 +141,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 thread_local! {
     static RNG_STATE: Cell<u64> = {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
-        let seed = now.as_secs() ^ now.subsec_nanos() as u64;
-        Cell::new(if seed == 0 { 0xCAFEBABE } else { seed })
+        let seed = now.as_secs() ^ u64::from(now.subsec_nanos());
+        Cell::new(if seed == 0 { 0xCAFE_BABE } else { seed })
     };
 }
 
@@ -223,7 +223,7 @@ mod tests {
         // Manually construct a known UUID
         let mut bytes = [0u8; 16];
         for (i, b) in bytes.iter_mut().enumerate() {
-            *b = i as u8;
+            *b = u8::try_from(i).unwrap();
         }
 
         // Apply v4 bits to make it a technically valid layout (even though not random)

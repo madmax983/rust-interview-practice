@@ -53,7 +53,7 @@ pub fn is_anagram_brute_force(s: String, t: String) -> bool {
     s_chars == t_chars
 }
 
-/// Optimized approach: HashMap for character frequency counting.
+/// Optimized approach: `HashMap` for character frequency counting.
 /// Time: O(N) - single pass over both strings
 /// Space: O(K) - where K is the number of unique characters (up to 26 for lowercase English)
 ///
@@ -169,8 +169,8 @@ mod tests {
 
     #[test]
     fn test_empty_strings() {
-        let s = "".to_string();
-        let t = "".to_string();
+        let s = String::new();
+        let t = String::new();
 
         assert!(is_anagram_brute_force(s.clone(), t.clone()));
         assert!(is_anagram_optimized(s.clone(), t.clone()));

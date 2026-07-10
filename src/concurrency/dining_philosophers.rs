@@ -55,8 +55,8 @@ struct Philosopher {
 }
 
 impl Philosopher {
-    fn new(id: usize, first_fork: Arc<Fork>, second_fork: Arc<Fork>) -> Philosopher {
-        Philosopher {
+    const fn new(id: usize, first_fork: Arc<Fork>, second_fork: Arc<Fork>) -> Self {
+        Self {
             _id: id,
             first_fork,
             second_fork,
@@ -103,23 +103,28 @@ pub struct Table {
 
 impl Table {
     /// Create a new table with `n` philosophers.
-    pub fn new(n: usize) -> Table {
+    #[must_use]
+    pub fn new(n: usize) -> Self {
         let forks = (0..n).map(|_| Arc::new(Mutex::new(()))).collect();
 
-        Table { forks }
+        Self { forks }
     }
 
     /// Run the simulation. Each philosopher eats `meals_per_philosopher` times.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there are fewer than 2 philosophers, or if a philosopher
+    /// thread panics (e.g. a fork `Mutex` is poisoned).
     pub fn dine(&self, meals_per_philosopher: usize) {
         let (tx, rx) = std::sync::mpsc::channel();
         let num_philosophers = self.forks.len();
 
         // Handle edge case: need at least 2 philosophers/forks to avoid self-deadlock on single mutex
-        if num_philosophers < 2 {
-            panic!(
-                "Dining Philosophers requires at least 2 philosophers to avoid self-deadlock on a single fork."
-            );
-        }
+        assert!(
+            num_philosophers >= 2,
+            "Dining Philosophers requires at least 2 philosophers to avoid self-deadlock on a single fork."
+        );
 
         let mut handles = vec![];
 

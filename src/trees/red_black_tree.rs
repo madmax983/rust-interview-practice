@@ -51,12 +51,12 @@ struct Node<K, V> {
     key: K,
     val: V,
     color: Color,
-    left: Option<Box<Node<K, V>>>,
-    right: Option<Box<Node<K, V>>>,
+    left: Option<Box<Self>>,
+    right: Option<Box<Self>>,
 }
 
 impl<K, V> Node<K, V> {
-    fn new(key: K, val: V, color: Color) -> Self {
+    const fn new(key: K, val: V, color: Color) -> Self {
         Self {
             key,
             val,
@@ -79,15 +79,18 @@ impl<K: Ord, V> Default for RedBlackTree<K, V> {
 }
 
 impl<K: Ord, V> RedBlackTree<K, V> {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self { root: None, len: 0 }
     }
 
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.len
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -113,11 +116,8 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     }
 
     // Helper: is_red
-    fn is_red(node: Option<&Box<Node<K, V>>>) -> bool {
-        match node {
-            Some(n) => n.color == Color::Red,
-            None => false,
-        }
+    fn is_red(node: Option<&Node<K, V>>) -> bool {
+        node.is_some_and(|n| n.color == Color::Red)
     }
 
     // Rotations
@@ -126,6 +126,9 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     //    A   y    =>    x   C
     //       / \        / \
     //      B   C      A   B
+    // Returns `Box<Node>` intentionally: children are stored as `Option<Box<Node>>`,
+    // so threading the boxed node through rotations avoids re-boxing at every call site.
+    #[allow(clippy::unnecessary_box_returns)]
     fn rotate_left(mut h: Box<Node<K, V>>) -> Box<Node<K, V>> {
         let mut x = h
             .right
@@ -143,6 +146,9 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     //    y   C    =>    A   x
     //   / \                / \
     //  A   B              B   C
+    // Returns `Box<Node>` intentionally: children are stored as `Option<Box<Node>>`,
+    // so threading the boxed node through rotations avoids re-boxing at every call site.
+    #[allow(clippy::unnecessary_box_returns)]
     fn rotate_right(mut h: Box<Node<K, V>>) -> Box<Node<K, V>> {
         let mut x = h
             .left
@@ -166,6 +172,9 @@ impl<K: Ord, V> RedBlackTree<K, V> {
         }
     }
 
+    // Returns `Box<Node>` intentionally: children are stored as `Option<Box<Node>>`,
+    // so the recursive insert threads the boxed node without re-boxing at every level.
+    #[allow(clippy::unnecessary_box_returns)]
     fn insert_rec(
         mut h: Option<Box<Node<K, V>>>,
         key: K,
@@ -194,26 +203,22 @@ impl<K: Ord, V> RedBlackTree<K, V> {
 
         // LLRB Fixes
         // 1. Right child red, left black -> Rotate Left
-        if Self::is_red(node.right.as_ref()) && !Self::is_red(node.left.as_ref()) {
+        if Self::is_red(node.right.as_deref()) && !Self::is_red(node.left.as_deref()) {
             node = Self::rotate_left(node);
         }
 
         // 2. Left child red, left-left grandchild red -> Rotate Right
         // To check left-left, we must check node.left then node.left.left.
-        // We cannot borrow `node.left` then mutate `node`.
-        let mut needs_rotate_right = false;
-        if let Some(ref l) = node.left
-            && l.color == Color::Red
-            && Self::is_red(l.left.as_ref())
-        {
-            needs_rotate_right = true;
-        }
+        let needs_rotate_right = node
+            .left
+            .as_ref()
+            .is_some_and(|l| l.color == Color::Red && Self::is_red(l.left.as_deref()));
         if needs_rotate_right {
             node = Self::rotate_right(node);
         }
 
         // 3. Both children red -> Flip Colors
-        if Self::is_red(node.left.as_ref()) && Self::is_red(node.right.as_ref()) {
+        if Self::is_red(node.left.as_deref()) && Self::is_red(node.right.as_deref()) {
             Self::flip_colors(&mut node);
         }
 
@@ -231,36 +236,35 @@ impl<K: Ord, V> RedBlackTree<K, V> {
         // Check standard RB properties
         // 1. No red node has a red child
         // 2. Black height is consistent
-        let (consistent_bh, _) = self.check_black_height(self.root.as_ref());
-        let no_consecutive_red = self.check_no_red_red(self.root.as_ref());
+        let (consistent_bh, _) = Self::check_black_height(self.root.as_deref());
+        let no_consecutive_red = Self::check_no_red_red(self.root.as_deref());
 
         consistent_bh && no_consecutive_red
     }
 
     #[cfg(test)]
-    fn check_black_height(&self, node: Option<&Box<Node<K, V>>>) -> (bool, usize) {
-        match node {
-            None => (true, 1), // Null is black
-            Some(n) => {
-                let (lok, lh) = self.check_black_height(n.left.as_ref());
-                let (rok, rh) = self.check_black_height(n.right.as_ref());
-                let bh = lh + if n.color == Color::Black { 1 } else { 0 };
-                (lok && rok && lh == rh, bh)
-            }
-        }
+    fn check_black_height(node: Option<&Node<K, V>>) -> (bool, usize) {
+        node.map_or((true, 1), |n| {
+            // Null is black
+            let (lok, lh) = Self::check_black_height(n.left.as_deref());
+            let (rok, rh) = Self::check_black_height(n.right.as_deref());
+            let bh = lh + usize::from(n.color == Color::Black);
+            (lok && rok && lh == rh, bh)
+        })
     }
 
     #[cfg(test)]
-    fn check_no_red_red(&self, node: Option<&Box<Node<K, V>>>) -> bool {
+    fn check_no_red_red(node: Option<&Node<K, V>>) -> bool {
         match node {
             None => true,
             Some(n) => {
                 if n.color == Color::Red
-                    && (Self::is_red(n.left.as_ref()) || Self::is_red(n.right.as_ref()))
+                    && (Self::is_red(n.left.as_deref()) || Self::is_red(n.right.as_deref()))
                 {
                     return false;
                 }
-                self.check_no_red_red(n.left.as_ref()) && self.check_no_red_red(n.right.as_ref())
+                Self::check_no_red_red(n.left.as_deref())
+                    && Self::check_no_red_red(n.right.as_deref())
             }
         }
     }

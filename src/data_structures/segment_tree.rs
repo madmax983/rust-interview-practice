@@ -112,10 +112,11 @@ where
     /// Updates the value at the given index `idx` to `val`.
     ///
     /// Time Complexity: O(log n)
+    ///
+    /// # Panics
+    /// Panics if `idx` is out of bounds (`idx >= n`).
     pub fn update(&mut self, mut idx: usize, val: T) {
-        if idx >= self.n {
-            panic!("Index out of bounds");
-        }
+        assert!(idx < self.n, "Index out of bounds");
 
         // Move to leaf position
         idx += self.n;
@@ -140,6 +141,9 @@ where
     /// * `r` - Exclusive upper bound.
     ///
     /// Time Complexity: O(log n)
+    ///
+    /// # Panics
+    /// Panics if the range is invalid (`l >= n`, `r > n`, or `l > r`) and non-empty.
     pub fn query(&self, mut l: usize, mut r: usize) -> T {
         if l >= self.n || r > self.n || l > r {
             // Alternatively, return identity. But bounds checks are usually strict in Rust.
@@ -269,7 +273,7 @@ mod tests {
             "c".to_string(),
             "d".to_string(),
         ];
-        let op = |a: &String, b: &String| format!("{}{}", a, b);
+        let op = |a: &String, b: &String| format!("{a}{b}");
         let st = SegmentTree::new(&data, op, String::new());
 
         assert_eq!(st.query(0, 4), "abcd");

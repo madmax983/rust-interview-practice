@@ -134,16 +134,15 @@ impl AhoCorasick {
             // if we don't need to insert, satisfying the borrow checker cleanly.
             let next_state = self.states[current_state].transitions.get(&byte).copied();
 
-            match next_state {
-                Some(state) => current_state = state,
-                None => {
-                    let new_state_idx = self.states.len();
-                    self.states.push(State::default());
-                    self.states[current_state]
-                        .transitions
-                        .insert(byte, new_state_idx);
-                    current_state = new_state_idx;
-                }
+            if let Some(state) = next_state {
+                current_state = state;
+            } else {
+                let new_state_idx = self.states.len();
+                self.states.push(State::default());
+                self.states[current_state]
+                    .transitions
+                    .insert(byte, new_state_idx);
+                current_state = new_state_idx;
             }
         }
         // Mark the final state as an accepting state for this pattern index.

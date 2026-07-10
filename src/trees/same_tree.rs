@@ -65,12 +65,12 @@ impl TreeNode {
 #[allow(clippy::needless_pass_by_value)]
 pub fn is_same_tree_brute_force(p: Option<Box<TreeNode>>, q: Option<Box<TreeNode>>) -> bool {
     // Helper to serialize a tree into a Vec<Option<i32>>
-    fn serialize(node: &Option<Box<TreeNode>>, acc: &mut Vec<Option<i32>>) {
+    fn serialize(node: Option<&TreeNode>, acc: &mut Vec<Option<i32>>) {
         match node {
             Some(n) => {
                 acc.push(Some(n.val));
-                serialize(&n.left, acc);
-                serialize(&n.right, acc);
+                serialize(n.left.as_deref(), acc);
+                serialize(n.right.as_deref(), acc);
             }
             None => {
                 acc.push(None); // Essential to capture structure!
@@ -81,8 +81,8 @@ pub fn is_same_tree_brute_force(p: Option<Box<TreeNode>>, q: Option<Box<TreeNode
     let mut p_vec = Vec::new();
     let mut q_vec = Vec::new();
 
-    serialize(&p, &mut p_vec);
-    serialize(&q, &mut q_vec);
+    serialize(p.as_deref(), &mut p_vec);
+    serialize(q.as_deref(), &mut q_vec);
 
     p_vec == q_vec
 }
@@ -112,8 +112,8 @@ pub fn is_same_tree_optimized(p: Option<Box<TreeNode>>, q: Option<Box<TreeNode>>
                 queue.push_back((n_p.left, n_q.left));
                 queue.push_back((n_p.right, n_q.right));
             }
-            (None, None) => continue, // Both are empty branches, perfectly fine.
-            _ => return false,        // Structural mismatch (one is Some, one is None).
+            (None, None) => {} // Both are empty branches, perfectly fine.
+            _ => return false, // Structural mismatch (one is Some, one is None).
         }
     }
 
@@ -156,6 +156,9 @@ pub fn is_same_tree(p: Option<Box<TreeNode>>, q: Option<Box<TreeNode>>) -> bool 
 
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     // Helper to create a leaf node

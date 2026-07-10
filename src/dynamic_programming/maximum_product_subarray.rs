@@ -184,7 +184,7 @@ mod tests {
         let input = vec![-2, 0, -1];
         assert_eq!(maximum_product_subarray_brute_force(input.clone()), 0);
         assert_eq!(maximum_product_subarray_optimized(input.clone()), 0);
-        assert_eq!(maximum_product_subarray_optimal(input.clone()), 0);
+        assert_eq!(maximum_product_subarray_optimal(input), 0);
     }
 
     #[test]
@@ -192,7 +192,7 @@ mod tests {
         let input = vec![-3];
         assert_eq!(maximum_product_subarray_brute_force(input.clone()), -3);
         assert_eq!(maximum_product_subarray_optimized(input.clone()), -3);
-        assert_eq!(maximum_product_subarray_optimal(input.clone()), -3);
+        assert_eq!(maximum_product_subarray_optimal(input), -3);
     }
 
     #[test]
@@ -201,6 +201,6 @@ mod tests {
         // Ensure all approaches yield the same result for an array with multiple zeros and alternating signs.
         let expected = maximum_product_subarray_brute_force(input.clone());
         assert_eq!(maximum_product_subarray_optimized(input.clone()), expected);
-        assert_eq!(maximum_product_subarray_optimal(input.clone()), expected);
+        assert_eq!(maximum_product_subarray_optimal(input), expected);
     }
 }

@@ -41,7 +41,7 @@ pub trait Backend: Send + Sync {
     fn active_connections(&self) -> usize; // For Least Connections
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Strategy {
     RoundRobin,
     WeightedRoundRobin,
@@ -56,6 +56,7 @@ pub struct LoadBalancer<B> {
 }
 
 impl<B: Backend> LoadBalancer<B> {
+    #[must_use]
     pub fn new(strategy: Strategy) -> Self {
         Self {
             backends: Arc::new(Mutex::new(Vec::new())),
@@ -64,11 +65,19 @@ impl<B: Backend> LoadBalancer<B> {
         }
     }
 
+    /// Adds a backend to the pool.
+    ///
+    /// # Panics
+    /// Panics if the internal backends lock is poisoned.
     pub fn add_backend(&self, backend: B) {
         let mut backends = self.backends.lock().unwrap();
         backends.push(backend);
     }
 
+    /// Removes the backend with the given id from the pool.
+    ///
+    /// # Panics
+    /// Panics if the internal backends lock is poisoned.
     pub fn remove_backend(&self, id: &str) {
         let mut backends = self.backends.lock().unwrap();
         backends.retain(|b| b.id() != id);
@@ -76,6 +85,9 @@ impl<B: Backend> LoadBalancer<B> {
 
     /// Selects a backend according to the strategy.
     /// Returns `None` if no backends are available.
+    ///
+    /// # Panics
+    /// Panics if the internal backends lock is poisoned.
     pub fn next(&self) -> Option<B>
     where
         B: Clone, // We return a clone (or Arc) of the backend to the caller
@@ -111,7 +123,7 @@ impl<B: Backend> LoadBalancer<B> {
                 // For "From Scratch" simplicity, let's just pick based on `(idx % sum_weights)` mapped to ranges.
                 // This is O(N) to search the range.
 
-                let total_weight: usize = backends.iter().map(|b| b.weight()).sum();
+                let total_weight: usize = backends.iter().map(Backend::weight).sum();
                 if total_weight == 0 {
                     return backends.first().cloned();
                 }

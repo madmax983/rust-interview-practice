@@ -78,7 +78,7 @@ pub struct Codec;
 
 impl Codec {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 
@@ -98,20 +98,22 @@ impl Codec {
     /// reallocations. Instead of `n.val.to_string()` which allocates a temporary
     /// string per node, we use `use std::fmt::Write; write!(out, ...)` to write
     /// directly to the buffer in-place, achieving zero-allocation formatting.
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode Codec API: `serialize(root: Option<Box<TreeNode>>)`
     pub fn serialize(&self, root: Option<Box<TreeNode>>) -> String {
         let mut out = String::with_capacity(128);
-        self.serialize_helper(&root, &mut out);
+        Self::serialize_helper(root.as_deref(), &mut out);
         out
     }
 
-    fn serialize_helper(&self, node: &Option<Box<TreeNode>>, out: &mut String) {
+    fn serialize_helper(node: Option<&TreeNode>, out: &mut String) {
         use std::fmt::Write;
         match node {
             Some(n) => {
                 // Pre-order: Process root, then left, then right
                 write!(out, "{} ", n.val).unwrap();
-                self.serialize_helper(&n.left, out);
-                self.serialize_helper(&n.right, out);
+                Self::serialize_helper(n.left.as_deref(), out);
+                Self::serialize_helper(n.right.as_deref(), out);
             }
             None => {
                 out.push_str("N ");
@@ -132,12 +134,13 @@ impl Codec {
     /// consume tokens from the *same* iterator instance, effectively maintaining
     /// the "current position" in the stream without manual index management.
     #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode Codec API: `deserialize(data: String)`
     pub fn deserialize(&self, data: String) -> Option<Box<TreeNode>> {
         let mut tokens = data.split_whitespace();
-        self.deserialize_helper(&mut tokens)
+        Self::deserialize_helper(&mut tokens)
     }
 
-    fn deserialize_helper<'a, I>(&self, tokens: &mut I) -> Option<Box<TreeNode>>
+    fn deserialize_helper<'a, I>(tokens: &mut I) -> Option<Box<TreeNode>>
     where
         I: Iterator<Item = &'a str>,
     {
@@ -158,8 +161,8 @@ impl Codec {
             .expect("Invalid number in serialized data");
 
         let mut node = TreeNode::new(val);
-        node.left = self.deserialize_helper(tokens);
-        node.right = self.deserialize_helper(tokens);
+        node.left = Self::deserialize_helper(tokens);
+        node.right = Self::deserialize_helper(tokens);
 
         Some(Box::new(node))
     }
@@ -172,22 +175,22 @@ impl Default for Codec {
     }
 }
 
-/// # Alternative Approaches
-///
-/// 1. **Breadth-First Search (Level Order)**:
-///    Instead of DFS, use a Queue to serialize level by level. This is often
-///    more intuitive for humans to read but requires slightly more complex
-///    state management (Queue) during deserialization compared to the
-///    implicit stack of recursion.
-///
-/// 2. **Binary Format**:
-///    For production, serializing to a text string "1 2 3 N N" is inefficient.
-///    A binary format (like Protocol Buffers or a custom byte stream) would be
-///    much more compact and faster to parse.
-///
-/// 3. **Parentheses Notation**:
-///    "1(2)(3)" - This is another common format (like Lisp s-expressions),
-///    but parsing it often requires a more complex parser or stack-based approach.
+// # Alternative Approaches
+//
+// 1. **Breadth-First Search (Level Order)**:
+//    Instead of DFS, use a Queue to serialize level by level. This is often
+//    more intuitive for humans to read but requires slightly more complex
+//    state management (Queue) during deserialization compared to the
+//    implicit stack of recursion.
+//
+// 2. **Binary Format**:
+//    For production, serializing to a text string "1 2 3 N N" is inefficient.
+//    A binary format (like Protocol Buffers or a custom byte stream) would be
+//    much more compact and faster to parse.
+//
+// 3. **Parentheses Notation**:
+//    "1(2)(3)" - This is another common format (like Lisp s-expressions),
+//    but parsing it often requires a more complex parser or stack-based approach.
 
 #[cfg(test)]
 mod tests {

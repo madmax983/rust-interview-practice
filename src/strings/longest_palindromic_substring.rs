@@ -89,6 +89,7 @@ fn is_palindrome(bytes: &[u8], mut left: usize, mut right: usize) -> bool {
 /// repeatedly or creating new Strings, ensuring zero-allocation tracking.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn longest_palindrome_optimized(s: String) -> String {
     if s.len() <= 1 {
         return s;
@@ -262,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_edge_cases() {
-        let s1 = "".to_string();
+        let s1 = String::new();
         assert_eq!(longest_palindrome(s1), "");
 
         let s2 = "a".to_string();

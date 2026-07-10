@@ -1,3 +1,7 @@
+// Item names deliberately repeat their module name (e.g. `two_sum::two_sum_brute_force`)
+// as a gittype typing-practice convention; silence the style lint that fights it.
+#![allow(clippy::module_name_repetitions)]
+
 pub mod arrays;
 pub mod backtracking;
 pub mod binary_search;

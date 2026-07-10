@@ -52,7 +52,10 @@ pub struct RingBuffer<T> {
 }
 
 impl<T> RingBuffer<T> {
-    /// Creates a new RingBuffer with the specified capacity.
+    /// Creates a new `RingBuffer` with the specified capacity.
+    ///
+    /// # Panics
+    /// Panics if `capacity` is 0.
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");
         let mut buffer = Vec::with_capacity(capacity);
@@ -71,6 +74,9 @@ impl<T> RingBuffer<T> {
 
     /// Pushes an item into the buffer.
     /// Returns `Err(item)` if the buffer is full.
+    ///
+    /// # Errors
+    /// Returns `Err(item)` (handing the item back) if the buffer is full.
     pub fn push(&mut self, item: T) -> Result<(), T> {
         if self.count == self.capacity {
             return Err(item);
@@ -117,6 +123,7 @@ impl<T> RingBuffer<T> {
     }
 
     /// Peeks at the oldest item without removing it.
+    #[must_use]
     pub fn peek(&self) -> Option<&T> {
         if self.count == 0 {
             None
@@ -125,19 +132,23 @@ impl<T> RingBuffer<T> {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.count == 0
     }
 
-    pub fn is_full(&self) -> bool {
+    #[must_use]
+    pub const fn is_full(&self) -> bool {
         self.count == self.capacity
     }
 
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.count
     }
 
-    pub fn capacity(&self) -> usize {
+    #[must_use]
+    pub const fn capacity(&self) -> usize {
         self.capacity
     }
 }

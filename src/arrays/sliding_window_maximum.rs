@@ -4,11 +4,11 @@
 //! value in the window as it moves from left to right.
 //!
 //! - Difficulty: Hard
-//! - LeetCode: <https://leetcode.com/problems/sliding-window-maximum/>
+//! - `LeetCode`: <https://leetcode.com/problems/sliding-window-maximum/>
 //!
 //! ## Why this matters in Rust
 //! This problem is a perfect showcase for:
-//! 1.  **std::collections::VecDeque**: Using a double-ended queue to implement a Monotonic Queue efficiently.
+//! 1.  **`std::collections::VecDeque`**: Using a double-ended queue to implement a Monotonic Queue efficiently.
 //! 2.  **Iterator Windows**: Demonstrating how `slice::windows` simplifies the naive approach but comes with a performance cost.
 //! 3.  **Ownership & Indices**: Understanding why we store `usize` indices in the queue rather than values (to track window boundaries), avoiding ownership issues with non-Copy types.
 
@@ -24,6 +24,8 @@ use std::collections::VecDeque;
 /// # RUST INSIGHT
 /// The `windows` iterator makes this implementation trivial one-liners. However, `max()` is O(K),
 /// leading to quadratic behavior in the worst case (e.g., sorted array).
+#[must_use]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee k >= 0
 pub fn max_sliding_window_brute_force(nums: &[i32], k: i32) -> Vec<i32> {
     if nums.is_empty() || k == 0 {
         return vec![];
@@ -52,6 +54,8 @@ pub fn max_sliding_window_brute_force(nums: &[i32], k: i32) -> Vec<i32> {
 ///
 /// - **Time Complexity**: O(N). Each element is added to the deque once and removed at most once.
 /// - **Space Complexity**: O(K). The deque stores at most `k` indices.
+#[must_use]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee k >= 0
 pub fn max_sliding_window_optimal(nums: &[i32], k: i32) -> Vec<i32> {
     if nums.is_empty() || k == 0 {
         return vec![];
@@ -98,6 +102,8 @@ pub fn max_sliding_window_optimal(nums: &[i32], k: i32) -> Vec<i32> {
 }
 
 /// Entry point that defaults to the optimal solution.
+#[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn max_sliding_window(nums: Vec<i32>, k: i32) -> Vec<i32> {
     max_sliding_window_optimal(&nums, k)
 }

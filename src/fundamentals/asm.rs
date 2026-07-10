@@ -93,7 +93,7 @@ fn register_constraints_example() {
 // X86_64 Specific Instructions
 // ============================================================================
 
-/// Count set bits (population count) using x86_64 POPCNT instruction.
+/// Count set bits (population count) using `x86_64` POPCNT instruction.
 ///
 /// # Safety
 ///
@@ -114,7 +114,7 @@ pub unsafe fn popcnt_asm(value: u64) -> u64 {
     result
 }
 
-/// Byte swap using x86_64 BSWAP instruction.
+/// Byte swap using `x86_64` BSWAP instruction.
 #[cfg(target_arch = "x86_64")]
 #[must_use]
 pub fn bswap_asm(value: u64) -> u64 {
@@ -129,7 +129,7 @@ pub fn bswap_asm(value: u64) -> u64 {
     result
 }
 
-/// Count leading zeros using x86_64 LZCNT instruction.
+/// Count leading zeros using `x86_64` LZCNT instruction.
 ///
 /// # Safety
 ///
@@ -150,7 +150,7 @@ pub unsafe fn lzcnt_asm(value: u64) -> u64 {
     result
 }
 
-/// Count trailing zeros using x86_64 TZCNT instruction.
+/// Count trailing zeros using `x86_64` TZCNT instruction.
 ///
 /// # Safety
 ///
@@ -175,10 +175,10 @@ pub unsafe fn tzcnt_asm(value: u64) -> u64 {
 // Atomic Operations
 // ============================================================================
 
-/// Atomic compare-and-swap using x86_64 CMPXCHG instruction.
+/// Atomic compare-and-swap using `x86_64` CMPXCHG instruction.
 ///
-/// Compares *ptr with old_value. If equal, stores new_value and returns old value.
-/// Otherwise, loads current value into old_value and returns it.
+/// Compares *ptr with `old_value`. If equal, stores `new_value` and returns old value.
+/// Otherwise, loads current value into `old_value` and returns it.
 ///
 /// # Safety
 ///
@@ -200,7 +200,7 @@ pub unsafe fn atomic_cas(ptr: *mut u64, old_value: u64, new_value: u64) -> u64 {
     prev
 }
 
-/// Atomic fetch-and-add using x86_64 XADD instruction.
+/// Atomic fetch-and-add using `x86_64` XADD instruction.
 ///
 /// Atomically adds `value` to `*ptr` and returns the previous value.
 ///
@@ -223,7 +223,7 @@ pub unsafe fn atomic_fetch_add(ptr: *mut u64, value: u64) -> u64 {
     prev
 }
 
-/// Atomic increment using x86_64 LOCK INC instruction.
+/// Atomic increment using `x86_64` LOCK INC instruction.
 ///
 /// # Safety
 ///
@@ -312,7 +312,7 @@ pub fn store_fence() {
 // System Calls
 // ============================================================================
 
-/// Direct system call using SYSCALL instruction (Linux x86_64).
+/// Direct system call using SYSCALL instruction (Linux `x86_64`).
 ///
 /// # Safety
 ///
@@ -369,6 +369,11 @@ pub unsafe extern "C" fn naked_identity(x: u64) -> u64 {
 }
 
 /// Naked function that adds two numbers.
+///
+/// # Safety
+///
+/// This is a naked function following the C ABI; it must only be called with the
+/// C calling convention and relies on the hand-written prologue/epilogue being correct.
 #[cfg(target_arch = "x86_64")]
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
@@ -385,6 +390,8 @@ pub unsafe extern "C" fn naked_add(a: u64, b: u64) -> u64 {
 // ============================================================================
 
 /// Spin loop hint - tells CPU we're in a spin loop for better power efficiency.
+// Single-instruction intrinsic wrapper: inline(always) is intended so the hint is emitted inline
+#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn spin_loop_hint() {
     #[cfg(target_arch = "x86_64")]
@@ -398,7 +405,7 @@ pub fn spin_loop_hint() {
     }
 }
 
-/// Read timestamp counter (x86_64 RDTSC).
+/// Read timestamp counter (`x86_64` RDTSC).
 ///
 /// Returns the number of CPU cycles since reset.
 #[cfg(target_arch = "x86_64")]
@@ -435,7 +442,7 @@ pub fn rdtscp() -> u64 {
     ((u64::from(high)) << 32) | u64::from(low)
 }
 
-/// Prefetch data into cache (x86_64).
+/// Prefetch data into cache (`x86_64`).
 ///
 /// # Safety
 ///
@@ -490,6 +497,8 @@ fn clobber_example() {
 // ============================================================================
 
 /// Platform-specific NOP (no operation).
+// Single-instruction intrinsic wrapper: inline(always) is intended so the NOP is emitted inline
+#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn nop() {
     #[cfg(target_arch = "x86_64")]
@@ -504,6 +513,8 @@ pub fn nop() {
 }
 
 /// Breakpoint instruction for debugging.
+// Single-instruction intrinsic wrapper: inline(always) is intended so the trap is emitted inline
+#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn breakpoint() {
     #[cfg(target_arch = "x86_64")]
@@ -613,8 +624,8 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_bswap_asm() {
-        assert_eq!(bswap_asm(0x0123456789ABCDEF), 0xEFCDAB8967452301);
-        assert_eq!(bswap_asm(0x1234), 0x3412000000000000);
+        assert_eq!(bswap_asm(0x0123_4567_89AB_CDEF), 0xEFCD_AB89_6745_2301);
+        assert_eq!(bswap_asm(0x1234), 0x3412_0000_0000_0000);
     }
 
     #[test]
@@ -622,7 +633,7 @@ mod tests {
     fn test_popcnt_asm() {
         if std::is_x86_feature_detected!("popcnt") {
             unsafe {
-                assert_eq!(popcnt_asm(0b1010101010), 5);
+                assert_eq!(popcnt_asm(0b10_1010_1010), 5);
                 assert_eq!(popcnt_asm(0b1111), 4);
                 assert_eq!(popcnt_asm(0), 0);
             }
@@ -646,12 +657,12 @@ mod tests {
         let mut value = 42u64;
         unsafe {
             // Should succeed: value is 42
-            let prev = atomic_cas(&mut value as *mut u64, 42, 100);
+            let prev = atomic_cas(&raw mut value, 42, 100);
             assert_eq!(prev, 42);
             assert_eq!(value, 100);
 
             // Should fail: value is 100, not 42
-            let prev = atomic_cas(&mut value as *mut u64, 42, 200);
+            let prev = atomic_cas(&raw mut value, 42, 200);
             assert_eq!(prev, 100);
             assert_eq!(value, 100); // Unchanged
         }
@@ -662,7 +673,7 @@ mod tests {
     fn test_atomic_fetch_add() {
         let mut value = 10u64;
         unsafe {
-            let prev = atomic_fetch_add(&mut value as *mut u64, 5);
+            let prev = atomic_fetch_add(&raw mut value, 5);
             assert_eq!(prev, 10);
             assert_eq!(value, 15);
         }
@@ -697,7 +708,7 @@ mod tests {
 
     #[test]
     #[cfg(target_arch = "x86_64")]
-    #[ignore] // Naked functions are unstable and may not work correctly in all contexts
+    #[ignore = "naked functions are unstable and may not work correctly in all contexts"]
     fn test_naked_functions() {
         unsafe {
             assert_eq!(naked_identity(42), 42);

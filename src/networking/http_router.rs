@@ -48,11 +48,11 @@ use std::sync::Arc;
 #[derive(Default)]
 struct Node {
     /// Children nodes keyed by static path segment.
-    children: HashMap<String, Node>,
+    children: HashMap<String, Self>,
     /// Optional child node for dynamic parameter (e.g., ":id").
     /// We store the parameter name (without ':') and the node.
     /// Limitation: Only one dynamic parameter per level.
-    dynamic_child: Option<(String, Box<Node>)>,
+    dynamic_child: Option<(String, Box<Self>)>,
     /// Handlers for this path, keyed by HTTP method (GET, POST, etc.).
     handlers: HashMap<String, Arc<dyn Handler>>,
 }
@@ -64,6 +64,7 @@ pub struct Router {
 
 impl Router {
     /// Creates a new empty Router.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             root: Node::default(),
@@ -77,14 +78,18 @@ impl Router {
     /// - `/users`
     /// - `/users/:id`
     /// - `/users/:id/profile`
+    ///
+    /// # Panics
+    /// Panics if a dynamic segment conflicts with an existing one at the same
+    /// position under a different parameter name.
     pub fn add_route<H: Handler>(&mut self, method: &str, path: &str, handler: H) {
         let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
         let mut current = &mut self.root;
 
         for part in parts {
-            if part.starts_with(':') {
+            if let Some(param) = part.strip_prefix(':') {
                 // Dynamic segment
-                let param_name = part[1..].to_string();
+                let param_name = param.to_string();
 
                 // GOTCHA: If we already have a dynamic child, it must match the new one's name.
                 // In a production router, we might allow different names if they don't conflict,
@@ -93,8 +98,7 @@ impl Router {
                     && existing_name != &param_name
                 {
                     panic!(
-                        "Conflict: Route already has dynamic parameter '{}', cannot add '{}'",
-                        existing_name, param_name
+                        "Conflict: Route already has dynamic parameter '{existing_name}', cannot add '{param_name}'"
                     );
                 }
 
@@ -125,6 +129,7 @@ impl Router {
 
     /// Matches a request method and path to a registered handler.
     /// Returns the handler and extracted path parameters.
+    #[must_use]
     pub fn match_route(
         &self,
         method: &str,
@@ -140,6 +145,12 @@ impl Router {
         // branch first (precedence) and falling back to the dynamic child.
         let handler = self.root.match_node(&parts, &method_upper, &mut params)?;
         Some((handler, params))
+    }
+}
+
+impl Default for Router {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

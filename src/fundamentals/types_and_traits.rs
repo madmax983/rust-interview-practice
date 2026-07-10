@@ -10,8 +10,14 @@ use std::fmt;
 // ============================================================================
 
 /// Type alias: Convenience name for complex types
+// Demonstrates the type-alias idiom for gittype practice
+#[allow(dead_code)]
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+// Demonstrates the type-alias idiom for gittype practice
+#[allow(dead_code)]
 type NodeId = usize;
+// Demonstrates the type-alias idiom for gittype practice
+#[allow(dead_code)]
 type Graph = Vec<Vec<NodeId>>;
 
 /// Newtype pattern: Strong typing to prevent mixing up primitives
@@ -23,6 +29,7 @@ pub struct UserId(pub u64);
 pub struct PostId(pub u64);
 
 // Now you can't accidentally pass a PostId where UserId is expected!
+#[must_use]
 pub fn get_user(_id: UserId) -> String {
     String::from("user")
 }
@@ -41,7 +48,7 @@ pub struct Pair<T> {
 }
 
 impl<T> Pair<T> {
-    pub fn new(first: T, second: T) -> Self {
+    pub const fn new(first: T, second: T) -> Self {
         Self { first, second }
     }
 }
@@ -149,6 +156,7 @@ where
 // ============================================================================
 
 /// Return type using impl Trait
+#[must_use]
 pub fn create_article() -> impl Summary {
     Article {
         title: String::from("Rust Patterns"),
@@ -168,6 +176,7 @@ pub fn notify(item: &impl Summary) {
 
 /// Trait object: Box<dyn Trait>
 /// Use when you need to store different types implementing the same trait
+#[must_use]
 pub fn create_summaries() -> Vec<Box<dyn Summary>> {
     vec![
         Box::new(Article {
@@ -192,7 +201,7 @@ pub struct Point {
 
 impl From<(i32, i32)> for Point {
     fn from((x, y): (i32, i32)) -> Self {
-        Point { x, y }
+        Self { x, y }
     }
 }
 
@@ -209,7 +218,7 @@ pub struct Coordinate {
 
 impl From<Point> for Coordinate {
     fn from(p: Point) -> Self {
-        Coordinate {
+        Self {
             x: f64::from(p.x),
             y: f64::from(p.y),
         }
@@ -246,6 +255,7 @@ impl PartialEq for CustomStruct {
 
 /// Generic trait: Can implement multiple times with different types
 pub trait GenericAdd<T> {
+    #[must_use]
     fn add(&self, other: T) -> Self;
 }
 
@@ -309,23 +319,29 @@ pub struct QueryBuilder<T> {
 }
 
 impl<T> QueryBuilder<T> {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             items: Vec::new(),
             limit: None,
         }
     }
 
+    // Builder-style `add` (consumes and returns self); intentionally not std::ops::Add
+    #[must_use]
+    #[allow(clippy::should_implement_trait)]
     pub fn add(mut self, item: T) -> Self {
         self.items.push(item);
         self
     }
 
-    pub fn limit(mut self, limit: usize) -> Self {
+    #[must_use]
+    pub const fn limit(mut self, limit: usize) -> Self {
         self.limit = Some(limit);
         self
     }
 
+    #[must_use]
     pub fn build(self) -> Vec<T> {
         if let Some(limit) = self.limit {
             self.items.into_iter().take(limit).collect()
@@ -350,13 +366,15 @@ pub struct Door<State = Locked> {
 }
 
 impl Door<Locked> {
-    pub fn new() -> Self {
-        Door {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
             _state: std::marker::PhantomData,
         }
     }
 
-    pub fn unlock(self) -> Door<Unlocked> {
+    #[must_use]
+    pub const fn unlock(self) -> Door<Unlocked> {
         Door {
             _state: std::marker::PhantomData,
         }
@@ -364,7 +382,8 @@ impl Door<Locked> {
 }
 
 impl Door<Unlocked> {
-    pub fn lock(self) -> Door<Locked> {
+    #[must_use]
+    pub const fn lock(self) -> Door<Locked> {
         Door {
             _state: std::marker::PhantomData,
         }

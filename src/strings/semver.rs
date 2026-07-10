@@ -1,4 +1,4 @@
-//! # Semantic Versioning (SemVer) Parser and Evaluator
+//! # Semantic Versioning (`SemVer`) Parser and Evaluator
 //!
 //! **Implements:** A robust parser and evaluator for Semantic Versioning 2.0.0 rules.
 //! **Replaces Crates:** `semver`
@@ -16,7 +16,7 @@
 //!
 //! # Architecture
 //!
-//! The SemVer format is defined as: `MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]`
+//! The `SemVer` format is defined as: `MAJOR.MINOR.PATCH[-PRERELEASE][+BUILD]`
 //!
 //! **Data Structure (`Version`):**
 //! - `major`: `u64`
@@ -61,14 +61,14 @@ pub enum SemVerError {
 impl fmt::Display for SemVerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SemVerError::EmptyString => write!(f, "Version string is empty"),
-            SemVerError::MissingMajor => write!(f, "Missing MAJOR version component"),
-            SemVerError::MissingMinor => write!(f, "Missing MINOR version component"),
-            SemVerError::MissingPatch => write!(f, "Missing PATCH version component"),
-            SemVerError::InvalidCharacters => write!(f, "Invalid characters in version string"),
-            SemVerError::LeadingZero => write!(f, "Numeric identifier contains leading zero"),
-            SemVerError::EmptyIdentifier => write!(f, "Identifier is empty"),
-            SemVerError::NumberOverflow => write!(f, "Numeric component is too large"),
+            Self::EmptyString => write!(f, "Version string is empty"),
+            Self::MissingMajor => write!(f, "Missing MAJOR version component"),
+            Self::MissingMinor => write!(f, "Missing MINOR version component"),
+            Self::MissingPatch => write!(f, "Missing PATCH version component"),
+            Self::InvalidCharacters => write!(f, "Invalid characters in version string"),
+            Self::LeadingZero => write!(f, "Numeric identifier contains leading zero"),
+            Self::EmptyIdentifier => write!(f, "Identifier is empty"),
+            Self::NumberOverflow => write!(f, "Numeric component is too large"),
         }
     }
 }
@@ -76,7 +76,7 @@ impl fmt::Display for SemVerError {
 impl std::error::Error for SemVerError {}
 
 /// Represents a single identifier in the pre-release section.
-/// According to the SemVer spec, numeric identifiers are compared numerically,
+/// According to the `SemVer` spec, numeric identifiers are compared numerically,
 /// while alphanumeric identifiers are compared lexically.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Identifier {
@@ -95,12 +95,12 @@ impl Ord for Identifier {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             // Numeric identifiers are compared numerically
-            (Identifier::Numeric(a), Identifier::Numeric(b)) => a.cmp(b),
+            (Self::Numeric(a), Self::Numeric(b)) => a.cmp(b),
             // Alphanumeric identifiers are compared lexically in ASCII sort order
-            (Identifier::Alphanumeric(a), Identifier::Alphanumeric(b)) => a.cmp(b),
+            (Self::Alphanumeric(a), Self::Alphanumeric(b)) => a.cmp(b),
             // Numeric identifiers always have lower precedence than non-numeric identifiers
-            (Identifier::Numeric(_), Identifier::Alphanumeric(_)) => Ordering::Less,
-            (Identifier::Alphanumeric(_), Identifier::Numeric(_)) => Ordering::Greater,
+            (Self::Numeric(_), Self::Alphanumeric(_)) => Ordering::Less,
+            (Self::Alphanumeric(_), Self::Numeric(_)) => Ordering::Greater,
         }
     }
 }
@@ -108,8 +108,8 @@ impl Ord for Identifier {
 impl fmt::Display for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Identifier::Numeric(n) => write!(f, "{}", n),
-            Identifier::Alphanumeric(s) => write!(f, "{}", s),
+            Self::Numeric(n) => write!(f, "{n}"),
+            Self::Alphanumeric(s) => write!(f, "{s}"),
         }
     }
 }
@@ -169,7 +169,7 @@ impl Ord for Version {
                 // if all of the preceding identifiers are equal.
                 for (a, b) in self.pre.iter().zip(other.pre.iter()) {
                     match a.cmp(b) {
-                        Ordering::Equal => continue,
+                        Ordering::Equal => {}
                         other => return other,
                     }
                 }
@@ -189,7 +189,7 @@ impl fmt::Display for Version {
                 if i > 0 {
                     write!(f, ".")?;
                 }
-                write!(f, "{}", id)?;
+                write!(f, "{id}")?;
             }
         }
 
@@ -199,7 +199,7 @@ impl fmt::Display for Version {
                 if i > 0 {
                     write!(f, ".")?;
                 }
-                write!(f, "{}", meta)?;
+                write!(f, "{meta}")?;
             }
         }
 
@@ -250,7 +250,7 @@ impl FromStr for Version {
             return Err(SemVerError::InvalidCharacters); // Too many dot-separated components
         }
 
-        Ok(Version {
+        Ok(Self {
             major,
             minor,
             patch,
@@ -428,7 +428,7 @@ mod tests {
     #[test]
     fn test_precedence_ordering() {
         // Spec precedence example
-        let ordered = vec![
+        let ordered = [
             "1.0.0-alpha",
             "1.0.0-alpha.1",
             "1.0.0-alpha.beta",
@@ -446,7 +446,7 @@ mod tests {
         parsed.sort();
 
         for (i, v) in parsed.iter().enumerate() {
-            assert_eq!(v, &parsed_clone[i], "Ordering failed at index {}", i);
+            assert_eq!(v, &parsed_clone[i], "Ordering failed at index {i}");
         }
 
         // Additional edge cases

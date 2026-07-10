@@ -152,13 +152,13 @@ enum CharType {
 }
 
 impl CharType {
-    fn from_byte(b: u8) -> Self {
+    const fn from_byte(b: u8) -> Self {
         match b {
-            b'0'..=b'9' => CharType::Digit,
-            b'+' | b'-' => CharType::Sign,
-            b'.' => CharType::Dot,
-            b'e' | b'E' => CharType::Exponent,
-            _ => CharType::Invalid,
+            b'0'..=b'9' => Self::Digit,
+            b'+' | b'-' => Self::Sign,
+            b'.' => Self::Dot,
+            b'e' | b'E' => Self::Exponent,
+            _ => Self::Invalid,
         }
     }
 }
@@ -183,53 +183,45 @@ impl State {
     ///
     /// // RUST INSIGHT: Exhaustive pattern matching ensures we never miss a state-input
     /// // combination. The compiler enforces that every possible state transition is handled.
-    fn transition(self, char_type: CharType) -> Self {
+    const fn transition(self, char_type: CharType) -> Self {
+        // Arms are grouped by their resulting state; or-patterns merge the source
+        // states that share a transition so no two arms have identical bodies.
         match (self, char_type) {
-            // Transitions from Start
-            (State::Start, CharType::Sign) => State::Sign,
-            (State::Start, CharType::Digit) => State::Integer,
-            (State::Start, CharType::Dot) => State::EmptyDot,
+            (Self::Start, CharType::Sign) => Self::Sign,
 
-            // Transitions from Sign
-            (State::Sign, CharType::Digit) => State::Integer,
-            (State::Sign, CharType::Dot) => State::EmptyDot,
+            // A digit while reading the integer part.
+            (Self::Start | Self::Sign | Self::Integer, CharType::Digit) => Self::Integer,
 
-            // Transitions from Integer
-            (State::Integer, CharType::Digit) => State::Integer,
-            (State::Integer, CharType::Dot) => State::Dot,
-            (State::Integer, CharType::Exponent) => State::Exponent,
+            // A dot with no integer preceding it.
+            (Self::Start | Self::Sign, CharType::Dot) => Self::EmptyDot,
 
-            // Transitions from Dot (integer preceding it)
-            (State::Dot, CharType::Digit) => State::Fraction,
-            (State::Dot, CharType::Exponent) => State::Exponent,
+            // A dot after an integer.
+            (Self::Integer, CharType::Dot) => Self::Dot,
 
-            // Transitions from EmptyDot (no integer preceding it)
-            (State::EmptyDot, CharType::Digit) => State::Fraction,
+            // Entering the exponent from any valid mantissa state.
+            (Self::Integer | Self::Dot | Self::Fraction, CharType::Exponent) => Self::Exponent,
 
-            // Transitions from Fraction
-            (State::Fraction, CharType::Digit) => State::Fraction,
-            (State::Fraction, CharType::Exponent) => State::Exponent,
+            // A digit forming the fractional part.
+            (Self::Dot | Self::EmptyDot | Self::Fraction, CharType::Digit) => Self::Fraction,
 
-            // Transitions from Exponent
-            (State::Exponent, CharType::Sign) => State::ExponentSign,
-            (State::Exponent, CharType::Digit) => State::ExponentInt,
+            // A sign directly after the exponent marker.
+            (Self::Exponent, CharType::Sign) => Self::ExponentSign,
 
-            // Transitions from ExponentSign
-            (State::ExponentSign, CharType::Digit) => State::ExponentInt,
-
-            // Transitions from ExponentInt
-            (State::ExponentInt, CharType::Digit) => State::ExponentInt,
+            // Digits after the exponent (and its optional sign).
+            (Self::Exponent | Self::ExponentSign | Self::ExponentInt, CharType::Digit) => {
+                Self::ExponentInt
+            }
 
             // Any other input moves us to an invalid state, or keeps us there
-            _ => State::Invalid,
+            _ => Self::Invalid,
         }
     }
 
     /// Determines if the current state is considered a final valid state for the entire string.
-    fn is_valid_end(&self) -> bool {
+    const fn is_valid_end(self) -> bool {
         matches!(
             self,
-            State::Integer | State::Dot | State::Fraction | State::ExponentInt
+            Self::Integer | Self::Dot | Self::Fraction | Self::ExponentInt
         )
     }
 }
@@ -298,8 +290,7 @@ mod tests {
         for &s in VALID_CASES {
             assert!(
                 is_number_brute_force(s.to_string()),
-                "Brute force failed for valid case: {}",
-                s
+                "Brute force failed for valid case: {s}"
             );
         }
     }
@@ -309,8 +300,7 @@ mod tests {
         for &s in INVALID_CASES {
             assert!(
                 !is_number_brute_force(s.to_string()),
-                "Brute force failed for invalid case: {}",
-                s
+                "Brute force failed for invalid case: {s}"
             );
         }
     }
@@ -320,8 +310,7 @@ mod tests {
         for &s in VALID_CASES {
             assert!(
                 is_number_optimized(s.to_string()),
-                "Optimized failed for valid case: {}",
-                s
+                "Optimized failed for valid case: {s}"
             );
         }
     }
@@ -331,8 +320,7 @@ mod tests {
         for &s in INVALID_CASES {
             assert!(
                 !is_number_optimized(s.to_string()),
-                "Optimized failed for invalid case: {}",
-                s
+                "Optimized failed for invalid case: {s}"
             );
         }
     }
@@ -342,8 +330,7 @@ mod tests {
         for &s in VALID_CASES {
             assert!(
                 is_number_optimal(s.to_string()),
-                "Optimal failed for valid case: {}",
-                s
+                "Optimal failed for valid case: {s}"
             );
         }
     }
@@ -353,8 +340,7 @@ mod tests {
         for &s in INVALID_CASES {
             assert!(
                 !is_number_optimal(s.to_string()),
-                "Optimal failed for invalid case: {}",
-                s
+                "Optimal failed for invalid case: {s}"
             );
         }
     }
@@ -367,12 +353,8 @@ mod tests {
             let brute = is_number_brute_force(s.to_string());
             let optimized = is_number_optimized(s.to_string());
             let optimal = is_number_optimal(s.to_string());
-            assert_eq!(brute, optimized, "brute vs optimized disagree on: {}", s);
-            assert_eq!(
-                optimized, optimal,
-                "optimized vs optimal disagree on: {}",
-                s
-            );
+            assert_eq!(brute, optimized, "brute vs optimized disagree on: {s}");
+            assert_eq!(optimized, optimal, "optimized vs optimal disagree on: {s}");
         }
     }
 }

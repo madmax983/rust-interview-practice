@@ -1,7 +1,7 @@
 //! # 146. LRU Cache
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/lru-cache/
+//! Link: <https://leetcode.com/problems/lru-cache>/
 //!
 //! Design a data structure that follows the constraints of a Least Recently Used (LRU) cache.
 //!
@@ -39,13 +39,16 @@
 //! - `0 <= value <= 10^5`
 //! - At most `2 * 10^5` calls will be made to `get` and `put`.
 
+// LeetCode signatures pass capacity as a non-negative `i32`; casting to `usize` is intentional.
+#![allow(clippy::cast_sign_loss)]
+
 use std::collections::HashMap;
 
 // ============================================================================
 // Brute Force / Naive Approach
 // ============================================================================
 
-/// Brute force approach: HashMap + Vec
+/// Brute force approach: `HashMap` + Vec
 ///
 /// Uses a `HashMap` for `O(1)` lookups and a `Vec` to track the order of recently used keys.
 /// Updating the LRU order requires finding the key in the `Vec` and moving it to the back,
@@ -78,9 +81,10 @@ impl LRUCacheNaive {
         if let Some(&val) = self.map.get(&key) {
             // RUST INSIGHT: `position` takes a closure to find the index. We must borrow `key`.
             // After finding the index, we remove it and push it to the back to mark as most recent.
-            let idx = self.order.iter().position(|&k| k == key).unwrap();
-            self.order.remove(idx);
-            self.order.push(key);
+            if let Some(idx) = self.order.iter().position(|&k| k == key) {
+                self.order.remove(idx);
+                self.order.push(key);
+            }
             val
         } else {
             -1
@@ -91,9 +95,9 @@ impl LRUCacheNaive {
         if self.map.contains_key(&key) {
             // Update existing value and mark as most recent
             self.map.insert(key, value);
-            let idx = self.order.iter().position(|&k| k == key).unwrap();
-            self.order.remove(idx);
-            self.order.push(key);
+            if let Some(idx) = self.order.iter().position(|&k| k == key) {
+                self.order.remove(idx);
+            }
         } else {
             // If at capacity, evict the least recently used (front of Vec)
             if self.map.len() == self.capacity {
@@ -102,8 +106,9 @@ impl LRUCacheNaive {
             }
             // Insert new key-value pair
             self.map.insert(key, value);
-            self.order.push(key);
         }
+        // Mark the key as most recently used.
+        self.order.push(key);
     }
 }
 
@@ -120,7 +125,7 @@ struct Node {
     next: usize,
 }
 
-/// Optimal approach: HashMap + Array-based Doubly-Linked List
+/// Optimal approach: `HashMap` + Array-based Doubly-Linked List
 ///
 /// Instead of fighting the borrow checker with `Rc<RefCell<Node>>` or risking
 /// UB with `unsafe` pointers, we use a `Vec<Node>` to act as an arena allocator.

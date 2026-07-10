@@ -92,7 +92,7 @@ impl<T: PartialOrd> Interval<T> {
     }
 
     /// Returns true if this interval overlaps with another interval.
-    pub fn overlaps(&self, other: &Interval<T>) -> bool {
+    pub fn overlaps(&self, other: &Self) -> bool {
         self.low <= other.high && self.high >= other.low
     }
 }
@@ -103,12 +103,12 @@ struct Node<T, V> {
     interval: Interval<T>,
     value: V,
     max: T,
-    left: Option<Box<Node<T, V>>>,
-    right: Option<Box<Node<T, V>>>,
+    left: Option<Box<Self>>,
+    right: Option<Box<Self>>,
 }
 
 impl<T: Copy + Ord, V> Node<T, V> {
-    fn new(interval: Interval<T>, value: V) -> Self {
+    const fn new(interval: Interval<T>, value: V) -> Self {
         let max = interval.high;
         Self {
             interval,
@@ -169,11 +169,11 @@ impl<T: Copy + Ord, V> IntervalMap<T, V> for IntervalTree<T, V> {
             // If the left child exists and its `max` is >= the query's `low`,
             // then there *might* be an overlapping interval in the left subtree.
             // Otherwise, we can safely skip the entire left subtree and search the right.
-            if let Some(ref left) = node.left {
-                if left.max >= query.low {
-                    current = node.left.as_ref();
-                    continue;
-                }
+            if let Some(ref left) = node.left
+                && left.max >= query.low
+            {
+                current = node.left.as_ref();
+                continue;
             }
 
             // If we didn't go left, go right.
@@ -195,17 +195,19 @@ impl<T: Copy + Ord, V> IntervalMap<T, V> for IntervalTree<T, V> {
 impl<T: Copy + Ord, V> IntervalTree<T, V> {
     /// Creates a new, empty Interval Tree.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { root: None, len: 0 }
     }
 
     /// Returns the number of intervals in the tree.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the tree contains no intervals.
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -236,7 +238,7 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
     }
 
     fn find_all_overlapping_recursive<'a>(
-        node: &'a Box<Node<T, V>>,
+        node: &'a Node<T, V>,
         query: &Interval<T>,
         results: &mut Vec<(&'a Interval<T>, &'a V)>,
     ) {
@@ -247,10 +249,10 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
         }
 
         // Check if left subtree might contain overlaps
-        if let Some(ref left) = node.left {
-            if left.max >= query.low {
-                Self::find_all_overlapping_recursive(left, query, results);
-            }
+        if let Some(ref left) = node.left
+            && left.max >= query.low
+        {
+            Self::find_all_overlapping_recursive(left, query, results);
         }
 
         // Check the current node
@@ -261,12 +263,11 @@ impl<T: Copy + Ord, V> IntervalTree<T, V> {
         // Check right subtree. We only need to visit the right subtree
         // if the query's high is >= the current node's low, because nodes in
         // the right subtree all have `low` >= `node.interval.low`.
-        if query.high >= node.interval.low {
-            if let Some(ref right) = node.right {
-                if right.max >= query.low {
-                    Self::find_all_overlapping_recursive(right, query, results);
-                }
-            }
+        if query.high >= node.interval.low
+            && let Some(ref right) = node.right
+            && right.max >= query.low
+        {
+            Self::find_all_overlapping_recursive(right, query, results);
         }
     }
 }

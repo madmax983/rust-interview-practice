@@ -6,10 +6,10 @@
 //! **Replaces Crates:** `rusqlite` (internals), `sqlparser`, `gluesql`
 //!
 //! **Real-world Usage:**
-//! - Embedded database engines (SQLite, DuckDB).
-//! - Web browsers (IndexedDB built on SQLite).
+//! - Embedded database engines (`SQLite`, `DuckDB`).
+//! - Web browsers (`IndexedDB` built on `SQLite`).
 //! - Mobile applications for offline data synchronization.
-//! - Distributed SQL databases (CockroachDB, TiDB) which use similar query pipelines.
+//! - Distributed SQL databases (`CockroachDB`, `TiDB`) which use similar query pipelines.
 //!
 //! **Why build it yourself?**
 //! Building an SQL engine demystifies the "magic" of relational databases. You learn how
@@ -64,7 +64,7 @@
 //! # Footer
 //!
 //! **Comparison to Canonical Crates:**
-//! - `rusqlite`: This crate wraps the C-based SQLite engine. SQLite is fully featured, robust, uses pager-backed B-Trees, features a virtual machine (VDBE) for query execution, and an incredibly sophisticated query planner.
+//! - `rusqlite`: This crate wraps the C-based `SQLite` engine. `SQLite` is fully featured, robust, uses pager-backed B-Trees, features a virtual machine (VDBE) for query execution, and an incredibly sophisticated query planner.
 //! - `sqlparser-rs`: This crate provides a highly robust, spec-compliant SQL lexer and parser. Our parser is a toy recursive-descent parser that supports exactly what we need it to, without AST normalization or standard dialect support.
 //! - `gluesql`: An SQL database engine written purely in Rust. It strongly separates storage and execution (like we did here), but provides massive coverage of SQL standard operations, indexing, and transactions.
 //!
@@ -98,10 +98,10 @@ pub enum SqlError {
 impl fmt::Display for SqlError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SqlError::LexerError(m) => write!(f, "Lexer Error: {}", m),
-            SqlError::ParserError(m) => write!(f, "Parser Error: {}", m),
-            SqlError::ExecutionError(m) => write!(f, "Execution Error: {}", m),
-            SqlError::StorageError(m) => write!(f, "Storage Error: {}", m),
+            Self::LexerError(m) => write!(f, "Lexer Error: {m}"),
+            Self::ParserError(m) => write!(f, "Parser Error: {m}"),
+            Self::ExecutionError(m) => write!(f, "Execution Error: {m}"),
+            Self::StorageError(m) => write!(f, "Storage Error: {m}"),
         }
     }
 }
@@ -130,10 +130,10 @@ pub enum Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::Integer(i) => write!(f, "{}", i),
-            Value::Text(t) => write!(f, "{}", t),
-            Value::Boolean(b) => write!(f, "{}", if *b { "TRUE" } else { "FALSE" }),
-            Value::Null => write!(f, "NULL"),
+            Self::Integer(i) => write!(f, "{i}"),
+            Self::Text(t) => write!(f, "{t}"),
+            Self::Boolean(b) => write!(f, "{}", if *b { "TRUE" } else { "FALSE" }),
+            Self::Null => write!(f, "NULL"),
         }
     }
 }
@@ -183,7 +183,8 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(input: &'a str) -> Self {
+    #[must_use]
+    pub const fn new(input: &'a str) -> Self {
         Self { input, pos: 0 }
     }
 
@@ -210,6 +211,10 @@ impl<'a> Lexer<'a> {
     // RUST INSIGHT:
     // We use a simple sequential lexer. Since we only hold a reference to `input` (`&'a str`),
     // slicing is very cheap. We don't allocate strings unless we find an identifier or literal.
+    ///
+    /// # Errors
+    /// Returns `Err(SqlError::LexerError)` on an unterminated string, an invalid integer
+    /// literal, or an unexpected character.
     pub fn next_token(&mut self) -> Result<Token> {
         self.skip_whitespace();
 
@@ -243,12 +248,9 @@ impl<'a> Lexer<'a> {
                 Ok(Token::Semicolon)
             }
             '\'' => self.read_string_literal(),
-            'a'..='z' | 'A'..='Z' | '_' => self.read_identifier_or_keyword(),
+            'a'..='z' | 'A'..='Z' | '_' => Ok(self.read_identifier_or_keyword()),
             '0'..='9' | '-' => self.read_integer_literal(),
-            _ => Err(SqlError::LexerError(format!(
-                "Unexpected character: {}",
-                ch
-            ))),
+            _ => Err(SqlError::LexerError(format!("Unexpected character: {ch}"))),
         }
     }
 
@@ -266,7 +268,7 @@ impl<'a> Lexer<'a> {
         Err(SqlError::LexerError("Unterminated string literal".into()))
     }
 
-    fn read_identifier_or_keyword(&mut self) -> Result<Token> {
+    fn read_identifier_or_keyword(&mut self) -> Token {
         let mut ident = String::new();
         while let Some(ch) = self.peek_char() {
             if ch.is_ascii_alphanumeric() || ch == '_' {
@@ -278,7 +280,7 @@ impl<'a> Lexer<'a> {
         }
 
         let upper = ident.to_uppercase();
-        Ok(match upper.as_str() {
+        match upper.as_str() {
             "CREATE" => Token::Create,
             "TABLE" => Token::Table,
             "INSERT" => Token::Insert,
@@ -294,7 +296,7 @@ impl<'a> Lexer<'a> {
             "TRUE" => Token::BooleanLiteral(true),
             "FALSE" => Token::BooleanLiteral(false),
             _ => Token::Identifier(ident), // Keep original case for identifiers
-        })
+        }
     }
 
     fn read_integer_literal(&mut self) -> Result<Token> {
@@ -315,10 +317,14 @@ impl<'a> Lexer<'a> {
 
         let val = num_str
             .parse::<i64>()
-            .map_err(|_| SqlError::LexerError(format!("Invalid integer literal: {}", num_str)))?;
+            .map_err(|_| SqlError::LexerError(format!("Invalid integer literal: {num_str}")))?;
         Ok(Token::IntegerLiteral(val))
     }
 
+    /// Tokenizes the entire input string into a vector of tokens.
+    ///
+    /// # Errors
+    /// Returns `Err(SqlError::LexerError)` if the input contains an invalid token.
     pub fn tokenize(mut self) -> Result<Vec<Token>> {
         let mut tokens = Vec::new();
         loop {
@@ -347,9 +353,9 @@ pub enum Expr {
     Ident(String),
     Literal(Value),
     BinaryOp {
-        left: Box<Expr>,
+        left: Box<Self>,
         op: Token, // e.g., Token::Equals
-        right: Box<Expr>,
+        right: Box<Self>,
     },
 }
 
@@ -380,7 +386,8 @@ pub struct Parser {
 // Recursive descent parsing is elegant but can lead to stack overflows on deeply nested
 // expressions. Production parsers often use Pratt parsing or iterative approaches for expressions.
 impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    #[must_use]
+    pub const fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, pos: 0 }
     }
 
@@ -396,26 +403,30 @@ impl Parser {
         t
     }
 
+    // `expected` is a small token compared by value against the next token in the stream.
+    #[allow(clippy::needless_pass_by_value)]
     fn consume(&mut self, expected: Token) -> Result<()> {
         match self.advance() {
             Some(t) if t == &expected => Ok(()),
             Some(t) => Err(SqlError::ParserError(format!(
-                "Expected {:?}, found {:?}",
-                expected, t
+                "Expected {expected:?}, found {t:?}"
             ))),
             None => Err(SqlError::ParserError(format!(
-                "Expected {:?}, found EOF",
-                expected
+                "Expected {expected:?}, found EOF"
             ))),
         }
     }
 
+    /// Parses the token stream into a list of SQL statements.
+    ///
+    /// # Errors
+    /// Returns `Err(SqlError::ParserError)` if the tokens do not form a valid statement.
     pub fn parse(&mut self) -> Result<Vec<Statement>> {
         let mut stmts = Vec::new();
         while self.peek().is_some() {
             stmts.push(self.parse_statement()?);
             // Optional semicolon
-            if let Some(Token::Semicolon) = self.peek() {
+            if matches!(self.peek(), Some(Token::Semicolon)) {
                 self.advance();
             }
         }
@@ -428,8 +439,7 @@ impl Parser {
             Some(Token::Insert) => self.parse_insert(),
             Some(Token::Select) => self.parse_select(),
             Some(t) => Err(SqlError::ParserError(format!(
-                "Unexpected statement start: {:?}",
-                t
+                "Unexpected statement start: {t:?}"
             ))),
             None => Err(SqlError::ParserError("Unexpected EOF".into())),
         }
@@ -492,8 +502,7 @@ impl Parser {
         };
 
         // Parse optional columns
-        let mut columns = None;
-        if let Some(Token::OpenParen) = self.peek() {
+        let columns = if matches!(self.peek(), Some(Token::OpenParen)) {
             self.advance();
             let mut cols = Vec::new();
             loop {
@@ -510,8 +519,10 @@ impl Parser {
                 }
             }
             self.consume(Token::CloseParen)?;
-            columns = Some(cols);
-        }
+            Some(cols)
+        } else {
+            None
+        };
 
         self.consume(Token::Values)?;
         self.consume(Token::OpenParen)?;
@@ -540,7 +551,7 @@ impl Parser {
         self.consume(Token::Select)?;
 
         let mut columns = Vec::new();
-        if let Some(Token::Asterisk) = self.peek() {
+        if matches!(self.peek(), Some(Token::Asterisk)) {
             self.advance();
         } else {
             loop {
@@ -548,7 +559,7 @@ impl Parser {
                     Some(Token::Identifier(id)) => columns.push(id.clone()),
                     _ => return Err(SqlError::ParserError("Expected column name or '*'".into())),
                 }
-                if let Some(Token::Comma) = self.peek() {
+                if matches!(self.peek(), Some(Token::Comma)) {
                     self.advance();
                 } else {
                     break;
@@ -563,11 +574,12 @@ impl Parser {
             _ => return Err(SqlError::ParserError("Expected table name".into())),
         };
 
-        let mut where_clause = None;
-        if let Some(Token::Where) = self.peek() {
+        let where_clause = if matches!(self.peek(), Some(Token::Where)) {
             self.advance();
-            where_clause = Some(self.parse_expression()?);
-        }
+            Some(self.parse_expression()?)
+        } else {
+            None
+        };
 
         Ok(Statement::Select {
             table_name,
@@ -587,7 +599,7 @@ impl Parser {
         };
 
         // Check for binary operator (only '=' supported for now)
-        if let Some(Token::Equals) = self.peek() {
+        if matches!(self.peek(), Some(Token::Equals)) {
             let op = self.advance().unwrap().clone();
             let right = self.parse_expression()?;
             Ok(Expr::BinaryOp {
@@ -616,9 +628,28 @@ pub struct Row {
 }
 
 pub trait StorageEngine {
+    /// Creates a new table with the given schema.
+    ///
+    /// # Errors
+    /// Returns `Err` if a table with the same name already exists.
     fn create_table(&mut self, name: &str, schema: TableSchema) -> Result<()>;
+
+    /// Returns the schema for a table.
+    ///
+    /// # Errors
+    /// Returns `Err` if the table does not exist.
     fn get_schema(&self, table_name: &str) -> Result<TableSchema>;
+
+    /// Inserts a row into a table.
+    ///
+    /// # Errors
+    /// Returns `Err` if the table does not exist.
     fn insert_row(&mut self, table_name: &str, row: Row) -> Result<()>;
+
+    /// Returns all rows in a table.
+    ///
+    /// # Errors
+    /// Returns `Err` if the table does not exist.
     fn scan_table(&self, table_name: &str) -> Result<Vec<Row>>;
 }
 
@@ -627,7 +658,14 @@ pub struct InMemoryStorage {
     tables: HashMap<String, Vec<Row>>,
 }
 
+impl Default for InMemoryStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InMemoryStorage {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             schemas: HashMap::new(),
@@ -640,8 +678,7 @@ impl StorageEngine for InMemoryStorage {
     fn create_table(&mut self, name: &str, schema: TableSchema) -> Result<()> {
         if self.schemas.contains_key(name) {
             return Err(SqlError::StorageError(format!(
-                "Table '{}' already exists",
-                name
+                "Table '{name}' already exists"
             )));
         }
         self.schemas.insert(name.to_string(), schema);
@@ -653,26 +690,28 @@ impl StorageEngine for InMemoryStorage {
         self.schemas
             .get(table_name)
             .cloned()
-            .ok_or_else(|| SqlError::StorageError(format!("Table '{}' not found", table_name)))
+            .ok_or_else(|| SqlError::StorageError(format!("Table '{table_name}' not found")))
     }
 
     fn insert_row(&mut self, table_name: &str, row: Row) -> Result<()> {
-        if let Some(table) = self.tables.get_mut(table_name) {
-            table.push(row);
-            Ok(())
-        } else {
-            Err(SqlError::StorageError(format!(
-                "Table '{}' not found",
-                table_name
-            )))
-        }
+        self.tables.get_mut(table_name).map_or_else(
+            || {
+                Err(SqlError::StorageError(format!(
+                    "Table '{table_name}' not found"
+                )))
+            },
+            |table| {
+                table.push(row);
+                Ok(())
+            },
+        )
     }
 
     fn scan_table(&self, table_name: &str) -> Result<Vec<Row>> {
         self.tables
             .get(table_name)
             .cloned()
-            .ok_or_else(|| SqlError::StorageError(format!("Table '{}' not found", table_name)))
+            .ok_or_else(|| SqlError::StorageError(format!("Table '{table_name}' not found")))
     }
 }
 
@@ -690,10 +729,15 @@ pub struct SqlEngine<S: StorageEngine> {
 // Our executor is highly simplified, essentially combining the Planner and Executor stages,
 // and doing full table scans for everything.
 impl<S: StorageEngine> SqlEngine<S> {
-    pub fn new(storage: S) -> Self {
+    pub const fn new(storage: S) -> Self {
         Self { storage }
     }
 
+    /// Parses and executes a SQL query string against the storage engine.
+    ///
+    /// # Errors
+    /// Returns `Err` if the query fails to tokenize, parse, or execute (e.g. unknown table,
+    /// column, or type mismatch).
     pub fn execute(&mut self, query: &str) -> Result<Vec<Row>> {
         let lexer = Lexer::new(query);
         let tokens = lexer.tokenize()?;
@@ -737,24 +781,21 @@ impl<S: StorageEngine> SqlEngine<S> {
 
                 let mut row_values = Vec::new();
                 for (i, expr) in values.into_iter().enumerate() {
-                    let val = match expr {
-                        Expr::Literal(v) => v,
-                        _ => {
-                            return Err(SqlError::ExecutionError(
-                                "Only literals supported in INSERT VALUES".into(),
-                            ));
-                        }
+                    let Expr::Literal(val) = expr else {
+                        return Err(SqlError::ExecutionError(
+                            "Only literals supported in INSERT VALUES".into(),
+                        ));
                     };
 
                     // Type checking
                     let expected_type = &schema.columns[i].data_type;
-                    let valid = match (&val, expected_type) {
-                        (Value::Integer(_), DataType::Integer) => true,
-                        (Value::Text(_), DataType::Text) => true,
-                        (Value::Boolean(_), DataType::Boolean) => true,
-                        (Value::Null, _) => true,
-                        _ => false,
-                    };
+                    let valid = matches!(
+                        (&val, expected_type),
+                        (Value::Integer(_), DataType::Integer)
+                            | (Value::Text(_), DataType::Text)
+                            | (Value::Boolean(_), DataType::Boolean)
+                            | (Value::Null, _)
+                    );
 
                     if !valid {
                         return Err(SqlError::ExecutionError(format!(
@@ -779,29 +820,30 @@ impl<S: StorageEngine> SqlEngine<S> {
                 let rows = self.storage.scan_table(&table_name)?;
 
                 // Map column names to indices
-                let mut projection_indices = Vec::new();
-                if columns.is_empty() {
+                let projection_indices: Vec<usize> = if columns.is_empty() {
                     // SELECT *
-                    projection_indices = (0..schema.columns.len()).collect();
+                    (0..schema.columns.len()).collect()
                 } else {
+                    let mut indices = Vec::new();
                     for col_name in &columns {
                         let idx = schema
                             .columns
                             .iter()
                             .position(|c| c.name == *col_name)
                             .ok_or_else(|| {
-                                SqlError::ExecutionError(format!("Column '{}' not found", col_name))
+                                SqlError::ExecutionError(format!("Column '{col_name}' not found"))
                             })?;
-                        projection_indices.push(idx);
+                        indices.push(idx);
                     }
-                }
+                    indices
+                };
 
                 let mut result_rows = Vec::new();
                 for row in rows {
-                    if let Some(ref expr) = where_clause {
-                        if !self.evaluate_boolean_expr(expr, &row, &schema)? {
-                            continue;
-                        }
+                    if let Some(ref expr) = where_clause
+                        && !Self::evaluate_boolean_expr(expr, &row, &schema)?
+                    {
+                        continue;
                     }
 
                     let projected_values = projection_indices
@@ -818,7 +860,7 @@ impl<S: StorageEngine> SqlEngine<S> {
         }
     }
 
-    fn evaluate_boolean_expr(&self, expr: &Expr, row: &Row, schema: &TableSchema) -> Result<bool> {
+    fn evaluate_boolean_expr(expr: &Expr, row: &Row, schema: &TableSchema) -> Result<bool> {
         match expr {
             Expr::BinaryOp { left, op, right } => {
                 if *op != Token::Equals {
@@ -827,8 +869,8 @@ impl<S: StorageEngine> SqlEngine<S> {
                     ));
                 }
 
-                let left_val = self.evaluate_expr(left, row, schema)?;
-                let right_val = self.evaluate_expr(right, row, schema)?;
+                let left_val = Self::evaluate_expr(left, row, schema)?;
+                let right_val = Self::evaluate_expr(right, row, schema)?;
 
                 Ok(left_val == right_val)
             }
@@ -838,7 +880,7 @@ impl<S: StorageEngine> SqlEngine<S> {
         }
     }
 
-    fn evaluate_expr(&self, expr: &Expr, row: &Row, schema: &TableSchema) -> Result<Value> {
+    fn evaluate_expr(expr: &Expr, row: &Row, schema: &TableSchema) -> Result<Value> {
         match expr {
             Expr::Literal(val) => Ok(val.clone()),
             Expr::Ident(col_name) => {
@@ -848,8 +890,7 @@ impl<S: StorageEngine> SqlEngine<S> {
                     .position(|c| c.name == *col_name)
                     .ok_or_else(|| {
                         SqlError::ExecutionError(format!(
-                            "Column '{}' not found in WHERE clause",
-                            col_name
+                            "Column '{col_name}' not found in WHERE clause"
                         ))
                     })?;
                 Ok(row.values[idx].clone())
@@ -985,6 +1026,7 @@ mod tests {
         //         std::hint::black_box(engine.execute("INSERT INTO t VALUES (1);").unwrap());
         //     });
         // });
-        assert!(true);
+        //
+        // This test intentionally has no runtime assertions; it documents the benchmark setup.
     }
 }

@@ -1,7 +1,7 @@
 //! # 875. Koko Eating Bananas
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/koko-eating-bananas/
+//! Link: <https://leetcode.com/problems/koko-eating-bananas>/
 //!
 //! This problem demonstrates "Binary Search on Answer" - a powerful pattern where we know the
 //! bounds of the possible answer, and we use binary search to efficiently find the optimal one.
@@ -22,6 +22,9 @@
 pub struct Solution;
 
 impl Solution {
+    /// # Panics
+    ///
+    /// Panics if `piles` is empty (the `LeetCode` constraints guarantee `piles.len() >= 1`).
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     #[allow(clippy::cast_possible_truncation)]
@@ -57,31 +60,31 @@ impl Solution {
     /// Helper to check if Koko can eat all bananas at speed `k` within `h` hours.
     fn can_eat_all(piles: &[i32], h: i32, k: i32) -> bool {
         let mut total_hours: i64 = 0; // Use i64 to prevent overflow during sum
-        let k_i64 = k as i64;
+        let k_i64 = i64::from(k);
 
         // RUST INSIGHT: Iterator combinators make this elegant, but a manual loop is sometimes
         // easier to read for algorithmic problems.
         for &pile in piles {
-            let pile_i64 = pile as i64;
+            let pile_i64 = i64::from(pile);
             // Ceiling division: (a + b - 1) / b
             // GOTCHA: Don't use f64::ceil() as floating point arithmetic can lose precision
             // for very large integers. Integer ceiling division is safer and faster.
             total_hours += (pile_i64 + k_i64 - 1) / k_i64;
         }
 
-        total_hours <= h as i64
+        total_hours <= i64::from(h)
     }
 
     /// Alternative approach using Iterator methods for `can_eat_all`
     /// This is more functional but conceptually does the same thing.
     fn _can_eat_all_iterative(piles: &[i32], h: i32, k: i32) -> bool {
-        let k_i64 = k as i64;
+        let k_i64 = i64::from(k);
         let total_hours: i64 = piles
             .iter()
-            .map(|&pile| (pile as i64 + k_i64 - 1) / k_i64)
+            .map(|&pile| (i64::from(pile) + k_i64 - 1) / k_i64)
             .sum();
 
-        total_hours <= h as i64
+        total_hours <= i64::from(h)
     }
 }
 
@@ -104,9 +107,12 @@ mod tests {
     #[test]
     fn test_stress_large_numbers() {
         // Requires using i64 internally to prevent overflow during accumulation
-        assert_eq!(Solution::min_eating_speed(vec![1000000000], 2), 500000000);
         assert_eq!(
-            Solution::min_eating_speed(vec![805306368, 805306368, 805306368], 1000000000),
+            Solution::min_eating_speed(vec![1_000_000_000], 2),
+            500_000_000
+        );
+        assert_eq!(
+            Solution::min_eating_speed(vec![805_306_368, 805_306_368, 805_306_368], 1_000_000_000),
             3
         );
     }

@@ -14,6 +14,9 @@
 //! Understanding Count-Min Sketch demystifies how "Big Data" systems process massive streams with tiny memory.
 //! You learn about the trade-off between space (width * depth) and accuracy (epsilon, delta).
 
+// Intentional index/byte/word manipulation and statistical estimation casts.
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+
 use std::collections::hash_map::RandomState;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::marker::PhantomData;
@@ -65,6 +68,7 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
     /// # Arguments
     /// * `epsilon` - Acceptable error rate (e.g., 0.01). Error is within `epsilon * N`.
     /// * `delta` - Probability of error exceeding the bound (e.g., 0.01).
+    #[must_use]
     pub fn new(epsilon: f64, delta: f64) -> Self {
         // Guard against degenerate / non-finite parameters. epsilon and delta
         // must live in the open interval (0, 1); clamp anything else (including
@@ -120,7 +124,8 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
     }
 
     /// Returns the total number of items added (sum of all counts).
-    pub fn total_count(&self) -> u64 {
+    #[must_use]
+    pub const fn total_count(&self) -> u64 {
         self.total_count
     }
 
@@ -141,7 +146,7 @@ impl<T: ?Sized + Hash> CountMinSketch<T> {
         // Use a simple custom hasher for the second hash to ensure independence.
         // FNV-1a style is fine here as secondary mixing.
         // We seed it with h1 to add randomness from RandomState.
-        let mut hasher2 = Fnv1aHasher::new(0xcbf29ce484222325 ^ h1);
+        let mut hasher2 = Fnv1aHasher::new(0xcbf2_9ce4_8422_2325 ^ h1);
         item.hash(&mut hasher2);
         let h2 = hasher2.finish();
 
@@ -155,7 +160,7 @@ struct Fnv1aHasher {
 }
 
 impl Fnv1aHasher {
-    fn new(seed: u64) -> Self {
+    const fn new(seed: u64) -> Self {
         Self { state: seed }
     }
 }
@@ -166,9 +171,9 @@ impl Hasher for Fnv1aHasher {
     }
 
     fn write(&mut self, bytes: &[u8]) {
-        let prime = 1099511628211;
+        let prime = 1_099_511_628_211;
         for byte in bytes {
-            self.state ^= *byte as u64;
+            self.state ^= u64::from(*byte);
             self.state = self.state.wrapping_mul(prime);
         }
     }
@@ -233,7 +238,7 @@ mod tests {
 
         // This is probabilistic, but with high probability it holds.
         // If it fails, either we got unlucky or implementation is wrong.
-        assert!(est <= 11, "Estimate {} too high for item with count 1", est);
+        assert!(est <= 11, "Estimate {est} too high for item with count 1");
     }
 
     #[test]

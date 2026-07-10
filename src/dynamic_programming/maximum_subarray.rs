@@ -46,8 +46,8 @@ pub fn max_sub_array_brute_force(nums: Vec<i32>) -> i32 {
 
     for i in 0..n {
         let mut current_sum = 0;
-        for j in i..n {
-            current_sum += nums[j];
+        for &val in &nums[i..] {
+            current_sum += val;
             max_sum = cmp::max(max_sum, current_sum);
         }
     }
@@ -147,7 +147,7 @@ pub fn max_sub_array_optimal(nums: Vec<i32>) -> i32 {
 /// Functional-style variant of the optimal Kadane approach using `fold`.
 ///
 /// NOTE: This shares the same O(N) time / O(1) space profile as `max_sub_array_optimal`; it is kept
-/// under a clearly-named suffix to demonstrate carrying complex state (current_max, global_max)
+/// under a clearly-named suffix to demonstrate carrying complex state (`current_max`, `global_max`)
 /// through an iterator chain, which is a core idiom this repository practices.
 ///
 /// **Time**: O(N) - Single pass.
@@ -260,20 +260,17 @@ mod tests {
             assert_eq!(
                 max_sub_array_brute_force(nums.clone()),
                 expected,
-                "brute force mismatch for {:?}",
-                nums
+                "brute force mismatch for {nums:?}"
             );
             assert_eq!(
                 max_sub_array_optimized(nums.clone()),
                 expected,
-                "divide-and-conquer mismatch for {:?}",
-                nums
+                "divide-and-conquer mismatch for {nums:?}"
             );
             assert_eq!(
                 max_sub_array_functional(nums.clone()),
                 expected,
-                "functional mismatch for {:?}",
-                nums
+                "functional mismatch for {nums:?}"
             );
         }
     }

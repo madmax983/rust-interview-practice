@@ -16,6 +16,9 @@
 //! to efficiently determine the next task to run, and how to use `Condvar` to efficiently
 //! put a worker thread to sleep and wake it up only when necessary.
 
+// The scheduler lock is intentionally held across the wait/peek/pop worker-loop critical sections.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::sync::{Arc, Condvar, Mutex};
@@ -130,7 +133,7 @@ pub trait Scheduler: Send + Sync {
     fn stop(&mut self);
 }
 
-/// A background task scheduler using a BinaryHeap.
+/// A background task scheduler using a `BinaryHeap`.
 pub struct TaskScheduler {
     state: Arc<Mutex<SchedulerState>>,
     condvar: Arc<Condvar>,
@@ -163,6 +166,8 @@ impl TaskScheduler {
     }
 
     /// The core loop of the background thread.
+    // The worker thread owns these Arc handles for its entire lifetime, so it takes them by value.
+    #[allow(clippy::needless_pass_by_value)]
     fn worker_loop(state_arc: Arc<Mutex<SchedulerState>>, condvar: Arc<Condvar>) {
         let mut state = state_arc.lock().unwrap();
 

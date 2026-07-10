@@ -15,6 +15,9 @@
 //! Sliding Window logs teach you about time-series data management.
 //! Distributed rate limiting forces you to think about atomicity and race conditions across network boundaries.
 
+// The bucket/log locks are intentionally held across the refill-and-check critical sections.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -48,6 +51,7 @@ impl RateLimiter {
     /// # Arguments
     /// * `capacity` - Maximum number of tokens the bucket can hold (burst size).
     /// * `refill_rate` - Number of tokens added per second.
+    #[must_use]
     pub fn new(capacity: f64, refill_rate: f64) -> Self {
         Self {
             state: Mutex::new(BucketState {
@@ -61,6 +65,9 @@ impl RateLimiter {
 
     /// Attempts to acquire `tokens` from the bucket.
     /// Returns `true` if successful, `false` if not enough tokens.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
     pub fn try_acquire(&self, tokens_needed: f64) -> bool {
         let mut state = self.state.lock().unwrap();
         self.refill(&mut state);
@@ -115,7 +122,8 @@ pub struct SlidingWindowRateLimiter {
 }
 
 impl SlidingWindowRateLimiter {
-    pub fn new(window: Duration, limit: usize) -> Self {
+    #[must_use]
+    pub const fn new(window: Duration, limit: usize) -> Self {
         Self {
             log: Mutex::new(VecDeque::new()),
             window,
@@ -123,6 +131,11 @@ impl SlidingWindowRateLimiter {
         }
     }
 
+    /// Attempts to record a request against the sliding-window limit.
+    /// Returns `true` if within the limit, `false` if the request should be rejected.
+    ///
+    /// # Panics
+    /// Panics if the internal log mutex is poisoned.
     pub fn try_acquire(&self) -> bool {
         let mut log = self.log.lock().unwrap();
         let now = Instant::now();
@@ -163,6 +176,9 @@ pub trait RateLimitStore: Send + Sync {
     /// * `limit` - Max requests in the window.
     ///
     /// Returns `Ok(true)` if allowed, `Ok(false)` if limited.
+    ///
+    /// # Errors
+    /// Returns `Err` if the underlying store cannot be accessed (e.g. a backend/lock failure).
     fn check_and_update(&self, key: &str, window: Duration, limit: usize) -> Result<bool, String>;
 }
 
@@ -179,6 +195,7 @@ impl Default for MemoryStore {
 }
 
 impl MemoryStore {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             logs: Mutex::new(HashMap::new()),
@@ -228,13 +245,14 @@ impl<S: RateLimitStore> DistributedRateLimiter<S> {
         }
     }
 
+    #[must_use]
     pub fn try_acquire(&self, key: &str, window: Duration, limit: usize) -> bool {
         match self.store.check_and_update(key, window, limit) {
             Ok(allowed) => allowed,
             Err(e) => {
                 // Fail-open or Fail-closed strategy?
                 // Usually fail-open (allow traffic) if Redis is down to avoid outage.
-                eprintln!("Rate limiter store error: {}", e);
+                eprintln!("Rate limiter store error: {e}");
                 true
             }
         }

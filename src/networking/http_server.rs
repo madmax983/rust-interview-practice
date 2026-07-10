@@ -120,6 +120,9 @@ pub struct HttpServer<H: Handler> {
 
 impl<H: Handler> HttpServer<H> {
     /// Creates a new HTTP Server bound to the given address with a request handler.
+    ///
+    /// # Errors
+    /// Returns an error if the listener cannot bind to the given address.
     pub fn new<A: ToSocketAddrs>(addr: A, handler: H, pool_size: usize) -> io::Result<Self> {
         let listener = TcpListener::bind(addr)?;
         let pool = ThreadPool::new(pool_size);
@@ -131,6 +134,9 @@ impl<H: Handler> HttpServer<H> {
     }
 
     /// Starts the server loop.
+    ///
+    /// # Errors
+    /// Returns an error if the local address cannot be read from the listener.
     pub fn run(&self) -> io::Result<()> {
         println!("Server listening on {}", self.listener.local_addr()?);
 
@@ -140,21 +146,21 @@ impl<H: Handler> HttpServer<H> {
                     let handler = Arc::clone(&self.handler);
 
                     self.pool.execute(move || {
-                        if let Err(e) = Self::handle_connection(stream, handler) {
+                        if let Err(e) = Self::handle_connection(stream, &handler) {
                             // Don't log unexpected EOF which is normal connection close
                             if e.kind() != io::ErrorKind::UnexpectedEof {
-                                eprintln!("Error handling connection: {}", e);
+                                eprintln!("Error handling connection: {e}");
                             }
                         }
                     });
                 }
-                Err(e) => eprintln!("Connection failed: {}", e),
+                Err(e) => eprintln!("Connection failed: {e}"),
             }
         }
         Ok(())
     }
 
-    fn handle_connection(mut stream: TcpStream, handler: Arc<H>) -> io::Result<()> {
+    fn handle_connection(mut stream: TcpStream, handler: &Arc<H>) -> io::Result<()> {
         let mut reader = BufReader::new(stream.try_clone()?);
 
         loop {
@@ -166,7 +172,7 @@ impl<H: Handler> HttpServer<H> {
                     let response = HttpResponse::new(
                         400,
                         "Bad Request",
-                        Some(format!("Error parsing request: {}", e).into_bytes()),
+                        Some(format!("Error parsing request: {e}").into_bytes()),
                     );
                     // Ignore write error on broken pipe
                     let _ = stream.write_all(&response.to_bytes());
@@ -180,8 +186,7 @@ impl<H: Handler> HttpServer<H> {
             let close_connection = request
                 .headers
                 .get("connection")
-                .map(|v| v.to_lowercase() == "close")
-                .unwrap_or(false);
+                .is_some_and(|v| v.to_lowercase() == "close");
 
             let response = handler.handle(request);
             stream.write_all(&response.to_bytes())?;
@@ -197,6 +202,10 @@ impl<H: Handler> HttpServer<H> {
 impl HttpRequest {
     /// Reads and parses an HTTP request from the given reader.
     /// Returns `Ok(None)` if the stream ends cleanly at the start of a request.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying stream fails or the request is
+    /// malformed (bad request line, headers, or content length).
     pub fn parse<R: Read>(reader: &mut BufReader<R>) -> io::Result<Option<Self>> {
         // GOTCHA: `read_line` appends to the string. If we reused a buffer, we'd need to clear it.
         // It also includes the newline characters, which we must trim.
@@ -325,7 +334,7 @@ impl HttpRequest {
             body = buffer;
         }
 
-        Ok(Some(HttpRequest {
+        Ok(Some(Self {
             method,
             path,
             version,
@@ -337,6 +346,7 @@ impl HttpRequest {
 }
 
 impl HttpResponse {
+    #[must_use]
     pub fn new(status_code: u16, status_text: &str, body: Option<Vec<u8>>) -> Self {
         Self {
             status_code,
@@ -346,6 +356,7 @@ impl HttpResponse {
         }
     }
 
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut response = Vec::new();
 
@@ -358,12 +369,19 @@ impl HttpResponse {
         .unwrap();
 
         // Headers
-        let is_chunked = self.headers.get("Transfer-Encoding").map(|v| v.as_str())
+        let is_chunked = self
+            .headers
+            .get("Transfer-Encoding")
+            .map(std::string::String::as_str)
             == Some("chunked")
-            || self.headers.get("transfer-encoding").map(|v| v.as_str()) == Some("chunked");
+            || self
+                .headers
+                .get("transfer-encoding")
+                .map(std::string::String::as_str)
+                == Some("chunked");
 
         for (key, value) in &self.headers {
-            write!(&mut response, "{}: {}\r\n", key, value).unwrap();
+            write!(&mut response, "{key}: {value}\r\n").unwrap();
         }
 
         // Content-Length or Transfer-Encoding
@@ -501,10 +519,6 @@ mod tests {
 
     #[test]
     fn test_server_handle_connection() {
-        // Find a free port
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-
         struct TestHandler;
         impl Handler for TestHandler {
             fn handle(&self, req: HttpRequest) -> HttpResponse {
@@ -520,6 +534,10 @@ mod tests {
             }
         }
 
+        // Find a free port
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+
         let handler = Arc::new(TestHandler);
         let handler_clone = Arc::clone(&handler);
 
@@ -529,7 +547,7 @@ mod tests {
             // We need a dummy handler since we can't create an HttpServer without arguments or access its internal method easily
             // But wait, the method is static on the struct if H is known.
             // Actually, handle_connection is an associated function.
-            let _ = HttpServer::<TestHandler>::handle_connection(stream, handler_clone);
+            let _ = HttpServer::<TestHandler>::handle_connection(stream, &handler_clone);
         });
 
         // Client

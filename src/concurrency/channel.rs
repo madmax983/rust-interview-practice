@@ -62,12 +62,12 @@ pub struct Receiver<T> {
 }
 
 // Errors
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum SendError<T> {
     Disconnected(T),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum RecvError {
     Empty,
     Disconnected,
@@ -114,6 +114,14 @@ impl<T> Drop for Receiver<T> {
 
 impl<T> Sender<T> {
     /// Sends a message into the channel. Blocks if the channel is full.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SendError::Disconnected` if the receiver has been dropped.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the shared-state `Mutex` is poisoned.
     pub fn send(&self, t: T) -> Result<(), SendError<T>> {
         let mut guard = self.shared.lock().unwrap();
 
@@ -137,6 +145,15 @@ impl<T> Sender<T> {
 
 impl<T> Receiver<T> {
     /// Receives a message from the channel. Blocks if empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RecvError::Disconnected` if all senders have been dropped
+    /// and the channel is empty.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the shared-state `Mutex` is poisoned.
     pub fn recv(&self) -> Result<T, RecvError> {
         let mut guard = self.shared.lock().unwrap();
 
@@ -157,20 +174,43 @@ impl<T> Receiver<T> {
     }
 
     /// Non-blocking receive.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RecvError::Empty` if no message is currently available, or
+    /// `RecvError::Disconnected` if all senders have been dropped.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the shared-state `Mutex` is poisoned.
     pub fn try_recv(&self) -> Result<T, RecvError> {
         let mut guard = self.shared.lock().unwrap();
 
-        if let Some(t) = guard.queue.pop_front() {
-            self.available.notify_one();
-            Ok(t)
-        } else if guard.senders_count == 0 {
-            Err(RecvError::Disconnected)
-        } else {
-            Err(RecvError::Empty)
-        }
+        guard.queue.pop_front().map_or_else(
+            || {
+                if guard.senders_count == 0 {
+                    Err(RecvError::Disconnected)
+                } else {
+                    Err(RecvError::Empty)
+                }
+            },
+            |t| {
+                self.available.notify_one();
+                Ok(t)
+            },
+        )
     }
 
     /// Receive with timeout.
+    ///
+    /// # Errors
+    ///
+    /// Returns `RecvError::Empty` if the timeout elapses before a message
+    /// arrives, or `RecvError::Disconnected` if all senders have been dropped.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the shared-state `Mutex` is poisoned.
     pub fn recv_timeout(&self, timeout: Duration) -> Result<T, RecvError> {
         let mut guard = self.shared.lock().unwrap();
         let now = std::time::Instant::now();
@@ -193,7 +233,7 @@ impl<T> Receiver<T> {
             // wait_timeout returns (guard, wait_timeout_result)
             let (new_guard, _) = self
                 .received
-                .wait_timeout(guard, timeout - elapsed)
+                .wait_timeout(guard, timeout.checked_sub(elapsed).unwrap())
                 .unwrap();
             guard = new_guard;
         }
@@ -201,6 +241,11 @@ impl<T> Receiver<T> {
 }
 
 /// Creates a new bounded channel.
+///
+/// # Panics
+///
+/// Panics if `capacity` is zero.
+#[must_use]
 pub fn channel<T>(capacity: usize) -> (Sender<T>, Receiver<T>) {
     assert!(capacity > 0, "Capacity must be greater than 0");
 
@@ -260,7 +305,7 @@ mod tests {
             received.push(val);
         }
 
-        received.sort();
+        received.sort_unstable();
         assert_eq!(received, vec![0, 1, 2, 3, 4]);
 
         for h in handles {
@@ -275,7 +320,7 @@ mod tests {
         // Fill channel
         tx.send(1).unwrap();
 
-        let tx_clone = tx.clone();
+        let tx_clone = tx;
         let handle = thread::spawn(move || {
             // This should block until rx receives
             tx_clone.send(2).unwrap();

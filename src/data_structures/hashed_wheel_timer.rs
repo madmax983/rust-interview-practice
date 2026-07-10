@@ -49,7 +49,6 @@ use std::time::Duration;
 pub type TaskId = u64;
 
 struct TaskEntry {
-    id: TaskId,
     rounds: usize,
     callback: Box<dyn Fn() + Send + Sync>,
 }
@@ -69,6 +68,7 @@ impl HashedWheelTimer {
     /// # Arguments
     /// * `tick_duration` - The resolution of the timer.
     /// * `wheel_size` - Number of buckets. Must be power of 2 for efficiency (though we use % here).
+    #[must_use]
     pub fn new(tick_duration: Duration, wheel_size: usize) -> Self {
         // Guard degenerate configuration. A zero tick_duration would cause a
         // divide-by-zero in schedule() (and an infinite loop in tick()); a
@@ -113,7 +113,6 @@ impl HashedWheelTimer {
         self.next_id += 1;
 
         let entry = TaskEntry {
-            id,
             rounds,
             callback: Box::new(callback),
         };
@@ -152,12 +151,12 @@ impl HashedWheelTimer {
 
         // Take the bucket out (replace with empty) to avoid borrow checker issues
         // while iterating.
-        let bucket_ids = std::mem::take(&mut self.wheel[bucket_idx]);
+        let entry_ids = std::mem::take(&mut self.wheel[bucket_idx]);
 
         // We need to know which IDs to KEEP in the bucket, and which to REMOVE from tasks.
         let mut still_pending = Vec::new();
 
-        for id in bucket_ids {
+        for id in entry_ids {
             let should_run = if let Some(entry) = self.tasks.get_mut(&id) {
                 if entry.rounds > 0 {
                     entry.rounds -= 1;

@@ -8,7 +8,7 @@
 //!
 //! **Real-world Usage:**
 //! - ZFS (ZFS Adaptive Replacement Cache) - likely the most famous use case.
-//! - Database buffer pools (PostgreSQL experimented with it, though often use simpler approximations like 2Q due to patent/complexity).
+//! - Database buffer pools (`PostgreSQL` experimented with it, though often use simpler approximations like 2Q due to patent/complexity).
 //! - Storage systems (IBM DS8000).
 //!
 //! **Why build it yourself?**
@@ -83,12 +83,12 @@ struct Node<K, V> {
     key: K,
     val: Option<V>, // None if in B1 or B2 (Ghost)
     list_type: ListType,
-    prev: Option<NonNull<Node<K, V>>>,
-    next: Option<NonNull<Node<K, V>>>,
+    prev: Option<NonNull<Self>>,
+    next: Option<NonNull<Self>>,
 }
 
 impl<K, V> Node<K, V> {
-    fn new(key: K, val: Option<V>, list_type: ListType) -> Self {
+    const fn new(key: K, val: Option<V>, list_type: ListType) -> Self {
         Self {
             key,
             val,
@@ -107,7 +107,7 @@ struct LinkedList<K, V> {
 }
 
 impl<K, V> LinkedList<K, V> {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             head: None,
             tail: None,
@@ -117,7 +117,7 @@ impl<K, V> LinkedList<K, V> {
 
     /// Adds a node to the head of the list.
     /// Safety: Node must not be in any list.
-    unsafe fn push_front(&mut self, mut node: NonNull<Node<K, V>>) {
+    const unsafe fn push_front(&mut self, mut node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid.
         let node_ref = unsafe { node.as_mut() };
         node_ref.next = self.head;
@@ -137,7 +137,7 @@ impl<K, V> LinkedList<K, V> {
 
     /// Removes a specific node from the list.
     /// Safety: Node must be in this list.
-    unsafe fn remove(&mut self, mut node: NonNull<Node<K, V>>) {
+    const unsafe fn remove(&mut self, mut node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid.
         let node_ref = unsafe { node.as_mut() };
         let prev = node_ref.prev;
@@ -163,7 +163,7 @@ impl<K, V> LinkedList<K, V> {
     }
 
     /// Removes and returns the tail node (LRU).
-    unsafe fn pop_back(&mut self) -> Option<NonNull<Node<K, V>>> {
+    const unsafe fn pop_back(&mut self) -> Option<NonNull<Node<K, V>>> {
         if let Some(tail) = self.tail {
             // SAFETY: tail is valid.
             unsafe { self.remove(tail) };
@@ -189,11 +189,16 @@ pub struct ARCCache<K, V> {
 // The `map` owns the nodes (conceptually), or rather the `ARCCache` owns the allocated Boxes.
 // We implement Send/Sync manually as NonNull is !Send/!Sync, but our usage is safe because
 // we never expose raw pointers and the struct owns all data it points to.
+// Send is upheld manually (see SAFETY note above); the raw NonNull fields are owned exclusively.
+#[allow(clippy::non_send_fields_in_send_ty)]
 unsafe impl<K: Send, V: Send> Send for ARCCache<K, V> {}
 unsafe impl<K: Sync, V: Sync> Sync for ARCCache<K, V> {}
 
 impl<K: Hash + Eq + Clone + fmt::Debug, V> ARCCache<K, V> {
     /// Creates a new ARC Cache with the given capacity.
+    ///
+    /// # Panics
+    /// Panics if `capacity` is 0.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");
@@ -209,7 +214,7 @@ impl<K: Hash + Eq + Clone + fmt::Debug, V> ARCCache<K, V> {
     }
 
     /// The generic REPLACE procedure from ARC.
-    /// adjust_p_for_b2: true if the triggering miss was in B2 (used for condition check).
+    /// `adjust_p_for_b2`: true if the triggering miss was in B2 (used for condition check).
     fn replace(&mut self, adjust_p_for_b2: bool) {
         let t1_len = self.t1.len;
         let p = self.p;
@@ -237,7 +242,7 @@ impl<K: Hash + Eq + Clone + fmt::Debug, V> ARCCache<K, V> {
     }
 
     /// Helper: Detaches a node from its current list.
-    unsafe fn detach(&mut self, node: NonNull<Node<K, V>>) {
+    const unsafe fn detach(&mut self, node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid.
         match unsafe { node.as_ref().list_type } {
             ListType::T1 => unsafe { self.t1.remove(node) },
@@ -297,11 +302,10 @@ impl<K: Hash + Eq + Clone + fmt::Debug, V> Cache<K, V> for ARCCache<K, V> {
                     self.detach(node_ptr);
                     self.attach(node_ptr, ListType::T2);
                     return node_ptr.as_ref().val.as_ref();
-                } else {
-                    // Ghost Hit (B1 or B2)
-                    // Return None, user must fetch and put.
-                    return None;
                 }
+                // Ghost Hit (B1 or B2)
+                // Return None, user must fetch and put.
+                return None;
             }
         }
         None
@@ -562,7 +566,7 @@ mod tests {
         }
         let duration = start.elapsed();
         // Just printing for visibility, assert is mainly that it finishes quickly.
-        println!("Inserted 10k items in {:?}", duration);
+        println!("Inserted 10k items in {duration:?}");
         assert!(duration.as_secs() < 1);
     }
 }

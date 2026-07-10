@@ -53,7 +53,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 //   though a production system would definitely use `serde_json`.
 
 /// JWT Header (Simplified)
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Header {
     pub alg: String,
     pub typ: String,
@@ -77,7 +77,7 @@ impl Header {
 }
 
 /// JWT Payload
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Claims {
     pub sub: String,
     pub exp: Option<u64>,
@@ -86,7 +86,8 @@ pub struct Claims {
 }
 
 impl Claims {
-    pub fn new(sub: String, exp: Option<u64>, iat: Option<u64>) -> Self {
+    #[must_use]
+    pub const fn new(sub: String, exp: Option<u64>, iat: Option<u64>) -> Self {
         Self { sub, exp, iat }
     }
 
@@ -95,10 +96,10 @@ impl Claims {
         let mut json = String::with_capacity(128);
         let _ = write!(json, r#"{{"sub":"{}""#, self.sub);
         if let Some(exp) = self.exp {
-            let _ = write!(json, r#","exp":{}"#, exp);
+            let _ = write!(json, r#","exp":{exp}"#);
         }
         if let Some(iat) = self.iat {
-            let _ = write!(json, r#","iat":{}"#, iat);
+            let _ = write!(json, r#","iat":{iat}"#);
         }
         json.push('}');
         json
@@ -162,8 +163,8 @@ fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
         // Hash it
         let mut hasher = sha256::Sha256::new();
         hasher.update(key);
-        let hashed = hasher.finalize();
-        k[..32].copy_from_slice(&hashed);
+        let key_digest = hasher.finalize();
+        k[..32].copy_from_slice(&key_digest);
     } else {
         k[..key.len()].copy_from_slice(key);
     }
@@ -215,6 +216,13 @@ fn base64url_decode(data: &str) -> Option<Vec<u8>> {
 /// Demonstrates how to abstract the signing algorithm and validation logic.
 pub trait JwtHandler {
     fn encode(&self, claims: &Claims) -> String;
+
+    /// Decodes and verifies a token, returning its claims.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` if the token is malformed, has an invalid signature,
+    /// contains a payload that is not valid UTF-8 or JSON, or has expired.
     fn decode(&self, token: &str) -> Result<Claims, &'static str>;
 }
 
@@ -227,6 +235,7 @@ pub struct Hs256Jwt {
 }
 
 impl Hs256Jwt {
+    #[must_use]
     pub fn new(secret: &[u8]) -> Self {
         Self {
             secret: secret.to_vec(),

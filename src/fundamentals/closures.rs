@@ -1,7 +1,7 @@
 //! # Closure Patterns
 //!
 //! Closures are anonymous functions that can capture their environment.
-//! Understanding Fn, FnMut, and FnOnce traits is essential for working with
+//! Understanding Fn, `FnMut`, and `FnOnce` traits is essential for working with
 //! iterators and callbacks in Rust.
 
 use std::collections::HashMap;
@@ -22,7 +22,7 @@ where
 }
 
 /// Accepts a closure that can be called multiple times and borrows mutably.
-/// FnMut trait: Can call multiple times, captures by mutable reference.
+/// `FnMut` trait: Can call multiple times, captures by mutable reference.
 #[allow(dead_code)]
 fn call_with_fn_mut<F>(mut f: F, x: i32) -> i32
 where
@@ -33,7 +33,7 @@ where
 }
 
 /// Accepts a closure that consumes captured values and can only be called once.
-/// FnOnce trait: Consumes captured values, can only call once.
+/// `FnOnce` trait: Consumes captured values, can only call once.
 #[allow(dead_code)]
 fn call_with_fn_once<F>(f: F, x: i32) -> i32
 where
@@ -64,6 +64,8 @@ fn demonstrate_fn_traits() {
     // FnOnce: Consumes captured values
     let vec = vec![1, 2, 3];
     let consume_vec = |x| {
+        // Demonstrates a closure taking ownership (FnOnce) for gittype practice.
+        #[allow(clippy::no_effect_underscore_binding)]
         let _owned = vec; // Takes ownership
         x + 1
     };
@@ -152,7 +154,7 @@ fn demonstrate_iterator_closures() {
         .map(|x| {
             let squared = x * x;
             let doubled = squared * 2;
-            format!("{}^2 * 2 = {}", x, doubled)
+            format!("{x}^2 * 2 = {doubled}")
         })
         .collect();
     println!("Multi-statement closure: {result:?}");
@@ -283,9 +285,9 @@ fn demonstrate_interview_patterns() {
     // Pattern 1: Frequency counting with closure
     let words = ["apple", "banana", "apple", "cherry", "banana"];
     let mut freq: HashMap<&str, i32> = HashMap::new();
-    words.iter().for_each(|&word| {
+    for &word in &words {
         *freq.entry(word).or_insert(0) += 1;
-    });
+    }
     println!("Frequency: {freq:?}");
 
     // Pattern 2: Custom sorting with closure

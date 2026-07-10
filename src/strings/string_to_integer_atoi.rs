@@ -251,9 +251,9 @@ mod tests {
 
     #[test]
     fn test_empty_string() {
-        assert_eq!(my_atoi_brute_force("".to_string()), 0);
-        assert_eq!(my_atoi_optimal("".to_string()), 0);
-        assert_eq!(my_atoi("".to_string()), 0);
+        assert_eq!(my_atoi_brute_force(String::new()), 0);
+        assert_eq!(my_atoi_optimal(String::new()), 0);
+        assert_eq!(my_atoi(String::new()), 0);
     }
 
     #[test]

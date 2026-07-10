@@ -7,7 +7,7 @@
 //! **Replaces Crates:** `r2d2`, `deadpool` (sync parts), `mobc`
 //!
 //! **Real-world Usage:**
-//! - Database Connection Pooling (PostgreSQL, MySQL).
+//! - Database Connection Pooling (`PostgreSQL`, `MySQL`).
 //! - Redis/Memcached client connection management.
 //! - Reusing expensive TLS connections for outgoing HTTP requests.
 //!
@@ -15,6 +15,9 @@
 //! Building a connection pool teaches you how to manage shared state limits,
 //! thread synchronization with `Condvar`, and the powerful RAII (Resource Acquisition Is Initialization)
 //! pattern in Rust to automatically return connections to the pool when they are dropped.
+
+// Pool-state locks are intentionally held across the wait/pop loops that manage connections.
+#![allow(clippy::significant_drop_tightening)]
 
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Condvar, Mutex};
@@ -71,6 +74,9 @@ pub trait ManageConnection: Send + Sync + 'static {
     type Error: Send + 'static;
 
     /// Attempts to create a new connection.
+    ///
+    /// # Errors
+    /// Returns `Err` if establishing the connection fails (e.g. the backend is unreachable).
     fn connect(&self) -> Result<Self::Connection, Self::Error>;
 
     // PRODUCTION NOTE: A real pool trait would also include `is_valid` (ping)
@@ -78,7 +84,7 @@ pub trait ManageConnection: Send + Sync + 'static {
 }
 
 /// Errors that can occur when interacting with the pool.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PoolError<E> {
     /// The factory function returned an error while creating a connection.
     Factory(E),
@@ -122,7 +128,7 @@ struct ActiveCountGuard<'a, M: ManageConnection> {
 }
 
 impl<'a, M: ManageConnection> ActiveCountGuard<'a, M> {
-    fn new(shared: &'a Arc<Shared<M>>) -> Self {
+    const fn new(shared: &'a Arc<Shared<M>>) -> Self {
         Self {
             shared,
             commit: false,
@@ -136,7 +142,7 @@ impl<'a, M: ManageConnection> ActiveCountGuard<'a, M> {
     }
 }
 
-impl<'a, M: ManageConnection> Drop for ActiveCountGuard<'a, M> {
+impl<M: ManageConnection> Drop for ActiveCountGuard<'_, M> {
     fn drop(&mut self) {
         if !self.commit {
             let mut state = self.shared.state.lock().unwrap();
@@ -148,6 +154,9 @@ impl<'a, M: ManageConnection> Drop for ActiveCountGuard<'a, M> {
 
 impl<M: ManageConnection> ConnectionPool<M> {
     /// Creates a new connection pool with a maximum size and a connection manager.
+    ///
+    /// # Panics
+    /// Panics if `max_size` is 0.
     #[must_use]
     pub fn new(max_size: usize, manager: M) -> Self {
         assert!(max_size > 0, "max_size must be greater than 0");
@@ -166,6 +175,12 @@ impl<M: ManageConnection> ConnectionPool<M> {
 
     /// Retrieves a connection from the pool.
     /// Blocks indefinitely until a connection becomes available.
+    ///
+    /// # Errors
+    /// Returns `Err(PoolError::Factory(_))` if the manager fails to create a new connection.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex or condvar is poisoned.
     pub fn get(&self) -> Result<PooledConnection<M>, PoolError<M::Error>> {
         let mut state = self.shared.state.lock().unwrap();
 
@@ -213,6 +228,13 @@ impl<M: ManageConnection> ConnectionPool<M> {
     }
 
     /// Retrieves a connection from the pool, waiting up to `timeout`.
+    ///
+    /// # Errors
+    /// Returns `Err(PoolError::Timeout)` if no connection becomes available within `timeout`,
+    /// or `Err(PoolError::Factory(_))` if the manager fails to create a new connection.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex or condvar is poisoned.
     pub fn get_timeout(
         &self,
         timeout: Duration,
@@ -274,12 +296,20 @@ impl<M: ManageConnection> ConnectionPool<M> {
     }
 
     /// Returns the number of connections currently created and available in the pool.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
+    #[must_use]
     pub fn idle_count(&self) -> usize {
         let state = self.shared.state.lock().unwrap();
         state.idle.len()
     }
 
     /// Returns the number of connections currently checked out by clients.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
+    #[must_use]
     pub fn active_count(&self) -> usize {
         let state = self.shared.state.lock().unwrap();
         state.active_count
@@ -471,7 +501,7 @@ mod tests {
     #[test]
     fn test_pool_discard() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let c_clone = counter.clone();
+        let c_clone = counter;
 
         let pool = make_pool(2, move || {
             Ok::<usize, ()>(c_clone.fetch_add(1, Ordering::SeqCst))

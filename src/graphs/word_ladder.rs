@@ -22,6 +22,8 @@ use std::collections::{HashSet, VecDeque};
 /// one by one, allocating a new `String` every time. It uses `.chars()` and `.collect()`, which
 /// are safe but slow due to repeated heap allocations and UTF-8 validation overhead.
 #[must_use]
+// LeetCode signature: three implementations share (String, String, Vec<String>) by value.
+#[allow(clippy::needless_pass_by_value)]
 pub fn word_ladder_brute_force(
     begin_word: String,
     end_word: String,
@@ -79,12 +81,15 @@ pub fn word_ladder_brute_force(
 /// Time: O(N * M * 26) = O(N * M)
 /// Space: O(N * M) for queue and visited set.
 ///
-/// By recognizing that LeetCode inputs guarantee ASCII characters ('a'-'z'), we can safely cast
+/// By recognizing that `LeetCode` inputs guarantee ASCII characters ('a'-'z'), we can safely cast
 /// strings to `Vec<u8>` or `&[u8]`. This bypasses UTF-8 boundaries and allows us to perform
 /// O(1) in-place byte manipulation, drastically reducing heap allocations per character mutation.
 #[must_use]
 pub fn word_ladder_optimized(begin_word: String, end_word: String, word_list: Vec<String>) -> i32 {
-    let mut word_set: HashSet<Vec<u8>> = word_list.into_iter().map(|w| w.into_bytes()).collect();
+    let mut word_set: HashSet<Vec<u8>> = word_list
+        .into_iter()
+        .map(std::string::String::into_bytes)
+        .collect();
     let end_word_bytes = end_word.into_bytes();
 
     if !word_set.contains(&end_word_bytes) {
@@ -141,7 +146,10 @@ pub fn word_ladder_optimized(begin_word: String, end_word: String, word_list: Ve
 /// search perimeters ever intersect, we've found the shortest path.
 #[must_use]
 pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<String>) -> i32 {
-    let mut word_set: HashSet<Vec<u8>> = word_list.into_iter().map(|w| w.into_bytes()).collect();
+    let mut word_set: HashSet<Vec<u8>> = word_list
+        .into_iter()
+        .map(std::string::String::into_bytes)
+        .collect();
     let end_word_bytes = end_word.into_bytes();
 
     if !word_set.contains(&end_word_bytes) {
@@ -264,10 +272,7 @@ mod tests {
             word_ladder_optimized(begin_word.clone(), end_word.clone(), word_list.clone()),
             0
         );
-        assert_eq!(
-            word_ladder_optimal(begin_word.clone(), end_word.clone(), word_list.clone()),
-            0
-        );
+        assert_eq!(word_ladder_optimal(begin_word, end_word, word_list), 0);
     }
 
     #[test]
@@ -284,10 +289,7 @@ mod tests {
             word_ladder_optimized(begin_word.clone(), end_word.clone(), word_list.clone()),
             2
         );
-        assert_eq!(
-            word_ladder_optimal(begin_word.clone(), end_word.clone(), word_list.clone()),
-            2
-        );
+        assert_eq!(word_ladder_optimal(begin_word, end_word, word_list), 2);
     }
 
     // Stress/Boundary tests
@@ -305,9 +307,6 @@ mod tests {
             word_ladder_optimized(begin_word.clone(), end_word.clone(), word_list.clone()),
             2
         );
-        assert_eq!(
-            word_ladder_optimal(begin_word.clone(), end_word.clone(), word_list.clone()),
-            2
-        );
+        assert_eq!(word_ladder_optimal(begin_word, end_word, word_list), 2);
     }
 }

@@ -70,7 +70,7 @@ pub trait ActorContext {
     fn stop(&mut self);
 }
 
-/// A concrete implementation of ActorContext.
+/// A concrete implementation of `ActorContext`.
 pub struct ContextImpl {
     running: bool,
 }
@@ -206,8 +206,12 @@ impl<A: Actor> Addr<A> {
         let _ = self.sender.send(envelope);
     }
 
-    /// Sends a message and returns a Receiver that will yield the result.
+    /// Sends a message and returns a `Receiver` that will yield the result.
     /// In a fully async system (like Actix), this returns a Future.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SendError::Closed` if the actor's mailbox channel is closed.
     pub fn send<M>(&self, msg: M) -> Result<Receiver<M::Result>, SendError>
     where
         M: Message,
@@ -220,7 +224,7 @@ impl<A: Actor> Addr<A> {
         });
 
         match self.sender.send(envelope) {
-            Ok(_) => Ok(rx),
+            Ok(()) => Ok(rx),
             Err(_) => Err(SendError::Closed),
         }
     }

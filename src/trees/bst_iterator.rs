@@ -70,8 +70,8 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq, Eq)]
 pub struct TreeNode {
     pub val: i32,
-    pub left: Option<Rc<RefCell<TreeNode>>>,
-    pub right: Option<Rc<RefCell<TreeNode>>>,
+    pub left: Option<Rc<RefCell<Self>>>,
+    pub right: Option<Rc<RefCell<Self>>>,
 }
 
 impl TreeNode {
@@ -113,7 +113,7 @@ impl BSTIterator {
     /// effectively, we just prepare the stack.
     #[must_use]
     pub fn new(root: Option<Rc<RefCell<TreeNode>>>) -> Self {
-        let mut iterator = BSTIterator { stack: Vec::new() };
+        let mut iterator = Self { stack: Vec::new() };
         iterator.push_all_left(root);
         iterator
     }
@@ -121,7 +121,7 @@ impl BSTIterator {
     /// Returns the next smallest number.
     ///
     /// # Panics
-    /// Panics if called when `has_next()` is false. (Though LeetCode guarantees valid calls).
+    /// Panics if called when `has_next()` is false. (Though `LeetCode` guarantees valid calls).
     ///
     /// # Gotcha: Name Collision
     /// This method is named `next`, which is the same as `Iterator::next`.
@@ -148,7 +148,7 @@ impl BSTIterator {
 
     /// Returns whether we have a next smallest number.
     #[must_use]
-    pub fn has_next(&self) -> bool {
+    pub const fn has_next(&self) -> bool {
         !self.stack.is_empty()
     }
 
@@ -156,8 +156,12 @@ impl BSTIterator {
     fn push_all_left(&mut self, mut node: Option<Rc<RefCell<TreeNode>>>) {
         while let Some(n) = node {
             self.stack.push(Rc::clone(&n));
-            // Move to left child
-            node = n.borrow().left.clone();
+            // Move to left child. `clone_from` does not apply: `node` was just
+            // moved out by the `while let`, so there is no live value to clone into.
+            #[allow(clippy::assigning_clones)]
+            {
+                node = n.borrow().left.clone();
+            }
         }
     }
 }

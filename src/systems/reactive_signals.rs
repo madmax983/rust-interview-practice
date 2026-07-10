@@ -155,7 +155,7 @@ impl Effect {
 struct SignalState<T> {
     value: T,
     /// Subscribers are stored as weak pointers to prevent memory leaks if the Effect is dropped.
-    /// We use a HashMap keyed by Effect ID to prevent exponential duplicate subscriptions
+    /// We use a `HashMap` keyed by Effect ID to prevent exponential duplicate subscriptions
     /// if an effect evaluates a signal multiple times or in a loop.
     subscribers: HashMap<usize, std::rc::Weak<EffectState>>,
 }
@@ -200,12 +200,10 @@ impl<T> Notify<T> for Signal<T> {
         let mut effects_to_run = Vec::new();
         // Remove dropped weak references
         state.subscribers.retain(|_id, weak_effect| {
-            if let Some(effect) = weak_effect.upgrade() {
+            weak_effect.upgrade().is_some_and(|effect| {
                 effects_to_run.push(effect);
                 true
-            } else {
-                false
-            }
+            })
         });
 
         // Drop the borrow on state BEFORE running effects, because effects might call `set` or `get` on this same signal!
@@ -227,12 +225,10 @@ impl<T> Notify<T> for Signal<T> {
 
         let mut effects_to_run = Vec::new();
         state.subscribers.retain(|_id, weak_effect| {
-            if let Some(effect) = weak_effect.upgrade() {
+            weak_effect.upgrade().is_some_and(|effect| {
                 effects_to_run.push(effect);
                 true
-            } else {
-                false
-            }
+            })
         });
 
         drop(state);
@@ -272,14 +268,14 @@ pub struct Memo<T> {
     signal: Signal<T>,
     // We must keep the effect alive as long as the Memo is alive.
     // By wrapping it in an Rc, multiple Memo handles can share the same computation.
-    _effect: Rc<Effect>,
+    keep_alive_effect: Rc<Effect>,
 }
 
 impl<T: Clone> Clone for Memo<T> {
     fn clone(&self) -> Self {
         Self {
             signal: self.signal.clone(),
-            _effect: Rc::clone(&self._effect),
+            keep_alive_effect: Rc::clone(&self.keep_alive_effect),
         }
     }
 }
@@ -320,7 +316,7 @@ where
 
         Self {
             signal,
-            _effect: Rc::new(effect),
+            keep_alive_effect: Rc::new(effect),
         }
     }
 }
@@ -446,7 +442,7 @@ mod tests {
         let name_clone = name.clone();
         let greeting = Memo::new(move || format!("Hello, {}!", name_clone.get()));
 
-        let greeting_clone = greeting.clone();
+        let greeting_clone = greeting;
         let loud_greeting = Memo::new(move || greeting_clone.get().to_uppercase());
 
         assert_eq!(loud_greeting.get(), "HELLO, ALICE!");

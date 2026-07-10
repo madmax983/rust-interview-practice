@@ -5,7 +5,7 @@
 //! **Replaces Crates:** `lru`, `cached` (partial)
 //!
 //! **Real-world Usage:**
-//! - Database buffer pools (PostgreSQL, MySQL)
+//! - Database buffer pools (`PostgreSQL`, `MySQL`)
 //! - CPU caches (L1/L2 eviction policies)
 //! - Web browser resource caching
 //! - CDN edge node content eviction
@@ -62,12 +62,12 @@ use std::ptr::NonNull;
 struct Node<K, V> {
     key: K,
     val: V,
-    prev: Option<NonNull<Node<K, V>>>,
-    next: Option<NonNull<Node<K, V>>>,
+    prev: Option<NonNull<Self>>,
+    next: Option<NonNull<Self>>,
 }
 
 impl<K, V> Node<K, V> {
-    fn new(key: K, val: V) -> Self {
+    const fn new(key: K, val: V) -> Self {
         Self {
             key,
             val,
@@ -100,6 +100,9 @@ unsafe impl<K: Sync, V: Sync> Sync for LRUCache<K, V> {}
 
 impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
     /// Creates a new LRU Cache with the given capacity.
+    ///
+    /// # Panics
+    /// Panics if `capacity` is 0.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
         // GOTCHA: A capacity of 0 is effectively useless but valid in some interpretations.
@@ -150,7 +153,8 @@ impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
 
             // Create new node
             let node = Box::new(Node::new(key.clone(), val));
-            let node_ptr = NonNull::new(Box::into_raw(node)).unwrap();
+            // SAFETY: `Box::into_raw` never returns a null pointer, so this cannot be null.
+            let node_ptr = unsafe { NonNull::new_unchecked(Box::into_raw(node)) };
 
             // Insert into map
             self.map.insert(key, node_ptr);
@@ -185,7 +189,7 @@ impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
     /// # Safety
     /// `node` must be a valid pointer to a node that is *not* currently in the list
     /// (or has been unlinked).
-    unsafe fn add_to_head(&mut self, mut node: NonNull<Node<K, V>>) {
+    const unsafe fn add_to_head(&mut self, mut node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid.
         let node_ref = unsafe { node.as_mut() };
 
@@ -208,7 +212,7 @@ impl<K: Hash + Eq + Clone, V> LRUCache<K, V> {
     ///
     /// # Safety
     /// `node` must be a valid pointer to a node currently in the list.
-    unsafe fn unlink(&mut self, mut node: NonNull<Node<K, V>>) {
+    const unsafe fn unlink(&mut self, mut node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid.
         let node_ref = unsafe { node.as_mut() };
 

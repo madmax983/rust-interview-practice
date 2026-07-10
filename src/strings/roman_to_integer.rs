@@ -73,13 +73,13 @@ impl TryFrom<char> for RomanSymbol {
     }
 }
 
-/// Brute Force Approach: HashMap lookup
+/// Brute Force Approach: `HashMap` lookup
 ///
 /// Time: O(N) where N is the length of the string.
 /// Space: O(N) for the collected `Vec<char>` (the map itself is constant size).
 ///
 /// This is how you might solve it in Java or Python. While valid in Rust,
-/// using a HashMap adds overhead (hashing, heap allocation) that we don't need
+/// using a `HashMap` adds overhead (hashing, heap allocation) that we don't need
 /// for a fixed set of characters.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
@@ -235,20 +235,17 @@ mod tests {
             assert_eq!(
                 roman_to_int_brute_force(s.to_string()),
                 expected,
-                "Brute force (HashMap) failed on {}",
-                s
+                "Brute force (HashMap) failed on {s}"
             );
             assert_eq!(
                 roman_to_int_optimized(s.to_string()),
                 expected,
-                "Optimized (Peekable) failed on {}",
-                s
+                "Optimized (Peekable) failed on {s}"
             );
             assert_eq!(
                 roman_to_int_optimal(s.to_string()),
                 expected,
-                "Optimal failed on {}",
-                s
+                "Optimal failed on {s}"
             );
         }
     }

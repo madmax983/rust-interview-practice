@@ -48,6 +48,11 @@ pub fn sort_colors_brute_force(nums: &mut Vec<i32>) {
 /// This approach counts the frequencies of `0`, `1`, and `2`, and then sequentially
 /// overwrites the elements in the vector based on the counts.
 #[allow(clippy::ptr_arg)]
+#[allow(
+    clippy::cast_sign_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap
+)] // LeetCode constraints guarantee it fits
 pub fn sort_colors_optimized(nums: &mut Vec<i32>) {
     // We could use a hash map, but an array is O(1) and specifically fits the constraint (0, 1, 2).
     let mut counts = [0, 0, 0];
@@ -132,12 +137,12 @@ pub fn sort_colors(nums: &mut Vec<i32>) {
     sort_colors_optimal(nums);
 }
 
-/// ## Alternative Approaches
-///
-/// - **Quick Sort / Merge Sort**: The Brute Force approach utilizes standard unstable sort (which is
-///   Pattern-Defeating Quicksort in Rust). This is O(N log N) but usually quite fast due to caching.
-/// - **Lomuto / Hoare Partitioning**: Variations of Quicksort's partition scheme can be applied,
-///   but the Dutch National Flag algorithm (3-way partitioning) is perfectly specialized for exactly three values.
+// ## Alternative Approaches
+//
+// - **Quick Sort / Merge Sort**: The Brute Force approach utilizes standard unstable sort (which is
+//   Pattern-Defeating Quicksort in Rust). This is O(N log N) but usually quite fast due to caching.
+// - **Lomuto / Hoare Partitioning**: Variations of Quicksort's partition scheme can be applied,
+//   but the Dutch National Flag algorithm (3-way partitioning) is perfectly specialized for exactly three values.
 
 #[cfg(test)]
 mod tests {

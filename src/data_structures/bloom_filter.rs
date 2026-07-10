@@ -13,6 +13,13 @@
 //! Understanding the math behind false positive rates and optimal sizing (m bits, k hashes)
 //! is crucial for system design. You'll also learn about double hashing to simulate k hash functions.
 
+// Intentional index/byte/word manipulation and statistical estimation casts.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss
+)]
+
 use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -64,6 +71,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     /// # Arguments
     /// * `expected_items` - The number of items you expect to insert (n).
     /// * `false_positive_rate` - The desired false positive rate (p) (e.g., 0.01 for 1%).
+    #[must_use]
     pub fn new(expected_items: usize, false_positive_rate: f64) -> Self {
         // RUST INSIGHT:
         // Optimal m = -(n * ln(p)) / (ln(2)^2)
@@ -104,12 +112,12 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
 
     /// Adds an item to the Bloom Filter.
     pub fn add(&mut self, item: &T) {
-        let (h1, h2) = self.get_hash_pair(item);
+        let (h1, h2) = Self::get_hash_pair(item);
 
         for i in 0..self.hash_count {
             // Double hashing: h_i = (h1 + i * h2) % m
             // Wrapping add to allow overflow (standard behavior)
-            let index = h1.wrapping_add((i as u64).wrapping_mul(h2)) % self.bit_count;
+            let index = h1.wrapping_add(u64::from(i).wrapping_mul(h2)) % self.bit_count;
             self.set_bit(index);
         }
     }
@@ -117,10 +125,10 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     /// Checks if an item might be in the Bloom Filter.
     /// Returns `true` if the item is *probably* present, `false` if it is *definitely* not.
     pub fn contains(&self, item: &T) -> bool {
-        let (h1, h2) = self.get_hash_pair(item);
+        let (h1, h2) = Self::get_hash_pair(item);
 
         for i in 0..self.hash_count {
-            let index = h1.wrapping_add((i as u64).wrapping_mul(h2)) % self.bit_count;
+            let index = h1.wrapping_add(u64::from(i).wrapping_mul(h2)) % self.bit_count;
             if !self.get_bit(index) {
                 return false;
             }
@@ -153,8 +161,8 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     ///
     /// We use `DefaultHasher` which is not cryptographically secure and can vary across Rust versions,
     /// but is sufficient for this educational implementation.
-    /// In production, use SipHash (which DefaultHasher often wraps) or Murmur3 explicitly.
-    fn get_hash_pair(&self, item: &T) -> (u64, u64) {
+    /// In production, use `SipHash` (which `DefaultHasher` often wraps) or Murmur3 explicitly.
+    fn get_hash_pair(item: &T) -> (u64, u64) {
         let mut hasher1 = DefaultHasher::new();
         item.hash(&mut hasher1);
         let h1 = hasher1.finish();
@@ -183,7 +191,7 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
         // Let's implement a simple FNV-1a hasher for the second hash to ensure independence.
 
         let h2 = {
-            let mut hasher = Fnv1aHasher::new(0xcbf29ce484222325); // FNV offset basis
+            let mut hasher = Fnv1aHasher::new(0xcbf2_9ce4_8422_2325); // FNV offset basis
             item.hash(&mut hasher);
             hasher.finish()
         };
@@ -192,7 +200,10 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     }
 
     /// Saves the Bloom Filter to a file.
-    /// Format: [bit_count (8 bytes)] [hash_count (4 bytes)] [vec_len (8 bytes)] [bit_vec (8 * vec_len bytes)]
+    /// Format: [`bit_count` (8 bytes)] [`hash_count` (4 bytes)] [`vec_len` (8 bytes)] [`bit_vec` (8 * `vec_len` bytes)]
+    ///
+    /// # Errors
+    /// Returns an [`io::Error`] if the file cannot be created or written to.
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> io::Result<()> {
         let mut file = File::create(path)?;
         file.write_all(&self.bit_count.to_le_bytes())?;
@@ -205,6 +216,10 @@ impl<T: ?Sized + Hash> BloomFilter<T> {
     }
 
     /// Loads a Bloom Filter from a file.
+    ///
+    /// # Errors
+    /// Returns an [`io::Error`] if the file cannot be opened or read (e.g. it is
+    /// missing or truncated).
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let mut file = File::open(path)?;
 
@@ -240,7 +255,7 @@ struct Fnv1aHasher {
 }
 
 impl Fnv1aHasher {
-    fn new(seed: u64) -> Self {
+    const fn new(seed: u64) -> Self {
         Self { state: seed }
     }
 }
@@ -251,9 +266,9 @@ impl Hasher for Fnv1aHasher {
     }
 
     fn write(&mut self, bytes: &[u8]) {
-        let prime = 1099511628211;
+        let prime = 1_099_511_628_211;
         for byte in bytes {
-            self.state ^= *byte as u64;
+            self.state ^= u64::from(*byte);
             self.state = self.state.wrapping_mul(prime);
         }
     }
@@ -303,15 +318,11 @@ mod tests {
             }
         }
 
-        let actual_rate = false_positives as f64 / trials as f64;
-        println!("Expected FPR: {}, Actual FPR: {}", p, actual_rate);
+        let actual_rate = f64::from(false_positives) / trials as f64;
+        println!("Expected FPR: {p}, Actual FPR: {actual_rate}");
 
         // Allow some variance, but it shouldn't be way off (e.g. > 2*p)
-        assert!(
-            actual_rate < p * 2.0 + 0.01,
-            "FPR too high: {}",
-            actual_rate
-        );
+        assert!(actual_rate < p * 2.0 + 0.01, "FPR too high: {actual_rate}");
     }
 
     #[test]
@@ -348,7 +359,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = format!("test_bloom_filter_{}.bin", now);
+        let path = format!("test_bloom_filter_{now}.bin");
 
         let mut bf = BloomFilter::new(100, 0.01);
         bf.add("persist");

@@ -120,6 +120,9 @@ impl LegacyApplication {
 
 #[cfg(test)]
 mod tests {
+    // test-code: these tests assert "no panic occurred"; the `assert!(true)` markers are illustrative.
+    #![allow(clippy::assertions_on_constants)]
+
     use super::*;
 
     #[test]

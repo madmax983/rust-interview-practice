@@ -13,16 +13,16 @@
 //!
 //! **Components:**
 //! 1.  **Data File (Active)**: Append-only file where all writes go.
-//! 2.  **KeyDir (In-Memory)**: A Hash Map mapping `Key -> (FileId, ValueSize, ValuePos, Timestamp)`.
-//! 3.  **Hint File**: Acceleration structure to rebuild KeyDir faster on startup (omitted for brevity).
+//! 2.  **`KeyDir` (In-Memory)**: A Hash Map mapping `Key -> (FileId, ValueSize, ValuePos, Timestamp)`.
+//! 3.  **Hint File**: Acceleration structure to rebuild `KeyDir` faster on startup (omitted for brevity).
 //!
 //! **Write Path:**
 //! 1.  Serialize Key, Value, Metadata.
 //! 2.  Append to active file.
-//! 3.  Update KeyDir.
+//! 3.  Update `KeyDir`.
 //!
 //! **Read Path:**
-//! 1.  Lookup Key in KeyDir to get position.
+//! 1.  Lookup Key in `KeyDir` to get position.
 //! 2.  Seek to position in file.
 //! 3.  Read and deserialize value.
 //!
@@ -37,11 +37,16 @@
 //! *   All keys must fit in RAM.
 //! *   Compaction (Merge) is required to reclaim space from updated/deleted keys.
 
+// Truncating usize sizes into the 32-bit on-disk length fields is intentional.
+#![allow(clippy::cast_possible_truncation)]
+// The keydir/active-file locks are intentionally held across scan/read/write critical sections.
+#![allow(clippy::significant_drop_tightening)]
+
 use crc32fast::Hasher;
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -55,10 +60,8 @@ type Value = Vec<u8>;
 /// Pointer to a value on disk.
 #[derive(Debug, Clone, Copy)]
 struct EntryLocation {
-    file_id: u32,
     value_sz: u32,
     value_pos: u64,
-    timestamp: u64,
 }
 
 /// The main Bitcask instance.
@@ -75,14 +78,10 @@ pub struct Bitcask {
     keydir: Arc<Mutex<HashMap<Key, EntryLocation>>>,
     /// Active file for writing
     active_file: Arc<Mutex<File>>,
-    /// Path to the directory storing files
-    base_path: PathBuf,
-    /// Current file ID
-    current_file_id: u32,
 }
 
 /// Represents an entry in the log file.
-/// Format: [CRC (4) | Tstamp (8) | KeySz (4) | ValSz (4) | Key | Value]
+/// Format: [CRC (4) | Tstamp (8) | `KeySz` (4) | `ValSz` (4) | Key | Value]
 struct EntryHeader {
     crc: u32,
     timestamp: u64,
@@ -97,6 +96,10 @@ const TOMBSTONE_VALUE_SZ: u32 = u32::MAX;
 
 impl Bitcask {
     /// Opens or creates a Bitcask store at the given path.
+    ///
+    /// # Errors
+    /// Returns `Err` if the directory cannot be created, the data file cannot be opened,
+    /// or the on-disk log cannot be read while rebuilding the in-memory index.
     pub fn open(path: impl AsRef<Path>) -> io::Result<Self> {
         let path = path.as_ref().to_path_buf();
         if !path.exists() {
@@ -113,11 +116,9 @@ impl Bitcask {
             .append(true)
             .open(&file_path)?;
 
-        let mut store = Self {
+        let store = Self {
             keydir: Arc::new(Mutex::new(HashMap::new())),
             active_file: Arc::new(Mutex::new(file)),
-            base_path: path,
-            current_file_id: 0,
         };
 
         // If file exists, we should replay it to build KeyDir.
@@ -127,7 +128,7 @@ impl Bitcask {
     }
 
     /// Rebuilds the in-memory index by scanning the file.
-    fn rebuild_keydir(&mut self, file_path: &Path) -> io::Result<()> {
+    fn rebuild_keydir(&self, file_path: &Path) -> io::Result<()> {
         let mut file = File::open(file_path)?;
         let mut pos = 0;
         let len = file.metadata()?.len();
@@ -147,15 +148,19 @@ impl Bitcask {
             let mut key = vec![0u8; header.key_sz as usize];
             file.read_exact(&mut key)?;
 
-            let mut value = Vec::new();
-            let entry_sz = if header.value_sz == TOMBSTONE_VALUE_SZ {
+            let value = if header.value_sz == TOMBSTONE_VALUE_SZ {
                 // Tombstone has no value payload
-                HEADER_SIZE as u64 + header.key_sz as u64
+                Vec::new()
             } else {
                 // Read Value to verify CRC
-                value = vec![0u8; header.value_sz as usize];
-                file.read_exact(&mut value)?;
-                HEADER_SIZE as u64 + header.key_sz as u64 + header.value_sz as u64
+                let mut buf = vec![0u8; header.value_sz as usize];
+                file.read_exact(&mut buf)?;
+                buf
+            };
+            let entry_sz = if header.value_sz == TOMBSTONE_VALUE_SZ {
+                HEADER_SIZE as u64 + u64::from(header.key_sz)
+            } else {
+                HEADER_SIZE as u64 + u64::from(header.key_sz) + u64::from(header.value_sz)
             };
 
             let mut hasher = Hasher::new();
@@ -174,15 +179,13 @@ impl Bitcask {
                     keydir.remove(&key);
                 } else {
                     // Value position is start + header + key
-                    let value_pos = pos + HEADER_SIZE as u64 + header.key_sz as u64;
+                    let value_pos = pos + HEADER_SIZE as u64 + u64::from(header.key_sz);
 
                     keydir.insert(
                         key,
                         EntryLocation {
-                            file_id: self.current_file_id,
                             value_sz: header.value_sz,
                             value_pos,
-                            timestamp: header.timestamp,
                         },
                     );
                 }
@@ -198,6 +201,14 @@ impl Bitcask {
     }
 
     /// Stores a key-value pair.
+    ///
+    /// # Errors
+    /// Returns `Err` if writing the entry to the active data file fails.
+    ///
+    /// # Panics
+    /// Panics if the system clock is before the UNIX epoch or if an internal mutex is poisoned.
+    // Owned key/value match the standard key-value store API even though this impl only needs borrows.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn put(&self, key: Key, value: Value) -> io::Result<()> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -240,10 +251,8 @@ impl Bitcask {
         keydir.insert(
             key,
             EntryLocation {
-                file_id: self.current_file_id,
                 value_sz: header.value_sz,
                 value_pos,
-                timestamp,
             },
         );
 
@@ -251,6 +260,12 @@ impl Bitcask {
     }
 
     /// Retrieves a value by key.
+    ///
+    /// # Errors
+    /// Returns `Err` if seeking/reading the value from the data file fails or the CRC check fails.
+    ///
+    /// # Panics
+    /// Panics if an internal mutex is poisoned.
     pub fn get(&self, key: &Key) -> io::Result<Option<Value>> {
         // LOCK ORDER: acquire `active_file` BEFORE `keydir` (see the lock-order
         // invariant on `Bitcask`). Previously this method locked `keydir` first
@@ -297,6 +312,14 @@ impl Bitcask {
     }
 
     /// Deletes a key (Writes a tombstone).
+    ///
+    /// # Errors
+    /// Returns `Err` if writing the tombstone entry to the active data file fails.
+    ///
+    /// # Panics
+    /// Panics if the system clock is before the UNIX epoch or if an internal mutex is poisoned.
+    // Owned key matches the standard key-value store API even though this impl only needs a borrow.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn delete(&self, key: Key) -> io::Result<()> {
         // Write tombstone to file
         let timestamp = SystemTime::now()
@@ -371,6 +394,7 @@ mod tests {
     use super::*;
     use std::env;
     use std::fs;
+    use std::path::PathBuf;
 
     // Helper to create a temp dir without external crates
     fn temp_dir() -> PathBuf {
@@ -495,8 +519,8 @@ mod tests {
     }
 
     /// Stress test: many threads concurrently `put`/`get`/`delete`. Before the
-    /// lock-order fix, `get` (keydir -> active_file) and `put`/`delete`
-    /// (active_file -> keydir) formed an ABBA cycle that could deadlock. We run
+    /// lock-order fix, `get` (keydir -> `active_file`) and `put`/`delete`
+    /// (`active_file` -> keydir) formed an ABBA cycle that could deadlock. We run
     /// the workload in a helper thread and wait on a channel with a timeout, so a
     /// regression fails the test instead of hanging forever.
     #[test]
@@ -537,8 +561,8 @@ mod tests {
             Ok(()) => {
                 coordinator.join().unwrap();
             }
-            Err(_) => panic!(
-                "concurrent get/put/delete did not finish within timeout (possible deadlock)"
+            Err(err) => panic!(
+                "concurrent get/put/delete did not finish within timeout (possible deadlock): {err}"
             ),
         }
 

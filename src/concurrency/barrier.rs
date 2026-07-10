@@ -7,7 +7,7 @@
 //! **Replaces Crates:** `std::sync::Barrier`
 //!
 //! **Real-world Usage:**
-//! - Parallel algorithms with distinct phases (e.g., MapReduce, scatter-gather).
+//! - Parallel algorithms with distinct phases (e.g., `MapReduce`, scatter-gather).
 //! - Wait for all worker threads to finish initialization before starting a workload.
 //! - Graphics rendering pipelines (synchronizing frames across multiple GPU command queues).
 //!
@@ -16,6 +16,10 @@
 //! "generation" counter to prevent a fast thread from leaving the barrier, racing around,
 //! and entering the next phase before other threads have even woken up from the first phase.
 //! Building this teaches you how to orchestrate complex wake-up conditions using `Condvar`.
+
+// Lock guards are intentionally held across condvar waits/notifications;
+// do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
 
 use std::sync::{Condvar, Mutex};
 
@@ -75,7 +79,7 @@ impl BarrierWaitResult {
     /// Returns `true` if this thread is the "leader" (the last thread to arrive at the barrier).
     /// Exactly one thread will receive `true` per barrier cycle.
     #[must_use]
-    pub fn is_leader(&self) -> bool {
+    pub const fn is_leader(&self) -> bool {
         self.is_leader
     }
 }
@@ -189,7 +193,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Barrier requires at least 1 thread")]
     fn test_barrier_zero_threads() {
-        Barrier::new(0);
+        let _ = Barrier::new(0);
     }
 
     #[test]

@@ -57,6 +57,8 @@ enum State {
 }
 
 #[must_use]
+// Course labels are 0..num_courses, so i32->usize casts are in range.
+#[allow(clippy::cast_sign_loss)]
 pub fn can_finish_optimized(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
     // GOTCHA: Casting i32 to usize is generally safe for indices if verified positive,
     // but in competitive programming inputs are usually valid within constraints.
@@ -125,6 +127,8 @@ fn has_cycle_dfs(node: usize, adj: &[Vec<usize>], state: &mut [State]) -> bool {
 /// Time: O(V + E)
 /// Space: O(V + E)
 #[must_use]
+// Course labels are 0..num_courses, so i32->usize casts are in range.
+#[allow(clippy::cast_sign_loss)]
 pub fn can_finish_optimal(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {
     let num_courses = num_courses as usize;
     let mut adj = vec![vec![]; num_courses];
@@ -138,8 +142,8 @@ pub fn can_finish_optimal(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> boo
     }
 
     let mut queue = VecDeque::new();
-    for i in 0..num_courses {
-        if in_degree[i] == 0 {
+    for (i, &degree) in in_degree.iter().enumerate() {
+        if degree == 0 {
             queue.push_back(i);
         }
     }

@@ -68,12 +68,12 @@ struct Node<K, V> {
     key: K,
     val: V,
     freq: usize,
-    prev: Option<NonNull<Node<K, V>>>,
-    next: Option<NonNull<Node<K, V>>>,
+    prev: Option<NonNull<Self>>,
+    next: Option<NonNull<Self>>,
 }
 
 impl<K, V> Node<K, V> {
-    fn new(key: K, val: V) -> Self {
+    const fn new(key: K, val: V) -> Self {
         Self {
             key,
             val,
@@ -91,7 +91,7 @@ struct FrequencyList<K, V> {
 }
 
 impl<K, V> FrequencyList<K, V> {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             head: None,
             tail: None,
@@ -100,7 +100,7 @@ impl<K, V> FrequencyList<K, V> {
 
     /// Adds a node to the head (MRU position for this frequency).
     /// Safety: Node must be valid and not currently linked.
-    unsafe fn push_front(&mut self, mut node: NonNull<Node<K, V>>) {
+    const unsafe fn push_front(&mut self, mut node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid.
         unsafe {
             let node_ref = node.as_mut();
@@ -120,7 +120,7 @@ impl<K, V> FrequencyList<K, V> {
 
     /// Removes a specific node from the list.
     /// Safety: Node must be in this list.
-    unsafe fn remove(&mut self, mut node: NonNull<Node<K, V>>) {
+    const unsafe fn remove(&mut self, mut node: NonNull<Node<K, V>>) {
         // SAFETY: Caller guarantees node is valid and in this list.
         unsafe {
             let node_ref = node.as_mut();
@@ -145,7 +145,7 @@ impl<K, V> FrequencyList<K, V> {
     }
 
     /// Removes and returns the tail node (LRU position for this frequency).
-    unsafe fn pop_back(&mut self) -> Option<NonNull<Node<K, V>>> {
+    const unsafe fn pop_back(&mut self) -> Option<NonNull<Node<K, V>>> {
         if let Some(tail) = self.tail {
             // SAFETY: tail is valid as it comes from self.tail
             unsafe {
@@ -157,7 +157,7 @@ impl<K, V> FrequencyList<K, V> {
         }
     }
 
-    fn is_empty(&self) -> bool {
+    const fn is_empty(&self) -> bool {
         self.head.is_none()
     }
 }
@@ -172,11 +172,16 @@ pub struct LFUCache<K, V> {
 // UNSAFE JUSTIFICATION:
 // Same as LRU, we own the nodes via the `key_map`. The `freq_map` just organizes them.
 // We implement Send/Sync manually because `NonNull` is !Send/!Sync.
+// Send is upheld manually (see SAFETY note above); the raw NonNull fields are owned exclusively.
+#[allow(clippy::non_send_fields_in_send_ty)]
 unsafe impl<K: Send, V: Send> Send for LFUCache<K, V> {}
 unsafe impl<K: Sync, V: Sync> Sync for LFUCache<K, V> {}
 
 impl<K: Hash + Eq + Clone, V> LFUCache<K, V> {
     /// Creates a new LFU Cache with the given capacity.
+    ///
+    /// # Panics
+    /// Panics if `capacity` is 0.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");
@@ -218,7 +223,8 @@ impl<K: Hash + Eq + Clone, V> LFUCache<K, V> {
 
             // Create new node
             let node = Box::new(Node::new(key.clone(), val));
-            let node_ptr = NonNull::new(Box::into_raw(node)).unwrap();
+            // SAFETY: `Box::into_raw` never returns a null pointer, so this cannot be null.
+            let node_ptr = unsafe { NonNull::new_unchecked(Box::into_raw(node)) };
 
             self.key_map.insert(key, node_ptr);
 
@@ -289,11 +295,13 @@ impl<K: Hash + Eq + Clone, V> LFUCache<K, V> {
     }
 
     /// Returns the current size of the cache.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.key_map.len()
     }
 
     /// Returns true if the cache is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.key_map.is_empty()
     }

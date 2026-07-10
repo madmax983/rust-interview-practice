@@ -12,6 +12,8 @@ use std::rc::Rc;
 // ============================================================================
 
 /// Classic builder pattern with setters.
+// Fields are the builder's target; only read via derived Debug in this demo
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 struct Server {
     host: String,
@@ -29,7 +31,7 @@ struct ServerBuilder {
 
 impl ServerBuilder {
     fn new() -> Self {
-        ServerBuilder {
+        Self {
             host: "localhost".to_string(),
             port: 8080,
             timeout: 30,
@@ -42,17 +44,17 @@ impl ServerBuilder {
         self
     }
 
-    fn port(mut self, port: u16) -> Self {
+    const fn port(mut self, port: u16) -> Self {
         self.port = port;
         self
     }
 
-    fn timeout(mut self, timeout: u64) -> Self {
+    const fn timeout(mut self, timeout: u64) -> Self {
         self.timeout = timeout;
         self
     }
 
-    fn max_connections(mut self, max: u32) -> Self {
+    const fn max_connections(mut self, max: u32) -> Self {
         self.max_connections = max;
         self
     }
@@ -73,6 +75,7 @@ fn demonstrate_builder() {
         .host("example.com")
         .port(443)
         .timeout(60)
+        .max_connections(1000)
         .build();
 
     println!("Server: {server:?}");
@@ -94,13 +97,15 @@ struct WithUrl;
 struct Ready;
 
 impl ConnectionBuilder<Initial> {
-    fn new() -> Self {
-        ConnectionBuilder {
+    const fn new() -> Self {
+        Self {
             url: None,
             state: Initial,
         }
     }
 
+    // Consumes `self` to enforce the type-state transition (can only be called on Initial)
+    #[allow(clippy::unused_self)]
     fn url(self, url: impl Into<String>) -> ConnectionBuilder<WithUrl> {
         ConnectionBuilder {
             url: Some(url.into()),
@@ -120,6 +125,8 @@ impl ConnectionBuilder<WithUrl> {
 }
 
 impl ConnectionBuilder<Ready> {
+    // `&self` requires the Ready state at compile time; the receiver enforces the type-state
+    #[allow(clippy::unused_self)]
     fn send(&self, data: &str) {
         println!("Sending: {data}");
     }
@@ -152,21 +159,21 @@ struct UserId(u64);
 struct ProductId(u64);
 
 impl UserId {
-    fn new(id: u64) -> Self {
-        UserId(id)
+    const fn new(id: u64) -> Self {
+        Self(id)
     }
 
-    fn value(&self) -> u64 {
+    const fn value(self) -> u64 {
         self.0
     }
 }
 
 impl ProductId {
-    fn new(id: u64) -> Self {
-        ProductId(id)
+    const fn new(id: u64) -> Self {
+        Self(id)
     }
 
-    fn value(&self) -> u64 {
+    const fn value(self) -> u64 {
         self.0
     }
 }
@@ -204,7 +211,7 @@ struct Email(String);
 impl Email {
     fn new(email: String) -> Result<Self, String> {
         if email.contains('@') {
-            Ok(Email(email))
+            Ok(Self(email))
         } else {
             Err("Invalid email".to_string())
         }
@@ -248,7 +255,7 @@ struct Reading;
 
 impl FileHandle<Closed> {
     fn new(path: impl Into<String>) -> Self {
-        FileHandle {
+        Self {
             path: path.into(),
             state: Closed,
         }
@@ -272,6 +279,8 @@ impl FileHandle<Open> {
         }
     }
 
+    // Demonstrates closing directly from the Open state for gittype practice
+    #[allow(dead_code)]
     fn close(self) -> FileHandle<Closed> {
         println!("Closing file: {}", self.path);
         FileHandle {
@@ -282,7 +291,9 @@ impl FileHandle<Open> {
 }
 
 impl FileHandle<Reading> {
-    fn get_data(&self) -> &str {
+    // `&self` requires the Reading state at compile time; the receiver enforces the type-state
+    #[allow(clippy::unused_self)]
+    const fn get_data(&self) -> &'static str {
         "file contents"
     }
 
@@ -322,7 +333,7 @@ impl TempFile {
     fn new(path: impl Into<String>) -> Self {
         let path = path.into();
         println!("Creating temp file: {path}");
-        TempFile { path }
+        Self { path }
     }
 }
 
@@ -343,17 +354,19 @@ fn demonstrate_raii() {
 }
 
 /// Guard pattern for scoped resources.
+// Demonstrates the RAII guard pattern (Drop + Deref) for gittype practice
+#[allow(dead_code)]
 struct MutexGuard<'a, T> {
     data: &'a mut T,
 }
 
-impl<'a, T> Drop for MutexGuard<'a, T> {
+impl<T> Drop for MutexGuard<'_, T> {
     fn drop(&mut self) {
         println!("Releasing lock");
     }
 }
 
-impl<'a, T> Deref for MutexGuard<'a, T> {
+impl<T> Deref for MutexGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -361,7 +374,7 @@ impl<'a, T> Deref for MutexGuard<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for MutexGuard<'a, T> {
+impl<T> DerefMut for MutexGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.data
     }
@@ -381,15 +394,15 @@ trait Visitor {
 enum Node {
     Number(i32),
     String(String),
-    List(Vec<Node>),
+    List(Vec<Self>),
 }
 
 impl Node {
     fn accept(&self, visitor: &mut dyn Visitor) {
         match self {
-            Node::Number(n) => visitor.visit_number(*n),
-            Node::String(s) => visitor.visit_string(s),
-            Node::List(nodes) => {
+            Self::Number(n) => visitor.visit_number(*n),
+            Self::String(s) => visitor.visit_string(s),
+            Self::List(nodes) => {
                 for node in nodes {
                     node.accept(visitor);
                 }
@@ -458,7 +471,7 @@ struct Compressor {
 
 impl Compressor {
     fn new(strategy: Box<dyn CompressionStrategy>) -> Self {
-        Compressor { strategy }
+        Self { strategy }
     }
 
     fn compress(&self, data: &[u8]) -> Vec<u8> {
@@ -507,8 +520,8 @@ struct AddCommand {
 }
 
 impl AddCommand {
-    fn new(target: SharedValue, value: i32) -> Self {
-        AddCommand { value, target }
+    const fn new(target: SharedValue, value: i32) -> Self {
+        Self { value, target }
     }
 }
 
@@ -531,7 +544,7 @@ struct CommandHistory {
 
 impl CommandHistory {
     fn new() -> Self {
-        CommandHistory {
+        Self {
             done: Vec::new(),
             undone: Vec::new(),
         }
@@ -587,8 +600,8 @@ struct Counter {
 }
 
 impl Counter {
-    fn new(max: u32) -> Self {
-        Counter { count: 0, max }
+    const fn new(max: u32) -> Self {
+        Self { count: 0, max }
     }
 }
 
@@ -605,7 +618,7 @@ impl Iterator for Counter {
     }
 }
 
-/// IntoIterator for owned iteration.
+/// `IntoIterator` for owned iteration.
 struct Numbers {
     items: Vec<i32>,
 }
@@ -632,6 +645,11 @@ fn demonstrate_iterator() {
     for n in numbers {
         println!("{n}");
     }
+
+    // Infinite iterator: take a finite prefix
+    for n in Fibonacci::new().take(5) {
+        println!("fib: {n}");
+    }
 }
 
 /// Infinite iterator.
@@ -641,8 +659,8 @@ struct Fibonacci {
 }
 
 impl Fibonacci {
-    fn new() -> Self {
-        Fibonacci { curr: 0, next: 1 }
+    const fn new() -> Self {
+        Self { curr: 0, next: 1 }
     }
 }
 
@@ -670,7 +688,7 @@ struct Observable {
 
 impl Observable {
     fn new() -> Self {
-        Observable {
+        Self {
             observers: Vec::new(),
         }
     }
@@ -728,12 +746,16 @@ fn demonstrate_channel_observer() {
 // ============================================================================
 
 /// Adapter to implement foreign traits.
+// Demonstrates the adapter/newtype workaround for orphan rules for gittype practice
+#[allow(dead_code)]
 struct ExternalType {
     value: i32,
 }
 
 // Can't implement Display for ExternalType directly (orphan rules)
 // Use newtype wrapper:
+// Demonstrates the adapter/newtype workaround for orphan rules for gittype practice
+#[allow(dead_code)]
 struct DisplayAdapter(ExternalType);
 
 impl std::fmt::Display for DisplayAdapter {
@@ -743,6 +765,8 @@ impl std::fmt::Display for DisplayAdapter {
 }
 
 /// Transparent wrapper with Deref.
+// Demonstrates a transparent Deref wrapper for gittype practice
+#[allow(dead_code)]
 #[repr(transparent)]
 struct Wrapper<T>(T);
 
@@ -769,7 +793,7 @@ struct PluginManager {
 
 impl PluginManager {
     fn new() -> Self {
-        PluginManager {
+        Self {
             plugins: HashMap::new(),
         }
     }
@@ -786,7 +810,7 @@ impl PluginManager {
 struct UppercasePlugin;
 
 impl Plugin for UppercasePlugin {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "uppercase"
     }
 

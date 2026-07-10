@@ -15,6 +15,10 @@
 //! teaches you how to map thread IDs to specific memory regions safely, and how to deal with the primary challenge
 //! of TLS: cleaning up memory when a thread exits.
 
+// Lock guards are intentionally held across the registry critical sections;
+// do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, ThreadId};
@@ -84,6 +88,10 @@ impl<T> ThreadLocal<T> {
     /// To prevent lifetime issues, use-after-free bugs (if `clear` is called while a reference is held),
     /// and mutable aliasing, we enforce a closure-based access pattern.
     /// This ensures the reference cannot outlive the lock guard, matching `std::thread_local!` semantics.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal registry `Mutex` is poisoned.
     pub fn with<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&T) -> R,
@@ -107,6 +115,10 @@ impl<T> ThreadLocal<T> {
     /// to use interior mutability (e.g., `RefCell` or `Cell`) if they want to mutate. We provide
     /// `with_mut` here for convenience, but it inherently blocks other threads while executing `f`
     /// because it holds the global `Mutex` write lock!
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal registry `Mutex` is poisoned.
     pub fn with_mut<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut T) -> R,
@@ -125,6 +137,10 @@ impl<T> ThreadLocal<T> {
 
     /// Explicitly removes the current thread's value from the registry.
     /// Useful for mimicking thread-exit cleanup.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal registry `Mutex` is poisoned.
     pub fn clear(&self) {
         let tid = thread::current().id();
         let mut map = self.registry.lock().unwrap();

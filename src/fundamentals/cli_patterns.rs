@@ -6,6 +6,15 @@
 //! **Enable with:** `cargo build --features cli-patterns`
 
 #![cfg(feature = "cli-patterns")]
+// demonstrates ratatui TUI idioms (components, layouts, widgets); items are reference
+// examples for gittype practice and are not all wired into a running app.
+#![allow(dead_code)]
+// cli_patterns.rs is ratatui TUI code — geometry/color/scroll casts are intentional.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
 use ratatui::{
     Frame, Terminal,
@@ -73,19 +82,19 @@ struct App {
 }
 
 impl App {
-    fn new() -> Self {
-        App {
+    const fn new() -> Self {
+        Self {
             running: true,
             counter: 0,
             input: String::new(),
         }
     }
 
-    fn on_tick(&mut self) {
+    const fn on_tick(&mut self) {
         self.counter += 1;
     }
 
-    fn quit(&mut self) {
+    const fn quit(&mut self) {
         self.running = false;
     }
 }
@@ -167,7 +176,7 @@ impl ListComponent {
     fn new(items: Vec<String>) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
-        ListComponent { items, state }
+        Self { items, state }
     }
 
     fn next(&mut self) {
@@ -254,7 +263,7 @@ struct MultiViewApp {
 
 impl MultiViewApp {
     fn new() -> Self {
-        MultiViewApp {
+        Self {
             running: true,
             current_view: View::Main,
             list: ListComponent::new(vec![
@@ -266,11 +275,11 @@ impl MultiViewApp {
         }
     }
 
-    fn switch_view(&mut self, view: View) {
+    const fn switch_view(&mut self, view: View) {
         self.current_view = view;
     }
 
-    fn toggle_popup(&mut self) {
+    const fn toggle_popup(&mut self) {
         self.show_popup = !self.show_popup;
     }
 }
@@ -302,7 +311,7 @@ fn handle_events(app: &mut MultiViewApp, key: KeyEvent) -> Option<AppEvent> {
     }
 }
 
-fn process_event(app: &mut MultiViewApp, event: AppEvent) {
+const fn process_event(app: &mut MultiViewApp, event: AppEvent) {
     match event {
         AppEvent::Quit => app.running = false,
         AppEvent::SwitchView(view) => app.switch_view(view),
@@ -422,8 +431,8 @@ struct ColorScheme {
 }
 
 impl ColorScheme {
-    fn dark() -> Self {
-        ColorScheme {
+    const fn dark() -> Self {
+        Self {
             bg: Color::Black,
             fg: Color::White,
             accent: Color::Cyan,
@@ -432,8 +441,8 @@ impl ColorScheme {
         }
     }
 
-    fn light() -> Self {
-        ColorScheme {
+    const fn light() -> Self {
+        Self {
             bg: Color::White,
             fg: Color::Black,
             accent: Color::Blue,
@@ -492,7 +501,7 @@ async fn run_async_tui() -> io::Result<()> {
             Some(msg) = rx.recv() => {
                 println!("{msg}");
             }
-            _ = tokio::time::sleep(std::time::Duration::from_millis(100)) => {
+            () = tokio::time::sleep(std::time::Duration::from_millis(100)) => {
                 if event::poll(std::time::Duration::from_millis(0))?
                     && let Event::Key(key) = event::read()?
                         && key.code == KeyCode::Char('q') {
@@ -513,15 +522,15 @@ struct ScrollableText {
 }
 
 impl ScrollableText {
-    fn new(content: Vec<String>) -> Self {
-        ScrollableText { content, scroll: 0 }
+    const fn new(content: Vec<String>) -> Self {
+        Self { content, scroll: 0 }
     }
 
-    fn scroll_up(&mut self) {
+    const fn scroll_up(&mut self) {
         self.scroll = self.scroll.saturating_sub(1);
     }
 
-    fn scroll_down(&mut self) {
+    const fn scroll_down(&mut self) {
         if self.scroll < self.content.len().saturating_sub(1) {
             self.scroll += 1;
         }
@@ -556,7 +565,7 @@ impl SearchableList {
     fn new(items: Vec<String>) -> Self {
         let mut state = ListState::default();
         state.select(Some(0));
-        SearchableList {
+        Self {
             filtered: items.clone(),
             items,
             query: String::new(),
@@ -724,13 +733,13 @@ struct Cli {
 /// Best practices:
 /// - Always restore terminal on exit
 /// - Set panic hook to restore terminal
-/// - Use raw_mode for input handling
+/// - Use `raw_mode` for input handling
 /// - Poll events with timeout for responsive UI
 /// - Keep render logic pure (no side effects)
 /// - Test components in isolation
 ///
 /// Resources:
-/// - ratatui examples: https://github.com/ratatui-org/ratatui/tree/main/examples
-/// - ratatui book: https://ratatui.rs/
+/// - ratatui examples: <https://github.com/ratatui-org/ratatui/tree/main/examples>
+/// - ratatui book: <https://ratatui.rs>/
 #[allow(dead_code)]
 const TUI_GUIDE: &str = "See module docs";

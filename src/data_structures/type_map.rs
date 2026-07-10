@@ -103,7 +103,6 @@ impl DynamicTypeMap for TypeMap {
     }
 
     /// Gets a reference to the value of type `T`, if it exists in the map.
-
     fn get<T: 'static>(&self) -> Option<&T> {
         self.map
             .get(&TypeId::of::<T>())
@@ -111,7 +110,6 @@ impl DynamicTypeMap for TypeMap {
     }
 
     /// Gets a mutable reference to the value of type `T`, if it exists in the map.
-
     fn get_mut<T: 'static>(&mut self) -> Option<&mut T> {
         self.map
             .get_mut(&TypeId::of::<T>())
@@ -126,7 +124,6 @@ impl DynamicTypeMap for TypeMap {
     }
 
     /// Checks if the map contains a value of type `T`.
-
     fn contains<T: 'static>(&self) -> bool {
         self.map.contains_key(&TypeId::of::<T>())
     }

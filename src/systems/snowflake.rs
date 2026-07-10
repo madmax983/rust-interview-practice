@@ -16,6 +16,9 @@
 //! It teaches you about bitwise operations, epoch offsets, handling clock drift (NTP sync issues),
 //! and concurrency control (Mutex vs Atomics) for sequence generation.
 
+// Word truncation is intentional when packing millisecond timestamps into 64-bit IDs.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -63,7 +66,7 @@ const NODE_ID_SHIFT: u64 = SEQUENCE_BITS;
 const TIMESTAMP_SHIFT: u64 = SEQUENCE_BITS + NODE_ID_BITS;
 
 /// A trait for generating unique distributed IDs.
-/// Allows swapping implementations (e.g., Snowflake vs UUIDv7) seamlessly.
+/// Allows swapping implementations (e.g., Snowflake vs `UUIDv7`) seamlessly.
 pub trait IdGenerator: Send + Sync {
     type Id;
 
@@ -110,8 +113,7 @@ impl Snowflake {
     pub fn new(epoch: u64, node_id: u64) -> Self {
         assert!(
             node_id <= MAX_NODE_ID,
-            "Node ID must be between 0 and {}",
-            MAX_NODE_ID
+            "Node ID must be between 0 and {MAX_NODE_ID}"
         );
 
         Self {
@@ -227,7 +229,7 @@ mod tests {
     use std::thread;
 
     // Use a recent epoch for testing (e.g., 2024-01-01)
-    const TEST_EPOCH: u64 = 1704067200000;
+    const TEST_EPOCH: u64 = 1_704_067_200_000;
 
     #[test]
     fn test_unique_generation() {
@@ -238,7 +240,7 @@ mod tests {
         // This will span multiple milliseconds and test the sequence logic.
         for _ in 0..10_000 {
             let id = generator.generate();
-            assert!(ids.insert(id), "Duplicate ID generated: {}", id);
+            assert!(ids.insert(id), "Duplicate ID generated: {id}");
         }
     }
 

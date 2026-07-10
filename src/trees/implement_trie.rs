@@ -7,7 +7,7 @@
 //!
 //! This problem demonstrates:
 //! 1.  **Recursive Data Structures**: Similar to trees but with N children.
-//! 2.  **Trade-offs**: Memory vs Speed vs Flexibility (Array vs HashMap).
+//! 2.  **Trade-offs**: Memory vs Speed vs Flexibility (Array vs `HashMap`).
 //! 3.  **Ownership**: Managing recursive `Box<Node>` structures.
 //!
 //! Note: data-structure design problem; a single canonical implementation (or the shown
@@ -46,13 +46,14 @@ use std::collections::{HashMap, HashSet};
 ///
 /// This is arguably "optimized" for `search` (O(L) average), but fails the spirit of a Trie
 /// because `starts_with` becomes O(N * L) where N is the number of words, as we must scan all words.
-/// Alternatively, a `Vec<String>` would be O(N * L) for both search and starts_with.
+/// Alternatively, a `Vec<String>` would be O(N * L) for both search and `starts_with`.
 /// Here we use `HashSet` to be slightly less naive, but the prefix search is the killer.
 ///
 /// Time:
 /// - insert: O(L)
 /// - search: O(L)
-/// - starts_with: O(N * L) - Must iterate all words to check prefix.
+/// - `starts_with`: O(N * L) - Must iterate all words to check prefix.
+///
 /// Space: O(N * L) - Store every character of every word.
 #[derive(Default)]
 pub struct TrieBruteForce {
@@ -71,10 +72,14 @@ impl TrieBruteForce {
         self.words.insert(word);
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         self.words.contains(&word)
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `starts_with(prefix: String)`
     pub fn starts_with(&self, prefix: String) -> bool {
         // Linear scan required for prefix check in a hash set
         self.words.iter().any(|w| w.starts_with(&prefix))
@@ -91,14 +96,14 @@ impl TrieBruteForce {
 /// It supports full Unicode characters and sparse data well.
 ///
 /// Time: O(L) for all operations.
-/// Space: O(N * L) - potentially more overhead per node (HashMap structure) than array.
+/// Space: O(N * L) - potentially more overhead per node (`HashMap` structure) than array.
 ///
 /// # Rust Insight
 /// Using `HashMap` avoids the fixed-size array limitation and handles any valid `char`.
 /// However, `HashMap` has memory overhead and hashing cost.
 #[derive(Default)]
 pub struct TrieOptimized {
-    children: HashMap<char, Box<TrieOptimized>>,
+    children: HashMap<char, Box<Self>>,
     is_end_of_word: bool,
 }
 
@@ -111,17 +116,20 @@ impl TrieOptimized {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `insert(word: String)`
     pub fn insert(&mut self, word: String) {
         let mut current = self;
         for c in word.chars() {
             current = current
                 .children
                 .entry(c)
-                .or_insert_with(|| Box::new(TrieOptimized::new()));
+                .or_insert_with(|| Box::new(Self::new()));
         }
         current.is_end_of_word = true;
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         let mut current = self;
         for c in word.chars() {
@@ -133,6 +141,8 @@ impl TrieOptimized {
         current.is_end_of_word
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `starts_with(prefix: String)`
     pub fn starts_with(&self, prefix: String) -> bool {
         let mut current = self;
         for c in prefix.chars() {
@@ -163,7 +173,7 @@ impl TrieOptimized {
 /// - Indexing with `(c as u8 - b'a') as usize` is safe due to constraints.
 #[derive(Default)]
 pub struct TrieOptimal {
-    children: [Option<Box<TrieOptimal>>; 26],
+    children: [Option<Box<Self>>; 26],
     is_end_of_word: bool,
 }
 
@@ -176,13 +186,20 @@ impl TrieOptimal {
         }
     }
 
+    /// Inserts `word` into the trie.
+    ///
+    /// # Panics
+    ///
+    /// Does not panic in practice: the child slot at `index` is populated immediately
+    /// before the `unwrap`, and inputs are lowercase ASCII per the problem constraints.
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `insert(word: String)`
     pub fn insert(&mut self, word: String) {
         let mut current = self;
         for b in word.bytes() {
             let index = (b - b'a') as usize;
             // Get mutable reference to the option, inserting if None
             if current.children[index].is_none() {
-                current.children[index] = Some(Box::new(TrieOptimal::new()));
+                current.children[index] = Some(Box::new(Self::new()));
             }
             // Move to the child
             // SAFETY: We just inserted it if it was None.
@@ -191,6 +208,8 @@ impl TrieOptimal {
         current.is_end_of_word = true;
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         let mut current = self;
         for b in word.bytes() {
@@ -203,6 +222,8 @@ impl TrieOptimal {
         current.is_end_of_word
     }
 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `starts_with(prefix: String)`
     pub fn starts_with(&self, prefix: String) -> bool {
         let mut current = self;
         for b in prefix.bytes() {

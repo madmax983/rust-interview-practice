@@ -1,4 +1,4 @@
-//! # SlotMap Implementation
+//! # `SlotMap` Implementation
 //!
 //! A data structure that returns unique, stable keys (generational indices) when elements are inserted,
 //! allowing O(1) retrieval and deletion while completely solving the ABA problem safely.
@@ -11,7 +11,7 @@
 //! - UI frameworks (tracking widgets).
 //!
 //! **Why build it yourself?**
-//! Building a SlotMap teaches you how generational indices work. It's the standard solution to "I need references
+//! Building a `SlotMap` teaches you how generational indices work. It's the standard solution to "I need references
 //! to things in a collection, but I also need to mutate the collection" in Rust. By keeping a generation counter
 //! alongside the data, you can catch dangling index bugs at runtime with zero unsafe code.
 
@@ -63,10 +63,12 @@ pub struct Key {
 
 impl Key {
     // Expose index and generation for potential external use or debugging, though typically opaque.
-    pub fn index(&self) -> usize {
+    #[must_use]
+    pub const fn index(&self) -> usize {
         self.index
     }
-    pub fn generation(&self) -> u32 {
+    #[must_use]
+    pub const fn generation(&self) -> u32 {
         self.generation
     }
 }
@@ -93,7 +95,7 @@ pub struct SlotMap<T> {
 impl<T> SlotMap<T> {
     /// Creates a new, empty `SlotMap`.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             slots: Vec::new(),
             free_head: None,
@@ -113,13 +115,13 @@ impl<T> SlotMap<T> {
 
     /// Returns the number of elements in the map.
     #[must_use]
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns `true` if the map contains no elements.
     #[must_use]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -176,9 +178,8 @@ impl<T> SlotMap<T> {
                         self.free_head = Some(key.index);
                         self.len -= 1;
                         return Some(value);
-                    } else {
-                        unreachable!();
                     }
+                    unreachable!();
                 }
                 _ => return None, // Generation mismatch or already free (ABA prevented)
             }

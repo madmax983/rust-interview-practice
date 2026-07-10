@@ -7,7 +7,7 @@
 //! You may assume that the given expression is always valid. All intermediate results will be in the range of `[-2^31, 2^31 - 1]`.
 //!
 //! - Difficulty: Medium
-//! - LeetCode: <https://leetcode.com/problems/basic-calculator-ii/>
+//! - `LeetCode`: <https://leetcode.com/problems/basic-calculator-ii/>
 //!
 //! ## Why this matters in Rust
 //! This problem perfectly illustrates the power of Rust's iterators, enums, and pattern matching.
@@ -36,6 +36,11 @@
 /// Using `.replace(" ", "")` creates a whole new `String` allocation. While it makes
 /// parsing easier, it's inefficient. Idiomatic Rust avoids unnecessary allocations
 /// by parsing strings in-place (often using byte slices `&[u8]` for ASCII).
+///
+/// # Panics
+///
+/// Panics if a character that passes `is_ascii_digit` fails to convert via `to_digit(10)`;
+/// this cannot happen for valid input.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::cast_possible_truncation)]
@@ -97,9 +102,7 @@ pub fn calculate_optimized(s: String) -> i32 {
     let bytes = s.as_bytes();
     let n = bytes.len();
 
-    for i in 0..n {
-        let b = bytes[i];
-
+    for (i, &b) in bytes.iter().enumerate() {
         if b.is_ascii_digit() {
             current_num = current_num * 10 + i32::from(b - b'0');
         }
@@ -149,6 +152,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    #[must_use]
     pub fn new(s: &'a str) -> Self {
         let mut bytes = s.as_bytes().iter();
         let peeked = bytes.next().copied();
@@ -160,7 +164,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-impl<'a> Iterator for Lexer<'a> {
+impl Iterator for Lexer<'_> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -241,7 +245,7 @@ pub fn calculate_optimal(s: String) -> i32 {
                 Token::Divide => {
                     last_number /= num;
                 }
-                _ => unreachable!(),
+                Token::Number(_) => unreachable!(),
             },
             op => current_op = op,
         }
@@ -306,20 +310,17 @@ mod tests {
             assert_eq!(
                 calculate_brute_force(s.to_string()),
                 expected,
-                "Brute force failed for {}",
-                s
+                "Brute force failed for {s}"
             );
             assert_eq!(
                 calculate_optimized(s.to_string()),
                 expected,
-                "Optimized failed for {}",
-                s
+                "Optimized failed for {s}"
             );
             assert_eq!(
                 calculate_optimal(s.to_string()),
                 expected,
-                "Optimal failed for {}",
-                s
+                "Optimal failed for {s}"
             );
         }
     }

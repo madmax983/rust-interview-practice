@@ -4,7 +4,7 @@
 //! to store and manage components associated with entities.
 //!
 //! **Replaces Crates:** `sparsey`, `hecs` (internal component storage), C++'s `entt`
-//! **Real-world systems:** Game engines (Bevy, Amethyst, EnTT) use sparse sets to pack component data
+//! **Real-world systems:** Game engines (Bevy, Amethyst, `EnTT`) use sparse sets to pack component data
 //! contiguously in memory, enabling extremely fast, cache-friendly iteration while maintaining `O(1)` random access.
 //!
 //! **Why build it yourself?**
@@ -41,7 +41,7 @@
 //!
 //! **Complexity:**
 //! - `insert(id)`: O(1) amortized
-//! - `remove(id)`: O(1) (using swap_remove)
+//! - `remove(id)`: O(1) (using `swap_remove`)
 //! - `get(id)`: O(1)
 //! - `iterate()`: O(N) over contiguous memory (extremely cache-friendly)
 
@@ -96,7 +96,8 @@ pub struct SparseSet<V> {
 
 impl<V> SparseSet<V> {
     /// Creates a new, empty Sparse Set.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             sparse: Vec::new(),
             dense: Vec::new(),
@@ -104,6 +105,7 @@ impl<V> SparseSet<V> {
     }
 
     /// Creates a new, empty Sparse Set with the given capacities.
+    #[must_use]
     pub fn with_capacity(sparse_cap: usize, dense_cap: usize) -> Self {
         Self {
             sparse: Vec::with_capacity(sparse_cap),
@@ -113,6 +115,7 @@ impl<V> SparseSet<V> {
 
     /// Returns a slice of all tightly packed entries.
     /// This is the killer feature: O(N) cache-friendly iteration.
+    #[must_use]
     pub fn entries(&self) -> &[Entry<V>] {
         &self.dense
     }

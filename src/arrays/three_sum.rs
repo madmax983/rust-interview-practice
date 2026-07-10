@@ -126,29 +126,33 @@ pub fn three_sum_optimal(nums: Vec<i32>) -> Vec<Vec<i32>> {
         while left < right {
             let sum = nums[i] + nums[left] + nums[right];
 
-            if sum == 0 {
-                // Found a triplet!
-                result.push(vec![nums[i], nums[left], nums[right]]);
+            match sum.cmp(&0) {
+                std::cmp::Ordering::Equal => {
+                    // Found a triplet!
+                    result.push(vec![nums[i], nums[left], nums[right]]);
 
-                // Skip duplicates for left pointer
-                while left < right && nums[left] == nums[left + 1] {
+                    // Skip duplicates for left pointer
+                    while left < right && nums[left] == nums[left + 1] {
+                        left += 1;
+                    }
+
+                    // Skip duplicates for right pointer
+                    while left < right && nums[right] == nums[right - 1] {
+                        right -= 1;
+                    }
+
+                    // Move both pointers
                     left += 1;
-                }
-
-                // Skip duplicates for right pointer
-                while left < right && nums[right] == nums[right - 1] {
                     right -= 1;
                 }
-
-                // Move both pointers
-                left += 1;
-                right -= 1;
-            } else if sum < 0 {
-                // Sum too small, move left pointer right (increase sum)
-                left += 1;
-            } else {
-                // Sum too large, move right pointer left (decrease sum)
-                right -= 1;
+                std::cmp::Ordering::Less => {
+                    // Sum too small, move left pointer right (increase sum)
+                    left += 1;
+                }
+                std::cmp::Ordering::Greater => {
+                    // Sum too large, move right pointer left (decrease sum)
+                    right -= 1;
+                }
             }
         }
     }

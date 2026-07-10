@@ -90,7 +90,7 @@ impl<R: BufRead> CsvReader<R> {
     }
 
     /// Creates a new CSV reader with custom configuration.
-    pub fn with_config(reader: R, config: CsvConfig) -> Self {
+    pub const fn with_config(reader: R, config: CsvConfig) -> Self {
         Self {
             reader,
             config,
@@ -127,9 +127,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
             // carried over from a previous CR-terminated record within the same read
             // buffer before pulling a fresh line from the underlying reader. This is what
             // makes bare `\r` (old-Mac) line endings work without dropping records.
-            let segment = if !self.pending.is_empty() {
-                std::mem::take(&mut self.pending)
-            } else {
+            let segment = if self.pending.is_empty() {
                 self.line_buf.clear();
                 let bytes_read = match self.reader.read_line(&mut self.line_buf) {
                     Ok(b) => b,
@@ -153,6 +151,8 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                 }
 
                 std::mem::take(&mut self.line_buf)
+            } else {
+                std::mem::take(&mut self.pending)
             };
 
             let mut chars = segment.chars().peekable();
@@ -187,9 +187,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                     } else if c == '\r' || c == '\n' {
                         // End of line.
                         // If it's `\r`, check if next is `\n`
-                        if c == '\r'
-                            && let Some(&'\n') = chars.peek()
-                        {
+                        if c == '\r' && chars.peek() == Some(&'\n') {
                             chars.next();
                         }
 

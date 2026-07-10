@@ -11,10 +11,13 @@
 //! - Deduplication and grouping operations.
 //!
 //! **Why build it yourself?**
-//! Everyone uses HashMaps, but few understand the mechanics of collision resolution,
+//! Everyone uses `HashMaps`, but few understand the mechanics of collision resolution,
 //! load factor triggers, and the performance differences between chaining (linked lists)
 //! and open addressing (arrays). Robin Hood hashing teaches you how to minimize the variance
 //! of probe lengths, drastically reducing the worst-case lookup time.
+
+// Intentional index/word manipulation and load-factor estimation casts.
+#![allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
 
 use std::borrow::Borrow;
 use std::collections::hash_map::DefaultHasher;
@@ -86,7 +89,7 @@ impl<K: Hash + Eq, V> Default for HashMap<K, V> {
 }
 
 impl<K: Hash + Eq, V> HashMap<K, V> {
-    /// Creates an empty HashMap.
+    /// Creates an empty `HashMap`.
     #[must_use]
     pub fn new() -> Self {
         let mut buckets = Vec::with_capacity(INITIAL_CAPACITY);
@@ -96,12 +99,14 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
     }
 
     /// Returns the number of elements in the map.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.len
     }
 
     /// Returns true if the map contains no elements.
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -125,28 +130,25 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
         let mut idx = (hash as usize) & (cap - 1);
 
         loop {
-            match self.buckets[idx].as_mut() {
-                Some(existing) => {
-                    if existing.hash == entry.hash && existing.key == entry.key {
-                        // Key exists, update value and return old
-                        return Some(mem::replace(&mut existing.value, entry.value));
-                    }
-
-                    // Robin Hood swap: if the current entry has probed further than the existing one, swap them.
-                    if entry.dib > existing.dib {
-                        mem::swap(existing, &mut entry);
-                    }
-
-                    // Continue probing for the displaced (or original) entry
-                    entry.dib += 1;
-                    idx = (idx + 1) & (cap - 1);
+            if let Some(existing) = self.buckets[idx].as_mut() {
+                if existing.hash == entry.hash && existing.key == entry.key {
+                    // Key exists, update value and return old
+                    return Some(mem::replace(&mut existing.value, entry.value));
                 }
-                None => {
-                    // Empty bucket found, insert here
-                    self.buckets[idx] = Some(entry);
-                    self.len += 1;
-                    return None;
+
+                // Robin Hood swap: if the current entry has probed further than the existing one, swap them.
+                if entry.dib > existing.dib {
+                    mem::swap(existing, &mut entry);
                 }
+
+                // Continue probing for the displaced (or original) entry
+                entry.dib += 1;
+                idx = (idx + 1) & (cap - 1);
+            } else {
+                // Empty bucket found, insert here
+                self.buckets[idx] = Some(entry);
+                self.len += 1;
+                return None;
             }
         }
     }
@@ -163,21 +165,18 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
         let mut dib = 0;
 
         loop {
-            match &self.buckets[idx] {
-                Some(entry) => {
-                    if entry.hash == hash && entry.key.borrow() == key {
-                        return Some(&entry.value);
-                    }
-                    if dib > entry.dib {
-                        // The element we are looking for would have been inserted before this one
-                        // or would have displaced it. Therefore, it's not in the map.
-                        return None;
-                    }
-                    dib += 1;
-                    idx = (idx + 1) & (cap - 1);
-                }
-                None => return None,
+            // An empty bucket means the key is absent, so `?` short-circuits to `None`.
+            let entry = self.buckets[idx].as_ref()?;
+            if entry.hash == hash && entry.key.borrow() == key {
+                return Some(&entry.value);
             }
+            if dib > entry.dib {
+                // The element we are looking for would have been inserted before this one
+                // or would have displaced it. Therefore, it's not in the map.
+                return None;
+            }
+            dib += 1;
+            idx = (idx + 1) & (cap - 1);
         }
     }
 
@@ -195,12 +194,13 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
         loop {
             // RUST INSIGHT: To avoid NLL borrow checking issues, we first extract
             // whether the current bucket matches or whether we should stop searching.
-            let (is_match, stop) = match &self.buckets[idx] {
-                Some(entry) => (
+            // An empty bucket means the key is absent, so `?` short-circuits to `None`.
+            let (is_match, stop) = {
+                let entry = self.buckets[idx].as_ref()?;
+                (
                     entry.hash == hash && entry.key.borrow() == key,
                     dib > entry.dib,
-                ),
-                None => return None,
+                )
             };
 
             if is_match {
@@ -229,23 +229,21 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
         let mut dib = 0;
 
         loop {
-            match &self.buckets[idx] {
-                Some(entry) => {
-                    if entry.hash == hash && entry.key.borrow() == key {
-                        // Found it. Remove it and do backward shifting to fill the gap.
-                        let old_val = self.buckets[idx].take().unwrap().value;
-                        self.len -= 1;
-                        self.backward_shift(idx);
-                        return Some(old_val);
-                    }
-                    if dib > entry.dib {
-                        return None;
-                    }
-                    dib += 1;
-                    idx = (idx + 1) & (cap - 1);
-                }
-                None => return None,
+            // An empty bucket means the key is absent, so `?` short-circuits to `None`.
+            let entry = self.buckets[idx].as_ref()?;
+            if entry.hash == hash && entry.key.borrow() == key {
+                // Found it. Remove it and do backward shifting to fill the gap.
+                // `take` yields Some because we just matched on Some above.
+                let old_val = self.buckets[idx].take().map(|e| e.value);
+                self.len -= 1;
+                self.backward_shift(idx);
+                return old_val;
             }
+            if dib > entry.dib {
+                return None;
+            }
+            dib += 1;
+            idx = (idx + 1) & (cap - 1);
         }
     }
 
@@ -282,19 +280,16 @@ impl<K: Hash + Eq, V> HashMap<K, V> {
             let mut idx = (entry.hash as usize) & (cap - 1);
 
             loop {
-                match self.buckets[idx].as_mut() {
-                    Some(existing) => {
-                        if entry.dib > existing.dib {
-                            mem::swap(existing, &mut entry);
-                        }
-                        entry.dib += 1;
-                        idx = (idx + 1) & (cap - 1);
+                if let Some(existing) = self.buckets[idx].as_mut() {
+                    if entry.dib > existing.dib {
+                        mem::swap(existing, &mut entry);
                     }
-                    None => {
-                        self.buckets[idx] = Some(entry);
-                        self.len += 1;
-                        break;
-                    }
+                    entry.dib += 1;
+                    idx = (idx + 1) & (cap - 1);
+                } else {
+                    self.buckets[idx] = Some(entry);
+                    self.len += 1;
+                    break;
                 }
             }
         }
@@ -418,10 +413,10 @@ mod tests {
 
         // Ensure all other elements are still reachable
         for i in 0..20 {
-            if i != 10 {
-                assert_eq!(map.get(&i), Some(&i));
-            } else {
+            if i == 10 {
                 assert_eq!(map.get(&i), None);
+            } else {
+                assert_eq!(map.get(&i), Some(&i));
             }
         }
     }

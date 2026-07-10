@@ -75,6 +75,11 @@ unsafe impl<T: Sync + Send> Sync for Arc<T> {}
 
 impl<T> Arc<T> {
     /// Creates a new `Arc` containing the given data.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the underlying allocation returned by `Box::into_raw` is null,
+    /// which cannot happen for a successful allocation.
     pub fn new(data: T) -> Self {
         // PRODUCTION NOTE:
         // A production `Arc` also supports `Weak` pointers, which requires a separate `weak_count` atomic.
@@ -188,7 +193,7 @@ mod tests {
         let arc = Arc::new(42);
         assert_eq!(*arc, 42);
 
-        let arc2 = arc.clone();
+        let arc2 = arc;
         assert_eq!(*arc2, 42);
     }
 

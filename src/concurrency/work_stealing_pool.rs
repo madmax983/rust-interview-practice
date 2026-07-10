@@ -18,6 +18,17 @@
 //! - **Fairness**: Thieves steal from the "oldest" tasks (FIFO) to take larger chunks of work (assuming recursive splitting).
 //! - **Synchronization**: Managing distributed queues with minimal contention.
 
+// Low-level index manipulation: RNG-derived victim indices are intentionally
+// truncated/wrapped to fit the worker array.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+// Lock guards are intentionally held across condvar waits and steal critical
+// sections; do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::cell::Cell;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -77,7 +88,7 @@ thread_local! {
     static WORKER_ID: Cell<Option<usize>> = const { Cell::new(None) };
 }
 
-/// The main ThreadPool struct.
+/// The main `ThreadPool` struct.
 pub struct WorkStealingPool {
     workers: Arc<Vec<WorkerState>>,
     global_queue: Arc<GlobalQueue>,
@@ -90,12 +101,16 @@ struct GlobalQueue {
 }
 
 struct WorkerState {
-    id: usize,
     queue: Mutex<VecDeque<Job>>,
 }
 
 impl WorkStealingPool {
-    /// Create a new WorkStealingPool with `size` threads.
+    /// Create a new `WorkStealingPool` with `size` threads.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `size` is zero, or if a worker thread fails to spawn.
+    #[must_use]
     pub fn new(size: usize) -> Self {
         assert!(size > 0, "Pool size must be > 0");
 
@@ -108,9 +123,8 @@ impl WorkStealingPool {
         let mut worker_states = Vec::with_capacity(size);
 
         // Pre-create states to share arc
-        for id in 0..size {
+        for _ in 0..size {
             worker_states.push(WorkerState {
-                id,
                 queue: Mutex::new(VecDeque::new()),
             });
         }
@@ -124,7 +138,7 @@ impl WorkStealingPool {
             let thread_global = global_queue.clone();
             let thread_shutdown = shutdown.clone();
 
-            let builder = thread::Builder::new().name(format!("worker-{}", id));
+            let builder = thread::Builder::new().name(format!("worker-{id}"));
 
             let _handle = builder
                 .spawn(move || {
@@ -196,7 +210,7 @@ impl WorkStealingPool {
                 .unwrap();
         }
 
-        WorkStealingPool {
+        Self {
             workers: shared_states, // we keep this mainly to ensure they stay alive? No, threads own them.
             global_queue,
             shutdown,
@@ -204,6 +218,10 @@ impl WorkStealingPool {
     }
 
     /// Executes the function `f` on a thread in the pool.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an internal queue `Mutex` is poisoned by a panicking job.
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
@@ -211,7 +229,7 @@ impl WorkStealingPool {
         let job = Box::new(f);
 
         // Check if called from a worker thread
-        let worker_id = WORKER_ID.with(|id_cell| id_cell.get());
+        let worker_id = WORKER_ID.with(std::cell::Cell::get);
 
         if let Some(id) = worker_id {
             // Push to local queue
@@ -264,13 +282,13 @@ struct XorShift64 {
 }
 
 impl XorShift64 {
-    fn new(seed: u64) -> Self {
+    const fn new(seed: u64) -> Self {
         // Avoid 0 state
-        let state = if seed == 0 { 0xCAFEBABE } else { seed };
+        let state = if seed == 0 { 0xCAFE_BABE } else { seed };
         Self { state }
     }
 
-    fn next(&mut self) -> u64 {
+    const fn next(&mut self) -> u64 {
         let mut x = self.state;
         x ^= x << 13;
         x ^= x >> 7;
@@ -338,7 +356,7 @@ mod tests {
         // 3. Worker 1 is busy executing A (and its subtasks).
         // 4. Worker 2 is idle. It should steal B, C, D from Worker 1.
 
-        let counter_clone = counter.clone();
+        let counter_clone = counter;
         pool.execute(move || {
             // This runs on Worker X.
             // Submit 100 tasks to Worker X's local queue.

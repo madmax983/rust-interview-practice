@@ -43,6 +43,7 @@
 /// Time: O(N) - Iterates through each character in the string once.
 /// Space: O(N) - In the worst case (e.g., all opening brackets), the stack will hold all characters.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn is_valid_brute_force(s: String) -> bool {
     let mut stack = Vec::new();
 
@@ -83,9 +84,10 @@ pub fn is_valid_brute_force(s: String) -> bool {
 /// Time: O(N) - Iterates through each byte.
 /// Space: O(N) - In the worst case, the stack stores all bytes.
 ///
-/// Because LeetCode guarantees the input only contains ASCII bracket characters,
+/// Because `LeetCode` guarantees the input only contains ASCII bracket characters,
 /// we can bypass UTF-8 decoding (`chars()`) and work directly on the underlying bytes (`as_bytes()`).
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn is_valid_optimal(s: String) -> bool {
     // RUST INSIGHT: Working with `u8` bytes is significantly faster than `char` for ASCII strings,
     // as it avoids UTF-8 multi-byte boundary checks.
@@ -122,6 +124,7 @@ pub fn is_valid_optimal(s: String) -> bool {
 /// Time: O(N)
 /// Space: O(N)
 #[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn is_valid_optimized(s: String) -> bool {
     // We fold over the bytes. State is our `Vec<u8>` stack.
     let result = s.as_bytes().iter().try_fold(Vec::new(), |mut stack, &b| {
@@ -150,15 +153,15 @@ pub fn is_valid(s: String) -> bool {
     is_valid_optimal(s)
 }
 
-/// ## Alternative Approaches
-///
-/// - **Early Exit on Odd Lengths**: Since each opening bracket needs a closing bracket,
-///   strings with odd lengths can be immediately returned as `false`.
-/// - **Stackless Validation (Counter approach)**: If there is only ONE type of bracket
-///   (e.g., only `(` and `)`), you can simply use an integer counter instead of a stack,
-///   incrementing on open and decrementing on close (returning false if it goes negative).
-///   This drops space complexity to O(1). However, since there are three types that can
-///   be nested, a stack is strictly required for this problem.
+// ## Alternative Approaches
+//
+// - **Early Exit on Odd Lengths**: Since each opening bracket needs a closing bracket,
+//   strings with odd lengths can be immediately returned as `false`.
+// - **Stackless Validation (Counter approach)**: If there is only ONE type of bracket
+//   (e.g., only `(` and `)`), you can simply use an integer counter instead of a stack,
+//   incrementing on open and decrementing on close (returning false if it goes negative).
+//   This drops space complexity to O(1). However, since there are three types that can
+//   be nested, a stack is strictly required for this problem.
 
 #[cfg(test)]
 mod tests {
@@ -217,9 +220,9 @@ mod tests {
 
     #[test]
     fn test_empty_string() {
-        assert!(is_valid_brute_force("".to_string()));
-        assert!(is_valid_optimal("".to_string()));
-        assert!(is_valid_optimized("".to_string()));
+        assert!(is_valid_brute_force(String::new()));
+        assert!(is_valid_optimal(String::new()));
+        assert!(is_valid_optimized(String::new()));
     }
 
     // Stress/Boundary Tests

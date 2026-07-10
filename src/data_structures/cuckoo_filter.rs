@@ -13,6 +13,9 @@
 //! You'll learn about "cuckoo hashing" (using multiple hash functions and relocating items on collision),
 //! fingerprinting, and how to manage partial-key collisions. It's a great example of trading computation (relocation) for space.
 
+// Intentional index/byte/word manipulation casts.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
@@ -29,10 +32,11 @@ pub struct FnvHasher {
 }
 
 impl FnvHasher {
-    const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
-    const PRIME: u64 = 0x100000001b3;
+    const OFFSET_BASIS: u64 = 0xcbf2_9ce4_8422_2325;
+    const PRIME: u64 = 0x0100_0000_01b3;
 
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             state: Self::OFFSET_BASIS,
         }
@@ -46,7 +50,7 @@ impl Hasher for FnvHasher {
 
     fn write(&mut self, bytes: &[u8]) {
         for &byte in bytes {
-            self.state ^= byte as u64;
+            self.state ^= u64::from(byte);
             self.state = self.state.wrapping_mul(Self::PRIME);
         }
     }
@@ -118,14 +122,14 @@ struct Bucket {
 }
 
 impl Bucket {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             entries: [None; BUCKET_SIZE],
         }
     }
 
     fn insert(&mut self, fp: Fingerprint) -> bool {
-        for entry in self.entries.iter_mut() {
+        for entry in &mut self.entries {
             if entry.is_none() {
                 *entry = Some(fp);
                 return true;
@@ -135,7 +139,7 @@ impl Bucket {
     }
 
     fn remove(&mut self, fp: Fingerprint) -> bool {
-        for entry in self.entries.iter_mut() {
+        for entry in &mut self.entries {
             if let Some(existing) = entry
                 && *existing == fp
             {
@@ -147,7 +151,7 @@ impl Bucket {
     }
 
     fn contains(&self, fp: Fingerprint) -> bool {
-        for entry in self.entries.iter() {
+        for entry in &self.entries {
             if let Some(existing) = entry
                 && *existing == fp
             {
@@ -159,7 +163,7 @@ impl Bucket {
 
     #[allow(dead_code)]
     fn is_full(&self) -> bool {
-        self.entries.iter().all(|e| e.is_some())
+        self.entries.iter().all(std::option::Option::is_some)
     }
 }
 
@@ -173,6 +177,7 @@ pub struct CuckooFilter<T: ?Sized> {
 impl<T: ?Sized + Hash> CuckooFilter<T> {
     /// Creates a new Cuckoo Filter with capacity for at least `capacity` items.
     /// Actual capacity will be rounded up to the next power of 2 of buckets.
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         // Target 95% load factor roughly.
         // capacity / 4 = num_buckets needed (since 4 slots per bucket).
@@ -192,11 +197,13 @@ impl<T: ?Sized + Hash> CuckooFilter<T> {
     }
 
     /// Returns the number of items currently in the filter.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.len
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -335,13 +342,13 @@ struct XorShift {
 }
 
 impl XorShift {
-    fn new(seed: u32) -> Self {
+    const fn new(seed: u32) -> Self {
         Self {
             state: if seed == 0 { 12345 } else { seed },
         }
     }
 
-    fn next_u32(&mut self) -> u32 {
+    const fn next_u32(&mut self) -> u32 {
         let mut x = self.state;
         x ^= x << 13;
         x ^= x >> 17;
@@ -350,7 +357,7 @@ impl XorShift {
         x
     }
 
-    fn next_bool(&mut self) -> bool {
+    const fn next_bool(&mut self) -> bool {
         self.next_u32().is_multiple_of(2)
     }
 }
@@ -405,7 +412,7 @@ mod tests {
             }
         }
 
-        println!("Inserted {} items into capacity 16", inserted);
+        println!("Inserted {inserted} items into capacity 16");
         assert!(inserted >= 15); // Should fit close to max
         assert!(inserted <= 16); // Hard limit
     }
@@ -426,7 +433,7 @@ mod tests {
             }
         }
 
-        assert!(fp_count < 5, "Too many false positives: {}", fp_count);
+        assert!(fp_count < 5, "Too many false positives: {fp_count}");
     }
 
     #[test]

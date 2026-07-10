@@ -1,7 +1,7 @@
 //! # 23. Merge k Sorted Lists
 //!
 //! Difficulty: Hard
-//! Link: https://leetcode.com/problems/merge-k-sorted-lists/
+//! Link: <https://leetcode.com/problems/merge-k-sorted-lists>/
 //!
 //! You are given an array of `k` linked-lists `lists`, each linked-list is sorted in ascending order.
 //!
@@ -43,7 +43,7 @@ use std::collections::BinaryHeap;
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub struct ListNode {
     pub val: i32,
-    pub next: Option<Box<ListNode>>,
+    pub next: Option<Box<Self>>,
 }
 
 impl ListNode {
@@ -56,10 +56,10 @@ impl ListNode {
     /// Helper to create a list from a vector (useful for tests and initialization)
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
-    pub fn from_vec(vec: Vec<i32>) -> Option<Box<ListNode>> {
+    pub fn from_vec(vec: Vec<i32>) -> Option<Box<Self>> {
         let mut current = None;
         for &val in vec.iter().rev() {
-            let mut node = ListNode::new(val);
+            let mut node = Self::new(val);
             node.next = current;
             current = Some(Box::new(node));
         }
@@ -136,9 +136,11 @@ pub fn merge_k_lists_brute_force(lists: Vec<Option<Box<ListNode>>>) -> Option<Bo
 }
 
 /// Optimal approach: Min-Heap (Priority Queue)
+///
 /// Time: O(N log k) where k is the number of linked lists.
 /// - The heap size is at most k.
 /// - Every node is pushed and popped exactly once.
+///
 /// Space: O(k)
 /// - The heap stores at most k nodes at any time.
 /// - The result list simply relinks existing nodes (plus a dummy head).
@@ -147,8 +149,13 @@ pub fn merge_k_lists_brute_force(lists: Vec<Option<Box<ListNode>>>) -> Option<Bo
 /// - `BinaryHeap` for efficient minimum retrieval.
 /// - `Option<Box<T>>` manipulation with `take()`.
 /// - Wrapper struct (`HeapNode`) to bypass the orphan rule or implement custom trait behavior locally.
+///
+/// # Panics
+///
+/// Does not panic in practice: `tail.next` is set to `Some(node)` immediately before
+/// the `unwrap`, so the reborrow always finds a node.
 #[must_use]
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn merge_k_lists_optimal(lists: Vec<Option<Box<ListNode>>>) -> Option<Box<ListNode>> {
     let mut min_heap = BinaryHeap::new();
 

@@ -42,7 +42,7 @@
 //!
 //! *   **Generics**: `RadixTrie<V>` allows storing any payload.
 //! *   **Ownership**: Recursive `Box<Node<V>>` handles memory management automatically.
-//! *   **HashMap**: We use `HashMap<char, Box<Node<V>>>` for children to allow O(1) branch selection.
+//! *   **`HashMap`**: We use `HashMap<char, Box<Node<V>>>` for children to allow O(1) branch selection.
 
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -50,7 +50,7 @@ use std::fmt::Debug;
 #[derive(Debug, Clone)]
 struct Node<V> {
     prefix: String,
-    children: HashMap<char, Box<Node<V>>>,
+    children: HashMap<char, Box<Self>>,
     value: Option<V>,
 }
 
@@ -174,17 +174,14 @@ impl<V> RadixTrie<V> {
         let mut current = &self.root;
         let mut remaining_key = key;
 
-        while !remaining_key.is_empty() {
-            let first_char = remaining_key.chars().next().unwrap();
-            if let Some(child) = current.children.get(&first_char) {
-                if remaining_key.starts_with(&child.prefix) {
-                    remaining_key = &remaining_key[child.prefix.len()..];
-                    current = child;
-                } else {
-                    // Key diverges from prefix -> Not found
-                    return None;
-                }
+        while let Some(first_char) = remaining_key.chars().next() {
+            // No child for this character means the key is absent -> `?` yields `None`.
+            let child = current.children.get(&first_char)?;
+            if remaining_key.starts_with(&child.prefix) {
+                remaining_key = &remaining_key[child.prefix.len()..];
+                current = child;
             } else {
+                // Key diverges from prefix -> Not found
                 return None;
             }
         }

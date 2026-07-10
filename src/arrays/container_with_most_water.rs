@@ -17,7 +17,7 @@
 //! It demonstrates:
 //! -   **Iterators vs Indices**: While Rust iterators are powerful, some algorithms (like two pointers meeting in the middle) are more naturally expressed with explicit indices (`usize`) and `while` loops.
 //! -   **Safe Indexing**: Managing bounds checks and ensuring `left < right` invariants.
-//! -   **cmp::min / cmp::max**: Idiomatic usage of standard library comparison functions.
+//! -   **`cmp::min` / `cmp::max`**: Idiomatic usage of standard library comparison functions.
 //!
 //! ## Examples
 //!

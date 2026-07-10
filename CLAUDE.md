@@ -1,307 +1,197 @@
-# LeetCode Practice Repository
+# Rust Interview Practice Repository
 
 ## Purpose
 
-This repository contains LeetCode problem solutions in Rust, designed for use with **gittype** to build muscle memory for coding interviews. The goal is to internalize Rust syntax patterns through repeated typing practice, eliminating stumbles during interviews where autocomplete isn't available.
+This repository contains Rust implementations of coding-interview problems, core language
+fundamentals, and larger systems-design exercises. It is designed for use with **gittype**
+to build muscle memory for coding interviews: the goal is to internalize Rust syntax
+patterns through repeated typing practice, eliminating stumbles during interviews where
+autocomplete isn't available.
 
-## Architecture
+## Crate Overview
 
-### Directory Structure
+- **Crate name:** `rust-interview-practice` (v0.1.0)
+- **Edition:** 2024
+- **Location:** the crate lives at the **repository root** — `Cargo.toml` is at `./Cargo.toml`
+  and sources are under `./src`. There is **no `leetcode/` subdirectory**.
+- **Toolchain:** builds on **stable** Rust (developed against rustc 1.94.1). There is no
+  `rust-toolchain.toml`. One nightly-only code path exists (portable SIMD) and is gated behind
+  a cfg flag — see [Feature Flags](#feature-flags).
+- **Always-on dependency:** `crc32fast` (the only non-optional dependency). Everything else is
+  behind an optional feature flag.
+- **Binaries:** `src/main.rs` (a placeholder `Hello, world!`) and `src/bin/bench_sha256.rs`
+  (a benchmark helper for the cryptography module).
+
+## Directory Structure
 
 ```
-leetcode/
-├── src/
-│   ├── lib.rs              # Module exports
-│   ├── fundamentals/       # Core Rust patterns (not LeetCode problems)
-│   │   ├── mod.rs
-│   │   ├── iterators.rs
-│   │   ├── collections.rs
-│   │   ├── error_handling.rs
-│   │   ├── pattern_matching.rs
-│   │   └── strings.rs
-│   ├── arrays/             # Array-based problems
-│   │   ├── mod.rs
-│   │   └── *.rs
-│   ├── strings/            # String manipulation problems
-│   │   ├── mod.rs
-│   │   └── longest_substring_without_repeating.rs
-│   ├── linked_lists/       # Linked list problems
-│   ├── trees/              # Tree problems (BST, binary tree, etc.)
-│   ├── graphs/             # Graph algorithms (BFS, DFS, etc.)
-│   ├── dynamic_programming/# DP problems
-│   ├── sliding_window/     # Sliding window technique
-│   ├── two_pointers/       # Two pointer technique
-│   └── backtracking/       # Backtracking problems
+.
 ├── Cargo.toml
-└── CLAUDE.md
+├── CLAUDE.md
+└── src/
+    ├── lib.rs                  # Module exports (pub mod for every category)
+    ├── main.rs                 # Placeholder binary
+    ├── bin/
+    │   └── bench_sha256.rs     # sha256 benchmark helper
+    ├── fundamentals/           # Core Rust patterns (not interview problems)
+    ├── arrays/                 # Array problems
+    ├── strings/                # String manipulation problems
+    ├── linked_lists/           # Linked list problems
+    ├── trees/                  # Binary tree / BST / trie problems
+    ├── graphs/                 # Graph traversal & shortest paths
+    ├── dynamic_programming/    # DP problems
+    ├── backtracking/           # Backtracking problems
+    ├── binary_search/          # Binary search problems
+    ├── heaps/                  # Heap / priority-queue problems
+    ├── stacks/                 # Stack / monotonic-stack problems
+    ├── concurrency/            # Concurrency primitives & patterns
+    ├── cryptography/           # Crypto primitives (sha256, jwt, rand)
+    ├── networking/             # Networking building blocks (HTTP, DNS, RPC, ...)
+    ├── serialization/          # Encoders/decoders (json, protobuf, msgpack, ...)
+    ├── data_structures/        # Advanced data structures (tries, filters, caches, ...)
+    ├── design_patterns/        # Rust-flavored design patterns
+    └── systems/                # Larger systems-design exercises (LSM, raft, VM, ...)
 ```
 
-### Problem Organization
+## Category Organization
 
-Problems are organized by **primary data structure** or **algorithmic technique**:
-- **strings/** - String manipulation, substring problems
-- **arrays/** - Array operations, searching, sorting
-- **linked_lists/** - Singly/doubly linked lists
-- **trees/** - Binary trees, BST, tries
-- **graphs/** - Graph traversal, shortest paths
-- **dynamic_programming/** - DP problems
-- **sliding_window/** - Sliding window technique
-- **two_pointers/** - Two pointer patterns
-
-When a problem fits multiple categories, use the **primary data structure** as the category.
+Interview problems are organized by **primary data structure** or **algorithmic technique**.
+When a problem fits multiple categories, its **primary data structure** wins (some problems
+therefore appear under more than one category, e.g. rotated-array search under both `arrays`
+and `binary_search`). Beyond the classic interview categories, this repo also contains larger
+implementation exercises (`data_structures`, `systems`, `networking`, `serialization`,
+`cryptography`, `concurrency`, `design_patterns`) that are practiced the same way with gittype.
 
 ## Fundamentals Category
 
-The `fundamentals/` directory contains **Rust idioms and patterns** that aren't LeetCode problems but are essential for fluent coding. These are patterns you'll type repeatedly in any interview:
+The `fundamentals/` directory contains **Rust idioms and patterns** (not interview problems)
+that are essential for fluent coding — patterns you'll type repeatedly in any interview.
 
-### `asm.rs` - Inline Assembly
-- **Basic syntax:** `asm!` macro, register operands, templates
-- **Register constraints:** in, out, inout, lateout, clobbers
-- **Options:** pure, nomem, readonly, nostack, preserves_flags
-- **X86_64 instructions:** POPCNT, BSWAP, LZCNT, TZCNT for bit manipulation
-- **Atomic operations:** CMPXCHG (compare-and-swap), XADD (fetch-add), LOCK prefix
-- **CPUID:** CPU feature detection, vendor identification
-- **Memory barriers:** MFENCE, LFENCE, SFENCE for ordering
-- **System calls:** Direct syscalls via SYSCALL instruction (Linux)
-- **Naked functions:** Manual stack management, custom prologues/epilogues
-- **Performance:** RDTSC (timestamp counter), PAUSE (spin loop hint)
-- **Cross-platform:** X86_64 vs AArch64 patterns, platform-specific intrinsics
+### Always-compiled fundamentals (stable)
 
-### `borrowing.rs` - Borrow Checker Patterns
-- **Borrowing rules:** Immutable vs mutable borrows, exclusive access
-- **Lifetimes:** Basic `'a`, multiple lifetimes, lifetime elision
-- **Common patterns:** Splitting borrows, reborrowing, NLL (Non-Lexical Lifetimes)
-- **Ownership:** Move vs copy, taking ownership vs borrowing
-- **Dereferencing:** `*` operator, `as_ref()`, entry API
-- **Avoiding issues:** Clone to sidestep borrows, return owned data
+- `asm.rs` — inline assembly (`asm!`), register constraints, x86_64/aarch64 intrinsics
+- `borrowing.rs` — borrow checker, lifetimes, ownership, splitting/reborrowing
+- `closures.rs` — `Fn`/`FnMut`/`FnOnce`, capturing, returning closures
+- `collections.rs` — HashMap, HashSet, VecDeque, BinaryHeap
+- `concurrency.rs` — Arc, Mutex, RwLock, channels, atomics, thread patterns
+- `design_patterns.rs` — builder, newtype, type-state, RAII, visitor, strategy
+- `error_handling.rs` — Option/Result combinators, `?` operator
+- `error_types.rs` — thiserror/anyhow-style custom errors, recovery strategies
+- `iterators.rs` — map, filter, fold, zip, windows, and other iterator patterns
+- `macros.rs` — declarative macros, repetition, DSLs, debugging
+- `numeric_ops.rs` — bit manipulation, safe arithmetic, number algorithms
+- `pattern_matching.rs` — match, if let, destructuring, guards, slice patterns
+- `performance.rs` — inlining, allocation, cache-friendly patterns, hot paths
+- `simd.rs` — SSE/AVX intrinsics with `is_x86_feature_detected!`. **The portable-SIMD
+  (`std::simd`) parts require nightly** and are gated on the `nightly_portable_simd` cfg
+  (see [Feature Flags](#feature-flags)); the x86 intrinsic parts build on stable.
+- `smart_pointers.rs` — Box, Rc, RefCell, Cow, ownership patterns
+- `strings.rs` — String/&str operations, parsing, manipulation
+- `testing.rs` — unit tests, fixtures, TDD workflow, doc tests
+- `types_and_traits.rs` — generics, trait bounds, From/Into, trait objects, type state
+- `unsafe_rust.rs` — raw pointers, FFI, unsafe traits, safety invariants
 
-### `iterators.rs` - Iterator Patterns
-- `map`, `filter`, `filter_map`, `collect`
-- `enumerate`, `zip`, `chain`
-- `fold`, `sum`, `max`, `min`
-- `any`, `all`, `take`, `skip`
-- `windows`, `partition`
+### Feature-gated fundamentals
 
-### `collections.rs` - Collection Operations
-- **HashMap:** frequency maps, `entry().or_insert()`, `get_or_default()`
-- **HashSet:** membership, duplicates, set operations
-- **VecDeque:** queue (FIFO), stack (LIFO), sliding window
-- **BinaryHeap:** priority queue operations
+- `async_and_parallel.rs` — tokio async/await + rayon data parallelism. Requires
+  `--features async-parallel`.
+- `serde_patterns.rs` — serde serialization/deserialization patterns. Requires
+  `--features serde-patterns`.
+- `cli_patterns.rs` — ratatui 0.29 TUI development (components, layouts, events). Requires
+  `--features cli-patterns`.
 
-### `error_handling.rs` - Option/Result Patterns
-- **Option:** `unwrap_or`, `unwrap_or_else`, `map`, `and_then`
-- **Result:** `map`, `map_err`, `and_then`, `?` operator
-- Pattern matching: `match`, `if let`, `while let`
-- `transpose`, collecting Results
+## Feature Flags
 
-### `pattern_matching.rs` - Match Patterns
-- Basic match, ranges, guards
-- Tuple destructuring
-- Enum destructuring
-- `if let`, `while let`
-- Slice patterns
-- `@` bindings
-- Or patterns (`|`)
+All feature flags are declared in `Cargo.toml`. Everything except `crc32fast` is optional.
 
-### `strings.rs` - String Operations
-- String vs &str conversions
-- Char/byte iteration
-- String building (`push_str`, `format!`, `join`)
-- Splitting, trimming, case conversion
-- Substring operations
-- Char classification
-- Parsing
+| Feature | Enables (deps) | Purpose |
+|---------|----------------|---------|
+| `async-parallel` | tokio, tokio-stream, futures, rayon | `fundamentals::async_and_parallel` |
+| `serde-patterns` | serde, serde_json, serde_yaml, toml, bincode | `fundamentals::serde_patterns` |
+| `cli-patterns` | ratatui 0.29, crossterm, clap | `fundamentals::cli_patterns` |
+| `testing-extras` | proptest | property-based testing helpers |
+| `simd-patterns` | *(nothing)* | **no-op**, retained for backward compatibility only |
 
-### `macros.rs` - Macro Patterns
-- **Declarative macros:** macro_rules!, fragment specifiers (expr, ident, ty, pat, stmt)
-- **Repetition patterns:** $(...)\*, $(...)+, comma-separated lists
-- **Multiple branches:** Pattern matching, recursive macros
-- **Practical patterns:** HashMap literals, custom assertions, time measurement
-- **DSL creation:** Builder-style, SQL-like, HTML-like syntax
-- **Macro hygiene:** Variable scoping, $crate usage
-- **Debugging:** cargo expand, trace_macros!, common errors
-- **When to use:** Macros vs functions vs generics trade-offs
+Enable features on stable, e.g.:
 
-### `error_types.rs` - Error Design
-- **Custom error types:** Manual Error trait implementation
-- **thiserror patterns:** #[error("...")], #[from], transparent errors
-- **anyhow patterns:** .context(), .with_context(), error chains
-- **Error composition:** Multiple variants, error metadata, error codes
-- **Propagation:** ? operator, map_err, error wrapping
-- **Boxing errors:** Box<dyn Error>, type erasure
-- **Library vs application:** Design principles for each
-- **Recovery strategies:** Retry, fallback, graceful degradation
-- **When to panic:** Error vs panic decision making
+```bash
+cargo test --features async-parallel
+cargo test --features serde-patterns
+cargo test --all-features          # builds cleanly on stable (see note below)
+```
 
-### `performance.rs` - Performance Optimization
-- **Inlining:** #[inline], #[inline(always)], #[inline(never)]
-- **Allocation:** with_capacity, reuse buffers, avoid clones
-- **Cache-friendly:** SoA vs AoS, memory layout, repr attributes
-- **Iterator optimization:** Avoiding collect(), extend vs push
-- **Cow:** Clone-on-write for conditional allocation
-- **Benchmarking:** black_box, micro-benchmark patterns
-- **Hot path:** Fast/slow path, reducing bounds checks
-- **String interning:** Deduplication for memory savings
-- **Object pools:** Reusing allocations
-- **Lazy initialization:** OnceLock, lazy patterns
-- **SSO:** Small string optimization
-- **Arena allocation:** Bump allocators
+### Portable SIMD (nightly) — the `nightly_portable_simd` cfg
 
-### `serde_patterns.rs` - Serialization (Optional)
-- **Basics:** #[derive(Serialize, Deserialize)], JSON/YAML/TOML/Bincode
-- **Field attributes:** rename, skip, default, flatten, alias
-- **Container attributes:** rename_all, deny_unknown_fields
-- **Enum serialization:** Tagged, untagged, internally tagged
-- **Custom serialization:** serialize_with, deserialize_with
-- **Multiple formats:** JSON, YAML, TOML, Bincode comparison
-- **Versioning:** Schema evolution, backwards compatibility
-- **Validation:** Deserialization-time validation
-- **Performance:** Zero-copy, borrowed types, streaming
-- **Requires:** `--features serde-patterns` to enable dependencies
+The portable-SIMD examples in `src/fundamentals/simd.rs` use `std::simd`
+(`#![feature(portable_simd)]`) and therefore require **nightly**. They are **NOT** gated on a
+Cargo feature — if they were, `cargo build --all-features` would try to compile nightly-only
+code on stable and fail with `E0658`. Instead they are gated on the **cfg flag**
+`nightly_portable_simd`, which `--all-features` cannot enable. This keeps stable
+`--all-features` building cleanly. `[lints.rust]` in `Cargo.toml` declares
+`unexpected_cfgs` with `check-cfg = ['cfg(nightly_portable_simd)']` so the custom cfg does not
+trigger a warning. (Introduced in PR #442.)
 
-### `simd.rs` - SIMD (Single Instruction, Multiple Data)
-- **Platform detection:** `is_x86_feature_detected!` for SSE, AVX, AVX2, FMA
-- **SSE/SSE2:** 128-bit vectors (4 floats, 4 i32s), basic operations
-- **Vector operations:** Load/store (aligned/unaligned), add, mul, sub, div
-- **Horizontal operations:** Reduce (sum, max, min), shuffle, permute
-- **AVX/AVX2:** 256-bit vectors (8 floats, 8 i32s), wider parallelism
-- **FMA:** Fused multiply-add for accuracy and performance
-- **Comparisons:** Vector comparisons, masks, conditional operations
-- **Integer SIMD:** i32/i64 operations, horizontal add
-- **Alignment:** #[repr(align)] for optimal memory access
-- **Portable SIMD:** std::simd for cross-platform (nightly feature)
-- **Target features:** #[target_feature(enable = "avx2")] attributes
-- **Performance:** Scalar vs SIMD benchmarks, when to vectorize
+The legacy `simd-patterns` Cargo feature is a **no-op** kept only for backward compatibility;
+enabling it does nothing.
 
-### `testing.rs` - Testing Patterns
-- **Unit tests:** Assertions, #[should_panic], #[ignore], Result return
-- **Test organization:** Inline vs separate modules, testing private functions
-- **Fixtures:** Setup/teardown, test helpers, context structs with Drop
-- **Parameterized tests:** Table-driven tests, test case structs
-- **Property-based testing:** proptest integration (optional feature), custom strategies
-- **Mocking:** Trait-based mocks without external crates
-- **Async testing:** tokio::test patterns
-- **TDD workflow:** RED-GREEN-REFACTOR cycle, test-first development
-- **Doc tests:** Examples in documentation, hidden setup lines
-- **Best practices:** AAA pattern, edge cases, clear naming
+To build the nightly portable-SIMD path:
 
-### `types_and_traits.rs` - Types and Traits
-- **Type aliases:** Convenience names, newtype pattern for type safety
-- **Generics:** Type parameters, constraints, associated types
-- **Trait definitions:** Simple traits, default implementations, supertraits
-- **Trait bounds:** where clauses, multiple bounds, impl Trait syntax
-- **Trait objects:** Dynamic dispatch with `Box<dyn Trait>`
-- **From/Into:** Conversion traits, automatic implementations
-- **Derive macros:** Debug, Clone, PartialEq, Eq, Hash
-- **Advanced patterns:** Builder pattern, type state pattern, marker traits
+```bash
+# 1. Add to the crate root: #![cfg_attr(nightly_portable_simd, feature(portable_simd))]
+# 2. Compile on nightly:
+RUSTFLAGS="--cfg nightly_portable_simd" cargo +nightly build
+```
 
-### `cli_patterns.rs` - CLI/TUI Patterns with Ratatui (Optional)
-- **Terminal setup:** Initialization, cleanup, panic hooks
-- **Event loop:** Basic app structure, event polling
-- **Component architecture:** Stateful widgets, trait-based composition
-- **State management:** Multiple views, navigation, popups
-- **Event handling:** Keyboard/mouse events, event dispatch
-- **Layouts:** Responsive layouts, nested layouts, constraints
-- **Widgets:** List, Paragraph, Gauge, styled text
-- **Styling:** Color schemes, themes, conditional styling
-- **Advanced:** Async TUI with tokio, scrollable content, search/filter
-- **Testing:** Component testing, backend abstraction
-- **Production:** Error handling, help screens, clap configuration
-- **Requires:** `--features cli-patterns` to enable ratatui dependencies
+## Three-Implementation Pattern (Interview Problems)
 
-### `design_patterns.rs` - Design Patterns
-- **Builder:** Classic builder, type-state builder, consuming builder
-- **Newtype:** Type safety, Deref for convenience, trait implementation
-- **Type State:** Compile-time state validation, state transitions
-- **RAII:** Drop trait cleanup, guards, scope-based resources
-- **Visitor:** Trait-based visitor, AST traversal, double dispatch
-- **Strategy:** Trait objects vs generics, runtime vs compile-time
-- **Command:** Undo/redo, command history, deferred execution
-- **Iterator:** Custom iterators, IntoIterator, infinite iterators
-- **Observer:** Callbacks, channel-based observers, pub/sub
-- **Adapter:** Wrapper pattern, transparent wrappers, trait impl for foreign types
-- **Plugin System:** Dynamic loading, trait-based plugins
-
-### `unsafe_rust.rs` - Unsafe Patterns
-- **Unsafe superpowers:** Raw pointers, unsafe functions, traits, statics, unions
-- **Raw pointers:** Creating, dereferencing, arithmetic, null pointers
-- **Unsafe functions:** Safety contracts, documentation, safe wrappers
-- **FFI:** extern "C", calling C from Rust, repr(C), string handling
-- **Unsafe traits:** Send, Sync, UnsafeCell for interior mutability
-- **Common patterns:** Transmute, MaybeUninit, mutable aliasing
-- **Safety invariants:** Documentation, defensive programming, testing
-- **Miri:** Undefined behavior detection, testing unsafe code
-- **When to use:** Valid reasons, minimizing unsafe surface area
-- **Common mistakes:** Dangling pointers, aliasing violations, uninitialized memory
-
-### `async_and_parallel.rs` - Async/Await and Data Parallelism (Optional)
-- **Tokio async patterns:** spawn, join!, select!, timeout, channels, Mutex/RwLock
-- **Stream processing:** Async iteration, combinators
-- **Rayon parallel iterators:** par_iter, par_map, par_fold, par_sort
-- **Parallel operations:** Partition, find, chunks processing
-- **Thread pool configuration:** Custom pools, work distribution
-- **Hybrid patterns:** Combining tokio and rayon for I/O + CPU work
-- **When to use:** I/O-bound (tokio) vs CPU-bound (rayon) workloads
-- **Requires:** `--features async-parallel` to enable dependencies
-
-**Purpose:** Use gittype to practice these fundamentals alongside LeetCode problems. When you can type `.iter().filter().map().collect()` without thinking, you'll write algorithms much faster.
-
-## Three-Implementation Pattern (LeetCode Problems)
-
-**Every problem includes three implementations** to demonstrate algorithmic progression:
+Classic interview problems (arrays, strings, trees, DP, etc.) typically include **three
+implementations** to demonstrate algorithmic progression:
 
 ### 1. Brute Force (`_brute_force` suffix)
-- **Purpose:** Demonstrates understanding of the problem
-- **Characteristics:**
-  - Straightforward, naive approach
-  - Often O(n²) or O(n³) time complexity
-  - Easy to understand and explain
-- **Interview value:** Shows you can solve the problem, even if not optimally
+- **Purpose:** Demonstrates understanding of the problem.
+- Straightforward, naive approach; often O(n²) or O(n³); easy to explain.
 
 ### 2. Optimized (`_optimized` suffix)
-- **Purpose:** Shows you can improve on brute force
-- **Characteristics:**
-  - Better time/space complexity
-  - May use basic data structures (HashSet, HashMap, Vec)
-  - Still readable and explainable
-- **Interview value:** Demonstrates optimization thinking
+- **Purpose:** Shows you can improve on brute force.
+- Better time/space complexity; may use HashSet/HashMap/Vec; still readable.
 
 ### 3. Optimal (`_optimal` suffix)
-- **Purpose:** Best possible solution
-- **Characteristics:**
-  - Optimal time and space complexity
-  - May use advanced techniques or clever insights
-  - Production-ready code
-- **Interview value:** Shows mastery and deep understanding
+- **Purpose:** Best possible solution.
+- Optimal time and space; may use advanced techniques; production-ready.
 
 ### Main Entry Point
-Each problem also exports a main function (e.g., `length_of_longest_substring`) that calls the optimal solution.
+Each problem also exports a main function (e.g. `length_of_longest_substring`) that calls the
+optimal solution.
 
-## File Template
+> Note: the larger implementation exercises under `systems/`, `data_structures/`,
+> `networking/`, `serialization/`, `cryptography/`, `concurrency/`, and `design_patterns/`
+> are single cohesive implementations rather than three-tier brute/optimized/optimal problems.
+
+## File Template (interview problems)
 
 ```rust
 //! # [Problem Number]. [Problem Title]
 //!
-//! [Problem description from LeetCode]
+//! [Problem description]
 //!
 //! ## Examples
 //!
 //! ```
-//! use leetcode::category::problem::function_name;
+//! use rust_interview_practice::category::problem::function_name;
 //!
 //! assert_eq!(function_name(input), expected);
 //! ```
 //!
 //! ## Constraints
 //!
-//! - [Constraints from LeetCode]
+//! - [Constraints]
 
 /// Brute force approach: [Brief description]
 /// Time: O(?) - [explanation]
 /// Space: O(?) - [explanation]
 #[must_use]
-#[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::needless_pass_by_value)] // interview signature uses owned types
+#[allow(clippy::cast_possible_truncation)] // constraints guarantee it fits
 #[allow(clippy::cast_possible_wrap)]
 pub fn function_name_brute_force(input: Type) -> ReturnType {
     // Implementation
@@ -311,9 +201,6 @@ pub fn function_name_brute_force(input: Type) -> ReturnType {
 /// Time: O(?) - [explanation]
 /// Space: O(?) - [explanation]
 #[must_use]
-#[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
-#[allow(clippy::cast_possible_wrap)]
 pub fn function_name_optimized(input: Type) -> ReturnType {
     // Implementation
 }
@@ -323,9 +210,6 @@ pub fn function_name_optimized(input: Type) -> ReturnType {
 /// Time: O(?) - [explanation]
 /// Space: O(?) - [explanation]
 #[must_use]
-#[allow(clippy::needless_pass_by_value)] // LeetCode signature
-#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
-#[allow(clippy::cast_possible_wrap)]
 pub fn function_name_optimal(input: Type) -> ReturnType {
     // Implementation
 }
@@ -340,19 +224,16 @@ pub fn function_name(input: Type) -> ReturnType {
 mod tests {
     use super::*;
 
-    // Tests for brute force
     #[test]
     fn test_brute_force_example_1() { /* ... */ }
 
-    // Tests for optimized
     #[test]
     fn test_optimized_example_1() { /* ... */ }
 
-    // Tests for optimal
     #[test]
     fn test_optimal_example_1() { /* ... */ }
 
-    // Cross-implementation verification tests
+    // Cross-implementation verification
     #[test]
     fn test_all_approaches_edge_case() {
         let input = /* ... */;
@@ -366,20 +247,23 @@ mod tests {
 ## Adding New Problems
 
 ### 1. Choose Category
-Determine which category (e.g., `arrays`, `strings`) best fits the problem.
+Determine which category (e.g. `arrays`, `strings`) best fits the problem.
 
 ### 2. Create Module
 If the category doesn't exist:
+
 ```bash
 mkdir src/category_name
 ```
 
 Create or update `src/category_name/mod.rs`:
+
 ```rust
 pub mod problem_name;
 ```
 
 Update `src/lib.rs`:
+
 ```rust
 pub mod category_name;
 ```
@@ -388,10 +272,8 @@ pub mod category_name;
 Create `src/category_name/problem_name.rs` following the template above.
 
 ### 4. Write Tests First (TDD)
-- Add tests for all three implementations
-- Run `cargo test` to verify RED state
-- Implement solutions to achieve GREEN state
-- Refactor while keeping tests green
+- Add tests for all implementations.
+- Run `cargo test` to verify RED state, implement to GREEN, then refactor.
 
 ### 5. Quality Checks
 ```bash
@@ -400,81 +282,38 @@ cargo clippy -- -W clippy::pedantic -W clippy::nursery
 cargo test
 ```
 
+## Continuous Integration
+
+CI runs on every push and pull request to `trunk` via `.github/workflows/ci.yml`.
+It has three jobs:
+
+- **fmt** — `cargo fmt --all -- --check` (blocking).
+- **test & build** — `cargo test` on default features, `cargo test --features serde-patterns`,
+  and builds for `cli-patterns`, `async-parallel`, and `--all-features` on stable (blocking).
+- **clippy** — `cargo clippy --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
+  -D warnings`, currently **non-blocking** (`continue-on-error: true`) while the repo-wide lint
+  sweep finishes; flip it to blocking once the sweep lands.
+
+Run these locally before pushing to keep CI green.
+
 ## Testing Standards
 
-- **Test all three implementations** separately
-- **Include LeetCode examples** as test cases
-- **Add edge cases:** empty inputs, single elements, max constraints
-- **Cross-implementation tests:** Verify all three approaches return same results
-- **Test coverage target:** 85-90% minimum
+- **Test each implementation** separately (brute force / optimized / optimal where applicable).
+- **Include the canonical examples** as test cases.
+- **Add edge cases:** empty inputs, single elements, max constraints.
+- **Cross-implementation tests:** verify all approaches return the same result.
+- The library currently has a large passing unit-test suite (~1731 tests at last count).
 
 ## Clippy Allowances
 
-Common allowances for LeetCode problems:
-- `#[allow(clippy::needless_pass_by_value)]` - LeetCode signatures use owned types
-- `#[allow(clippy::cast_possible_truncation)]` - Problem constraints guarantee safe casts
-- `#[allow(clippy::cast_possible_wrap)]` - Problem constraints guarantee safe casts
+Common allowances for interview-style problems:
+- `#[allow(clippy::needless_pass_by_value)]` — interview signatures use owned types
+- `#[allow(clippy::cast_possible_truncation)]` — problem constraints guarantee safe casts
+- `#[allow(clippy::cast_possible_wrap)]` — problem constraints guarantee safe casts
 
-## gittype Integration
-
-Once you have a collection of problems:
-
-1. **Use gittype** to practice typing the entire file
-2. **Focus on one category** at a time (e.g., all string problems)
-3. **Type all three implementations** to internalize different patterns
-4. **Repeat regularly** - muscle memory requires repetition
-
-### Common Patterns to Practice
-- Sliding window with HashSet/HashMap
-- Two pointers (start/end, slow/fast)
-- BFS/DFS with Vec as queue/stack
-- Dynamic programming with 1D/2D Vec
-- Pattern matching with `match` and `if let`
-- Iterator chains (`.iter()`, `.filter()`, `.map()`, `.collect()`)
-- Error handling with `Option` and `Result`
-
-## Coding Patterns & Idioms
-
-### Collections
-```rust
-use std::collections::{HashSet, HashMap, VecDeque};
-
-let mut set = HashSet::new();
-let mut map = HashMap::new();
-let mut queue = VecDeque::new();
-```
-
-### String Handling
-```rust
-let chars: Vec<char> = s.chars().collect();
-let bytes = s.as_bytes();
-```
-
-### Iterators
-```rust
-for (i, &item) in items.iter().enumerate() { }
-let result: Vec<_> = items.iter().filter(|&&x| x > 0).collect();
-```
-
-### Pattern Matching
-```rust
-match value {
-    Some(x) => x,
-    None => return 0,
-}
-
-if let Some(x) = optional { }
-```
-
-## Interview Strategy
-
-When using these solutions for interview practice:
-
-1. **Start with brute force** - Demonstrates you understand the problem
-2. **Identify bottlenecks** - Explain what makes it slow
-3. **Optimize incrementally** - Show the thought process
-4. **Arrive at optimal** - Explain why it's optimal
-5. **Test edge cases** - Show thoroughness
+The crate root (`src/lib.rs`) also sets `#![allow(clippy::module_name_repetitions)]` because
+items deliberately repeat their module name (e.g. `two_sum::two_sum_brute_force`) as a gittype
+typing-practice convention.
 
 ## Complexity Notation
 
@@ -482,55 +321,138 @@ Use Big-O notation in doc comments:
 - **Time:** O(n), O(n²), O(n log n), O(2^n)
 - **Space:** O(1), O(n), O(n²)
 
-Explain what n represents and any other variables (m, k, etc.).
+Explain what `n` represents and any other variables (m, k, etc.).
 
-## Components Completed
+## gittype Integration
+
+1. **Use gittype** to practice typing entire files.
+2. **Focus on one category** at a time (e.g. all string problems, or all of `systems/`).
+3. **Type all implementations** to internalize different patterns.
+4. **Repeat regularly** — muscle memory requires repetition.
+
+### Common Patterns to Practice
+- Sliding window with HashSet/HashMap
+- Two pointers (start/end, slow/fast)
+- BFS/DFS with Vec/VecDeque as queue/stack
+- Dynamic programming with 1D/2D Vec
+- Pattern matching with `match` and `if let`
+- Iterator chains (`.iter().filter().map().collect()`)
+- Error handling with `Option` and `Result`
+
+## Interview Strategy
+
+1. **Start with brute force** — demonstrates you understand the problem.
+2. **Identify bottlenecks** — explain what makes it slow.
+3. **Optimize incrementally** — show the thought process.
+4. **Arrive at optimal** — explain why it's optimal.
+5. **Test edge cases** — show thoroughness.
+
+## Components Present
+
+The lists below reflect the modules actually declared in each category's `mod.rs`.
 
 ### Fundamentals
-- [x] Asm - Inline assembly with asm! macro, register constraints, x86_64/aarch64 intrinsics
-- [x] Borrowing - Borrow checker patterns, lifetimes, ownership (19 patterns)
-- [x] CLI Patterns - Ratatui TUI development, components, layouts (optional feature)
-- [x] Closures - Fn/FnMut/FnOnce traits, capturing, returning closures
-- [x] Collections - HashMap, HashSet, VecDeque, BinaryHeap
-- [x] Concurrency - Arc, Mutex, RwLock, channels, atomics, thread patterns
-- [x] Design Patterns - Builder, newtype, type-state, RAII, visitor, strategy
-- [x] Error Handling - Option/Result combinators, ? operator
-- [x] Error Types - thiserror, anyhow, custom errors, recovery strategies
-- [x] Iterators - 14 common patterns (map, filter, fold, etc.)
-- [x] Macros - Declarative macros, repetition, DSLs, debugging
-- [x] Numeric Operations - Bit manipulation, safe arithmetic, number algorithms
-- [x] Pattern Matching - match, if let, destructuring, guards
-- [x] Performance - Inlining, allocation, cache-friendly patterns, hot path optimization
-- [x] Serde Patterns - Serialization/deserialization patterns (optional feature)
-- [x] SIMD - SSE/AVX vector operations, platform detection, portable SIMD
-- [x] Smart Pointers - Box, Rc, RefCell, Cow, ownership patterns
-- [x] Strings - String/&str operations, parsing, manipulation
-- [x] Testing - Unit tests, fixtures, property-based testing, TDD workflow
-- [x] Types and Traits - Generics, trait bounds, From/Into, impl Trait, trait objects, type state
-- [x] Unsafe Rust - Raw pointers, FFI, unsafe traits, safety invariants
-- [x] Async and Parallel - Tokio async/await, rayon data parallelism (optional feature)
+asm, borrowing, closures, collections, concurrency, design_patterns, error_handling,
+error_types, iterators, macros, numeric_ops, pattern_matching, performance, simd,
+smart_pointers, strings, testing, types_and_traits, unsafe_rust.
+Feature-gated: async_and_parallel (`async-parallel`), serde_patterns (`serde-patterns`),
+cli_patterns (`cli-patterns`).
 
-### LeetCode Problems
+### Arrays
+best_time_to_buy_and_sell_stock, container_with_most_water, contains_duplicate,
+find_minimum_in_rotated_sorted_array, first_missing_positive, gas_station, insert_interval,
+jump_game, longest_consecutive_sequence, majority_element, maximum_subarray, merge_intervals,
+move_zeroes, product_except_self, rotate_array, rotate_image, search_a_2d_matrix,
+search_in_rotated_sorted_array, sliding_window_maximum, sort_colors, spiral_matrix,
+subarray_sum_equals_k, three_sum, top_k_frequent_elements, trapping_rain_water, two_sum,
+two_sum_ii, valid_sudoku.
 
-#### Arrays
-- [x] #1 - Two Sum (Easy) - Hash map lookup, O(n²) → O(n) optimization
-- [x] #15 - Three Sum (Medium) - Two pointers, sorting, deduplication
-- [x] #42 - Trapping Rain Water (Hard) - Two pointers, DP alternatives
+### Strings
+aho_corasick, basic_calculator_ii, find_all_anagrams_in_a_string, group_anagrams,
+longest_common_prefix, longest_palindromic_substring, longest_repeating_character_replacement,
+longest_substring_without_repeating, mini_parser, minimum_window_substring, parser_combinator,
+regex, reverse_words_in_a_string, roman_to_integer, semver, string_to_integer_atoi,
+text_justification, valid_anagram, valid_number, valid_palindrome.
 
-#### Strings
-- [x] #3 - Longest Substring Without Repeating Characters (3 implementations)
+### Linked Lists
+add_two_numbers, linked_list_cycle, merge_k_sorted_lists, merge_two_sorted_lists,
+middle_of_the_linked_list, palindrome_linked_list, remove_duplicates_from_sorted_list,
+remove_nth_node_from_end_of_list, reverse_linked_list, swap_nodes_in_pairs.
 
-#### Linked Lists
-- [ ] TBD
+### Trees
+balanced_binary_tree, binary_tree_maximum_path_sum, bst_iterator,
+construct_binary_tree_from_preorder_and_inorder_traversal,
+design_add_and_search_words_data_structure, diameter_of_binary_tree, implement_trie,
+invert_binary_tree, kth_smallest_element_in_a_bst, level_order_traversal,
+lowest_common_ancestor, max_depth, red_black_tree, same_tree,
+serialize_and_deserialize_binary_tree, symmetric_tree, validate_binary_search_tree.
 
-#### Trees
-- [ ] TBD
+### Graphs
+clone_graph, course_schedule, dijkstra, network_delay_time, number_of_islands,
+pacific_atlantic_water_flow, reconstruct_itinerary, redundant_connection, rotting_oranges,
+word_ladder.
 
-#### Graphs
-- [ ] TBD
+### Dynamic Programming
+climbing_stairs, coin_change, edit_distance, house_robber, longest_common_subsequence,
+longest_increasing_subsequence, maximum_product_subarray, maximum_subarray,
+partition_equal_subset_sum, unique_paths, word_break.
 
-#### Dynamic Programming
-- [ ] TBD
+### Backtracking
+combination_sum, combinations, generate_parentheses, letter_combinations, n_queens,
+palindrome_partitioning, permutations, subsets, sudoku_solver, word_search.
+
+### Binary Search
+binary_search, find_minimum_in_rotated_sorted_array, koko_eating_bananas, search_a_2d_matrix,
+search_in_rotated_sorted_array, time_based_key_value_store.
+
+### Heaps
+find_median_from_data_stream, k_closest_points_to_origin, kth_largest_element_in_an_array.
+
+### Stacks
+asteroid_collision, daily_temperatures, decode_string, evaluate_reverse_polish_notation,
+flatten_nested_list_iterator, largest_rectangle_in_histogram, min_stack, simplify_path,
+valid_parentheses.
+
+### Concurrency
+actor_system, arc, async_executor, async_mutex, barrier, channel, dining_philosophers,
+event_loop, lock_free_queue, mutex, once_cell, parking_lot, promise, read_write_lock,
+semaphore, thread_local, thread_pool, work_stealing_pool.
+
+### Cryptography
+jwt, rand, sha256.
+
+### Networking
+dns_resolver, http_client, http_router, http_server, load_balancer, middleware, rpc,
+tcp_connection_pool, url, websocket.
+
+### Serialization
+base64, bencode, bincode, csv, ini, json, msgpack, protobuf, resp, serde_framework, toml,
+varint.
+
+### Data Structures
+b_tree, binary_heap, bit_vec, bloom_filter, bytes, concurrent_hash_map, count_min_sketch,
+crdt, cuckoo_filter, graph, hash_map, hashed_wheel_timer, hyperloglog, index_map,
+interval_tree, lfu_cache, lru_cache, merkle_tree, quadtree, radix_trie, ring_buffer, rope,
+segment_tree, skip_list, slotmap, smallvec, sparse_set, spsc_ring_buffer, type_map, union_find.
+
+### Design Patterns
+active_record_vs_repository, actor, adapter, borrowed_owned_duality, bridge, builder,
+callbacks, chain_of_responsibility, command, composite, concurrency_patterns, conversions,
+decorator, dependency_injection, drop_bomb, error_handling, extension_traits, facade, factory,
+flyweight, handle_pattern, interior_mutability, interpreter, iterators, macros, marker_traits,
+mediator, memento, middleware, newtype, null_object, object_pool, observer, oop_correction,
+oop_correction_factor, oop_mindset_cures, parse_dont_validate, plugin, polymorphism, prototype,
+proxy, raii_guards, registry, sealed_traits, self_referential, session_types, singleton, state,
+strategy, template_method, typestate, visitor.
+
+### Systems
+arc_cache, bitcask, bloom_filter, buddy_allocator, bump_allocator, circuit_breaker, cli_parser,
+concurrent_cache, connection_pool, consistent_hashing, cron, datetime, deflate,
+dependency_injection, design_twitter, ecs, error_framework, garbage_collector, inverted_index,
+job_queue, lfu_cache, log_structured_storage, lru_cache, lsm_tree, metrics_registry, mvcc,
+pub_sub, raft, rate_limiter, reactive_signals, slab_allocator, snowflake, sql_engine,
+task_scheduler, template_engine, tracing, ttl_cache, uuid, vdom, vector_clock, virtual_machine,
+w_tiny_lfu_cache, wal, write_strategies.
 
 ## Future Enhancements
 

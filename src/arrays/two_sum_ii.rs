@@ -16,7 +16,7 @@
 //! ## Why this matters in Rust
 //!
 //! This problem is a foundational introduction to the **Two Pointers** pattern.
-//! While the original Two Sum uses a HashMap to achieve O(N) time complexity (costing O(N) space),
+//! While the original Two Sum uses a `HashMap` to achieve O(N) time complexity (costing O(N) space),
 //! this problem exploits the *sorted* nature of the array to achieve O(N) time with O(1) space.
 //! It's a great way to practice Rust's array indexing, loop invariants, and safely manipulating
 //! multiple indices without running into bounds errors or borrow checker issues.
@@ -190,7 +190,7 @@ mod tests {
         let target = 0;
         assert_eq!(two_sum_brute_force(input.clone(), target), vec![1, 2]);
         assert_eq!(two_sum_optimized(input.clone(), target), vec![1, 2]);
-        assert_eq!(two_sum_optimal(input.clone(), target), vec![1, 2]);
+        assert_eq!(two_sum_optimal(input, target), vec![1, 2]);
     }
 
     #[test]

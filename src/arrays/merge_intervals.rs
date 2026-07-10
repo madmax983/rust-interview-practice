@@ -108,6 +108,11 @@ pub fn merge_brute_force(intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
 /// Note: sort-then-merge is the optimal solution for this problem — its cost is bounded below by the
 /// O(N log N) sort. There is no meaningfully distinct "optimized" tier between the naive pairwise
 /// scan and this approach, so only `_brute_force` and `_optimal` are provided.
+///
+/// # Panics
+///
+/// Does not panic in practice: `merged` is seeded with the first interval before
+/// the loop, so `last_mut().unwrap()` always has an element to return.
 #[must_use]
 pub fn merge_optimal(mut intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     if intervals.is_empty() {
@@ -158,12 +163,12 @@ pub fn merge(intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {
     merge_optimal(intervals)
 }
 
-/// Alternative Approach: Fold
-///
-/// While `fold` is a powerful iterator adaptor, using it here can be slightly more complex due to the need
-/// to access the "current last" element of the accumulator. A manual loop is often clearer for this specific logic
-/// because `fold` expects the accumulator to be passed by value in each step, which might involve more boilerplate
-/// to modify the `Vec` in place efficiently. However, `try_fold` or `fold` with a mutable reference could work.
+// Alternative Approach: Fold
+//
+// While `fold` is a powerful iterator adaptor, using it here can be slightly more complex due to the need
+// to access the "current last" element of the accumulator. A manual loop is often clearer for this specific logic
+// because `fold` expects the accumulator to be passed by value in each step, which might involve more boilerplate
+// to modify the `Vec` in place efficiently. However, `try_fold` or `fold` with a mutable reference could work.
 
 // GOTCHA: Input validation.
 // The problem constraints guarantee `intervals[i].length == 2`.

@@ -135,7 +135,10 @@ pub fn classify_char(ch: char) -> &'static str {
 }
 
 /// Pattern: String to number parsing
-#[must_use]
+///
+/// # Errors
+///
+/// Returns a `ParseIntError` if `s` is not a valid `i32`.
 pub fn parse_number(s: &str) -> Result<i32, std::num::ParseIntError> {
     s.parse::<i32>()
 }

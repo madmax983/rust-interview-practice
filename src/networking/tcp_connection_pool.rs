@@ -5,7 +5,7 @@
 //! **Replaces Crates:** `r2d2`, `bb8`, `deadpool`
 //!
 //! **Real-world Usage:**
-//! - Database clients (PostgreSQL, MySQL, Redis) to avoid handshake overhead.
+//! - Database clients (`PostgreSQL`, `MySQL`, Redis) to avoid handshake overhead.
 //! - HTTP clients (Keep-Alive connections).
 //!
 //! **Why build it yourself?**
@@ -46,9 +46,15 @@ pub trait ConnectionManager {
     type Error: std::fmt::Debug + Send + 'static;
 
     /// Creates a new connection.
+    ///
+    /// # Errors
+    /// Returns [`Self::Error`] if a new connection cannot be established.
     fn connect(&self) -> Result<Self::Connection, Self::Error>;
 
     /// Checks if the connection is still valid (e.g., ping).
+    ///
+    /// # Errors
+    /// Returns [`Self::Error`] if the connection is no longer valid.
     fn is_valid(&self, conn: &mut Self::Connection) -> Result<(), Self::Error>;
 
     /// Checks if the connection has broken (fast check).
@@ -109,6 +115,10 @@ pub enum PoolError<E> {
 }
 
 impl<M: ConnectionManager> Pool<M> {
+    /// Creates a new connection pool backed by the given manager and config.
+    ///
+    /// # Panics
+    /// Panics if `config.max_size` is zero.
     pub fn new(manager: M, config: PoolConfig) -> Self {
         assert!(config.max_size > 0, "max_size must be positive");
         Self {
@@ -124,6 +134,18 @@ impl<M: ConnectionManager> Pool<M> {
         }
     }
 
+    /// Checks out a connection from the pool, blocking until one is available
+    /// or the configured timeout elapses.
+    ///
+    /// # Errors
+    /// Returns [`PoolError::Timeout`] if no connection becomes available within
+    /// the timeout, or [`PoolError::Manager`] if creating a new connection fails.
+    ///
+    /// # Panics
+    /// Panics if the internal state lock is poisoned.
+    // The state guard is deliberately released and re-acquired around user I/O
+    // (validation/creation); it cannot be tightened without breaking that dance.
+    #[allow(clippy::significant_drop_tightening)]
     pub fn get(&self) -> Result<PooledConnection<M>, PoolError<M::Error>> {
         let mut state = self.shared.state.lock().unwrap();
         let start = std::time::Instant::now();
@@ -137,22 +159,18 @@ impl<M: ConnectionManager> Pool<M> {
                 // during potentially slow I/O operations. This improves concurrency.
                 drop(state);
 
-                match self.shared.manager.is_valid(&mut conn) {
-                    Ok(()) => {
-                        return Ok(PooledConnection {
-                            pool: self.clone(),
-                            conn: Some(conn),
-                        });
-                    }
-                    Err(_) => {
-                        // Connection is invalid. We must re-acquire lock to update state.
-                        state = self.shared.state.lock().unwrap();
-                        state.num_connections -= 1;
-                        // We freed a slot, so notify waiting threads.
-                        self.shared.cond.notify_one();
-                        continue;
-                    }
+                if matches!(self.shared.manager.is_valid(&mut conn), Ok(())) {
+                    return Ok(PooledConnection {
+                        pool: self.clone(),
+                        conn: Some(conn),
+                    });
                 }
+                // Connection is invalid. We must re-acquire lock to update state.
+                state = self.shared.state.lock().unwrap();
+                state.num_connections -= 1;
+                // We freed a slot, so notify waiting threads.
+                self.shared.cond.notify_one();
+                continue;
             }
 
             // 2. If no idle, try to create new
@@ -181,9 +199,8 @@ impl<M: ConnectionManager> Pool<M> {
 
             // 3. Pool is full, wait.
             let elapsed = start.elapsed();
-            let remaining = match timeout.checked_sub(elapsed) {
-                Some(duration) => duration,
-                None => return Err(PoolError::Timeout),
+            let Some(remaining) = timeout.checked_sub(elapsed) else {
+                return Err(PoolError::Timeout);
             };
 
             // RUST INSIGHT: Condvar Wait
