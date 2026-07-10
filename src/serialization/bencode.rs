@@ -78,6 +78,11 @@ pub trait BencodeEncode {
 /// A trait for types that can be deserialized from Bencode format.
 pub trait BencodeDecode: Sized {
     /// Decodes a value from a raw byte slice, returning the value and remaining bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` with a descriptive message if the bytes are not valid
+    /// Bencode for this type.
     fn bdecode(bytes: &[u8]) -> Result<(Self, &[u8]), String>;
 }
 
@@ -118,7 +123,7 @@ impl BencodeDecode for String {
 
 impl BencodeValue {
     /// Encodes the `BencodeValue` into a raw byte vector.
-    #[must_use] 
+    #[must_use]
     pub fn encode(&self) -> Vec<u8> {
         let mut buffer = Vec::new();
         self.encode_into(&mut buffer);
@@ -168,10 +173,15 @@ impl BencodeValue {
     }
 }
 
-/// Decodes a `BencodeValue` from a raw byte slice.
-/// Returns the parsed value and the remaining unparsed bytes.
 const MAX_DEPTH: usize = 512;
 
+/// Decodes a `BencodeValue` from a raw byte slice.
+/// Returns the parsed value and the remaining unparsed bytes.
+///
+/// # Errors
+///
+/// Returns an `Err` with a descriptive message if the bytes are not valid
+/// Bencode or the nesting depth exceeds `MAX_DEPTH`.
 pub fn decode(bytes: &[u8]) -> Result<(BencodeValue, &[u8]), String> {
     decode_internal(bytes, 0)
 }
@@ -289,16 +299,16 @@ fn decode_dictionary(mut bytes: &[u8], depth: usize) -> Result<(BencodeValue, &[
     while !bytes.is_empty() && bytes[0] != b'e' {
         // Keys must be byte strings
         let (key_val, remaining1) = decode_byte_string(bytes)?;
-        let key_bytes = match key_val {
-            BencodeValue::ByteString(b) => b,
-            _ => return Err("Dictionary key must be a byte string".to_string()),
+        let BencodeValue::ByteString(key_bytes) = key_val else {
+            return Err("Dictionary key must be a byte string".to_string());
         };
 
         // Bencode spec: keys must be sorted lexicographically
         if let Some(ref last) = last_key
-            && &key_bytes <= last {
-                return Err("Dictionary keys must be strictly sorted lexicographically".to_string());
-            }
+            && &key_bytes <= last
+        {
+            return Err("Dictionary keys must be strictly sorted lexicographically".to_string());
+        }
         last_key = Some(key_bytes.clone());
 
         let key_str = String::from_utf8(key_bytes)

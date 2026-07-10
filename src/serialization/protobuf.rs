@@ -44,6 +44,13 @@
 // 2. Decoder must skip unknown fields safely based on their wire type.
 // 3. Serialized size should be exactly pre-computable to avoid reallocations.
 
+// Byte/word truncation and reinterpretation are intentional in this serialization code.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use std::convert::TryFrom;
 
 /// Protobuf Wire Types.
@@ -75,6 +82,10 @@ pub trait Message: Sized + Default {
     fn encode(&self, buf: &mut Vec<u8>);
 
     /// Decodes the message from the given buffer slice. Returns the number of bytes read.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if the buffer is malformed or truncated.
     fn decode(buf: &[u8]) -> Result<(Self, usize), &'static str>;
 
     /// Computes the exact encoded size of this message.
@@ -115,6 +126,11 @@ impl Varint {
     }
 
     /// Decodes a u64 varint from the buffer. Returns the value and bytes read.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if the varint is too long (> 64 bits) or the
+    /// buffer is exhausted before the continuation bit clears.
     pub fn decode(buf: &[u8]) -> Result<(u64, usize), &'static str> {
         let mut val = 0u64;
         let mut shift = 0;
@@ -167,6 +183,11 @@ impl Field {
     }
 
     /// Decodes a tag from the buffer. Returns (`field_number`, `wire_type`, `bytes_read`).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if the varint is malformed or the wire type is
+    /// invalid.
     pub fn decode_tag(buf: &[u8]) -> Result<(u32, WireType, usize), &'static str> {
         let (tag, read) = Varint::decode(buf)?;
         let wire_type = WireType::try_from((tag & 0x07) as u8)?;
@@ -175,6 +196,11 @@ impl Field {
     }
 
     /// Skips a field based on its wire type. Returns the number of bytes to skip.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error string if the buffer is too short for the field's wire
+    /// type or a length-delimited length overflows `usize`.
     pub fn skip(wire_type: WireType, buf: &[u8]) -> Result<usize, &'static str> {
         match wire_type {
             WireType::Varint => {

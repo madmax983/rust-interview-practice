@@ -36,9 +36,20 @@
 //! | Encode | O(log N) | O(log N) |
 //! | Decode | O(log N) | O(1) |
 
+// Byte/word truncation and reinterpretation are intentional in this serialization code.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use std::io::{self, Read, Write};
 
 /// Encodes an unsigned 64-bit integer into a writer using LEB128.
+///
+/// # Errors
+///
+/// Returns an [`io::Error`] if writing to the underlying writer fails.
 // RUST INSIGHT: Using `impl Write` allows this to work with any writer (File, TcpStream, Vec<u8>), making it highly reusable.
 pub fn encode_u64<W: Write>(writer: &mut W, mut value: u64) -> io::Result<usize> {
     let mut bytes_written = 0;
@@ -58,6 +69,11 @@ pub fn encode_u64<W: Write>(writer: &mut W, mut value: u64) -> io::Result<usize>
 }
 
 /// Decodes an unsigned 64-bit integer from a reader using LEB128.
+///
+/// # Errors
+///
+/// Returns an [`io::Error`] if the reader fails or the stream is a malformed /
+/// overflowing LEB128 sequence.
 // RUST INSIGHT: `impl Read` allows us to decode from any source without loading the whole buffer into memory.
 pub fn decode_u64<R: Read>(reader: &mut R) -> io::Result<u64> {
     let mut result = 0;
@@ -101,6 +117,10 @@ pub fn decode_u64<R: Read>(reader: &mut R) -> io::Result<u64> {
 ///
 /// `ZigZag` encoding maps signed integers to unsigned integers so that small negative numbers
 /// become small unsigned numbers (e.g., -1 -> 1, 1 -> 2, -2 -> 3).
+///
+/// # Errors
+///
+/// Returns an [`io::Error`] if writing to the underlying writer fails.
 // RUST INSIGHT: ZigZag encoding is crucial for efficiency with signed integers because standard two's complement
 // for small negative numbers (like -1) has all high bits set, which would result in max-length LEB128.
 pub fn encode_i64<W: Write>(writer: &mut W, value: i64) -> io::Result<usize> {
@@ -109,6 +129,11 @@ pub fn encode_i64<W: Write>(writer: &mut W, value: i64) -> io::Result<usize> {
 }
 
 /// Decodes a signed 64-bit integer from a reader using `ZigZag` LEB128.
+///
+/// # Errors
+///
+/// Returns an [`io::Error`] if the reader fails or the stream is a malformed
+/// LEB128 sequence.
 pub fn decode_i64<R: Read>(reader: &mut R) -> io::Result<i64> {
     let zigzag = decode_u64(reader)?;
     let value = (zigzag >> 1) as i64 ^ -((zigzag & 1) as i64);

@@ -103,6 +103,11 @@ pub fn encode<T: AsRef<[u8]>>(input: T) -> String {
 }
 
 /// Decodes a Base64 string into binary data.
+///
+/// # Errors
+///
+/// Returns an `Err` with a descriptive message if the input length is not a
+/// multiple of four, contains an invalid character, or has malformed padding.
 pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
     let input = input.as_ref();
     // Filter out whitespace/newlines if we want to be robust, but RFC 4648 implies strictness.

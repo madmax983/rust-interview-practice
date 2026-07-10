@@ -38,6 +38,13 @@
 //! - **Cursor-less deserialization:** We use `&mut &[u8]` as the reader. Advancing the slice is an incredibly cheap and ergonomic way to consume bytes.
 //! - **Pre-allocation:** Length prefixes allow the deserializer to pre-allocate exact capacities for vectors and strings, avoiding dynamic reallocation.
 
+// Byte/word truncation and reinterpretation are intentional in this serialization code.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use std::convert::TryInto;
 use std::fmt;
 use std::string::FromUtf8Error;
@@ -84,6 +91,11 @@ pub trait Serialize {
 /// Any type implementing this can be decoded from a binary stream.
 pub trait Deserialize: Sized {
     /// Attempts to read `Self` from the given byte slice, advancing the slice.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`DecodeError`] if the buffer is too short, contains invalid
+    /// UTF-8, or reports a corrupted length.
     fn deserialize(bytes: &mut &[u8]) -> Result<Self, DecodeError>;
 }
 

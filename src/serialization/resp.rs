@@ -15,6 +15,13 @@
 //! how to parse prefix-length arrays recursively, and how to represent heterogeneous data (strings,
 //! integers, nested arrays) in a unified Rust enum safely without excessive memory copying.
 
+// Byte/word truncation and reinterpretation are intentional in this serialization code.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 // =========================================================================================
 // Architecture
 // =========================================================================================
@@ -57,8 +64,8 @@ pub enum RespValue {
     SimpleString(String),
     Error(String),
     Integer(i64),
-    BulkString(Option<Vec<u8>>),   // None represents Null bulk string
-    Array(Option<Vec<Self>>), // None represents Null array
+    BulkString(Option<Vec<u8>>), // None represents Null bulk string
+    Array(Option<Vec<Self>>),    // None represents Null array
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -114,6 +121,12 @@ impl RespValue {
 
     /// Attempts to parse a RESP value from the given buffer.
     /// Returns `Ok((value, bytes_consumed))` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RespError::Incomplete`] if the buffer does not yet contain a
+    /// full message, or [`RespError::InvalidProtocol`] if the bytes violate the
+    /// RESP grammar.
     pub fn parse(buf: &[u8]) -> Result<(Self, usize), RespError> {
         // GOTCHA: Always handle incomplete or empty buffers gracefully without panicking.
         if buf.is_empty() {

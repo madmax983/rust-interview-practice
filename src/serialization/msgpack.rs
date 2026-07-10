@@ -1,44 +1,52 @@
-/// `MessagePack` Serialization Format
-///
-/// What this implements and what crate(s) it replaces:
-/// This implements a robust encoder and decoder for the `MessagePack` binary serialization format.
-/// It replaces canonical crates like `rmp` and `rmp-serde` to demonstrate how self-describing
-/// binary formats achieve minimal overhead compared to JSON while retaining dynamic typing.
-///
-/// Real-world systems that use this:
-/// - Redis (as an alternative to raw JSON for faster internal parsing and caching)
-/// - Fluentd (log data streaming)
-/// - Various RPC frameworks (Neovim uses MsgPack-RPC)
-///
-/// Why build it yourself?
-/// Implementing `MessagePack` teaches you byte-level protocol design, masking/bit-shifting for
-/// space optimization (like storing a tiny integer and its type tag in a single byte), and how
-/// zero-copy deserialization works in Rust by borrowing from the input buffer.
-///
-/// Architecture
-/// ------------
-///
-/// `MessagePack` packs types tightly. A single byte often contains both the type information
-/// (the "tag") and the value itself if it's small enough.
-///
-/// Example Layouts:
-/// - `FixInt` (0..127): Tag is `0xxxxxxx`. The byte *is* the value.
-/// - `FixStr` (length up to 31): Tag is `101xxxxx`. The 5 bits are the length, followed by utf-8 bytes.
-/// - `Uint8`: Tag is `0xcc`, followed by 1 byte value.
-///
-/// Invariants:
-/// - Parsed sizes (for strings, arrays, maps) must not exceed the remaining buffer length.
-/// - String deserialization must yield valid UTF-8.
-/// - The encoder must always choose the most compact representation possible for integers.
-///
-/// Complexity:
-/// - Encoding/Decoding Time: O(N) where N is the size of the data structure.
-/// - Space: O(N) for encoding. O(1) extra space for decoding if zero-copy (yielding `&str`).
-///
-/// Design Decisions:
-/// - We use an explicit `Value` enum for the AST representation, allowing completely dynamic types.
-/// - We borrow strings (`&'a str`) from the input byte slice to demonstrate zero-copy deserialization.
-/// - We implement `std::io::Write` for encoding to support streams, but decoding operates on `&[u8]` for zero-copy.
+//! `MessagePack` Serialization Format
+//!
+//! What this implements and what crate(s) it replaces:
+//! This implements a robust encoder and decoder for the `MessagePack` binary serialization format.
+//! It replaces canonical crates like `rmp` and `rmp-serde` to demonstrate how self-describing
+//! binary formats achieve minimal overhead compared to JSON while retaining dynamic typing.
+//!
+//! Real-world systems that use this:
+//! - Redis (as an alternative to raw JSON for faster internal parsing and caching)
+//! - Fluentd (log data streaming)
+//! - Various RPC frameworks (Neovim uses MsgPack-RPC)
+//!
+//! Why build it yourself?
+//! Implementing `MessagePack` teaches you byte-level protocol design, masking/bit-shifting for
+//! space optimization (like storing a tiny integer and its type tag in a single byte), and how
+//! zero-copy deserialization works in Rust by borrowing from the input buffer.
+//!
+//! Architecture
+//! ------------
+//!
+//! `MessagePack` packs types tightly. A single byte often contains both the type information
+//! (the "tag") and the value itself if it's small enough.
+//!
+//! Example Layouts:
+//! - `FixInt` (0..127): Tag is `0xxxxxxx`. The byte *is* the value.
+//! - `FixStr` (length up to 31): Tag is `101xxxxx`. The 5 bits are the length, followed by utf-8 bytes.
+//! - `Uint8`: Tag is `0xcc`, followed by 1 byte value.
+//!
+//! Invariants:
+//! - Parsed sizes (for strings, arrays, maps) must not exceed the remaining buffer length.
+//! - String deserialization must yield valid UTF-8.
+//! - The encoder must always choose the most compact representation possible for integers.
+//!
+//! Complexity:
+//! - Encoding/Decoding Time: O(N) where N is the size of the data structure.
+//! - Space: O(N) for encoding. O(1) extra space for decoding if zero-copy (yielding `&str`).
+//!
+//! Design Decisions:
+//! - We use an explicit `Value` enum for the AST representation, allowing completely dynamic types.
+//! - We borrow strings (`&'a str`) from the input byte slice to demonstrate zero-copy deserialization.
+//! - We implement `std::io::Write` for encoding to support streams, but decoding operates on `&[u8]` for zero-copy.
+
+// Byte/word truncation and reinterpretation are intentional in this serialization code.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use std::convert::TryInto;
 use std::io::{self, Write};
 use std::str;
@@ -88,6 +96,13 @@ pub enum DecodeError {
 const MAX_DEPTH: usize = 128;
 
 /// Encodes a `Value` into a writer using the most compact representation.
+///
+/// # Errors
+///
+/// Returns an [`io::Error`] if the writer fails or a string/array/map exceeds
+/// the maximum length representable by the `MessagePack` format.
+// The match covers every marker family, so the line count is inherent to the format.
+#[allow(clippy::too_many_lines)]
 pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
     match value {
         Value::Nil => {
@@ -212,11 +227,18 @@ pub fn encode<W: Write>(writer: &mut W, value: &Value) -> io::Result<()> {
 
 /// Decodes a `MessagePack` value from a byte slice.
 /// Returns a tuple of the parsed `Value` and the remaining unparsed bytes.
+///
+/// # Errors
+///
+/// Returns a [`DecodeError`] if the buffer ends early, contains an invalid
+/// marker or non-UTF-8 string, or exceeds the maximum nesting depth.
 pub fn decode(input: &[u8]) -> Result<(Value<'_>, &[u8]), DecodeError> {
     decode_depth(input, 0)
 }
 
 /// Internal decode that tracks the current nesting depth to bound recursion.
+// One match arm per marker family; the length is inherent to the wire format.
+#[allow(clippy::too_many_lines)]
 fn decode_depth(input: &[u8], depth: usize) -> Result<(Value<'_>, &[u8]), DecodeError> {
     if depth > MAX_DEPTH {
         return Err(DecodeError::DepthLimitExceeded);
@@ -408,11 +430,14 @@ fn decode_array(
     Ok((arr, input))
 }
 
+/// Key/value entries produced by decoding a `MessagePack` map.
+type MapEntries<'a> = Vec<(Value<'a>, Value<'a>)>;
+
 fn decode_map(
     len: usize,
     mut input: &[u8],
     depth: usize,
-) -> Result<(Vec<(Value<'_>, Value<'_>)>, &[u8]), DecodeError> {
+) -> Result<(MapEntries<'_>, &[u8]), DecodeError> {
     let cap = std::cmp::min(len, 1024);
     let mut map = Vec::with_capacity(cap);
     for _ in 0..len {

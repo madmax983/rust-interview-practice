@@ -81,6 +81,11 @@ pub enum JsonValue {
 const MAX_DEPTH: usize = 128;
 
 /// Parses a JSON string into a `JsonValue`.
+///
+/// # Errors
+///
+/// Returns an `Err` with a human-readable message if the input is not valid
+/// JSON, has trailing characters, or exceeds the maximum nesting depth.
 pub fn parse(input: &str) -> Result<JsonValue, String> {
     let mut parser = Parser::new(input);
     let value = parser.parse_value(0)?;
@@ -163,7 +168,7 @@ impl<'a> Parser<'a> {
             self.skip_whitespace();
             match self.next() {
                 Some('}') => break,
-                Some(',') => continue,
+                Some(',') => {}
                 _ => return Err("Expected '}' or ',' in object".to_string()),
             }
         }
@@ -188,7 +193,7 @@ impl<'a> Parser<'a> {
             self.skip_whitespace();
             match self.next() {
                 Some(']') => break,
-                Some(',') => continue,
+                Some(',') => {}
                 _ => return Err("Expected ']' or ',' in array".to_string()),
             }
         }

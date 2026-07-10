@@ -187,9 +187,7 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                     } else if c == '\r' || c == '\n' {
                         // End of line.
                         // If it's `\r`, check if next is `\n`
-                        if c == '\r'
-                            && chars.peek() == Some(&'\n')
-                        {
+                        if c == '\r' && chars.peek() == Some(&'\n') {
                             chars.next();
                         }
 

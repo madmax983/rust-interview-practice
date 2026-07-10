@@ -31,13 +31,19 @@ impl Default for Ini {
 }
 
 impl Ini {
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             sections: HashMap::new(),
         }
     }
 
+    /// Parses INI-formatted text into an [`Ini`] document.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ParseError`] if a line is neither a comment, a section
+    /// header, nor a valid `key = value` assignment.
     pub fn parse(input: &str) -> Result<Self, ParseError> {
         let mut ini = Self::new();
         let mut current_section = "default".to_string();
@@ -71,7 +77,7 @@ impl Ini {
         Ok(ini)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn get(&self, section: &str, key: &str) -> Option<&String> {
         self.sections.get(section).and_then(|s| s.get(key))
     }
