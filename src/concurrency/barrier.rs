@@ -17,6 +17,10 @@
 //! and entering the next phase before other threads have even woken up from the first phase.
 //! Building this teaches you how to orchestrate complex wake-up conditions using `Condvar`.
 
+// Lock guards are intentionally held across condvar waits/notifications;
+// do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::{Condvar, Mutex};
 
 // =========================================================================================

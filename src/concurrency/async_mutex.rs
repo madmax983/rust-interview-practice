@@ -17,6 +17,10 @@
 //! and storing a `Waker`). It teaches how `UnsafeCell` is used correctly to bypass
 //! the borrow checker for interior mutability when manual synchronization guarantees safety.
 
+// Lock guards are intentionally held across critical sections (waker queues,
+// atomic state transitions); do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::cell::UnsafeCell;
 use std::collections::VecDeque;
 use std::future::Future;
@@ -109,7 +113,7 @@ impl<'a, T> Future for MutexAcquire<'a, T> {
                 if *id == self.id {
                     // Update the waker in case it has changed (e.g. `tokio::select!`).
                     if !waker.will_wake(cx.waker()) {
-                        *waker = cx.waker().clone();
+                        waker.clone_from(cx.waker());
                     }
                     found = true;
                     break;

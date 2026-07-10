@@ -88,7 +88,7 @@ impl ThreadPool {
     /// # Panics
     ///
     /// The `new` function will panic if the size is zero.
-    #[must_use] 
+    #[must_use]
     pub fn new(size: usize) -> Self {
         assert!(size > 0);
 
@@ -115,6 +115,10 @@ impl ThreadPool {
     /// Execute a function `f` on a thread in the pool.
     ///
     /// The closure `f` must be `Send` and `'static`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if sending the job to a worker fails (the channel is closed).
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,

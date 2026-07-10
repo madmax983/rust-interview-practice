@@ -18,6 +18,17 @@
 //! - **Fairness**: Thieves steal from the "oldest" tasks (FIFO) to take larger chunks of work (assuming recursive splitting).
 //! - **Synchronization**: Managing distributed queues with minimal contention.
 
+// Low-level index manipulation: RNG-derived victim indices are intentionally
+// truncated/wrapped to fit the worker array.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+// Lock guards are intentionally held across condvar waits and steal critical
+// sections; do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::cell::Cell;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -90,13 +101,16 @@ struct GlobalQueue {
 }
 
 struct WorkerState {
-    id: usize,
     queue: Mutex<VecDeque<Job>>,
 }
 
 impl WorkStealingPool {
     /// Create a new `WorkStealingPool` with `size` threads.
-    #[must_use] 
+    ///
+    /// # Panics
+    ///
+    /// Panics if `size` is zero, or if a worker thread fails to spawn.
+    #[must_use]
     pub fn new(size: usize) -> Self {
         assert!(size > 0, "Pool size must be > 0");
 
@@ -109,9 +123,8 @@ impl WorkStealingPool {
         let mut worker_states = Vec::with_capacity(size);
 
         // Pre-create states to share arc
-        for id in 0..size {
+        for _ in 0..size {
             worker_states.push(WorkerState {
-                id,
                 queue: Mutex::new(VecDeque::new()),
             });
         }
@@ -205,6 +218,10 @@ impl WorkStealingPool {
     }
 
     /// Executes the function `f` on a thread in the pool.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an internal queue `Mutex` is poisoned by a panicking job.
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
@@ -267,7 +284,7 @@ struct XorShift64 {
 impl XorShift64 {
     const fn new(seed: u64) -> Self {
         // Avoid 0 state
-        let state = if seed == 0 { 0xCAFEBABE } else { seed };
+        let state = if seed == 0 { 0xCAFE_BABE } else { seed };
         Self { state }
     }
 

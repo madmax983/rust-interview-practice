@@ -89,6 +89,11 @@ pub struct Spawner {
 }
 
 impl Spawner {
+    /// Spawns a new future onto the executor.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the ready queue is full (too many tasks queued).
     pub fn spawn(&self, future: impl Future<Output = ()> + Send + 'static) {
         let future = Box::pin(future);
         let task = Arc::new(Task {
@@ -105,6 +110,11 @@ pub struct Executor {
 }
 
 impl Executor {
+    /// Runs tasks from the ready queue until the queue is closed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a task's future `Mutex` is poisoned by a panicking task.
     pub fn run(&self) {
         while let Ok(task) = self.ready_queue.recv() {
             let mut future_slot = task.future.lock().unwrap();
@@ -125,7 +135,7 @@ impl Executor {
     }
 }
 
-#[must_use] 
+#[must_use]
 pub fn new_executor_and_spawner() -> (Executor, Spawner) {
     let (task_sender, ready_queue) = sync_channel(10_000);
     (Executor { ready_queue }, Spawner { task_sender })
@@ -206,7 +216,12 @@ impl Future for TimerFuture {
 }
 
 impl TimerFuture {
-    #[must_use] 
+    /// Creates a new `TimerFuture` that completes after `duration`.
+    ///
+    /// # Panics
+    ///
+    /// The spawned timer thread panics if the shared-state `Mutex` is poisoned.
+    #[must_use]
     pub fn new(duration: Duration) -> Self {
         let shared_state = Arc::new(Mutex::new(SharedState {
             completed: false,

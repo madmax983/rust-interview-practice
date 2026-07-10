@@ -15,7 +15,11 @@
 //! like "false sharing". You'll learn how to safely coordinate multiple threads modifying a shared
 //! ring buffer without using a single `Mutex`.
 
+// Low-level lock-free index manipulation: sequence/index casts to signed are intentional.
+#![allow(clippy::cast_possible_wrap)]
+
 use std::cell::UnsafeCell;
+use std::cmp::Ordering as CmpOrdering;
 use std::mem::MaybeUninit;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -83,6 +87,10 @@ struct Slot<T> {
 /// A trait defining a basic concurrent queue.
 pub trait Queue<T> {
     /// Attempts to push an item into the queue.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(PushError::Full(item))` if the queue is at capacity.
     fn push(&self, item: T) -> Result<(), PushError<T>>;
     /// Attempts to pop an item from the queue.
     fn pop(&self) -> Option<T>;
@@ -116,7 +124,11 @@ pub enum PushError<T> {
 impl<T> ArrayQueue<T> {
     /// Creates a new `ArrayQueue` with the specified capacity.
     /// Capacity must be a power of two.
-    #[must_use] 
+    ///
+    /// # Panics
+    ///
+    /// Panics if `capacity` is zero or not a power of two.
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         assert!(
             capacity > 0 && capacity.is_power_of_two(),
@@ -155,41 +167,45 @@ impl<T> Queue<T> for ArrayQueue<T> {
             // We must use `wrapping_sub` and cast to signed.
             let diff = seq.wrapping_sub(tail) as isize;
 
-            if diff == 0 {
-                // The slot is ready for us to enqueue.
-                // Try to claim the tail index by moving it forward.
-                match self.tail.compare_exchange_weak(
-                    tail,
-                    tail + 1,
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                ) {
-                    Ok(_) => {
-                        // We successfully claimed this slot!
-                        // UNSAFE JUSTIFICATION: We exclusively own this slot now because we
-                        // successfully incremented the tail, and `seq == tail`. No other thread
-                        // can write to or read from this slot until we update the sequence.
-                        unsafe {
-                            (*slot.data.get()).write(item);
-                        }
+            match diff.cmp(&0) {
+                CmpOrdering::Equal => {
+                    // The slot is ready for us to enqueue.
+                    // Try to claim the tail index by moving it forward.
+                    match self.tail.compare_exchange_weak(
+                        tail,
+                        tail + 1,
+                        Ordering::Relaxed,
+                        Ordering::Relaxed,
+                    ) {
+                        Ok(_) => {
+                            // We successfully claimed this slot!
+                            // UNSAFE JUSTIFICATION: We exclusively own this slot now because we
+                            // successfully incremented the tail, and `seq == tail`. No other thread
+                            // can write to or read from this slot until we update the sequence.
+                            unsafe {
+                                (*slot.data.get()).write(item);
+                            }
 
-                        // Release the slot to consumers.
-                        slot.sequence.store(tail + 1, Ordering::Release);
-                        return Ok(());
-                    }
-                    Err(actual_tail) => {
-                        // Another thread claimed the tail before us. Update and try again.
-                        tail = actual_tail;
+                            // Release the slot to consumers.
+                            slot.sequence.store(tail + 1, Ordering::Release);
+                            return Ok(());
+                        }
+                        Err(actual_tail) => {
+                            // Another thread claimed the tail before us. Update and try again.
+                            tail = actual_tail;
+                        }
                     }
                 }
-            } else if diff < 0 {
-                // The queue is full. The slot's sequence is behind our current tail,
-                // meaning a consumer hasn't reached it yet to reset it.
-                return Err(PushError::Full(item));
-            } else {
-                // `diff > 0`. Another producer has already claimed this slot and incremented
-                // the sequence, but we haven't seen the `tail` update yet. Reload tail.
-                tail = self.tail.load(Ordering::Relaxed);
+                CmpOrdering::Less => {
+                    // The queue is full. The slot's sequence is behind our current tail,
+                    // meaning a consumer hasn't reached it yet to reset it.
+                    return Err(PushError::Full(item));
+                }
+                CmpOrdering::Greater => {
+                    // Another producer has already claimed this slot and incremented
+                    // the sequence, but we haven't seen the `tail` update yet. Reload tail.
+                    tail = self.tail.load(Ordering::Relaxed);
+                }
             }
         }
     }
@@ -204,41 +220,45 @@ impl<T> Queue<T> for ArrayQueue<T> {
             let seq = slot.sequence.load(Ordering::Acquire);
             let diff = seq.wrapping_sub(head + 1) as isize;
 
-            if diff == 0 {
-                // The slot contains data and is ready for us to dequeue.
-                // Try to claim the head index by moving it forward.
-                match self.head.compare_exchange_weak(
-                    head,
-                    head + 1,
-                    Ordering::Relaxed,
-                    Ordering::Relaxed,
-                ) {
-                    Ok(_) => {
-                        // We successfully claimed this slot!
-                        // UNSAFE JUSTIFICATION: We exclusively own this slot now. We incremented
-                        // the head, and `seq == head + 1`. No other thread can read or write
-                        // to this slot until we reset the sequence.
-                        let item = unsafe { (*slot.data.get()).assume_init_read() };
+            match diff.cmp(&0) {
+                CmpOrdering::Equal => {
+                    // The slot contains data and is ready for us to dequeue.
+                    // Try to claim the head index by moving it forward.
+                    match self.head.compare_exchange_weak(
+                        head,
+                        head + 1,
+                        Ordering::Relaxed,
+                        Ordering::Relaxed,
+                    ) {
+                        Ok(_) => {
+                            // We successfully claimed this slot!
+                            // UNSAFE JUSTIFICATION: We exclusively own this slot now. We incremented
+                            // the head, and `seq == head + 1`. No other thread can read or write
+                            // to this slot until we reset the sequence.
+                            let item = unsafe { (*slot.data.get()).assume_init_read() };
 
-                        // Reset the slot's sequence so it can be used for enqueuing again.
-                        // For a slot at `idx` that was at wrap `wrap`, the next time a producer
-                        // needs it, its tail will be `head + capacity`.
-                        slot.sequence.store(head + self.mask + 1, Ordering::Release);
-                        return Some(item);
-                    }
-                    Err(actual_head) => {
-                        // Another thread claimed the head before us. Update and try again.
-                        head = actual_head;
+                            // Reset the slot's sequence so it can be used for enqueuing again.
+                            // For a slot at `idx` that was at wrap `wrap`, the next time a producer
+                            // needs it, its tail will be `head + capacity`.
+                            slot.sequence.store(head + self.mask + 1, Ordering::Release);
+                            return Some(item);
+                        }
+                        Err(actual_head) => {
+                            // Another thread claimed the head before us. Update and try again.
+                            head = actual_head;
+                        }
                     }
                 }
-            } else if diff < 0 {
-                // The queue is empty. The slot's sequence hasn't been incremented
-                // by a producer yet.
-                return None;
-            } else {
-                // `diff > 0`. Another consumer has already claimed this slot and incremented
-                // the sequence, but we haven't seen the `head` update yet. Reload head.
-                head = self.head.load(Ordering::Relaxed);
+                CmpOrdering::Less => {
+                    // The queue is empty. The slot's sequence hasn't been incremented
+                    // by a producer yet.
+                    return None;
+                }
+                CmpOrdering::Greater => {
+                    // Another consumer has already claimed this slot and incremented
+                    // the sequence, but we haven't seen the `head` update yet. Reload head.
+                    head = self.head.load(Ordering::Relaxed);
+                }
             }
         }
     }

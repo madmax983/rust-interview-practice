@@ -13,6 +13,10 @@
 //! Rust removed `Semaphore` from the standard library because it can be trivially implemented with `Mutex` and `Condvar`.
 //! Building it reinforces your understanding of condition variables and spurious wakeups.
 
+// Lock guards are intentionally held across condvar waits/notifications;
+// do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::{Condvar, Mutex};
 use std::time::Duration;
 
@@ -38,7 +42,7 @@ pub struct Semaphore {
 
 impl Semaphore {
     /// Creates a new semaphore with the initial number of permits.
-    #[must_use] 
+    #[must_use]
     pub const fn new(permits: usize) -> Self {
         Self {
             count: Mutex::new(permits),
@@ -47,6 +51,10 @@ impl Semaphore {
     }
 
     /// Acquires a permit, blocking the current thread until one is available.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal count `Mutex` is poisoned.
     pub fn acquire(&self) {
         let mut count = self.count.lock().unwrap();
         while *count == 0 {
@@ -57,6 +65,10 @@ impl Semaphore {
 
     /// Tries to acquire a permit without blocking.
     /// Returns `true` if a permit was acquired, `false` otherwise.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal count `Mutex` is poisoned.
     pub fn try_acquire(&self) -> bool {
         let mut count = self.count.lock().unwrap();
         if *count > 0 {
@@ -69,6 +81,10 @@ impl Semaphore {
 
     /// Tries to acquire a permit, blocking for at most `timeout`.
     /// Returns `true` if acquired, `false` if timed out.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal count `Mutex` is poisoned.
     pub fn try_acquire_timeout(&self, timeout: Duration) -> bool {
         let mut count = self.count.lock().unwrap();
         let start = std::time::Instant::now();
@@ -94,6 +110,10 @@ impl Semaphore {
 
     /// Releases a permit, returning it to the semaphore.
     /// This notifies a waiting thread, if any.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal count `Mutex` is poisoned.
     pub fn release(&self) {
         let mut count = self.count.lock().unwrap();
         *count += 1;

@@ -55,6 +55,10 @@
 //   - *Tradeoff*: Simple and available in `std`.
 //   - *Alternative*: OS-specific primitives like `futex` on Linux, `WaitOnAddress` on Windows.
 
+// The global parking-lot lock is intentionally held across enqueue/dequeue and
+// hand-off critical sections; do not tighten its scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::cell::UnsafeCell;
 use std::collections::{HashMap, VecDeque};
 use std::ops::{Deref, DerefMut};
@@ -172,7 +176,7 @@ impl<T> Mutex<T> {
                     // (woke spuriously and then acquired), remove our own entry so
                     // a later `unlock` cannot hand the lock to a phantom waiter.
                     if enqueued {
-                        self.dequeue_self(address, &current_thread);
+                        Self::dequeue_self(address, &current_thread);
                     }
                     return;
                 }
@@ -195,15 +199,18 @@ impl<T> Mutex<T> {
 
                 // Mark the lock as having parked waiters. If it turns out to be
                 // free again, retry the acquire instead of parking.
-                match self.state.compare_exchange(
+                //
+                // Ok: transitioned to LOCKED_WITH_PARKED.
+                // Err(UNLOCKED): became free again; go grab it instead of parking.
+                // Err(_): already LOCKED_WITH_PARKED, nothing to do.
+                if self.state.compare_exchange(
                     LOCKED,
                     LOCKED_WITH_PARKED,
                     Ordering::Relaxed,
                     Ordering::Relaxed,
-                ) {
-                    Ok(_) => {}
-                    Err(UNLOCKED) => continue, // became free; go grab it
-                    Err(_) => {}               // already LOCKED_WITH_PARKED
+                ) == Err(UNLOCKED)
+                {
+                    continue;
                 }
 
                 // Enqueue ourselves, avoiding duplicates if we woke up spuriously.
@@ -238,7 +245,7 @@ impl<T> Mutex<T> {
     /// a spurious wakeup). Keeping enqueue/dequeue symmetric guarantees the queue
     /// only ever holds genuinely-waiting threads, so `unlock`'s hand-off can never
     /// be wasted on a stale entry.
-    fn dequeue_self(&self, address: usize, current_thread: &Thread) {
+    fn dequeue_self(address: usize, current_thread: &Thread) {
         let mut lot = global_lot().lock().unwrap();
         if let Some(queue) = lot.queues.get_mut(&address) {
             queue.retain(|w| w.thread.id() != current_thread.id());

@@ -15,6 +15,10 @@
 //! Building one reveals the tricky coordination required between readers and writers using
 //! basic primitives like `Mutex` and `Condvar`. You'll learn about "Writer Starvation" vs "Reader Starvation".
 
+// Lock guards are intentionally held across condvar waits/notifications;
+// do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::cell::UnsafeCell;
 use std::ops::{Deref, DerefMut};
 use std::sync::{Condvar, Mutex};
@@ -86,6 +90,10 @@ impl<T> RwLock<T> {
 
     /// Acquires a shared lock for reading.
     /// Blocks if a writer is active or waiting (Writer Preference).
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal state `Mutex` is poisoned.
     pub fn read(&self) -> ReadGuard<'_, T> {
         let mut state = self.state.lock().unwrap();
 
@@ -101,6 +109,10 @@ impl<T> RwLock<T> {
 
     /// Acquires an exclusive lock for writing.
     /// Blocks if any readers or a writer are active.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal state `Mutex` is poisoned.
     pub fn write(&self) -> WriteGuard<'_, T> {
         let mut state = self.state.lock().unwrap();
 

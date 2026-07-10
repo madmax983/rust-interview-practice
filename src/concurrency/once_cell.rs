@@ -68,6 +68,12 @@ pub struct OnceCell<T> {
 unsafe impl<T: Sync + Send> Sync for OnceCell<T> {}
 unsafe impl<T: Send> Send for OnceCell<T> {}
 
+impl<T> Default for OnceCell<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> OnceCell<T> {
     /// Creates a new, empty `OnceCell`.
     #[must_use]

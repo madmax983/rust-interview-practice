@@ -15,6 +15,10 @@
 //! Building a Promise/Future pair from scratch using `Mutex` and `Condvar` demonstrates exactly how
 //! wait queues work under the hood, stripping away the magic of async/await to reveal the raw OS primitives.
 
+// Lock guards are intentionally held across condvar waits/notifications;
+// do not tighten their scope.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
@@ -85,6 +89,10 @@ pub trait AsyncFuture<T> {
 pub trait AsyncPromise<T> {
     /// Resolves the promise with the given value.
     /// Returns `Ok(())` if the value was set, or `Err(value)` if it was already resolved.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err(value)` if the promise has already been resolved.
     fn set(self, value: T) -> Result<(), T>;
 }
 
