@@ -144,6 +144,9 @@ pub struct Response {
 /// Trait defining the behavior of our HTTP client.
 pub trait HttpClient {
     /// Sends an HTTP request and returns the parsed response.
+    ///
+    /// # Errors
+    /// Returns an error if the request cannot be sent or the response cannot be parsed.
     fn send(&self, req: Request) -> io::Result<Response>;
 }
 
@@ -168,13 +171,13 @@ impl SyncHttpClient {
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Only HTTP is supported"))?;
 
         // Find path
-        let (host_port, path) = match without_scheme.find('/') {
-            Some(idx) => {
+        let (host_port, path) = without_scheme.find('/').map_or_else(
+            || (without_scheme, "/".to_string()),
+            |idx| {
                 let (hp, p) = without_scheme.split_at(idx);
                 (hp, p.to_string())
-            }
-            None => (without_scheme, "/".to_string()),
-        };
+            },
+        );
 
         // Find port
         let (host, port) = match host_port.find(':') {
@@ -255,6 +258,10 @@ impl HttpClient for SyncHttpClient {
 
 impl Response {
     /// Parses an HTTP response from a `BufReader`.
+    ///
+    /// # Errors
+    /// Returns an error if the stream ends unexpectedly, the status line or
+    /// headers are malformed, or the body exceeds the maximum allowed size.
     pub fn parse<R: Read>(reader: &mut BufReader<R>) -> io::Result<Self> {
         // Read status line
         let mut status_line = String::new();
@@ -278,11 +285,7 @@ impl Response {
         let status_code = parts[1]
             .parse::<u16>()
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid status code"))?;
-        let status_text = if parts.len() == 3 {
-            parts[2].to_string()
-        } else {
-            String::new()
-        };
+        let status_text = parts.get(2).map_or_else(String::new, |s| (*s).to_string());
 
         // Read headers
         let mut headers = HashMap::new();

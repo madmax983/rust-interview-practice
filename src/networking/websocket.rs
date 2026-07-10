@@ -15,6 +15,13 @@
 //! Implementing it teaches you about protocol upgrading, binary framing (handling bits, variable-length fields),
 //! and masking requirements designed to prevent proxy cache poisoning.
 
+// Intentional byte/word manipulation of raw WebSocket frames and SHA-1 words.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use crate::serialization::base64;
 use std::convert::TryInto;
 use std::io::{self, BufRead, BufReader, Read, Write};
@@ -125,6 +132,10 @@ impl<S: Read + Write> WebSocketConnection<S> {
 
     /// Performs the Server-side handshake.
     /// Reads the HTTP Upgrade request and sends the 101 Switching Protocols response.
+    ///
+    /// # Errors
+    /// Returns an error if the stream closes mid-handshake, the `Sec-WebSocket-Key`
+    /// header is missing, or the response cannot be written.
     pub fn perform_server_handshake(stream: S) -> io::Result<Self> {
         // Use a buffered reader to parse HTTP headers
         let mut reader = BufReader::new(stream);
@@ -179,6 +190,11 @@ impl<S: Read + Write> WebSocketConnection<S> {
     /// Reads a single message from the connection.
     /// Handles fragmentation (not fully implemented here, assumes single frame messages for simplicity)
     /// and control frames.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying stream fails, a frame is malformed
+    /// (invalid opcode, oversized payload, or a masking-rule violation), text is
+    /// not valid UTF-8, or a continuation frame is received.
     pub fn read_message(&mut self) -> io::Result<Message> {
         let (header, payload) = self.read_frame()?;
 
@@ -200,6 +216,9 @@ impl<S: Read + Write> WebSocketConnection<S> {
     }
 
     /// Writes a message to the connection.
+    ///
+    /// # Errors
+    /// Returns an error if writing to or flushing the underlying stream fails.
     pub fn write_message(&mut self, msg: Message) -> io::Result<()> {
         let (opcode, payload) = match msg {
             Message::Text(t) => (Opcode::Text, t.into_bytes()),
@@ -364,12 +383,14 @@ fn generate_accept_key(key: &str) -> String {
 }
 
 // FIPS 180-1 SHA-1
+// Single-letter names (a..e, f, k, w) match the FIPS 180-1 pseudocode.
+#[allow(clippy::many_single_char_names)]
 fn sha1(data: &[u8]) -> [u8; 20] {
-    let mut h0 = 0x67452301u32;
-    let mut h1 = 0xEFCDAB89u32;
-    let mut h2 = 0x98BADCFEu32;
-    let mut h3 = 0x10325476u32;
-    let mut h4 = 0xC3D2E1F0u32;
+    let mut h0 = 0x6745_2301u32;
+    let mut h1 = 0xEFCD_AB89u32;
+    let mut h2 = 0x98BA_DCFEu32;
+    let mut h3 = 0x1032_5476u32;
+    let mut h4 = 0xC3D2_E1F0u32;
 
     let mut message = data.to_vec();
     let original_len_bits = (data.len() as u64) * 8;
@@ -399,15 +420,15 @@ fn sha1(data: &[u8]) -> [u8; 20] {
         let mut d = h3;
         let mut e = h4;
 
-        for i in 0..80 {
+        for (i, &w_i) in w.iter().enumerate() {
             let (f, k) = if i < 20 {
-                ((b & c) | ((!b) & d), 0x5A827999)
+                ((b & c) | ((!b) & d), 0x5A82_7999)
             } else if i < 40 {
-                (b ^ c ^ d, 0x6ED9EBA1)
+                (b ^ c ^ d, 0x6ED9_EBA1)
             } else if i < 60 {
-                ((b & c) | (b & d) | (c & d), 0x8F1BBCDC)
+                ((b & c) | (b & d) | (c & d), 0x8F1B_BCDC)
             } else {
-                (b ^ c ^ d, 0xCA62C1D6)
+                (b ^ c ^ d, 0xCA62_C1D6)
             };
 
             let temp = a
@@ -415,7 +436,7 @@ fn sha1(data: &[u8]) -> [u8; 20] {
                 .wrapping_add(f)
                 .wrapping_add(e)
                 .wrapping_add(k)
-                .wrapping_add(w[i]);
+                .wrapping_add(w_i);
 
             e = d;
             d = c;

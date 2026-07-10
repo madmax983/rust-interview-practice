@@ -59,6 +59,9 @@ use std::fmt;
 /// Trait defining the core interface for a URL parser.
 pub trait UrlParser: Sized {
     /// Parses a URL string into a URL object.
+    ///
+    /// # Errors
+    /// Returns a [`ParseError`] if the input is not a well-formed URL.
     fn parse(input: &str) -> Result<Self, ParseError>;
 }
 
@@ -231,6 +234,10 @@ impl fmt::Display for Url {
 }
 
 /// Decodes a percent-encoded string.
+///
+/// # Errors
+/// Returns a [`ParseError`] if the input contains an invalid percent-escape
+/// sequence or decodes to invalid UTF-8.
 pub fn percent_decode(input: &str) -> Result<String, ParseError> {
     // ⚡ Bolt Optimization: Fast path to avoid parsing overhead when no decoding is necessary.
     if !input.contains('%') {

@@ -60,6 +60,10 @@ pub trait Service<Req> {
     type Res;
     type Err;
 
+    /// Processes a request and produces a response.
+    ///
+    /// # Errors
+    /// Returns [`Self::Err`] if the service fails to handle the request.
     fn call(&self, req: Req) -> Result<Self::Res, Self::Err>;
 }
 

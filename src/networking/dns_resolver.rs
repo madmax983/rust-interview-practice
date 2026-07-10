@@ -17,6 +17,13 @@
 //! 2. **Recursion in Data Structures**: Handling label pointers (`0xC0`) requires jumping around the buffer.
 //! 3. **UDP Networking**: Managing connectionless sockets and reliability (retries/timeouts - though simplified here).
 
+// Intentional byte/word/protocol-field manipulation of raw DNS packets.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use crate::systems::ttl_cache::TTLCache;
 use std::net::{Ipv4Addr, UdpSocket};
 use std::time::Duration;
@@ -76,6 +83,8 @@ pub enum ResultCode {
 }
 
 /// The DNS Header.
+// The DNS wire format defines each of these flags as a distinct 1-bit field.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug)]
 pub struct DnsHeader {
     pub id: u16, // 16 bits
@@ -160,16 +169,28 @@ impl BytePacketBuffer {
         self.valid_len = len;
     }
 
+    /// Advances the current position by `steps`.
+    ///
+    /// # Errors
+    /// This implementation never fails; it returns `Ok` for API symmetry.
     pub const fn step(&mut self, steps: usize) -> Result<(), &'static str> {
         self.pos += steps;
         Ok(())
     }
 
+    /// Moves the current position to `pos`.
+    ///
+    /// # Errors
+    /// This implementation never fails; it returns `Ok` for API symmetry.
     pub const fn seek(&mut self, pos: usize) -> Result<(), &'static str> {
         self.pos = pos;
         Ok(())
     }
 
+    /// Reads a single byte and advances the position.
+    ///
+    /// # Errors
+    /// Returns an error if the position is past the end of the valid buffer.
     pub const fn read(&mut self) -> Result<u8, &'static str> {
         if self.pos >= self.valid_len {
             return Err("End of buffer");
@@ -179,6 +200,10 @@ impl BytePacketBuffer {
         Ok(res)
     }
 
+    /// Reads the byte at `pos` without advancing the current position.
+    ///
+    /// # Errors
+    /// Returns an error if `pos` is past the end of the valid buffer.
     pub const fn get(&mut self, pos: usize) -> Result<u8, &'static str> {
         if pos >= self.valid_len {
             return Err("End of buffer");
@@ -186,6 +211,10 @@ impl BytePacketBuffer {
         Ok(self.buf[pos])
     }
 
+    /// Returns a slice of `len` bytes starting at `start`.
+    ///
+    /// # Errors
+    /// Returns an error if the requested range extends past the valid buffer.
     pub fn get_range(&mut self, start: usize, len: usize) -> Result<&[u8], &'static str> {
         if start + len > self.valid_len {
             return Err("End of buffer");
@@ -193,11 +222,19 @@ impl BytePacketBuffer {
         Ok(&self.buf[start..start + len])
     }
 
+    /// Reads a big-endian `u16` and advances the position by two bytes.
+    ///
+    /// # Errors
+    /// Returns an error if there are fewer than two bytes remaining.
     pub fn read_u16(&mut self) -> Result<u16, &'static str> {
         let res = (u16::from(self.read()?) << 8) | u16::from(self.read()?);
         Ok(res)
     }
 
+    /// Reads a big-endian `u32` and advances the position by four bytes.
+    ///
+    /// # Errors
+    /// Returns an error if there are fewer than four bytes remaining.
     pub fn read_u32(&mut self) -> Result<u32, &'static str> {
         let res = (u32::from(self.read()?) << 24)
             | (u32::from(self.read()?) << 16)
@@ -211,6 +248,10 @@ impl BytePacketBuffer {
     /// The DNS protocol uses a compression scheme where a label can be a pointer
     /// to a previous occurrence of the same name. A pointer is identified by the
     /// two high bits being set (0xC0).
+    ///
+    /// # Errors
+    /// Returns an error if the buffer ends prematurely or if the compression
+    /// pointers exceed the maximum jump limit (a malformed/looping packet).
     pub fn read_qname(&mut self, outstr: &mut String) -> Result<(), &'static str> {
         let mut pos = self.pos;
         let mut jumped = false;
@@ -266,6 +307,10 @@ impl BytePacketBuffer {
         Ok(())
     }
 
+    /// Writes a single byte and advances the position.
+    ///
+    /// # Errors
+    /// Returns an error if the buffer is already full (`MAX_PACKET_SIZE`).
     pub const fn write(&mut self, val: u8) -> Result<(), &'static str> {
         if self.pos >= MAX_PACKET_SIZE {
             return Err("End of buffer");
@@ -278,16 +323,28 @@ impl BytePacketBuffer {
         Ok(())
     }
 
+    /// Writes a single byte and advances the position.
+    ///
+    /// # Errors
+    /// Returns an error if the buffer is already full (`MAX_PACKET_SIZE`).
     pub const fn write_u8(&mut self, val: u8) -> Result<(), &'static str> {
         self.write(val)
     }
 
+    /// Writes a big-endian `u16`.
+    ///
+    /// # Errors
+    /// Returns an error if the buffer does not have room for two bytes.
     pub fn write_u16(&mut self, val: u16) -> Result<(), &'static str> {
         self.write((val >> 8) as u8)?;
         self.write((val & 0xFF) as u8)?;
         Ok(())
     }
 
+    /// Writes a big-endian `u32`.
+    ///
+    /// # Errors
+    /// Returns an error if the buffer does not have room for four bytes.
     pub fn write_u32(&mut self, val: u32) -> Result<(), &'static str> {
         self.write(((val >> 24) & 0xFF) as u8)?;
         self.write(((val >> 16) & 0xFF) as u8)?;
@@ -312,7 +369,7 @@ impl ResultCode {
             3 => Self::NXDOMAIN,
             4 => Self::NOTIMP,
             5 => Self::REFUSED,
-            0 | _ => Self::NOERROR,
+            _ => Self::NOERROR,
         }
     }
 }
@@ -339,6 +396,10 @@ impl DnsHeader {
         }
     }
 
+    /// Parses a DNS header from the buffer, decoding the packed flag bits.
+    ///
+    /// # Errors
+    /// Returns an error if the buffer ends before the full header is read.
     pub fn read(&mut self, buffer: &mut BytePacketBuffer) -> Result<(), &'static str> {
         self.id = buffer.read_u16()?;
 
@@ -366,6 +427,10 @@ impl DnsHeader {
         Ok(())
     }
 
+    /// Serializes the DNS header into the buffer, packing the flag bits.
+    ///
+    /// # Errors
+    /// Returns an error if the buffer does not have room for the header.
     pub fn write(&self, buffer: &mut BytePacketBuffer) -> Result<(), &'static str> {
         buffer.write_u16(self.id)?;
 
@@ -441,6 +506,10 @@ impl DnsQuestion {
         Self { name, qtype }
     }
 
+    /// Reads a question (name, type, class) from the buffer.
+    ///
+    /// # Errors
+    /// Returns an error if the buffer ends before the question is fully read.
     pub fn read(&mut self, buffer: &mut BytePacketBuffer) -> Result<(), &'static str> {
         buffer.read_qname(&mut self.name)?;
         self.qtype = QueryType::from_num(buffer.read_u16()?);
@@ -448,6 +517,10 @@ impl DnsQuestion {
         Ok(())
     }
 
+    /// Serializes the question (name, type, class) into the buffer.
+    ///
+    /// # Errors
+    /// Returns an error if a label exceeds 63 bytes or the buffer runs out of room.
     pub fn write(&self, buffer: &mut BytePacketBuffer) -> Result<(), &'static str> {
         for label in self.name.split('.') {
             let len = label.len();
@@ -471,6 +544,10 @@ impl DnsQuestion {
 }
 
 impl DnsRecord {
+    /// Reads a resource record from the buffer, dispatching on the record type.
+    ///
+    /// # Errors
+    /// Returns an error if the buffer ends before the record is fully read.
     pub fn read(buffer: &mut BytePacketBuffer) -> Result<Self, &'static str> {
         let mut domain = String::new();
         buffer.read_qname(&mut domain)?;
@@ -508,6 +585,10 @@ impl DnsRecord {
         }
     }
 
+    /// Serializes the resource record into the buffer, returning bytes written.
+    ///
+    /// # Errors
+    /// Returns an error if a label exceeds 63 bytes or the buffer runs out of room.
     pub fn write(&self, buffer: &mut BytePacketBuffer) -> Result<usize, &'static str> {
         let start_pos = buffer.pos();
 
@@ -592,6 +673,10 @@ impl DnsPacket {
         }
     }
 
+    /// Parses a complete DNS packet (header, questions, and all record sections).
+    ///
+    /// # Errors
+    /// Returns an error if any section cannot be read from the buffer.
     pub fn from_buffer(buffer: &mut BytePacketBuffer) -> Result<Self, &'static str> {
         let mut result = Self::new();
         result.header.read(buffer)?;
@@ -620,6 +705,10 @@ impl DnsPacket {
         Ok(result)
     }
 
+    /// Serializes the complete DNS packet into the buffer.
+    ///
+    /// # Errors
+    /// Returns an error if any section cannot be written to the buffer.
     pub fn write(&mut self, buffer: &mut BytePacketBuffer) -> Result<(), &'static str> {
         self.header.questions = self.questions.len() as u16;
         self.header.answers = self.answers.len() as u16;
@@ -672,6 +761,13 @@ impl DnsResolver {
     }
 
     /// Resolves a domain name to an IPv4 address.
+    ///
+    /// # Errors
+    /// Returns an error if the query cannot be serialized, the UDP socket
+    /// cannot be bound/sent/received on, the response cannot be parsed, or no
+    /// `A` record is present in the response.
+    // `req_buffer`/`res_buffer` intentionally mirror the request/response roles.
+    #[allow(clippy::similar_names)]
     pub fn resolve(&mut self, qname: &str) -> Result<Ipv4Addr, String> {
         // 1. Check cache
         if let Some(addr) = self.cache.get(&qname.to_string()) {

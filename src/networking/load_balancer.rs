@@ -65,11 +65,19 @@ impl<B: Backend> LoadBalancer<B> {
         }
     }
 
+    /// Adds a backend to the pool.
+    ///
+    /// # Panics
+    /// Panics if the internal backends lock is poisoned.
     pub fn add_backend(&self, backend: B) {
         let mut backends = self.backends.lock().unwrap();
         backends.push(backend);
     }
 
+    /// Removes the backend with the given id from the pool.
+    ///
+    /// # Panics
+    /// Panics if the internal backends lock is poisoned.
     pub fn remove_backend(&self, id: &str) {
         let mut backends = self.backends.lock().unwrap();
         backends.retain(|b| b.id() != id);
@@ -77,6 +85,9 @@ impl<B: Backend> LoadBalancer<B> {
 
     /// Selects a backend according to the strategy.
     /// Returns `None` if no backends are available.
+    ///
+    /// # Panics
+    /// Panics if the internal backends lock is poisoned.
     pub fn next(&self) -> Option<B>
     where
         B: Clone, // We return a clone (or Arc) of the backend to the caller

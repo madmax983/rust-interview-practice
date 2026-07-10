@@ -64,7 +64,7 @@ pub struct Router {
 
 impl Router {
     /// Creates a new empty Router.
-    #[must_use] 
+    #[must_use]
     pub fn new() -> Self {
         Self {
             root: Node::default(),
@@ -78,14 +78,18 @@ impl Router {
     /// - `/users`
     /// - `/users/:id`
     /// - `/users/:id/profile`
+    ///
+    /// # Panics
+    /// Panics if a dynamic segment conflicts with an existing one at the same
+    /// position under a different parameter name.
     pub fn add_route<H: Handler>(&mut self, method: &str, path: &str, handler: H) {
         let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
         let mut current = &mut self.root;
 
         for part in parts {
-            if part.starts_with(':') {
+            if let Some(param) = part.strip_prefix(':') {
                 // Dynamic segment
-                let param_name = part[1..].to_string();
+                let param_name = param.to_string();
 
                 // GOTCHA: If we already have a dynamic child, it must match the new one's name.
                 // In a production router, we might allow different names if they don't conflict,
@@ -141,6 +145,12 @@ impl Router {
         // branch first (precedence) and falling back to the dynamic child.
         let handler = self.root.match_node(&parts, &method_upper, &mut params)?;
         Some((handler, params))
+    }
+}
+
+impl Default for Router {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

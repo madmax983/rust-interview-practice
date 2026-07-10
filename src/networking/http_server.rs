@@ -120,6 +120,9 @@ pub struct HttpServer<H: Handler> {
 
 impl<H: Handler> HttpServer<H> {
     /// Creates a new HTTP Server bound to the given address with a request handler.
+    ///
+    /// # Errors
+    /// Returns an error if the listener cannot bind to the given address.
     pub fn new<A: ToSocketAddrs>(addr: A, handler: H, pool_size: usize) -> io::Result<Self> {
         let listener = TcpListener::bind(addr)?;
         let pool = ThreadPool::new(pool_size);
@@ -131,6 +134,9 @@ impl<H: Handler> HttpServer<H> {
     }
 
     /// Starts the server loop.
+    ///
+    /// # Errors
+    /// Returns an error if the local address cannot be read from the listener.
     pub fn run(&self) -> io::Result<()> {
         println!("Server listening on {}", self.listener.local_addr()?);
 
@@ -140,7 +146,7 @@ impl<H: Handler> HttpServer<H> {
                     let handler = Arc::clone(&self.handler);
 
                     self.pool.execute(move || {
-                        if let Err(e) = Self::handle_connection(stream, handler) {
+                        if let Err(e) = Self::handle_connection(stream, &handler) {
                             // Don't log unexpected EOF which is normal connection close
                             if e.kind() != io::ErrorKind::UnexpectedEof {
                                 eprintln!("Error handling connection: {e}");
@@ -154,7 +160,7 @@ impl<H: Handler> HttpServer<H> {
         Ok(())
     }
 
-    fn handle_connection(mut stream: TcpStream, handler: Arc<H>) -> io::Result<()> {
+    fn handle_connection(mut stream: TcpStream, handler: &Arc<H>) -> io::Result<()> {
         let mut reader = BufReader::new(stream.try_clone()?);
 
         loop {
@@ -196,6 +202,10 @@ impl<H: Handler> HttpServer<H> {
 impl HttpRequest {
     /// Reads and parses an HTTP request from the given reader.
     /// Returns `Ok(None)` if the stream ends cleanly at the start of a request.
+    ///
+    /// # Errors
+    /// Returns an error if the underlying stream fails or the request is
+    /// malformed (bad request line, headers, or content length).
     pub fn parse<R: Read>(reader: &mut BufReader<R>) -> io::Result<Option<Self>> {
         // GOTCHA: `read_line` appends to the string. If we reused a buffer, we'd need to clear it.
         // It also includes the newline characters, which we must trim.
@@ -530,7 +540,7 @@ mod tests {
             // We need a dummy handler since we can't create an HttpServer without arguments or access its internal method easily
             // But wait, the method is static on the struct if H is known.
             // Actually, handle_connection is an associated function.
-            let _ = HttpServer::<TestHandler>::handle_connection(stream, handler_clone);
+            let _ = HttpServer::<TestHandler>::handle_connection(stream, &handler_clone);
         });
 
         // Client
