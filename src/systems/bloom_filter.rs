@@ -90,6 +90,10 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
     ///
     /// Note: It is usually easier to use `with_rate` to calculate these optimally.
     pub fn new(m: usize, k: u32) -> Self {
+        // Clamp `m` to at least 1 bit. A zero-sized filter would make the
+        // `h % self.m` mapping in `insert`/`contains` a divide-by-zero panic.
+        let m = m.max(1);
+
         // Calculate the number of u64 blocks needed.
         // We use (m + 63) / 64 to round up.
         let num_blocks = (m + 63) / 64;
@@ -302,6 +306,22 @@ mod tests {
 
         filter.clear();
         assert!(!filter.contains("hello"));
+    }
+
+    #[test]
+    fn test_zero_bits_does_not_panic() {
+        // `m == 0` would make `h % self.m` a divide-by-zero panic on the first
+        // insert/contains; construction must clamp `m` to at least 1 bit.
+        let mut filter = BloomFilter::<str>::new(0, 3);
+        assert!(!filter.contains("apple"));
+        filter.insert("apple");
+        assert!(filter.contains("apple"));
+
+        // `with_rate` with zero expected items previously computed m == 0 too.
+        let mut filter2 = BloomFilter::<str>::with_rate(0, 0.01);
+        assert!(!filter2.contains("banana"));
+        filter2.insert("banana");
+        assert!(filter2.contains("banana"));
     }
 
     #[test]

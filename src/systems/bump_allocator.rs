@@ -91,25 +91,32 @@ impl BumpArena {
             let current_ptr = *self.next.get();
             let current_addr = current_ptr.as_ptr() as usize;
 
-            // Calculate alignment padding
+            // Calculate alignment padding (integer math is only used to derive the byte
+            // OFFSET; the resulting pointer is derived from `current_ptr` below).
             let align_offset = (layout.align() - (current_addr % layout.align())) % layout.align();
-            let alloc_start = current_addr + align_offset;
-            let alloc_end = alloc_start + layout.size();
+            let alloc_start_addr = current_addr + align_offset;
+            let alloc_end_addr = alloc_start_addr + layout.size();
 
             // Check capacity
-            // Note: We cast to usize for comparison.
-            if alloc_end > self.end.as_ptr() as usize {
+            // Note: We cast to usize for comparison only.
+            if alloc_end_addr > self.end.as_ptr() as usize {
                 panic!("BumpArena out of memory");
             }
 
-            let ptr = alloc_start as *mut T;
+            // SAFETY / PROVENANCE: Derive the result pointer from `current_ptr` (which carries
+            // valid provenance for the arena allocation) by offsetting it, rather than casting
+            // an integer address back to a pointer (which loses provenance and is UB under
+            // strict-provenance / Miri). `align_offset` and `layout.size()` keep us within the
+            // arena bounds (verified above), so both offsets stay in-bounds of the allocation.
+            let start_ptr = current_ptr.as_ptr().wrapping_add(align_offset);
+            let ptr = start_ptr.cast::<T>();
 
             // Write the value into the memory
             // `ptr::write` is safe because we verified bounds and alignment.
             std::ptr::write(ptr, value);
 
-            // Update the next pointer
-            let new_next = NonNull::new_unchecked(alloc_end as *mut u8);
+            // Update the next pointer (also provenance-preserving, derived from `start_ptr`).
+            let new_next = NonNull::new_unchecked(start_ptr.wrapping_add(layout.size()));
             *self.next.get() = new_next;
 
             // Return a mutable reference.
@@ -197,6 +204,29 @@ mod tests {
         // Check alignment
         let ptr_addr = val as *const _ as usize;
         assert_eq!(ptr_addr % 4, 0, "Address {} is not aligned to 4", ptr_addr);
+    }
+
+    #[test]
+    fn test_aligned_and_roundtrip() {
+        // Regression for the provenance fix: the result pointer is now derived from the
+        // arena base pointer (not an integer-to-pointer cast). Verify it is still properly
+        // aligned and that a written value round-trips through the returned reference.
+        let arena = BumpArena::new(1024);
+
+        // Offset the bump pointer so the next allocation needs alignment padding.
+        arena.alloc(1u8);
+
+        let v = arena.alloc(0xDEAD_BEEF_u32);
+        let addr = std::ptr::from_ref(v) as usize;
+        assert_eq!(
+            addr % std::mem::align_of::<u32>(),
+            0,
+            "u32 allocation not aligned"
+        );
+
+        assert_eq!(*v, 0xDEAD_BEEF);
+        *v = 0x1234_5678;
+        assert_eq!(*v, 0x1234_5678);
     }
 
     #[test]

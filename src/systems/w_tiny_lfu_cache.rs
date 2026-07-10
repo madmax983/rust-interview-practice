@@ -108,6 +108,9 @@ pub struct WTinyLfuCache<K, V> {
     window_cap: usize,
     window_len: usize,
 
+    // Retained for documentation/sizing; admission is now gated on total size vs `capacity`
+    // (see `admit_to_probation`) so this soft region cap is no longer read directly.
+    #[allow(dead_code)]
     probation_cap: usize,
     probation_len: usize,
 
@@ -363,8 +366,15 @@ impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
 
     /// Admission Policy: Compares the Window Victim against the Probation Victim using Sketch frequencies.
     fn admit_to_probation(&mut self, window_victim_idx: usize) {
-        // If Main cache (Probation + Protected) is not full, just add it to Probation
-        if self.probation_len + self.protected_len < self.probation_cap + self.protected_cap {
+        // BUG FIX: Region caps are floored independently with `max(1, ..)`, so for small
+        // capacities (1 or 2) `window_cap + probation_cap + protected_cap` can exceed the
+        // true `capacity` (e.g. 1 + 1 + 1 == 3 at capacity 2). Gating admission on
+        // `probation_cap + protected_cap` therefore let the cache grow past `capacity`.
+        // Gate on the true total item count vs `capacity` instead so we never exceed it.
+        // (At this point the window victim has already been removed from the Window, so the
+        // sum below excludes it.)
+        let total_len = self.window_len + self.probation_len + self.protected_len;
+        if total_len < self.capacity {
             self.add_node_to_head(window_victim_idx, Region::Probation);
             return;
         }
@@ -482,6 +492,35 @@ mod tests {
         // and have higher sketch frequencies than the one-time scan items.
         assert_eq!(cache.get(&1), Some(&10));
         assert_eq!(cache.get(&2), Some(&20));
+    }
+
+    #[test]
+    fn test_small_capacity_never_exceeds_capacity() {
+        // Regression: at capacity 1-2 the independently floored region caps summed to 3,
+        // and the admission gate used `probation_cap + protected_cap` instead of the true
+        // capacity, letting the cache hold 3 items. It must never exceed `capacity`.
+        let mut cache: WTinyLfuCache<i32, i32> = WTinyLfuCache::new(2);
+        cache.put(1, 10);
+        cache.put(2, 20);
+        cache.put(3, 30);
+
+        // `map` tracks every currently stored entry (freed nodes are removed from it).
+        assert!(
+            cache.map.len() <= 2,
+            "cache stored {} entries at capacity 2",
+            cache.map.len()
+        );
+
+        // Capacity 1 must also be respected.
+        let mut cache1: WTinyLfuCache<i32, i32> = WTinyLfuCache::new(1);
+        cache1.put(1, 10);
+        cache1.put(2, 20);
+        cache1.put(3, 30);
+        assert!(
+            cache1.map.len() <= 1,
+            "cache stored {} entries at capacity 1",
+            cache1.map.len()
+        );
     }
 
     #[test]

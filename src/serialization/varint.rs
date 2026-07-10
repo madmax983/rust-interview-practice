@@ -78,6 +78,16 @@ pub fn decode_u64<R: Read>(reader: &mut R) -> io::Result<u64> {
             ));
         }
 
+        // On the 10th byte (shift == 63) only bit 0 of the 7-bit group fits in a u64.
+        // Any higher bit would be silently dropped by the `<< 63` below, accepting an
+        // overlong/overflowing varint as a wrong value. Reject it explicitly.
+        if shift == 63 && (byte & 0x7F) > 0x01 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "LEB128 overflow",
+            ));
+        }
+
         result |= ((byte & 0x7F) as u64) << shift;
         if (byte & 0x80) == 0 {
             break;
@@ -161,6 +171,21 @@ mod tests {
             let decoded = decode_i64(&mut cursor).unwrap();
             assert_eq!(decoded, value, "Failed decoding {}", value);
         }
+    }
+
+    #[test]
+    fn test_decode_overflow_tenth_byte() {
+        // Regression: a 10th byte carrying more than one usable bit (shift == 63)
+        // previously passed the `shift >= 64` guard and had its high bits silently
+        // dropped by `<< 63`, accepting an overflowing varint as a wrong value.
+        let buf = vec![0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x7F];
+        let mut cursor = Cursor::new(buf);
+        assert!(decode_u64(&mut cursor).is_err());
+
+        // The canonical maximum u64 (10th byte == 0x01) must still decode correctly.
+        let max = vec![0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01];
+        let mut cursor = Cursor::new(max);
+        assert_eq!(decode_u64(&mut cursor).unwrap(), u64::MAX);
     }
 
     #[test]

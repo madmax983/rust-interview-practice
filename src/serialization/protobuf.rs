@@ -197,7 +197,13 @@ impl Field {
             }
             WireType::LengthDelimited => {
                 let (len, read) = Varint::decode(buf)?;
-                let total = read + (len as usize);
+                // A malformed length (e.g. near u64::MAX) must not overflow `usize`:
+                // in debug that panics, in release it wraps to a small `total` that
+                // passes the bounds check and mis-parses. Use checked arithmetic and
+                // validate against the remaining buffer.
+                let total = read
+                    .checked_add(len as usize)
+                    .ok_or("LengthDelimited length overflow")?;
                 if buf.len() >= total {
                     Ok(total)
                 } else {
@@ -341,6 +347,17 @@ mod tests {
                 1 + Varint::encoded_len(self.id)
             }
         }
+    }
+
+    #[test]
+    fn test_skip_length_delimited_overflow() {
+        // Regression: a length-delimited field claiming a length near u64::MAX
+        // previously overflowed `read + (len as usize)` (debug panic / release
+        // bogus skip). It must now return an error without panicking.
+        // Varint encoding of u64::MAX is nine 0xFF bytes followed by 0x01.
+        let buf = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01];
+        let result = Field::skip(WireType::LengthDelimited, &buf);
+        assert!(result.is_err());
     }
 
     #[test]

@@ -57,6 +57,15 @@ use std::io::{self, BufRead, BufReader, Read, Write};
 // │ Masking       │ O(Payload)  │ O(1)        │
 // └───────────────┴─────────────┴─────────────┘
 
+/// Maximum allowed payload length for a single frame (16 MiB).
+/// Rejecting larger frames before allocation prevents an attacker-controlled
+/// 64-bit length prefix from triggering a capacity-overflow panic or OOM abort.
+const MAX_PAYLOAD: u64 = 16 * 1024 * 1024;
+
+/// Per RFC 6455 §5.5, control frames (Close/Ping/Pong) MUST carry a payload of
+/// at most 125 bytes and MUST NOT use the 126/127 extended-length encoding.
+const MAX_CONTROL_PAYLOAD: u64 = 125;
+
 /// Represents a WebSocket Message.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Message {
@@ -89,6 +98,12 @@ impl Opcode {
             0xA => Some(Opcode::Pong),
             _ => None,
         }
+    }
+
+    /// Returns true for control frames (Close/Ping/Pong), which are subject to
+    /// the RFC 6455 §5.5 payload limit of 125 bytes.
+    fn is_control(self) -> bool {
+        matches!(self, Opcode::Close | Opcode::Ping | Opcode::Pong)
     }
 }
 
@@ -244,9 +259,23 @@ impl<S: Read + Write> WebSocketConnection<S> {
             None
         };
 
-        // PRODUCTION NOTE: Large Payloads
-        // We allocate the full payload in memory. A production server would
-        // stream this or limit the max size to prevent OOM DoS.
+        // SECURITY: Bound the payload length *before* allocating. An attacker can
+        // set the 127-marker and claim up to u64::MAX bytes; allocating that
+        // eagerly panics (capacity overflow) or aborts (OOM). Reject oversized
+        // frames, and enforce the RFC 6455 §5.5 limit for control frames.
+        if opcode.is_control() && payload_len > MAX_CONTROL_PAYLOAD {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Control frame payload exceeds 125 bytes",
+            ));
+        }
+        if payload_len > MAX_PAYLOAD {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Frame payload too large",
+            ));
+        }
+
         let mut payload = vec![0u8; payload_len as usize];
         self.stream.read_exact(&mut payload)?;
 
@@ -499,6 +528,43 @@ mod tests {
             Message::Binary(b) => assert_eq!(b, payload),
             _ => panic!("Expected binary message"),
         }
+    }
+
+    #[test]
+    fn test_read_frame_rejects_huge_payload_len() {
+        // FIN + Binary, masked (server role), 127-marker, u64::MAX length, 4-byte key.
+        // Before the fix this triggered `vec![0u8; u64::MAX as usize]` -> panic/abort.
+        let mut data = vec![
+            0x82, // FIN + Binary
+            0xFF, // Masked + 127 (extended 64-bit length)
+        ];
+        data.extend_from_slice(&u64::MAX.to_be_bytes());
+        data.extend_from_slice(&[0x00, 0x00, 0x00, 0x00]); // masking key
+
+        let cursor = Cursor::new(data);
+        let mut conn = WebSocketConnection::new(cursor, true);
+
+        let err = conn.read_message().expect_err("oversized frame must error");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn test_read_frame_rejects_oversized_control_frame() {
+        // Ping (control frame) with unmasked payload length 126 (> 125 limit).
+        // read as client (is_server=false) so the mask check is skipped.
+        let data = vec![
+            0x89, // FIN + Ping
+            0x7E, // 126 -> 16-bit extended length follows
+            0x00, 0x7E, // length = 126, exceeds control-frame max of 125
+        ];
+
+        let cursor = Cursor::new(data);
+        let mut conn = WebSocketConnection::new(cursor, false);
+
+        let err = conn
+            .read_message()
+            .expect_err("oversized control frame must error");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
     }
 
     #[test]

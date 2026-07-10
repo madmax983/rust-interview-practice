@@ -70,6 +70,17 @@ impl HashedWheelTimer {
     /// * `tick_duration` - The resolution of the timer.
     /// * `wheel_size` - Number of buckets. Must be power of 2 for efficiency (though we use % here).
     pub fn new(tick_duration: Duration, wheel_size: usize) -> Self {
+        // Guard degenerate configuration. A zero tick_duration would cause a
+        // divide-by-zero in schedule() (and an infinite loop in tick()); a
+        // zero wheel_size would cause a divide/modulo-by-zero. Clamp both to a
+        // sane positive minimum.
+        let tick_duration = if tick_duration.is_zero() {
+            Duration::from_nanos(1)
+        } else {
+            tick_duration
+        };
+        let wheel_size = wheel_size.max(1);
+
         let mut wheel = Vec::with_capacity(wheel_size);
         for _ in 0..wheel_size {
             wheel.push(Vec::new());
@@ -247,5 +258,24 @@ mod tests {
 
         timer.tick(Duration::from_millis(20));
         assert_eq!(counter.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn test_degenerate_config_does_not_panic() {
+        // Regression: tick_duration == ZERO caused a divide-by-zero in
+        // schedule(); wheel_size == 0 caused a divide/modulo-by-zero. Both
+        // must be clamped by the constructor.
+        let mut timer = HashedWheelTimer::new(Duration::ZERO, 0);
+        let counter = Arc::new(AtomicUsize::new(0));
+        let c = counter.clone();
+
+        // schedule() must not panic despite the degenerate config.
+        timer.schedule(Duration::from_millis(5), move || {
+            c.fetch_add(1, Ordering::SeqCst);
+        });
+
+        // tick() must terminate (no infinite loop) and eventually fire.
+        timer.tick(Duration::from_millis(10));
+        assert_eq!(counter.load(Ordering::SeqCst), 1);
     }
 }

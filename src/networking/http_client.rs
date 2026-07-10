@@ -22,6 +22,11 @@ use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::Duration;
 
+/// Hard cap on the total decoded response body (100 MB). Bounding allocations
+/// against this before `vec![0; n]` prevents an attacker-controlled length
+/// (Content-Length or a chunked size line) from panicking/aborting the process.
+const MAX_BODY_SIZE: usize = 100 * 1024 * 1024;
+
 // =========================================================================================
 // Architecture
 // =========================================================================================
@@ -338,6 +343,17 @@ impl Response {
                         break;
                     }
 
+                    // SECURITY: Bound per-chunk and cumulative body size before
+                    // allocating. A malicious server can send a hex size line like
+                    // `ffffffffffffffff` (usize::MAX); `vec![0; size]` would then
+                    // panic (capacity overflow) or abort (OOM).
+                    if size > MAX_BODY_SIZE || body.len().saturating_add(size) > MAX_BODY_SIZE {
+                        return Err(io::Error::new(
+                            io::ErrorKind::OutOfMemory,
+                            "Response body too large",
+                        ));
+                    }
+
                     // Read exactly `size` bytes
                     let mut chunk = vec![0; size];
                     reader.read_exact(&mut chunk)?;
@@ -360,7 +376,6 @@ impl Response {
                 // Prevent extreme memory allocation attacks (e.g., trying to allocate 10GB)
                 // PRODUCTION NOTE: A real client like reqwest might stream large bodies instead of buffering them.
                 // We'll place a sane hard limit for this educational implementation.
-                const MAX_BODY_SIZE: usize = 100 * 1024 * 1024; // 100 MB
                 if len > MAX_BODY_SIZE {
                     return Err(io::Error::new(
                         io::ErrorKind::OutOfMemory,
@@ -496,6 +511,20 @@ mod tests {
             String::from_utf8(resp.body).unwrap(),
             "Wikipediain \r\n\r\nchunks."
         );
+    }
+
+    #[test]
+    fn test_parse_chunked_rejects_oversized_chunk_size() {
+        // Malicious server declares a chunk of usize::MAX bytes. Before the fix
+        // this hit `vec![0; usize::MAX]` -> capacity-overflow panic. Now it must
+        // return an error without allocating.
+        let raw_response = b"HTTP/1.1 200 OK\r\n\
+                           Transfer-Encoding: chunked\r\n\
+                           \r\n\
+                           ffffffffffffffff\r\n";
+        let mut reader = BufReader::new(Cursor::new(raw_response));
+        let err = Response::parse(&mut reader).expect_err("oversized chunk must error");
+        assert_eq!(err.kind(), io::ErrorKind::OutOfMemory);
     }
 
     #[test]

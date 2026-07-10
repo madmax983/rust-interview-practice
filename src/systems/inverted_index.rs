@@ -182,6 +182,16 @@ impl SearchEngine for InvertedIndex {
             return;
         }
 
+        // Re-indexing: if this doc_id was added before, purge its stale postings
+        // first so re-adding updates the document instead of double-counting it.
+        // This upholds Invariant #2 (postings lists hold unique DocIds per term).
+        if self.documents.contains_key(&doc_id) {
+            self.index.retain(|_term, postings| {
+                postings.retain(|posting| posting.doc_id != doc_id);
+                !postings.is_empty()
+            });
+        }
+
         // Count term frequencies for this document
         let mut term_counts: HashMap<String, usize> = HashMap::new();
         for term in terms {
@@ -364,5 +374,51 @@ mod tests {
 
         let results2 = engine.search("the a is"); // Only stop words
         assert!(results2.is_empty());
+    }
+
+    #[test]
+    fn test_readd_document_reindexes_without_double_counting() {
+        let mut engine = InvertedIndex::new();
+
+        // Initial version of doc 1 contains "a" (twice) and "b".
+        engine.add_document(1, "D1".to_string(), "a a b");
+
+        // Re-index doc 1 with entirely new content ("c" only).
+        engine.add_document(1, "D1 v2".to_string(), "c");
+
+        // Only one document exists, and its metadata reflects the new content.
+        assert_eq!(engine.documents.len(), 1);
+        assert_eq!(engine.documents.get(&1).unwrap().total_terms, 1);
+
+        // Stale terms must no longer reference doc 1 (Invariant #2).
+        assert!(engine.index.get("a").is_none());
+        assert!(engine.index.get("b").is_none());
+
+        // The new term references doc 1 exactly once (no duplicate postings).
+        let c_postings = engine.index.get("c").unwrap();
+        assert_eq!(c_postings.len(), 1);
+        assert_eq!(c_postings[0].doc_id, 1);
+        assert_eq!(c_postings[0].term_frequency, 1);
+
+        // Searching the old term returns nothing; the new term returns doc 1 once.
+        assert!(engine.search("a").is_empty());
+        let results = engine.search("c");
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].doc_id, 1);
+    }
+
+    #[test]
+    fn test_readd_same_term_no_duplicate_postings() {
+        let mut engine = InvertedIndex::new();
+
+        // Add doc 1, then re-add with the same term at a different frequency.
+        engine.add_document(1, "D1".to_string(), "rust");
+        engine.add_document(1, "D1 v2".to_string(), "rust rust");
+
+        // Exactly one posting for "rust" -> doc 1, with the updated frequency.
+        let postings = engine.index.get("rust").unwrap();
+        assert_eq!(postings.len(), 1);
+        assert_eq!(postings[0].doc_id, 1);
+        assert_eq!(postings[0].term_frequency, 2);
     }
 }

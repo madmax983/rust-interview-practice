@@ -51,7 +51,11 @@ use std::fmt;
 // └───────────────┴─────────────┴─────────────┘
 // where N is the number of nodes in the vector.
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+// NOTE: `PartialEq` is implemented manually (see below) rather than derived. The derived
+// impl compares the raw `clock` HashMap and `my_id` exactly, which is incoherent with
+// `partial_cmp` (e.g. `{A:0}` and `{B:0}` compare `Some(Equal)` under causality but are
+// `!=` structurally). We make equality mean "causally equal".
+#[derive(Clone, Debug)]
 pub struct VectorClock {
     /// Map of Node ID to logical timestamp.
     /// Using BTreeMap would allow cheaper comparison (sorted keys), but HashMap is O(1) access.
@@ -153,6 +157,16 @@ impl PartialOrd for VectorClock {
     }
 }
 
+// RUST INSIGHT: Equality must be coherent with `PartialOrd`. Two vector clocks are equal
+// iff every node's count matches, treating a missing node as 0 (so `{A:0}`, `{B:0}`, and
+// `{}` are all equal). This is exactly `partial_cmp(...) == Some(Ordering::Equal)`, which
+// also ignores `my_id` — the identity of the observing node is not part of causal state.
+impl PartialEq for VectorClock {
+    fn eq(&self, other: &Self) -> bool {
+        self.partial_cmp(other) == Some(Ordering::Equal)
+    }
+}
+
 impl fmt::Display for VectorClock {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{{")?;
@@ -237,6 +251,30 @@ mod tests {
         // B has B:1 > A's B:0.
         // Concurrent.
         assert_eq!(a.partial_cmp(&b), None);
+    }
+
+    #[test]
+    fn test_eq_coherent_with_partial_cmp() {
+        // Regression: derived PartialEq compared the raw HashMap + my_id, so `{A:0}` and
+        // `{B:0}` were `!=` even though partial_cmp reports Some(Equal). Equality must now
+        // agree with causal ordering (missing keys treated as 0, my_id ignored).
+        let a = VectorClock::new("A"); // {A:0}
+        let b = VectorClock::new("B"); // {B:0}
+
+        assert_eq!(a.partial_cmp(&b), Some(Ordering::Equal));
+        assert_eq!(a, b);
+        assert!(!(a != b));
+
+        // A clock that has learned about a zero-count node is still equal.
+        let mut c = VectorClock::new("C"); // {C:0}
+        c.merge(&a); // {C:0, A:0}
+        assert_eq!(a, c);
+        assert_eq!(b, c);
+
+        // Divergence breaks equality.
+        let mut d = VectorClock::new("A");
+        d.increment(); // {A:1}
+        assert_ne!(a, d);
     }
 
     #[test]

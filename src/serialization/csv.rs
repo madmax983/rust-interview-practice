@@ -76,6 +76,9 @@ pub struct CsvReader<R: BufRead> {
     line_buf: String,
     // Buffer for the current field being parsed
     field_buf: String,
+    // Unconsumed characters left over after a record terminator inside the same
+    // read buffer (needed to correctly handle bare `\r` / CR-only line endings).
+    pending: String,
     // Track if we reached EOF
     eof: bool,
 }
@@ -93,6 +96,7 @@ impl<R: BufRead> CsvReader<R> {
             config,
             line_buf: String::new(),
             field_buf: String::new(),
+            pending: String::new(),
             eof: false,
         }
     }
@@ -119,29 +123,39 @@ impl<R: BufRead> Iterator for CsvReader<R> {
         self.field_buf.clear();
 
         loop {
-            self.line_buf.clear();
-            let bytes_read = match self.reader.read_line(&mut self.line_buf) {
-                Ok(b) => b,
-                Err(e) => return Some(Err(e)),
+            // Obtain the next chunk of input to process. Prefer any leftover characters
+            // carried over from a previous CR-terminated record within the same read
+            // buffer before pulling a fresh line from the underlying reader. This is what
+            // makes bare `\r` (old-Mac) line endings work without dropping records.
+            let segment = if !self.pending.is_empty() {
+                std::mem::take(&mut self.pending)
+            } else {
+                self.line_buf.clear();
+                let bytes_read = match self.reader.read_line(&mut self.line_buf) {
+                    Ok(b) => b,
+                    Err(e) => return Some(Err(e)),
+                };
+
+                if bytes_read == 0 {
+                    self.eof = true;
+                    // If we hit EOF but we have accumulated a field, push it.
+                    // Or if we have a completely empty file, return None.
+                    if !row.is_empty() || !self.field_buf.is_empty() || in_quotes {
+                        // Even if in quotes, we reached EOF, so we close the field.
+                        // This handles malformed CSVs with missing closing quotes gracefully.
+                        // BOLT OPTIMIZATION: Avoid `.clone()` and `.clear()` allocation overhead.
+                        // Using `std::mem::take` directly moves the string buffer into the row, leaving an empty string
+                        // behind and saving us a heap allocation per field. This prevents String reallocation when `field_buf.push(c)` runs later.
+                        row.push(std::mem::take(&mut self.field_buf));
+                        return Some(Ok(row));
+                    }
+                    return None;
+                }
+
+                std::mem::take(&mut self.line_buf)
             };
 
-            if bytes_read == 0 {
-                self.eof = true;
-                // If we hit EOF but we have accumulated a field, push it.
-                // Or if we have a completely empty file, return None.
-                if !row.is_empty() || !self.field_buf.is_empty() || in_quotes {
-                    // Even if in quotes, we reached EOF, so we close the field.
-                    // This handles malformed CSVs with missing closing quotes gracefully.
-                    // BOLT OPTIMIZATION: Avoid `.clone()` and `.clear()` allocation overhead.
-                    // Using `std::mem::take` directly moves the string buffer into the row, leaving an empty string
-                    // behind and saving us a heap allocation per field. This prevents String reallocation when `field_buf.push(c)` runs later.
-                    row.push(std::mem::take(&mut self.field_buf));
-                    return Some(Ok(row));
-                }
-                return None;
-            }
-
-            let mut chars = self.line_buf.chars().peekable();
+            let mut chars = segment.chars().peekable();
 
             while let Some(c) = chars.next() {
                 if in_quotes {
@@ -177,6 +191,15 @@ impl<R: BufRead> Iterator for CsvReader<R> {
                             && let Some(&'\n') = chars.peek()
                         {
                             chars.next();
+                        }
+
+                        // Preserve any characters remaining in this segment after the
+                        // terminator so they are not dropped. This is essential for bare
+                        // `\r` line endings, where the remainder of the read buffer holds
+                        // the next record(s).
+                        let remainder: String = chars.collect();
+                        if !remainder.is_empty() {
+                            self.pending = remainder;
                         }
 
                         // We finish the row
@@ -281,6 +304,22 @@ mod tests {
         assert_eq!(rows.len(), 3);
         assert_eq!(rows[1], vec!["1", "", "3"]);
         assert_eq!(rows[2], vec!["", "", ""]);
+    }
+
+    #[test]
+    fn test_cr_only_line_endings() {
+        // Regression: bare `\r` (old-Mac) line endings previously dropped every
+        // record after the first because the remainder of the read buffer was
+        // discarded. Both CR-only and CRLF must yield two single-field rows.
+        let cr = parse_csv("a\rb");
+        assert_eq!(cr.len(), 2);
+        assert_eq!(cr[0], vec!["a"]);
+        assert_eq!(cr[1], vec!["b"]);
+
+        let crlf = parse_csv("a\r\nb");
+        assert_eq!(crlf.len(), 2);
+        assert_eq!(crlf[0], vec!["a"]);
+        assert_eq!(crlf[1], vec!["b"]);
     }
 
     #[test]

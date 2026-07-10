@@ -120,9 +120,12 @@ impl Command for DeleteText {
         let start = self.range.start.min(target.len());
         let end = self.range.end.min(target.len());
 
-        if start < end {
+        // Use `get` so a range that lands mid-char (non char boundary) yields
+        // `None` instead of panicking on the slice. Guards against caller-supplied
+        // byte indices that split a multibyte UTF-8 char.
+        if start < end && let Some(slice) = target.get(start..end) {
             // Capture the text before deleting
-            self.deleted_text = Some(target[start..end].to_string());
+            self.deleted_text = Some(slice.to_string());
             target.replace_range(start..end, "");
         }
     }
@@ -277,6 +280,21 @@ mod tests {
         assert_eq!(editor.get_text(), "A");
 
         editor.undo(); // Undo A
+        assert_eq!(editor.get_text(), "");
+    }
+
+    #[test]
+    fn test_delete_mid_char_boundary_no_panic() {
+        // Regression: a range that lands mid-char used to panic when slicing.
+        // "é" is 2 bytes; deleting byte range 0..1 splits the char.
+        let mut editor = TextEditor::new();
+        editor.execute(Box::new(InsertText::new("é", 0)));
+        // Range 0..1 is not a char boundary -> should be a no-op, not a panic.
+        editor.execute(Box::new(DeleteText::new(0, 1)));
+        assert_eq!(editor.get_text(), "é");
+
+        // A valid full-char range still deletes correctly.
+        editor.execute(Box::new(DeleteText::new(0, 2)));
         assert_eq!(editor.get_text(), "");
     }
 }

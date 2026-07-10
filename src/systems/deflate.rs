@@ -288,6 +288,13 @@ impl Compressor for Deflate {
                         // Copy from window
                         // RUST INSIGHT: We must be careful to handle overlapping copies properly!
                         // If `distance` < `length`, we copy bytes we just appended.
+                        //
+                        // A distance of 0 would make `start_idx == out.len()`, so the very
+                        // first read `out[out.len()]` indexes out of bounds. `checked_sub`
+                        // only rejects `distance > out.len()`, so reject 0 explicitly.
+                        if distance == 0 {
+                            return Err("Invalid match distance");
+                        }
                         let start_idx = out
                             .len()
                             .checked_sub(distance as usize)
@@ -545,6 +552,46 @@ mod tests {
         let compressed = Deflate::compress(data);
         let decompressed = Deflate::decompress(&compressed).unwrap();
         assert_eq!(data, decompressed.as_slice());
+    }
+
+    #[test]
+    fn test_decompress_zero_distance_returns_err_not_panic() {
+        // Craft a stream whose decoded MATCH token carries distance == 0.
+        // A legitimate encoder never emits distance 0, but `decompress` takes
+        // untrusted bytes: `out.len().checked_sub(0) == Some(out.len())`, which
+        // would index `out[out.len()]` and panic without the explicit guard.
+        //
+        // Bits are written LSB-first (matching BitWriter/BitReader), so we
+        // collect a bool sequence in write order and pack each byte LSB-first.
+        let mut bits: Vec<bool> = Vec::new();
+        let mut push = |value: u64, num_bits: u8| {
+            for i in 0..num_bits {
+                bits.push((value >> i) & 1 == 1);
+            }
+        };
+
+        // Tree: root internal -> left leaf(MATCH_MARKER), right leaf(EOF_MARKER).
+        push(0, 1); // internal node
+        push(1, 1); // left is a leaf
+        push(u64::from(MATCH_MARKER), 9); // symbol 256
+        push(1, 1); // right is a leaf
+        push(u64::from(EOF_MARKER), 9); // symbol 257
+
+        // Token stream: one MATCH (left branch = bit 0) with distance 0.
+        push(0, 1); // MATCH code
+        push(0, 8); // length field (len_encoded = 0 -> length 3)
+        push(0, 16); // distance = 0 (the malformed value)
+
+        // Pack bools into bytes, LSB-first within each byte.
+        let mut bytes = vec![0u8; bits.len().div_ceil(8)];
+        for (i, &b) in bits.iter().enumerate() {
+            if b {
+                bytes[i / 8] |= 1 << (i % 8);
+            }
+        }
+
+        let result = Deflate::decompress(&bytes);
+        assert_eq!(result, Err("Invalid match distance"));
     }
 }
 

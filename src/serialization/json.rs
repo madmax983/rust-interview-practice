@@ -51,6 +51,8 @@ use std::str::Chars;
 // │ Serialize     │ O(N)   │ O(N)   │
 // └───────────────┴────────┴────────┘
 // N = input size, D = depth of nesting (stack space).
+// Recursion is bounded by MAX_DEPTH to prevent stack-overflow aborts on
+// pathologically nested input; exceeding it returns a recoverable Err.
 //
 // Design Decisions:
 // - **Number Representation**: `f64`.
@@ -73,10 +75,15 @@ pub enum JsonValue {
     Object(HashMap<String, JsonValue>),
 }
 
+/// Maximum nesting depth for objects/arrays. Bounds recursion so that adversarial
+/// deeply nested input returns a recoverable error instead of aborting the process
+/// via stack overflow.
+const MAX_DEPTH: usize = 128;
+
 /// Parses a JSON string into a JsonValue.
 pub fn parse(input: &str) -> Result<JsonValue, String> {
     let mut parser = Parser::new(input);
-    let value = parser.parse_value()?;
+    let value = parser.parse_value(0)?;
     parser.skip_whitespace();
     if parser.peek().is_some() {
         return Err("Trailing characters".to_string());
@@ -113,13 +120,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_value(&mut self) -> Result<JsonValue, String> {
+    fn parse_value(&mut self, depth: usize) -> Result<JsonValue, String> {
+        if depth > MAX_DEPTH {
+            return Err("Maximum nesting depth exceeded".to_string());
+        }
         self.skip_whitespace();
         let c = self.peek().ok_or("Unexpected EOF")?;
 
         match c {
-            '{' => self.parse_object(),
-            '[' => self.parse_array(),
+            '{' => self.parse_object(depth),
+            '[' => self.parse_array(depth),
             '"' => self.parse_string().map(JsonValue::String),
             't' | 'f' => self.parse_bool().map(JsonValue::Bool),
             'n' => self.parse_null().map(|_| JsonValue::Null),
@@ -128,7 +138,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_object(&mut self) -> Result<JsonValue, String> {
+    fn parse_object(&mut self, depth: usize) -> Result<JsonValue, String> {
         self.next(); // consume '{'
         let mut map = HashMap::new();
 
@@ -147,7 +157,7 @@ impl<'a> Parser<'a> {
                 return Err("Expected ':' after key in object".to_string());
             }
 
-            let value = self.parse_value()?;
+            let value = self.parse_value(depth + 1)?;
             map.insert(key, value);
 
             self.skip_whitespace();
@@ -161,7 +171,7 @@ impl<'a> Parser<'a> {
         Ok(JsonValue::Object(map))
     }
 
-    fn parse_array(&mut self) -> Result<JsonValue, String> {
+    fn parse_array(&mut self, depth: usize) -> Result<JsonValue, String> {
         self.next(); // consume '['
         let mut vec = Vec::new();
 
@@ -172,7 +182,7 @@ impl<'a> Parser<'a> {
         }
 
         loop {
-            let value = self.parse_value()?;
+            let value = self.parse_value(depth + 1)?;
             vec.push(value);
 
             self.skip_whitespace();
@@ -418,6 +428,18 @@ mod tests {
     fn test_trailing() {
         assert!(parse("null ").is_ok()); // trailing whitespace ok
         assert!(parse("null x").is_err()); // trailing chars not ok
+    }
+
+    #[test]
+    fn test_deeply_nested_returns_err_no_crash() {
+        // Regression: unbounded recursion previously aborted the process via
+        // stack overflow. With MAX_DEPTH we get a recoverable Err instead.
+        let deep = "[".repeat(10_000);
+        assert!(parse(&deep).is_err());
+
+        // Nesting up to the limit still parses successfully.
+        let ok = format!("{}{}", "[".repeat(100), "]".repeat(100));
+        assert!(parse(&ok).is_ok());
     }
 
     #[test]

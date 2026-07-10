@@ -88,22 +88,33 @@ impl AABB {
     }
 }
 
+/// Maximum subdivision depth. Prevents infinite recursion when more than
+/// `capacity` coincident (identical) points are inserted: at this depth a
+/// leaf is allowed to hold more than `capacity` points instead of splitting.
+const MAX_DEPTH: usize = 24;
+
 pub struct Quadtree {
     boundary: AABB,
     capacity: usize,
     points: Vec<Point>,
     divided: bool,
+    depth: usize,
     // Children: NW, NE, SW, SE
     children: Option<Box<[Quadtree; 4]>>,
 }
 
 impl Quadtree {
     pub fn new(boundary: AABB, capacity: usize) -> Self {
+        Self::with_depth(boundary, capacity, 0)
+    }
+
+    fn with_depth(boundary: AABB, capacity: usize, depth: usize) -> Self {
         Self {
             boundary,
             capacity,
             points: Vec::new(),
             divided: false,
+            depth,
             children: None,
         }
     }
@@ -115,7 +126,10 @@ impl Quadtree {
             return false;
         }
 
-        if self.points.len() < self.capacity && !self.divided {
+        if !self.divided && (self.points.len() < self.capacity || self.depth >= MAX_DEPTH) {
+            // Leaf has room, OR we've hit the max subdivision depth: at max
+            // depth we stop splitting and let this leaf hold >capacity points.
+            // This is what allows coincident (identical) points to terminate.
             self.points.push(p);
             return true;
         }
@@ -153,10 +167,11 @@ impl Quadtree {
         let y = self.boundary.center.y;
         let hd = self.boundary.half_dimension / 2.0;
 
-        let nw = Quadtree::new(AABB::new(Point::new(x - hd, y + hd), hd), self.capacity);
-        let ne = Quadtree::new(AABB::new(Point::new(x + hd, y + hd), hd), self.capacity);
-        let sw = Quadtree::new(AABB::new(Point::new(x - hd, y - hd), hd), self.capacity);
-        let se = Quadtree::new(AABB::new(Point::new(x + hd, y - hd), hd), self.capacity);
+        let d = self.depth + 1;
+        let nw = Quadtree::with_depth(AABB::new(Point::new(x - hd, y + hd), hd), self.capacity, d);
+        let ne = Quadtree::with_depth(AABB::new(Point::new(x + hd, y + hd), hd), self.capacity, d);
+        let sw = Quadtree::with_depth(AABB::new(Point::new(x - hd, y - hd), hd), self.capacity, d);
+        let se = Quadtree::with_depth(AABB::new(Point::new(x + hd, y - hd), hd), self.capacity, d);
 
         self.children = Some(Box::new([nw, ne, sw, se]));
         self.divided = true;
@@ -266,6 +281,25 @@ mod tests {
         // Check children (indirectly)
         let query_all = qt.query(&boundary);
         assert_eq!(query_all.len(), 5);
+    }
+
+    #[test]
+    fn test_coincident_points_terminate() {
+        // Regression: inserting more coincident (identical) points than
+        // capacity must not recurse forever / overflow the stack.
+        let boundary = AABB::new(Point::new(0.0, 0.0), 100.0);
+        let mut qt = Quadtree::new(boundary, 1); // Capacity 1
+
+        let p = Point::new(5.0, 5.0);
+        assert!(qt.insert(p));
+        assert!(qt.insert(p));
+        assert!(qt.insert(p)); // 3rd identical point, capacity 1
+
+        // A range query covering the point must find all three.
+        let range = AABB::new(Point::new(5.0, 5.0), 1.0);
+        let found = qt.query(&range);
+        assert_eq!(found.len(), 3);
+        assert!(found.iter().all(|q| *q == p));
     }
 
     #[test]

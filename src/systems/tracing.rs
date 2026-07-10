@@ -119,8 +119,13 @@ pub fn set_global_subscriber(subscriber: impl Subscriber + 'static) {
 
 /// Emits an event to the global subscriber, attaching the current thread's span context.
 pub fn dispatch_event(level: Level, message: impl Into<String>, fields: Vec<Field>) {
-    let global = GLOBAL_SUBSCRIBER.lock().unwrap();
-    if let Some(subscriber) = global.as_ref() {
+    // RUST INSIGHT: Clone the `Arc<dyn Subscriber>` out and drop the guard BEFORE
+    // invoking the subscriber. `std::sync::Mutex` is not reentrant, so holding the
+    // lock across `subscriber.event(...)` would deadlock any subscriber that logs
+    // (re-entering `dispatch_event`), and would serialize all threads behind the
+    // subscriber's I/O.
+    let subscriber = GLOBAL_SUBSCRIBER.lock().unwrap().as_ref().map(Arc::clone);
+    if let Some(subscriber) = subscriber {
         let event = Event {
             message: message.into(),
             level,
@@ -273,6 +278,10 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    // These tests mutate the process-wide GLOBAL_SUBSCRIBER, so serialize them
+    // to keep counts deterministic under the default parallel test runner.
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
+
     struct TestSubscriber {
         event_count: Arc<AtomicUsize>,
         span_depth_sum: Arc<AtomicUsize>,
@@ -288,6 +297,9 @@ mod tests {
 
     #[test]
     fn test_tracing_basic_flow() {
+        let _guard = TEST_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let event_count = Arc::new(AtomicUsize::new(0));
         let span_depth_sum = Arc::new(AtomicUsize::new(0));
 
@@ -331,5 +343,39 @@ mod tests {
         assert_eq!(span_depth_sum.load(Ordering::SeqCst), 4); // 4 + 0 = 4
 
         assert_eq!(event_count.load(Ordering::SeqCst), 5);
+    }
+
+    /// A subscriber whose `event` callback re-enters `dispatch_event`. With the
+    /// global Mutex held across the callback this self-deadlocks (the test would
+    /// hang forever); with the lock dropped before dispatch it completes.
+    struct ReentrantSubscriber {
+        count: Arc<AtomicUsize>,
+    }
+
+    impl Subscriber for ReentrantSubscriber {
+        fn event(&self, _event: &Event, _span_context: &[Span]) {
+            // Bound the recursion: only the first (outermost) callback re-enters.
+            if self.count.fetch_add(1, Ordering::SeqCst) == 0 {
+                dispatch_event(Level::Info, "nested from subscriber", vec![]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_dispatch_event_reentrant_does_not_deadlock() {
+        let _guard = TEST_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let count = Arc::new(AtomicUsize::new(0));
+
+        set_global_subscriber(ReentrantSubscriber {
+            count: Arc::clone(&count),
+        });
+
+        // Before the fix this deadlocks on the non-reentrant Mutex and never
+        // returns. After the fix it returns and the nested event is delivered.
+        dispatch_event(Level::Info, "outer", vec![]);
+
+        assert_eq!(count.load(Ordering::SeqCst), 2);
     }
 }

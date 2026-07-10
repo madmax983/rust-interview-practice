@@ -110,7 +110,6 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
     // Actually, let's just strip whitespace first or iterate carefully.
     // For simplicity and strictness, we assume no whitespace.
 
-    let _trimmed = input.trim_end_matches('=');
     let input_bytes = input.as_bytes();
 
     if input_bytes.len() % 4 != 0 {
@@ -119,6 +118,9 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
 
     let mut output = Vec::with_capacity(input.len() * 3 / 4);
 
+    // Padding (`=`) is only valid in the final 4-char quantum; track the last index.
+    let num_chunks = input_bytes.len() / 4;
+
     // Build reverse map for O(1) lookups?
     // Or just a helper function. Helper is O(1) effectively.
     // A 256-byte array for lookup is faster than a match or scan.
@@ -126,7 +128,7 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
     // is the standard optimization.
 
     // Decoding logic iterating by 4 chars
-    for chunk in input_bytes.chunks(4) {
+    for (chunk_index, chunk) in input_bytes.chunks(4).enumerate() {
         if chunk.len() != 4 {
             return Err("Invalid chunk length".to_string());
         }
@@ -154,6 +156,18 @@ pub fn decode<T: AsRef<str>>(input: T) -> Result<Vec<u8>, String> {
             // i=2: next 6 bits (6..12)
             // i=3: low 6 bits (0..6)
             combined |= (val as u32) << (18 - i * 6);
+        }
+
+        // Padding is only permitted in the terminal quantum. `Zg==Zg==` (padding in a
+        // non-final chunk) must be rejected rather than silently decoded.
+        if padding_count > 0 && chunk_index != num_chunks - 1 {
+            return Err("Invalid padding: '=' only allowed in the final chunk".to_string());
+        }
+
+        // A single quantum can carry at most 2 padding characters. `====` / `A===`
+        // (3 or 4 pads) are malformed and must not produce output.
+        if padding_count > 2 {
+            return Err("Invalid padding: too many '=' in chunk".to_string());
         }
 
         // Extract bytes
@@ -238,6 +252,18 @@ mod tests {
         assert!(decode("Zg=").is_err()); // Invalid length (missing one char)
         assert!(decode("$$$$").is_err()); // Invalid chars
         assert!(decode("Zg=Z").is_err()); // Padding in middle (logic check)
+    }
+
+    #[test]
+    fn test_decode_invalid_padding() {
+        // Regression: over-padded quanta and padding in a non-final chunk were
+        // previously accepted and produced output. They must now be rejected.
+        assert!(decode("====").is_err()); // 4 padding chars
+        assert!(decode("A===").is_err()); // 3 padding chars
+        assert!(decode("Zg==Zg==").is_err()); // padding in a non-final chunk
+
+        // Sanity: legitimate terminal padding still round-trips.
+        assert_eq!(decode("Zg==").unwrap(), b"f");
     }
 
     #[test]
