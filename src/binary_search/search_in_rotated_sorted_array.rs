@@ -6,6 +6,8 @@
 //! This problem tests your ability to adapt standard binary search to arrays that
 //! are partially sorted. It demonstrates careful boundary checking and understanding
 //! of which half of the array is strictly sorted.
+//!
+//! Note: single canonical implementation; the brute/optimized/optimal progression does not apply here.
 
 /// Approach: Modified Binary Search
 ///

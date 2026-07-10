@@ -5,6 +5,8 @@
 //!
 //! This problem is a natural fit for Rust's `std::collections::BTreeMap` and demonstrates why iterator adapters eliminate off-by-one errors.
 //! It teaches how to compose collections (`HashMap` containing `BTreeMap` or `Vec`) and how to leverage `range` queries or `partition_point` for efficient O(log N) lookups without manual binary search implementation.
+//!
+//! Note: design problem with two idiomatic variants (`TimeMapBTree`, `TimeMapVec`); the brute/optimized/optimal progression does not apply here.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -36,24 +38,23 @@ impl TimeMapBTree {
     pub fn set(&mut self, key: String, value: String, timestamp: i32) {
         // RUST INSIGHT: `entry` API prevents double-lookups.
         // `or_default` inserts an empty BTreeMap if the key doesn't exist.
-        self.store
-            .entry(key)
-            .or_default()
-            .insert(timestamp, value);
+        self.store.entry(key).or_default().insert(timestamp, value);
     }
 
     #[must_use]
     pub fn get(&self, key: &str, timestamp: i32) -> String {
         // GOTCHA: We must handle the case where the key doesn't exist,
         // AND the case where no valid timestamp exists for the key.
-        self.store.get(key).and_then(|tree| {
-            // RUST INSIGHT: `range(..=timestamp)` gets all entries up to `timestamp`.
-            // `.next_back()` effectively gets the maximum key <= timestamp.
-            // This completely eliminates manual binary search logic and off-by-one bugs.
-            tree.range(..=timestamp).next_back()
-        })
-        .map(|(_, v)| v.clone())
-        .unwrap_or_else(|| String::new())
+        self.store
+            .get(key)
+            .and_then(|tree| {
+                // RUST INSIGHT: `range(..=timestamp)` gets all entries up to `timestamp`.
+                // `.next_back()` effectively gets the maximum key <= timestamp.
+                // This completely eliminates manual binary search logic and off-by-one bugs.
+                tree.range(..=timestamp).next_back()
+            })
+            .map(|(_, v)| v.clone())
+            .unwrap_or_default()
     }
 }
 
@@ -80,10 +81,7 @@ impl TimeMapVec {
     }
 
     pub fn set(&mut self, key: String, value: String, timestamp: i32) {
-        self.store
-            .entry(key)
-            .or_default()
-            .push((timestamp, value));
+        self.store.entry(key).or_default().push((timestamp, value));
     }
 
     #[must_use]
