@@ -101,6 +101,9 @@ impl Wal {
         let mut reader = BufReader::new(self.file.try_clone()?);
         reader.seek(SeekFrom::Start(0))?;
 
+        // Total on-disk length, used to bounds-check each entry's declared length below.
+        let total_len = reader.get_ref().metadata()?.len();
+
         let mut entries = Vec::new();
 
         loop {
@@ -123,6 +126,18 @@ impl Wal {
                 return Err(e);
             }
             let len = u64::from_le_bytes(len_bytes);
+
+            // BUG FIX: The length field is not covered by the checksum, so a corrupt length
+            // would trigger an unbounded `vec![0u8; len]` allocation (potential OOM) before we
+            // ever get a chance to detect the corruption via the checksum. Bounds-check the
+            // declared length against the bytes actually remaining in the file first. If it
+            // claims more than exists, treat it as a corrupt/partial entry and stop replay
+            // cleanly, preserving the recovered good prefix.
+            let pos = reader.stream_position()?;
+            let remaining = total_len.saturating_sub(pos);
+            if len > remaining {
+                break;
+            }
 
             // Read Payload
             let mut payload = vec![0u8; len as usize];
@@ -257,6 +272,38 @@ mod tests {
         }
 
         // Reopen and replay
+        {
+            let mut wal = Wal::open(&path).unwrap();
+            let entries = wal.replay().unwrap();
+            assert_eq!(entries.len(), 1);
+            assert_eq!(entries[0], b"valid");
+        }
+
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn test_corrupt_length_does_not_overallocate() {
+        // Regression: a corrupt/oversized length field must NOT trigger a huge allocation.
+        // Replay should stop cleanly at the bad entry and keep the recovered good prefix.
+        let path = temp_file();
+
+        // Write one valid entry.
+        {
+            let mut wal = Wal::open(&path).unwrap();
+            wal.append(b"valid").unwrap();
+            wal.flush().unwrap();
+        }
+
+        // Append a bogus entry header: 8-byte checksum + a length claiming a huge payload
+        // that does not exist on disk, with no payload following.
+        {
+            let mut file = OpenOptions::new().append(true).open(&path).unwrap();
+            file.write_all(&[0u8; 8]).unwrap(); // checksum
+            file.write_all(&u64::MAX.to_le_bytes()).unwrap(); // absurd length
+        }
+
+        // Replay must return cleanly (no panic, no OOM) with just the good prefix.
         {
             let mut wal = Wal::open(&path).unwrap();
             let entries = wal.replay().unwrap();

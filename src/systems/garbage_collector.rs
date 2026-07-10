@@ -224,25 +224,41 @@ impl Collector {
         let mut current = self.head;
         let mut prev_ptr: Option<NonNull<GcBox<dyn Trace>>> = None;
 
-        while let Some(mut node_ptr) = current {
-            // UNSAFE JUSTIFICATION: We own the nodes, and no other thread can access them.
-            let node = unsafe { node_ptr.as_mut() };
+        while let Some(node_ptr) = current {
+            // SAFETY: `node_ptr` was produced by `Box::into_raw` in `alloc` and is still
+            // owned by this single-threaded, thread-local Collector, so it is valid and
+            // uniquely owned. We take only a SHARED reference (`as_ref`) here. This is
+            // crucial: a `&mut GcBox` would cover the whole box (including `value`) and
+            // would alias the `&T` handed out by the safe `Gc::deref`, which is
+            // Stacked-Borrows/Miri UB reachable from safe code. Reads of `next`/`marked`
+            // and the `unmark` write (via `RefCell` interior mutability) all go through a
+            // shared reference, so no such aliasing `&mut` is ever formed.
+            let node = unsafe { node_ptr.as_ref() };
             let next_ptr = node.next;
 
             if node.is_marked() {
-                // Keep the object, just unmark it for the next cycle
+                // Keep the object, just unmark it for the next cycle. `unmark` mutates
+                // through `RefCell`, so a shared `&GcBox` suffices — no `&mut` needed.
                 node.unmark();
                 prev_ptr = Some(node_ptr);
             } else {
                 // Object is unreachable, sweep it!
-                if let Some(mut prev) = prev_ptr {
-                    unsafe { prev.as_mut().next = next_ptr };
+                if let Some(prev) = prev_ptr {
+                    // SAFETY: `prev` is a valid, live node we still own. We write ONLY the
+                    // `next` field via a raw field pointer (`addr_of_mut!`) instead of
+                    // forming a `&mut GcBox` over the whole box, so we never alias any
+                    // outstanding `&T` from `Gc::deref`.
+                    unsafe {
+                        std::ptr::addr_of_mut!((*prev.as_ptr()).next).write(next_ptr);
+                    }
                 } else {
                     self.head = next_ptr;
                 }
 
-                // UNSAFE JUSTIFICATION: We reconstruct the Box to safely drop the inner value
-                // and deallocate the memory. Since it wasn't marked, there are no live `Gc<T>` pointers to it.
+                // SAFETY: We reconstruct the Box to safely drop the inner value and
+                // deallocate the memory. Since it wasn't marked, there are no live `Gc<T>`
+                // pointers to it, and the shared `node` borrow above has ended (its last use
+                // was reading `next`/`marked`), so this frees the allocation exactly once.
                 unsafe {
                     let _dropped_box = Box::from_raw(node_ptr.as_ptr());
                     // `_dropped_box` goes out of scope here, calling drop logic
@@ -343,6 +359,36 @@ mod tests {
         // If it was kept, we can still dereference it safely.
         assert_eq!(*val, 10);
         assert!(gc.head.is_some());
+    }
+
+    #[test]
+    fn test_gc_mixed_roots_survive_and_unreachable_freed() {
+        // Functional check that the reworked (non-aliasing) sweep still preserves behavior:
+        // rooted objects survive and stay dereferenceable; unrooted objects are swept.
+        // NOTE: full validation of the removed Stacked-Borrows aliasing requires Miri, which
+        // cannot run in this environment; the aliasing is removed by construction (sweep now
+        // only takes shared references + raw field writes).
+        let mut gc = Collector::new();
+
+        let a = gc.alloc(10);
+        let _b = gc.alloc(20); // unreachable
+        let c = gc.alloc(30);
+        let _d = gc.alloc(40); // unreachable
+
+        // Root only a and c. This exercises both sweep branches (keep + unlink), including
+        // the interior-node unlink that uses the raw `next`-field write.
+        let roots: [&dyn Trace; 2] = [&a, &c];
+        gc.collect(roots);
+
+        // Reachable objects survive and are still safely dereferenceable.
+        assert_eq!(*a, 10);
+        assert_eq!(*c, 30);
+        assert!(gc.head.is_some());
+
+        // A second collection with no roots frees everything that remains.
+        let empty: [&dyn Trace; 0] = [];
+        gc.collect(empty);
+        assert!(gc.head.is_none());
     }
 
     #[test]

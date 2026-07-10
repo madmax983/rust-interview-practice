@@ -26,7 +26,9 @@
 //! 2.  If Memtable size > Threshold -> Flush to new SSTable.
 //!
 //! **Format:**
-//! SSTables are simple text files: `key,value\n`.
+//! SSTables use an unambiguous length-prefixed binary record encoding:
+//! `[key_len: u32 LE][key bytes][val_len: u32 LE][val bytes]` repeated. This lets keys and
+//! values contain arbitrary bytes (including `,` and `\n`) without corrupting the framing.
 //!
 //! # Invariants
 //!
@@ -48,12 +50,51 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, BufRead, BufReader, Write};
+use std::io::{self, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::data_structures::bloom_filter::BloomFilter;
 use crate::systems::wal::Wal;
+
+/// Writes a single length-prefixed record to an SSTable writer.
+///
+/// Format: `[key_len: u32 LE][key bytes][val_len: u32 LE][val bytes]`.
+/// Unlike the old `key,value\n` text format, this is unambiguous for keys/values
+/// containing commas or newlines.
+fn write_record<W: Write>(writer: &mut W, key: &str, value: &str) -> io::Result<()> {
+    let key_bytes = key.as_bytes();
+    let val_bytes = value.as_bytes();
+    writer.write_all(&(key_bytes.len() as u32).to_le_bytes())?;
+    writer.write_all(key_bytes)?;
+    writer.write_all(&(val_bytes.len() as u32).to_le_bytes())?;
+    writer.write_all(val_bytes)?;
+    Ok(())
+}
+
+/// Reads a single length-prefixed record from an SSTable reader.
+///
+/// Returns `Ok(None)` at a clean end-of-file.
+fn read_record<R: Read>(reader: &mut R) -> io::Result<Option<(String, String)>> {
+    let mut len_buf = [0u8; 4];
+    match reader.read_exact(&mut len_buf) {
+        Ok(()) => {}
+        Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => return Ok(None),
+        Err(e) => return Err(e),
+    }
+    let key_len = u32::from_le_bytes(len_buf) as usize;
+    let mut key_bytes = vec![0u8; key_len];
+    reader.read_exact(&mut key_bytes)?;
+
+    reader.read_exact(&mut len_buf)?;
+    let val_len = u32::from_le_bytes(len_buf) as usize;
+    let mut val_bytes = vec![0u8; val_len];
+    reader.read_exact(&mut val_bytes)?;
+
+    let key = String::from_utf8_lossy(&key_bytes).to_string();
+    let val = String::from_utf8_lossy(&val_bytes).to_string();
+    Ok(Some((key, val)))
+}
 
 pub struct LsmTree {
     memtable: BTreeMap<String, String>,
@@ -141,13 +182,9 @@ impl LsmTree {
                 // Self-healing: Rebuild Bloom Filter from SSTable
                 if let Ok(file) = File::open(sst_path) {
                     let mut bf = BloomFilter::new(1000, 0.01); // Default sizing
-                    let reader = BufReader::new(file);
-                    for line in reader.lines() {
-                        if let Ok(line) = line
-                            && let Some((k, _)) = line.split_once(',')
-                        {
-                            bf.add(&k.to_string());
-                        }
+                    let mut reader = BufReader::new(file);
+                    while let Ok(Some((k, _))) = read_record(&mut reader) {
+                        bf.add(&k);
                     }
                     let _ = bf.save_to_file(&filter_path);
                     bloom_filters.insert(sst_path.clone(), bf);
@@ -244,7 +281,7 @@ impl LsmTree {
         let mut bf = BloomFilter::new(self.memtable.len(), 0.01);
 
         for (k, v) in &self.memtable {
-            writeln!(writer, "{},{}", k, v)?;
+            write_record(&mut writer, k, v)?;
             bf.add(k);
         }
 
@@ -278,12 +315,9 @@ impl LsmTree {
 
         for path in &self.sstables {
             let file = File::open(path)?;
-            let reader = BufReader::new(file);
-            for line in reader.lines() {
-                let line = line?;
-                if let Some((k, v)) = line.split_once(',') {
-                    merged_map.insert(k.to_string(), v.to_string());
-                }
+            let mut reader = BufReader::new(file);
+            while let Some((k, v)) = read_record(&mut reader)? {
+                merged_map.insert(k, v);
             }
         }
 
@@ -304,7 +338,7 @@ impl LsmTree {
         let mut bf = BloomFilter::new(merged_map.len().max(100), 0.01);
 
         for (k, v) in &merged_map {
-            writeln!(writer, "{},{}", k, v)?;
+            write_record(&mut writer, k, v)?;
             bf.add(k);
         }
         writer.flush()?;
@@ -334,19 +368,16 @@ impl LsmTree {
     // Naive linear scan of SSTable
     fn scan_sstable(&self, path: &Path, key: &str) -> io::Result<Option<String>> {
         let file = File::open(path)?;
-        let reader = BufReader::new(file);
+        let mut reader = BufReader::new(file);
 
         // Since SSTable is sorted, we could stop early if current_key > key.
-        for line in reader.lines() {
-            let line = line?;
-            if let Some((k, v)) = line.split_once(',') {
-                if k == key {
-                    return Ok(Some(v.to_string()));
-                }
-                if k > key {
-                    // Sorted: if we passed it, it's not here.
-                    return Ok(None);
-                }
+        while let Some((k, v)) = read_record(&mut reader)? {
+            if k == key {
+                return Ok(Some(v));
+            }
+            if k.as_str() > key {
+                // Sorted: if we passed it, it's not here.
+                return Ok(None);
             }
         }
 
@@ -465,6 +496,31 @@ mod tests {
             // Should be in memtable
             assert!(!lsm.memtable.is_empty());
         }
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_sstable_preserves_special_chars() {
+        // Regression: keys with commas and values with newlines used to corrupt/lose
+        // data with the old `key,value\n` text format. Length-prefixed records fix it.
+        let dir = temp_dir();
+        let mut lsm = LsmTree::new(&dir, 1000).unwrap();
+
+        let key = "a,b\nc";
+        let val = "v\n1";
+        lsm.put(key.to_string(), val.to_string()).unwrap();
+
+        // Force the record onto an SSTable (out of the memtable).
+        lsm.flush().unwrap();
+        assert_eq!(lsm.sstables.len(), 1);
+
+        // Read back from the SSTable: must be byte-for-byte identical.
+        assert_eq!(lsm.get(key).unwrap(), Some(val.to_string()));
+
+        // Also verify it survives compaction.
+        lsm.compact().unwrap();
+        assert_eq!(lsm.get(key).unwrap(), Some(val.to_string()));
 
         fs::remove_dir_all(&dir).unwrap();
     }
