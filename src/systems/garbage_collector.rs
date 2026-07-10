@@ -177,7 +177,7 @@ struct GcBox<T: ?Sized> {
 }
 
 impl<T: ?Sized> GcBox<T> {
-    fn is_marked(&self) -> bool {
+    const fn is_marked(&self) -> bool {
         self.marked.get()
     }
     fn mark(&self) {
@@ -186,7 +186,7 @@ impl<T: ?Sized> GcBox<T> {
     fn unmark(&self) {
         self.marked.set(false);
     }
-    fn is_rooted(&self) -> bool {
+    const fn is_rooted(&self) -> bool {
         self.roots.get() > 0
     }
     fn add_root(&self) {
@@ -243,7 +243,7 @@ pub struct Root<'gc, T: Trace + 'static> {
     _marker: PhantomData<&'gc Collector>,
 }
 
-impl<'gc, T: Trace + 'static> Root<'gc, T> {
+impl<T: Trace + 'static> Root<'_, T> {
     fn new(gc: Gc<T>) -> Self {
         // SAFETY: `gc` was produced from a live object owned by the collector
         // this root borrows for `'gc`; registering a root only reads/writes the
@@ -261,7 +261,7 @@ impl<'gc, T: Trace + 'static> Root<'gc, T> {
     /// graph. It does **not** keep the object alive and cannot be dereferenced;
     /// revive it with [`Collector::root`] to read it again.
     #[must_use]
-    pub fn to_gc(&self) -> Gc<T> {
+    pub const fn to_gc(&self) -> Gc<T> {
         self.gc
     }
 }
@@ -320,7 +320,7 @@ impl Collector {
     /// Total bytes of `GcBox` headers+values ever allocated (never decremented;
     /// illustrative only — a real GC would track live bytes to trigger collection).
     #[must_use]
-    pub fn allocated_bytes(&self) -> usize {
+    pub const fn allocated_bytes(&self) -> usize {
         self.allocated_bytes.get()
     }
 
