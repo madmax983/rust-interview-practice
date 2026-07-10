@@ -68,16 +68,16 @@ impl TreeNode {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn is_valid_bst_brute_force(root: Option<Box<TreeNode>>) -> bool {
-    fn inorder(node: Option<&Box<TreeNode>>, values: &mut Vec<i32>) {
+    fn inorder(node: Option<&TreeNode>, values: &mut Vec<i32>) {
         if let Some(n) = node {
-            inorder(n.left.as_ref(), values);
+            inorder(n.left.as_deref(), values);
             values.push(n.val);
-            inorder(n.right.as_ref(), values);
+            inorder(n.right.as_deref(), values);
         }
     }
 
     let mut values = Vec::new();
-    inorder(root.as_ref(), &mut values);
+    inorder(root.as_deref(), &mut values);
 
     // Check strictly increasing
     // windows(2) gives us an iterator over overlapping pairs
@@ -107,7 +107,7 @@ pub fn is_valid_bst_brute_force(root: Option<Box<TreeNode>>) -> bool {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn is_valid_bst_optimized(root: Option<Box<TreeNode>>) -> bool {
-    fn validate(node: Option<&Box<TreeNode>>, min: Option<i32>, max: Option<i32>) -> bool {
+    fn validate(node: Option<&TreeNode>, min: Option<i32>, max: Option<i32>) -> bool {
         match node {
             None => true,
             Some(n) => {
@@ -124,13 +124,13 @@ pub fn is_valid_bst_optimized(root: Option<Box<TreeNode>>) -> bool {
 
                 // Recurse left: max becomes current val
                 // Recurse right: min becomes current val
-                validate(n.left.as_ref(), min, Some(n.val))
-                    && validate(n.right.as_ref(), Some(n.val), max)
+                validate(n.left.as_deref(), min, Some(n.val))
+                    && validate(n.right.as_deref(), Some(n.val), max)
             }
         }
     }
 
-    validate(root.as_ref(), None, None)
+    validate(root.as_deref(), None, None)
 }
 
 /// Optimal approach: Iterative In-order Traversal

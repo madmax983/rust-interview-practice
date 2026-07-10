@@ -103,12 +103,8 @@ pub fn build_tree_brute_force(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<B
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn build_tree_optimized(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Box<TreeNode>> {
-    let mut inorder_map = HashMap::with_capacity(inorder.len());
-    for (i, &val) in inorder.iter().enumerate() {
-        inorder_map.insert(val, i);
-    }
-
-    // We use a mutable index `pre_idx` to track our current root in preorder array
+    // We use a mutable index `pre_idx` to track our current root in preorder array.
+    // Hoisted above the statements below so it exists from the start of the scope.
     fn helper(
         preorder: &[i32],
         inorder_map: &HashMap<i32, usize>,
@@ -140,6 +136,11 @@ pub fn build_tree_optimized(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Box
         Some(root)
     }
 
+    let mut inorder_map = HashMap::with_capacity(inorder.len());
+    for (i, &val) in inorder.iter().enumerate() {
+        inorder_map.insert(val, i);
+    }
+
     let mut pre_idx = 0;
     // Note: right boundary is `inorder.len() - 1`, we handle the empty case beforehand
     if inorder.is_empty() {
@@ -158,11 +159,7 @@ pub fn build_tree_optimized(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Box
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn build_tree_optimal(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Box<TreeNode>> {
-    // Convert arrays into iterators
-    // Peekable allows us to look at the next element without consuming it
-    let mut preorder_iter = preorder.into_iter();
-    let mut inorder_iter = inorder.into_iter().peekable();
-
+    // Hoisted above the statements below so it exists from the start of the scope.
     fn helper(
         preorder_iter: &mut std::vec::IntoIter<i32>,
         inorder_iter: &mut std::iter::Peekable<std::vec::IntoIter<i32>>,
@@ -193,6 +190,11 @@ pub fn build_tree_optimal(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Box<T
 
         Some(root)
     }
+
+    // Convert arrays into iterators.
+    // Peekable allows us to look at the next element without consuming it.
+    let mut preorder_iter = preorder.into_iter();
+    let mut inorder_iter = inorder.into_iter().peekable();
 
     helper(&mut preorder_iter, &mut inorder_iter, None)
 }

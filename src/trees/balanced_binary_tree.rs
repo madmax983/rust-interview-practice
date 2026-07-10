@@ -59,11 +59,10 @@ impl TreeNode {
 /// Time: O(N)
 /// Space: O(H) for recursion stack
 #[must_use]
-fn height(node: &Option<Box<TreeNode>>) -> i32 {
-    match node {
-        None => 0,
-        Some(n) => 1 + cmp::max(height(&n.left), height(&n.right)),
-    }
+fn height(node: Option<&TreeNode>) -> i32 {
+    node.map_or(0, |n| {
+        1 + cmp::max(height(n.left.as_deref()), height(n.right.as_deref()))
+    })
 }
 
 /// Brute Force Approach: Top-Down Recursion
@@ -80,17 +79,14 @@ fn height(node: &Option<Box<TreeNode>>) -> i32 {
 /// `height` is called repeatedly for the same nodes as we traverse down.
 #[must_use]
 pub fn is_balanced_brute_force(root: Option<Box<TreeNode>>) -> bool {
-    match root {
-        None => true,
-        Some(node) => {
-            let left_height = height(&node.left);
-            let right_height = height(&node.right);
+    root.is_none_or(|node| {
+        let left_height = height(node.left.as_deref());
+        let right_height = height(node.right.as_deref());
 
-            let diff = (left_height - right_height).abs();
+        let diff = (left_height - right_height).abs();
 
-            diff <= 1 && is_balanced_brute_force(node.left) && is_balanced_brute_force(node.right)
-        }
-    }
+        diff <= 1 && is_balanced_brute_force(node.left) && is_balanced_brute_force(node.right)
+    })
 }
 
 /// We define a custom Zero-Sized Type (ZST) for our error.
@@ -111,16 +107,18 @@ struct Unbalanced;
 /// returns `Err(Unbalanced)`, the `?` immediately bubbles that error up the call stack.
 /// We don't even evaluate `node.right`! This is much cleaner than checking for a
 /// magic number like `-1`.
+// LeetCode signature: `root` matches the by-value node type shared across all three implementations.
+#[allow(clippy::needless_pass_by_value)]
 #[must_use]
 pub fn is_balanced_optimal(root: Option<Box<TreeNode>>) -> bool {
-    fn check_height(node: &Option<Box<TreeNode>>) -> Result<i32, Unbalanced> {
+    fn check_height(node: Option<&TreeNode>) -> Result<i32, Unbalanced> {
         match node {
             None => Ok(0),
             Some(n) => {
                 // Short-circuit: if left is unbalanced, propagate Err immediately
-                let left_height = check_height(&n.left)?;
+                let left_height = check_height(n.left.as_deref())?;
                 // Short-circuit: if right is unbalanced, propagate Err immediately
-                let right_height = check_height(&n.right)?;
+                let right_height = check_height(n.right.as_deref())?;
 
                 if (left_height - right_height).abs() > 1 {
                     Err(Unbalanced)
@@ -132,7 +130,7 @@ pub fn is_balanced_optimal(root: Option<Box<TreeNode>>) -> bool {
     }
 
     // If it returns Ok(height), it's balanced. If Err, it's unbalanced.
-    check_height(&root).is_ok()
+    check_height(root.as_deref()).is_ok()
 }
 
 /// Main entry point - aliases to the optimal approach.

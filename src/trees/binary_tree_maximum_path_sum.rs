@@ -78,26 +78,28 @@ impl TreeNode {
 #[allow(clippy::needless_pass_by_value)]
 pub fn max_path_sum_brute_force(root: Option<Box<TreeNode>>) -> i32 {
     // Best downward path sum that starts at `node` and descends (always includes `node`).
-    fn max_down(node: &Option<Box<TreeNode>>) -> i32 {
-        match node {
-            None => 0,
-            Some(n) => n.val + cmp::max(0, cmp::max(max_down(&n.left), max_down(&n.right))),
-        }
+    fn max_down(node: Option<&TreeNode>) -> i32 {
+        node.map_or(0, |n| {
+            n.val + cmp::max(
+                0,
+                cmp::max(max_down(n.left.as_deref()), max_down(n.right.as_deref())),
+            )
+        })
     }
 
     // Visit every node, treating each as the peak of a candidate path.
-    fn visit(node: &Option<Box<TreeNode>>, best: &mut i32) {
+    fn visit(node: Option<&TreeNode>, best: &mut i32) {
         if let Some(n) = node {
-            let left_down = cmp::max(0, max_down(&n.left));
-            let right_down = cmp::max(0, max_down(&n.right));
+            let left_down = cmp::max(0, max_down(n.left.as_deref()));
+            let right_down = cmp::max(0, max_down(n.right.as_deref()));
             *best = cmp::max(*best, n.val + left_down + right_down);
-            visit(&n.left, best);
-            visit(&n.right, best);
+            visit(n.left.as_deref(), best);
+            visit(n.right.as_deref(), best);
         }
     }
 
     let mut best = i32::MIN;
-    visit(&root, &mut best);
+    visit(root.as_deref(), &mut best);
     best
 }
 
@@ -125,43 +127,37 @@ pub fn max_path_sum_brute_force(root: Option<Box<TreeNode>>) -> i32 {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn max_path_sum_optimal(root: Option<Box<TreeNode>>) -> i32 {
-    let mut global_max = i32::MIN;
-
     // Helper function that returns the max contribution a node can add to its parent,
     // while updating the global_max if the path passing through this node (as the peak) is better.
-    fn get_max_gain(node: &Option<Box<TreeNode>>, current_max: &mut i32) -> i32 {
-        match node {
-            None => 0,
-            Some(n) => {
-                // Recursively get the max gain from left and right children.
-                // We use cmp::max(x, 0) because if a branch has a negative sum,
-                // we're better off not including it in our path at all.
+    // Hoisted above the statements below so it exists from the start of the scope.
+    fn get_max_gain(node: Option<&TreeNode>, current_max: &mut i32) -> i32 {
+        node.map_or(0, |n| {
+            // Recursively get the max gain from left and right children.
+            // We use cmp::max(x, 0) because if a branch has a negative sum,
+            // we're better off not including it in our path at all.
+            //
+            // RUST INSIGHT: `as_deref()` turns `Option<Box<TreeNode>>` into
+            // `Option<&TreeNode>`, so we traverse without taking ownership.
+            let left_gain = cmp::max(get_max_gain(n.left.as_deref(), current_max), 0);
+            let right_gain = cmp::max(get_max_gain(n.right.as_deref(), current_max), 0);
 
-                // RUST INSIGHT: Explicit Deref
-                // We use &n.left and &n.right to borrow the Options. We could also just let
-                // `n.left.as_deref()` or borrow checking handle it depending on our signature,
-                // but passing `&Option<Box<TreeNode>>` allows us to traverse without taking ownership.
-                let left_gain = cmp::max(get_max_gain(&n.left, current_max), 0);
-                let right_gain = cmp::max(get_max_gain(&n.right, current_max), 0);
+            // The price of a path that passes THROUGH this node and both its children
+            let price_new_path = n.val + left_gain + right_gain;
 
-                // The price of a path that passes THROUGH this node and both its children
-                let price_new_path = n.val + left_gain + right_gain;
+            // Update the global max if this new path is better
+            *current_max = cmp::max(*current_max, price_new_path);
 
-                // Update the global max if this new path is better
-                *current_max = cmp::max(*current_max, price_new_path);
-
-                // For the parent of this node, we can only return the node's value
-                // plus the best of its left OR right branches (not both).
-                n.val + cmp::max(left_gain, right_gain)
-            }
-        }
+            // For the parent of this node, we can only return the node's value
+            // plus the best of its left OR right branches (not both).
+            n.val + cmp::max(left_gain, right_gain)
+        })
     }
 
-    // GOTCHA: We must pass `&root` because `get_max_gain` borrows the tree.
-    // If we passed by value, we'd consume the tree, which isn't strictly necessary
-    // for just reading values, though we *do* take ownership of `root` in the main
-    // `max_path_sum` function signature as per LeetCode's standard.
-    get_max_gain(&root, &mut global_max);
+    let mut global_max = i32::MIN;
+
+    // GOTCHA: We borrow via `as_deref` because `get_max_gain` only reads the tree.
+    // We still take ownership of `root` in the signature as per LeetCode's standard.
+    get_max_gain(root.as_deref(), &mut global_max);
 
     global_max
 }

@@ -40,6 +40,7 @@ use std::collections::BinaryHeap;
 /// preserving the original order of equal elements, leading to higher constant factors.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_sign_loss)] // `k` is strictly positive per constraints
 pub fn find_kth_largest_brute_force(mut nums: Vec<i32>, k: i32) -> i32 {
     // Sort descending so the kth largest is at index k-1
     // RUST INSIGHT: `sort_unstable_by` is generally faster than `sort_by` for primitives.
@@ -63,6 +64,11 @@ pub fn find_kth_largest_brute_force(mut nums: Vec<i32>, k: i32) -> i32 {
 /// # Rust Insight
 /// Rust's `BinaryHeap` is a Max-Heap by default. To make it a Min-Heap, we wrap the items in `std::cmp::Reverse`.
 /// This flips the ordering comparison, changing max-heap semantics to min-heap without custom comparator boilerplate.
+///
+/// # Panics
+///
+/// Panics if the heap is empty after processing, which cannot happen when the
+/// constraints `1 <= k <= nums.length` hold.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 #[allow(clippy::cast_sign_loss)] // `k` is strictly positive per constraints

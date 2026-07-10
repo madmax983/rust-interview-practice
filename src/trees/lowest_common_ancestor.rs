@@ -190,6 +190,9 @@ pub fn lowest_common_ancestor_brute_force(
 /// # Rust Insight
 /// We use `Rc::ptr_eq` to compare node identities efficiently without needing `PartialEq`
 /// implementation on the whole tree structure or unique IDs (though we have IDs here).
+///
+/// # Panics
+/// Panics if `p` or `q` is `None`. The `LeetCode` contract guarantees both nodes exist in the tree.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn lowest_common_ancestor_optimized(
@@ -198,7 +201,7 @@ pub fn lowest_common_ancestor_optimized(
     q: Option<Rc<RefCell<TreeNode>>>,
 ) -> Option<Rc<RefCell<TreeNode>>> {
     // Base case: root is None, or root is p, or root is q
-    let Some(node) = root else { return None };
+    let node = root?;
 
     // We can't easily move p and q into recursive calls if we need them for comparison.
     // So we pass references or clones. Since they are Rc, cloning is cheap.
@@ -235,6 +238,9 @@ pub fn lowest_common_ancestor_optimized(
 /// # Rust Insight
 /// Explicit state machines are a common pattern in Rust to turn recursive algorithms
 /// into iterative ones, ensuring "Zero Cost Abstractions" don't turn into "Hidden Stack Costs".
+///
+/// # Panics
+/// Panics if `p` or `q` is `None`. The `LeetCode` contract guarantees both nodes exist in the tree.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn lowest_common_ancestor_optimal(
@@ -242,16 +248,17 @@ pub fn lowest_common_ancestor_optimal(
     p: Option<Rc<RefCell<TreeNode>>>,
     q: Option<Rc<RefCell<TreeNode>>>,
 ) -> Option<Rc<RefCell<TreeNode>>> {
-    let root = root?;
-    let p = p.unwrap();
-    let q = q.unwrap();
-
-    // Stack items: (Node, State, LeftResult)
+    // Stack items: (Node, State, LeftResult).
+    // Hoisted above the statements below so it exists from the start of the scope.
     enum State {
         VisitLeft,
         VisitRight,
         Process,
     }
+
+    let root = root?;
+    let p = p.unwrap();
+    let q = q.unwrap();
 
     // Stack to simulate recursion
     let mut stack = Vec::new();

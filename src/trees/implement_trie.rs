@@ -53,6 +53,7 @@ use std::collections::{HashMap, HashSet};
 /// - insert: O(L)
 /// - search: O(L)
 /// - `starts_with`: O(N * L) - Must iterate all words to check prefix.
+///
 /// Space: O(N * L) - Store every character of every word.
 #[derive(Default)]
 pub struct TrieBruteForce {
@@ -71,12 +72,14 @@ impl TrieBruteForce {
         self.words.insert(word);
     }
 
-    #[must_use] 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         self.words.contains(&word)
     }
 
-    #[must_use] 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `starts_with(prefix: String)`
     pub fn starts_with(&self, prefix: String) -> bool {
         // Linear scan required for prefix check in a hash set
         self.words.iter().any(|w| w.starts_with(&prefix))
@@ -113,6 +116,7 @@ impl TrieOptimized {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `insert(word: String)`
     pub fn insert(&mut self, word: String) {
         let mut current = self;
         for c in word.chars() {
@@ -124,7 +128,8 @@ impl TrieOptimized {
         current.is_end_of_word = true;
     }
 
-    #[must_use] 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         let mut current = self;
         for c in word.chars() {
@@ -136,7 +141,8 @@ impl TrieOptimized {
         current.is_end_of_word
     }
 
-    #[must_use] 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `starts_with(prefix: String)`
     pub fn starts_with(&self, prefix: String) -> bool {
         let mut current = self;
         for c in prefix.chars() {
@@ -180,6 +186,13 @@ impl TrieOptimal {
         }
     }
 
+    /// Inserts `word` into the trie.
+    ///
+    /// # Panics
+    ///
+    /// Does not panic in practice: the child slot at `index` is populated immediately
+    /// before the `unwrap`, and inputs are lowercase ASCII per the problem constraints.
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `insert(word: String)`
     pub fn insert(&mut self, word: String) {
         let mut current = self;
         for b in word.bytes() {
@@ -195,7 +208,8 @@ impl TrieOptimal {
         current.is_end_of_word = true;
     }
 
-    #[must_use] 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `search(word: String)`
     pub fn search(&self, word: String) -> bool {
         let mut current = self;
         for b in word.bytes() {
@@ -208,7 +222,8 @@ impl TrieOptimal {
         current.is_end_of_word
     }
 
-    #[must_use] 
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)] // LeetCode API signature: `starts_with(prefix: String)`
     pub fn starts_with(&self, prefix: String) -> bool {
         let mut current = self;
         for b in prefix.bytes() {

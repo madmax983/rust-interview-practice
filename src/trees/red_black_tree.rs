@@ -79,17 +79,17 @@ impl<K: Ord, V> Default for RedBlackTree<K, V> {
 }
 
 impl<K: Ord, V> RedBlackTree<K, V> {
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self { root: None, len: 0 }
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.len
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
@@ -116,11 +116,8 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     }
 
     // Helper: is_red
-    fn is_red(node: Option<&Box<Node<K, V>>>) -> bool {
-        match node {
-            Some(n) => n.color == Color::Red,
-            None => false,
-        }
+    fn is_red(node: Option<&Node<K, V>>) -> bool {
+        node.is_some_and(|n| n.color == Color::Red)
     }
 
     // Rotations
@@ -129,6 +126,9 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     //    A   y    =>    x   C
     //       / \        / \
     //      B   C      A   B
+    // Returns `Box<Node>` intentionally: children are stored as `Option<Box<Node>>`,
+    // so threading the boxed node through rotations avoids re-boxing at every call site.
+    #[allow(clippy::unnecessary_box_returns)]
     fn rotate_left(mut h: Box<Node<K, V>>) -> Box<Node<K, V>> {
         let mut x = h
             .right
@@ -146,6 +146,9 @@ impl<K: Ord, V> RedBlackTree<K, V> {
     //    y   C    =>    A   x
     //   / \                / \
     //  A   B              B   C
+    // Returns `Box<Node>` intentionally: children are stored as `Option<Box<Node>>`,
+    // so threading the boxed node through rotations avoids re-boxing at every call site.
+    #[allow(clippy::unnecessary_box_returns)]
     fn rotate_right(mut h: Box<Node<K, V>>) -> Box<Node<K, V>> {
         let mut x = h
             .left
@@ -169,6 +172,9 @@ impl<K: Ord, V> RedBlackTree<K, V> {
         }
     }
 
+    // Returns `Box<Node>` intentionally: children are stored as `Option<Box<Node>>`,
+    // so the recursive insert threads the boxed node without re-boxing at every level.
+    #[allow(clippy::unnecessary_box_returns)]
     fn insert_rec(
         mut h: Option<Box<Node<K, V>>>,
         key: K,
@@ -197,26 +203,22 @@ impl<K: Ord, V> RedBlackTree<K, V> {
 
         // LLRB Fixes
         // 1. Right child red, left black -> Rotate Left
-        if Self::is_red(node.right.as_ref()) && !Self::is_red(node.left.as_ref()) {
+        if Self::is_red(node.right.as_deref()) && !Self::is_red(node.left.as_deref()) {
             node = Self::rotate_left(node);
         }
 
         // 2. Left child red, left-left grandchild red -> Rotate Right
         // To check left-left, we must check node.left then node.left.left.
-        // We cannot borrow `node.left` then mutate `node`.
-        let mut needs_rotate_right = false;
-        if let Some(ref l) = node.left
-            && l.color == Color::Red
-            && Self::is_red(l.left.as_ref())
-        {
-            needs_rotate_right = true;
-        }
+        let needs_rotate_right = node
+            .left
+            .as_ref()
+            .is_some_and(|l| l.color == Color::Red && Self::is_red(l.left.as_deref()));
         if needs_rotate_right {
             node = Self::rotate_right(node);
         }
 
         // 3. Both children red -> Flip Colors
-        if Self::is_red(node.left.as_ref()) && Self::is_red(node.right.as_ref()) {
+        if Self::is_red(node.left.as_deref()) && Self::is_red(node.right.as_deref()) {
             Self::flip_colors(&mut node);
         }
 
@@ -259,7 +261,7 @@ impl<K: Ord, V> RedBlackTree<K, V> {
             None => true,
             Some(n) => {
                 if n.color == Color::Red
-                    && (Self::is_red(n.left.as_ref()) || Self::is_red(n.right.as_ref()))
+                    && (Self::is_red(n.left.as_deref()) || Self::is_red(n.right.as_deref()))
                 {
                     return false;
                 }

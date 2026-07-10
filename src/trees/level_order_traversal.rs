@@ -127,13 +127,11 @@ impl Iterator for LevelOrderIterator {
 pub fn level_order(root: Option<Box<TreeNode>>) -> Vec<Vec<i32>> {
     // Handle the empty case explicitly or let the iterator handle it.
     // Here, if root is None, we return an empty vec immediately or use the iterator.
-    if let Some(node) = root {
+    root.map_or_else(Vec::new, |node| {
         let mut queue = VecDeque::new();
         queue.push_back(node);
         LevelOrderIterator { queue }.collect()
-    } else {
-        Vec::new()
-    }
+    })
 }
 
 /// # Alternative Approaches

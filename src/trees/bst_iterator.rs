@@ -156,8 +156,12 @@ impl BSTIterator {
     fn push_all_left(&mut self, mut node: Option<Rc<RefCell<TreeNode>>>) {
         while let Some(n) = node {
             self.stack.push(Rc::clone(&n));
-            // Move to left child
-            node = n.borrow().left.clone();
+            // Move to left child. `clone_from` does not apply: `node` was just
+            // moved out by the `while let`, so there is no live value to clone into.
+            #[allow(clippy::assigning_clones)]
+            {
+                node = n.borrow().left.clone();
+            }
         }
     }
 }

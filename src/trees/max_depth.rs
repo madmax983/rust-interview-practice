@@ -69,14 +69,11 @@ impl TreeNode {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn max_depth_brute_force(root: Option<Box<TreeNode>>) -> i32 {
-    match root {
-        Some(node) => {
-            let left_depth = max_depth_brute_force(node.left);
-            let right_depth = max_depth_brute_force(node.right);
-            1 + cmp::max(left_depth, right_depth)
-        }
-        None => 0,
-    }
+    root.map_or(0, |node| {
+        let left_depth = max_depth_brute_force(node.left);
+        let right_depth = max_depth_brute_force(node.right);
+        1 + cmp::max(left_depth, right_depth)
+    })
 }
 
 /// Optimal approach: iterative breadth-first search (BFS) with an explicit queue.
@@ -98,6 +95,10 @@ pub fn max_depth_brute_force(root: Option<Box<TreeNode>>) -> i32 {
 /// When implementing BFS for depth, you must capture the `level_size` *before* iterating
 /// through the queue to distinguish between nodes of the current level and their children
 /// (which belong to the next level).
+///
+/// # Panics
+/// Does not panic: `pop_front` is only called `level_size` times after confirming the queue
+/// holds at least that many elements.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn max_depth_optimal(root: Option<Box<TreeNode>>) -> i32 {

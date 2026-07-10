@@ -76,24 +76,21 @@ impl TreeNode {
 #[allow(clippy::needless_pass_by_value)]
 pub fn diameter_of_binary_tree_optimal(root: Option<Box<TreeNode>>) -> i32 {
     // Helper function that returns the height of the tree, while updating the maximum diameter.
-    fn height(node: &Option<Box<TreeNode>>, max_diameter: &mut i32) -> i32 {
-        match node {
-            None => 0,
-            Some(n) => {
-                let left_height = height(&n.left, max_diameter);
-                let right_height = height(&n.right, max_diameter);
+    fn height(node: Option<&TreeNode>, max_diameter: &mut i32) -> i32 {
+        node.map_or(0, |n| {
+            let left_height = height(n.left.as_deref(), max_diameter);
+            let right_height = height(n.right.as_deref(), max_diameter);
 
-                // Update the global maximum diameter if the path through the current node is longer
-                *max_diameter = cmp::max(*max_diameter, left_height + right_height);
+            // Update the global maximum diameter if the path through the current node is longer
+            *max_diameter = cmp::max(*max_diameter, left_height + right_height);
 
-                // Return the height of the current node's subtree
-                1 + cmp::max(left_height, right_height)
-            }
-        }
+            // Return the height of the current node's subtree
+            1 + cmp::max(left_height, right_height)
+        })
     }
 
     let mut max_diameter = 0;
-    height(&root, &mut max_diameter);
+    height(root.as_deref(), &mut max_diameter);
     max_diameter
 }
 
@@ -115,23 +112,19 @@ pub fn diameter_of_binary_tree_optimal(root: Option<Box<TreeNode>>) -> i32 {
 #[allow(clippy::needless_pass_by_value)]
 pub fn diameter_of_binary_tree_brute_force(root: Option<Box<TreeNode>>) -> i32 {
     // Returns (height of current subtree, max diameter found in current subtree)
-    fn helper(node: &Option<Box<TreeNode>>) -> (i32, i32) {
-        match node {
-            None => (0, 0),
-            Some(n) => {
-                let (left_height, left_diameter) = helper(&n.left);
-                let (right_height, right_diameter) = helper(&n.right);
+    fn helper(node: Option<&TreeNode>) -> (i32, i32) {
+        node.map_or((0, 0), |n| {
+            let (left_height, left_diameter) = helper(n.left.as_deref());
+            let (right_height, right_diameter) = helper(n.right.as_deref());
 
-                let current_diameter = left_height + right_height;
-                let max_diameter =
-                    cmp::max(current_diameter, cmp::max(left_diameter, right_diameter));
+            let current_diameter = left_height + right_height;
+            let max_diameter = cmp::max(current_diameter, cmp::max(left_diameter, right_diameter));
 
-                (1 + cmp::max(left_height, right_height), max_diameter)
-            }
-        }
+            (1 + cmp::max(left_height, right_height), max_diameter)
+        })
     }
 
-    helper(&root).1
+    helper(root.as_deref()).1
 }
 
 /// Main entry point - uses the optimal (mutable reference) approach.
