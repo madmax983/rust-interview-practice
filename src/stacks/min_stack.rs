@@ -56,13 +56,23 @@ impl MinStack {
         self.stack.pop();
     }
 
+    /// Returns the value on top of the stack.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stack is empty. The problem guarantees `top` is only called on
+    /// a non-empty stack.
     #[must_use]
     pub fn top(&self) -> i32 {
-        // RUST INSIGHT: `unwrap` is used here because the problem description usually
-        // guarantees that `top` is only called on non-empty stacks.
         self.stack.last().unwrap().0
     }
 
+    /// Returns the current minimum value in the stack.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stack is empty. The problem guarantees `get_min` is only called
+    /// on a non-empty stack.
     #[must_use]
     pub fn get_min(&self) -> i32 {
         self.stack.last().unwrap().1
@@ -88,7 +98,7 @@ impl MinStackOptimized {
     pub fn push(&mut self, val: i32) {
         self.stack.push(val);
         // Push to min_stack if it's empty or the value is <= current min
-        if self.min_stack.is_empty() || val <= *self.min_stack.last().unwrap() {
+        if self.min_stack.last().is_none_or(|&m| val <= m) {
             self.min_stack.push(val);
         }
     }
@@ -96,17 +106,29 @@ impl MinStackOptimized {
     pub fn pop(&mut self) {
         if let Some(val) = self.stack.pop() {
             // If the popped value is the current min, pop it from the min_stack too
-            if val == *self.min_stack.last().unwrap() {
+            if self.min_stack.last() == Some(&val) {
                 self.min_stack.pop();
             }
         }
     }
 
+    /// Returns the value on top of the stack.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stack is empty. The problem guarantees `top` is only called on
+    /// a non-empty stack.
     #[must_use]
     pub fn top(&self) -> i32 {
         *self.stack.last().unwrap()
     }
 
+    /// Returns the current minimum value in the stack.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the stack is empty. The problem guarantees `get_min` is only called
+    /// on a non-empty stack.
     #[must_use]
     pub fn get_min(&self) -> i32 {
         *self.min_stack.last().unwrap()

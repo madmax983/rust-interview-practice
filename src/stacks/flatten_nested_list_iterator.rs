@@ -59,15 +59,14 @@ pub struct NestedIterator {
 
 impl NestedIterator {
     /// Creates a new iterator from a vector of `NestedInteger`.
-    #[must_use] 
+    #[must_use]
     pub fn new(nested_list: Vec<NestedInteger>) -> Self {
-        let mut stack = Vec::new();
-        // Push the main list's iterator onto the stack.
-        // If the list is empty, we don't strictly need to push it, but pushing it handles
+        // Seed the stack with the main list's iterator.
+        // If the list is empty, we don't strictly need to push it, but seeding it handles
         // the logic uniformly (it will just return None immediately).
         // However, optimizing out empty initial lists is fine.
-        // Let's push it so the loop in `next()` handles everything.
-        stack.push(nested_list.into_iter());
+        // Seeding it lets the loop in `next()` handle everything.
+        let stack = vec![nested_list.into_iter()];
 
         Self { stack }
     }

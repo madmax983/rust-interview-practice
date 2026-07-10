@@ -68,6 +68,11 @@ pub struct Regex {
 
 impl Regex {
     /// Compiles a regex pattern into an NFA.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Err` with a diagnostic message if the pattern is malformed (for example,
+    /// unbalanced parentheses or a dangling operator).
     pub fn new(pattern: &str) -> Result<Self, String> {
         let postfix = infix_to_postfix(pattern)?;
         compile(&postfix)
@@ -75,7 +80,7 @@ impl Regex {
 
     /// Returns true if the text matches the regex pattern.
     /// Note: This performs a full string match (anchored).
-    #[must_use] 
+    #[must_use]
     pub fn is_match(&self, text: &str) -> bool {
         let mut clist = Vec::with_capacity(self.nfa.len());
         let mut nlist = Vec::with_capacity(self.nfa.len());

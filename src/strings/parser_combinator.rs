@@ -62,6 +62,11 @@ pub type ParseResult<'a, Output> = Result<(&'a str, Output), ParseError<'a>>;
 /// The core Parser trait.
 /// Any type implementing this can parse a string slice.
 pub trait Parser<'a, Output> {
+    /// Runs the parser against `input`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `ParseError` if the input does not match what this parser expects.
     fn parse(&self, input: &'a str) -> ParseResult<'a, Output>;
 
     // =========================================================================
@@ -104,9 +109,9 @@ pub trait Parser<'a, Output> {
         Output: 'a,
         P: Parser<'a, Output> + 'a,
     {
-        BoxedParser::new(move |input| match self.parse(input) {
-            Ok(success) => Ok(success),
-            Err(_) => other.parse(input),
+        BoxedParser::new(move |input| {
+            self.parse(input)
+                .map_or_else(|_| other.parse(input), Ok)
         })
     }
 }
@@ -149,18 +154,19 @@ impl<'a, Output> Parser<'a, Output> for BoxedParser<'a, Output> {
 // =========================================================================
 
 /// Matches an exact string literal.
-#[must_use] 
+#[must_use]
 pub fn tag<'a>(expected: &'a str) -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
-        if input.starts_with(expected) {
+        input.strip_prefix(expected).map_or_else(
+            || {
+                Err(ParseError {
+                    location: input,
+                    expected: format!("Expected '{expected}'"),
+                })
+            },
             // Return the remaining input, and the matched prefix
-            Ok((&input[expected.len()..], expected))
-        } else {
-            Err(ParseError {
-                location: input,
-                expected: format!("Expected '{expected}'"),
-            })
-        }
+            |rest| Ok((rest, expected)),
+        )
     }
 }
 

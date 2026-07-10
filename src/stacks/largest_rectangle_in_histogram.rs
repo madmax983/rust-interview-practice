@@ -20,15 +20,17 @@ use std::cmp;
 /// keeping track of the minimum height in that range to compute the area.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn largest_rectangle_area_brute_force(heights: Vec<i32>) -> i32 {
     let mut max_area = 0;
     let n = heights.len();
 
     for i in 0..n {
         let mut min_height = heights[i];
-        for j in i..n {
-            min_height = cmp::min(min_height, heights[j]);
-            let width = (j - i + 1) as i32;
+        for (offset, &height) in heights[i..].iter().enumerate() {
+            min_height = cmp::min(min_height, height);
+            let width = (offset + 1) as i32;
             max_area = cmp::max(max_area, min_height * width);
         }
     }
@@ -45,6 +47,9 @@ pub fn largest_rectangle_area_brute_force(heights: Vec<i32>) -> i32 {
 /// these boundary arrays efficiently.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_sign_loss)] // indices are non-negative when used
 pub fn largest_rectangle_area_optimized(heights: Vec<i32>) -> i32 {
     if heights.is_empty() {
         return 0;
@@ -91,6 +96,8 @@ pub fn largest_rectangle_area_optimized(heights: Vec<i32>) -> i32 {
 /// the bar at the top of the stack.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn largest_rectangle_area_optimal(mut heights: Vec<i32>) -> i32 {
     // GOTCHA: We append a 0 to the heights vector. This clever trick forces
     // any remaining bars in the stack to be processed at the end of the iteration,

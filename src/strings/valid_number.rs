@@ -184,41 +184,33 @@ impl State {
     /// // RUST INSIGHT: Exhaustive pattern matching ensures we never miss a state-input
     /// // combination. The compiler enforces that every possible state transition is handled.
     const fn transition(self, char_type: CharType) -> Self {
+        // Arms are grouped by their resulting state; or-patterns merge the source
+        // states that share a transition so no two arms have identical bodies.
         match (self, char_type) {
-            // Transitions from Start
             (Self::Start, CharType::Sign) => Self::Sign,
-            (Self::Start, CharType::Digit) => Self::Integer,
-            (Self::Start, CharType::Dot) => Self::EmptyDot,
 
-            // Transitions from Sign
-            (Self::Sign, CharType::Digit) => Self::Integer,
-            (Self::Sign, CharType::Dot) => Self::EmptyDot,
+            // A digit while reading the integer part.
+            (Self::Start | Self::Sign | Self::Integer, CharType::Digit) => Self::Integer,
 
-            // Transitions from Integer
-            (Self::Integer, CharType::Digit) => Self::Integer,
+            // A dot with no integer preceding it.
+            (Self::Start | Self::Sign, CharType::Dot) => Self::EmptyDot,
+
+            // A dot after an integer.
             (Self::Integer, CharType::Dot) => Self::Dot,
-            (Self::Integer, CharType::Exponent) => Self::Exponent,
 
-            // Transitions from Dot (integer preceding it)
-            (Self::Dot, CharType::Digit) => Self::Fraction,
-            (Self::Dot, CharType::Exponent) => Self::Exponent,
+            // Entering the exponent from any valid mantissa state.
+            (Self::Integer | Self::Dot | Self::Fraction, CharType::Exponent) => Self::Exponent,
 
-            // Transitions from EmptyDot (no integer preceding it)
-            (Self::EmptyDot, CharType::Digit) => Self::Fraction,
+            // A digit forming the fractional part.
+            (Self::Dot | Self::EmptyDot | Self::Fraction, CharType::Digit) => Self::Fraction,
 
-            // Transitions from Fraction
-            (Self::Fraction, CharType::Digit) => Self::Fraction,
-            (Self::Fraction, CharType::Exponent) => Self::Exponent,
-
-            // Transitions from Exponent
+            // A sign directly after the exponent marker.
             (Self::Exponent, CharType::Sign) => Self::ExponentSign,
-            (Self::Exponent, CharType::Digit) => Self::ExponentInt,
 
-            // Transitions from ExponentSign
-            (Self::ExponentSign, CharType::Digit) => Self::ExponentInt,
-
-            // Transitions from ExponentInt
-            (Self::ExponentInt, CharType::Digit) => Self::ExponentInt,
+            // Digits after the exponent (and its optional sign).
+            (Self::Exponent | Self::ExponentSign | Self::ExponentInt, CharType::Digit) => {
+                Self::ExponentInt
+            }
 
             // Any other input moves us to an invalid state, or keeps us there
             _ => Self::Invalid,
@@ -226,7 +218,7 @@ impl State {
     }
 
     /// Determines if the current state is considered a final valid state for the entire string.
-    const fn is_valid_end(&self) -> bool {
+    const fn is_valid_end(self) -> bool {
         matches!(
             self,
             Self::Integer | Self::Dot | Self::Fraction | Self::ExponentInt

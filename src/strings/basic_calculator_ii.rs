@@ -36,6 +36,11 @@
 /// Using `.replace(" ", "")` creates a whole new `String` allocation. While it makes
 /// parsing easier, it's inefficient. Idiomatic Rust avoids unnecessary allocations
 /// by parsing strings in-place (often using byte slices `&[u8]` for ASCII).
+///
+/// # Panics
+///
+/// Panics if a character that passes `is_ascii_digit` fails to convert via `to_digit(10)`;
+/// this cannot happen for valid input.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::cast_possible_truncation)]
@@ -97,9 +102,7 @@ pub fn calculate_optimized(s: String) -> i32 {
     let bytes = s.as_bytes();
     let n = bytes.len();
 
-    for i in 0..n {
-        let b = bytes[i];
-
+    for (i, &b) in bytes.iter().enumerate() {
         if b.is_ascii_digit() {
             current_num = current_num * 10 + i32::from(b - b'0');
         }
@@ -149,7 +152,7 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    #[must_use] 
+    #[must_use]
     pub fn new(s: &'a str) -> Self {
         let mut bytes = s.as_bytes().iter();
         let peeked = bytes.next().copied();
@@ -242,7 +245,7 @@ pub fn calculate_optimal(s: String) -> i32 {
                 Token::Divide => {
                     last_number /= num;
                 }
-                _ => unreachable!(),
+                Token::Number(_) => unreachable!(),
             },
             op => current_op = op,
         }

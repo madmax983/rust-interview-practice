@@ -169,7 +169,7 @@ impl Ord for Version {
                 // if all of the preceding identifiers are equal.
                 for (a, b) in self.pre.iter().zip(other.pre.iter()) {
                     match a.cmp(b) {
-                        Ordering::Equal => continue,
+                        Ordering::Equal => {}
                         other => return other,
                     }
                 }

@@ -89,6 +89,7 @@ fn is_palindrome(bytes: &[u8], mut left: usize, mut right: usize) -> bool {
 /// repeatedly or creating new Strings, ensuring zero-allocation tracking.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn longest_palindrome_optimized(s: String) -> String {
     if s.len() <= 1 {
         return s;

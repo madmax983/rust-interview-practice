@@ -134,7 +134,9 @@ impl AhoCorasick {
             // if we don't need to insert, satisfying the borrow checker cleanly.
             let next_state = self.states[current_state].transitions.get(&byte).copied();
 
-            if let Some(state) = next_state { current_state = state } else {
+            if let Some(state) = next_state {
+                current_state = state;
+            } else {
                 let new_state_idx = self.states.len();
                 self.states.push(State::default());
                 self.states[current_state]

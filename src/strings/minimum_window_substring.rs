@@ -178,6 +178,11 @@ pub fn min_window_optimized(s: String, t: String) -> String {
 /// **RUST INSIGHT**: Operating on `&[u8]` avoids the O(n) UTF-8 boundary checks of `.chars()`.
 /// Array access `map[b as usize]` is bounds-checked but easily optimized away by LLVM.
 /// We use `std::str::from_utf8` at the end to safely convert the slice back to a `String`.
+///
+/// # Panics
+///
+/// Panics if the winning window is not valid UTF-8. This cannot happen because the window
+/// is a byte range of the original `&str`, which is guaranteed to be valid UTF-8.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn min_window_optimal(s: String, t: String) -> String {

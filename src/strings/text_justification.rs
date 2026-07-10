@@ -51,7 +51,8 @@
 /// Why this matters:
 /// This explicitly uses standard collection mechanisms (a vector for the current line). It focuses
 /// on algorithm correctness (how to divide the extra spaces) rather than memory optimal operations.
-#[must_use] 
+#[must_use]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee max_width >= 0
 pub fn full_justify_brute_force(words: Vec<String>, max_width: i32) -> Vec<String> {
     let max_width = max_width as usize;
     let mut res = Vec::new();
@@ -129,7 +130,9 @@ pub fn full_justify_brute_force(words: Vec<String>, max_width: i32) -> Vec<Strin
 /// GOTCHA:
 /// Do not confuse byte length with character length, though `LeetCode` guarantees ASCII so
 /// `.len()` is safe here. If there were Unicode text, `.chars().count()` might be required for `max_width`.
-#[must_use] 
+#[must_use]
+#[allow(clippy::needless_pass_by_value)] // LeetCode signature
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee max_width >= 0
 pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
     let max_width = max_width as usize;
     let mut res = Vec::new();
@@ -154,9 +157,9 @@ pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
 
         if num_words == 1 || j == words.len() {
             // Left justify for a single word or the very last line
-            for k in i..j {
-                line.push_str(&words[k]);
-                if k < j - 1 {
+            for (offset, word) in words[i..j].iter().enumerate() {
+                line.push_str(word);
+                if offset < num_words - 1 {
                     line.push(' ');
                 }
             }
@@ -169,9 +172,9 @@ pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
             let spaces_between = total_spaces / (num_words - 1);
             let mut extra_spaces = total_spaces % (num_words - 1);
 
-            for k in i..j {
-                line.push_str(&words[k]);
-                if k < j - 1 {
+            for (offset, word) in words[i..j].iter().enumerate() {
+                line.push_str(word);
+                if offset < num_words - 1 {
                     line.extend(std::iter::repeat_n(' ', spaces_between));
                     if extra_spaces > 0 {
                         line.push(' ');
@@ -189,7 +192,7 @@ pub fn full_justify_optimal(words: Vec<String>, max_width: i32) -> Vec<String> {
 }
 
 /// Main Entry Point
-#[must_use] 
+#[must_use]
 pub fn full_justify(words: Vec<String>, max_width: i32) -> Vec<String> {
     full_justify_optimal(words, max_width)
 }

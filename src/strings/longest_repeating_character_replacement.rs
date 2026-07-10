@@ -48,6 +48,9 @@
 /// frequent character is less than or equal to `k`, the substring is valid.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee k >= 0
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn character_replacement_brute_force(s: String, k: i32) -> i32 {
     let bytes = s.as_bytes();
     let mut max_len = 0;
@@ -56,12 +59,12 @@ pub fn character_replacement_brute_force(s: String, k: i32) -> i32 {
         let mut counts = [0; 26];
         let mut max_freq = 0;
 
-        for j in i..bytes.len() {
-            let idx = (bytes[j] - b'A') as usize;
+        for (offset, &byte) in bytes[i..].iter().enumerate() {
+            let idx = (byte - b'A') as usize;
             counts[idx] += 1;
             max_freq = std::cmp::max(max_freq, counts[idx]);
 
-            let window_len = j - i + 1;
+            let window_len = offset + 1;
             if window_len - max_freq <= k as usize {
                 max_len = std::cmp::max(max_len, window_len);
             } else {
@@ -92,6 +95,9 @@ pub fn character_replacement_brute_force(s: String, k: i32) -> i32 {
 /// outdated, larger `max_freq` only prevents the window from shrinking, which is fine!
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::cast_sign_loss)] // LeetCode constraints guarantee k >= 0
+#[allow(clippy::cast_possible_truncation)] // LeetCode constraints guarantee it fits
+#[allow(clippy::cast_possible_wrap)] // LeetCode constraints guarantee it fits
 pub fn character_replacement_optimal(s: String, k: i32) -> i32 {
     // GOTCHA: Do not use `.chars().collect::<Vec<char>>()` here!
     // Since LeetCode guarantees the string contains only uppercase ASCII letters,

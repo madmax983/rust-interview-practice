@@ -39,6 +39,11 @@
 /// We iterate through the characters of the first string, and for each character,
 /// we check if every other string has the same character at the same position.
 /// This is linear in the total input size, faster than the sorting brute force.
+///
+/// # Panics
+///
+/// Does not panic: the non-empty case is guarded, so moving the first element out of
+/// the `Vec` always succeeds.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn longest_common_prefix_optimized(strs: Vec<String>) -> String {
@@ -80,6 +85,11 @@ pub fn longest_common_prefix_optimized(strs: Vec<String>) -> String {
 /// will end up at the first and last positions. We then only need to compare
 /// the first and last strings to find the common prefix. The sort dominates,
 /// making this the slowest of the three approaches (the extra log N factor).
+///
+/// # Panics
+///
+/// Does not panic: the empty case is guarded, so `first()` and `last()` always return
+/// `Some` after the early return.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn longest_common_prefix_brute_force(mut strs: Vec<String>) -> String {
@@ -119,9 +129,8 @@ pub fn longest_common_prefix_brute_force(mut strs: Vec<String>) -> String {
 #[allow(clippy::needless_pass_by_value)]
 pub fn longest_common_prefix_optimal(strs: Vec<String>) -> String {
     let mut iter = strs.into_iter();
-    let mut prefix = match iter.next() {
-        Some(s) => s,
-        None => return String::new(),
+    let Some(mut prefix) = iter.next() else {
+        return String::new();
     };
 
     for s in iter {

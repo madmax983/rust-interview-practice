@@ -94,6 +94,11 @@ impl FromStr for Token {
 ///
 /// Time Complexity: O(N)
 /// Space Complexity: O(N)
+///
+/// # Errors
+///
+/// Returns `Err` if a token fails to parse, if the stack underflows while applying
+/// an operator, or if the expression is empty.
 #[allow(clippy::needless_pass_by_value)]
 pub fn eval_rpn_brute_force(tokens: Vec<String>) -> Result<i32, String> {
     // BOLT OPTIMIZATION: Pre-allocate capacity for the stack.
@@ -136,8 +141,14 @@ pub fn eval_rpn_brute_force(tokens: Vec<String>) -> Result<i32, String> {
 ///
 /// Time Complexity: O(N)
 /// Space Complexity: O(N)
+///
+/// # Panics
+///
+/// Panics if a token cannot be parsed, if the stack underflows while applying an
+/// operator, or if the expression produces no result. The problem guarantees valid
+/// RPN, so this cannot happen for well-formed input.
 #[allow(clippy::needless_pass_by_value)]
-#[must_use] 
+#[must_use]
 pub fn eval_rpn_optimal(tokens: Vec<String>) -> i32 {
     // BOLT OPTIMIZATION: Pre-allocate capacity for the stack.
     // In valid RPN, the maximum number of elements on the stack at any time
