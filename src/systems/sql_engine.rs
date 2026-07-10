@@ -21,19 +21,21 @@
 //!
 //! **Flow:**
 //!
-//!      SQL String ("SELECT id FROM users")
-//!             │
-//!             ▼
-//!      [ Lexer ]  ────►  Vec<Token>
-//!             │
-//!             ▼
-//!      [ Parser ] ────►  AST (Statement::Select { .. })
-//!             │
-//!             ▼
-//!      [ Executor ] ◄──► [ Storage Engine (Trait) ]
-//!             │
-//!             ▼
-//!      ResultSet (Vec<Row>)
+//! ```text
+//! SQL String ("SELECT id FROM users")
+//!        │
+//!        ▼
+//! [ Lexer ]  ────►  Vec<Token>
+//!        │
+//!        ▼
+//! [ Parser ] ────►  AST (Statement::Select { .. })
+//!        │
+//!        ▼
+//! [ Executor ] ◄──► [ Storage Engine (Trait) ]
+//!        │
+//!        ▼
+//! ResultSet (Vec<Row>)
+//! ```
 //!
 //! **Invariants:**
 //! 1. All strings are assumed to be UTF-8 valid (Rust's `String` guarantees this).

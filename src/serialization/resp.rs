@@ -135,6 +135,14 @@ impl RespValue {
 
     /// Finds the index of the next \r\n. Returns `Ok((line_content, total_bytes_to_skip))`.
     fn read_line(buf: &[u8]) -> Result<(&[u8], usize), RespError> {
+        // GOTCHA: `0..buf.len() - 1` underflows to usize::MAX when `buf` is empty
+        // (or has a single byte, leaving no room for a CRLF), which would panic on
+        // the range construction. A slice shorter than 2 bytes cannot contain a
+        // "\r\n" terminator, so we report `Incomplete` per the module contract and
+        // let the caller read more data before retrying.
+        if buf.len() < 2 {
+            return Err(RespError::Incomplete);
+        }
         for i in 0..buf.len() - 1 {
             if buf[i] == b'\r' && buf[i + 1] == b'\n' {
                 return Ok((&buf[..i], i + 2));
@@ -351,6 +359,35 @@ mod tests {
         // Missing array elements
         let res = RespValue::parse(b"*2\r\n$3\r\nfoo\r\n");
         assert_eq!(res, Err(RespError::Incomplete));
+    }
+
+    #[test]
+    fn test_parse_single_byte_type_markers_are_incomplete() {
+        // REGRESSION: each of these reaches `read_line(&buf[1..])` with an empty
+        // slice. Previously `0..buf.len() - 1` underflowed to usize::MAX and panicked.
+        // They must all report `Incomplete` (a full message hasn't arrived yet).
+        for &prefix in &[&b"+"[..], b"-", b":", b"$", b"*"] {
+            let res = RespValue::parse(prefix);
+            assert_eq!(
+                res,
+                Err(RespError::Incomplete),
+                "1-byte input {prefix:?} should be Incomplete, not panic"
+            );
+        }
+    }
+
+    #[test]
+    fn test_parse_two_byte_partial_inputs_are_incomplete() {
+        // The type byte is present plus one payload byte, but still no CRLF.
+        // `read_line` receives a single-byte slice which cannot hold "\r\n".
+        for &input in &[&b"+O"[..], b"-E", b":1", b"$1", b"*1"] {
+            let res = RespValue::parse(input);
+            assert_eq!(
+                res,
+                Err(RespError::Incomplete),
+                "2-byte partial input {input:?} should be Incomplete, not panic"
+            );
+        }
     }
 }
 

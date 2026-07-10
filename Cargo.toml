@@ -39,5 +39,19 @@ serde-patterns = ["serde", "serde_json", "serde_yaml", "toml", "bincode"]
 # Feature flag for CLI/TUI patterns with ratatui
 cli-patterns = ["ratatui", "crossterm", "clap"]
 
-# Feature flag for portable SIMD (requires nightly Rust)
+# Retained for backwards compatibility. The portable-SIMD (`std::simd`) code is
+# NOT gated on this Cargo feature, because `cargo build --all-features` would then
+# try to compile nightly-only code on stable and fail (E0658). Instead the portable
+# SIMD module is gated on the `nightly_portable_simd` cfg flag (see [lints.rust]
+# below), which `--all-features` cannot enable. Enabling this feature is a no-op.
 simd-patterns = []
+
+# The portable-SIMD examples in `src/fundamentals/simd.rs` require nightly Rust
+# (`std::simd` / `#![feature(portable_simd)]`). They are gated on the
+# `nightly_portable_simd` cfg — NOT a Cargo feature — so that `--all-features`
+# builds cleanly on stable. Declaring the cfg here keeps the `unexpected_cfgs`
+# lint quiet. To build the nightly path:
+#   1. Add `#![cfg_attr(nightly_portable_simd, feature(portable_simd))]` to the crate root.
+#   2. Compile on nightly: `RUSTFLAGS="--cfg nightly_portable_simd" cargo +nightly build`.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly_portable_simd)'] }

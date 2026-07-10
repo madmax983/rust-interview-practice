@@ -50,30 +50,71 @@ use std::arch::x86_64::*;
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
 
+/// Horizontal sum of a 128-bit vector of 4 `f32` lanes, using only SSE/SSE2
+/// intrinsics (no SSE3 `_mm_movehdup_ps`).
+///
+/// # Safety
+/// The CPU must support SSE2 (guaranteed by `#[target_feature(enable = "sse2")]`).
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "sse2")]
+unsafe fn hsum_ps_sse2(v: __m128) -> f32 {
+    // Every intrinsic used here (`_mm_movehl_ps`, `_mm_add_ps`, `_mm_shuffle_ps`,
+    // `_mm_add_ss`, `_mm_cvtss_f32`) is part of the SSE/SSE2 baseline. Because this
+    // function carries `#[target_feature(enable = "sse2")]`, calling those SSE2
+    // intrinsics is safe here and needs no `unsafe` block (they only require the
+    // feature this function already guarantees). The `unsafe fn` marker remains so
+    // that callers must themselves establish SSE2 availability.
+    // v = [a, b, c, d]
+    let shuf = _mm_movehl_ps(v, v); // [c, d, c, d]
+    let sums = _mm_add_ps(v, shuf); // [a+c, b+d, _, _]
+    let shuf = _mm_shuffle_ps(sums, sums, 0b00_00_00_01); // move lane 1 -> lane 0
+    let sums = _mm_add_ss(sums, shuf); // (a+c) + (b+d)
+    _mm_cvtss_f32(sums)
+}
+
 /// Add two arrays of f32 using SSE (4 floats at a time).
 ///
 /// SSE processes 128 bits = 4 x 32-bit floats in parallel.
+///
+/// This is the SAFE public wrapper: it performs runtime feature detection and
+/// falls back to scalar code when SSE2 is unavailable.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub fn add_floats_sse(a: &[f32], b: &[f32], result: &mut [f32]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), result.len());
 
-    // Process in chunks of 4
+    if std::is_x86_feature_detected!("sse2") {
+        // SAFETY: We just confirmed SSE2 support at runtime, satisfying the
+        // `#[target_feature(enable = "sse2")]` contract of `add_floats_sse2`.
+        unsafe { add_floats_sse2(a, b, result) };
+    } else {
+        for ((r, &x), &y) in result.iter_mut().zip(a).zip(b) {
+            *r = x + y;
+        }
+    }
+}
+
+/// SSE2 implementation of [`add_floats_sse`].
+///
+/// # Safety
+/// The CPU must support SSE2. Callers must verify this (e.g. via
+/// `is_x86_feature_detected!("sse2")`); the safe wrapper does so.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "sse2")]
+unsafe fn add_floats_sse2(a: &[f32], b: &[f32], result: &mut [f32]) {
     let chunks = a.len() / 4;
     let remainder = a.len() % 4;
 
+    // SAFETY: SSE2 is guaranteed by the target feature. We only iterate over full
+    // 4-lane chunks, so every `add(offset)` and the 16 bytes read/written by the
+    // unaligned `_mm_loadu_ps`/`_mm_storeu_ps` stay within the (equal-length,
+    // asserted) slices. Unaligned loads/stores impose no alignment requirement.
     unsafe {
         for i in 0..chunks {
             let offset = i * 4;
-
-            // Load 4 floats from each array
             let va = _mm_loadu_ps(a.as_ptr().add(offset));
             let vb = _mm_loadu_ps(b.as_ptr().add(offset));
-
-            // Add vectors
             let vr = _mm_add_ps(va, vb);
-
-            // Store result
             _mm_storeu_ps(result.as_mut_ptr().add(offset), vr);
         }
     }
@@ -85,14 +126,35 @@ pub fn add_floats_sse(a: &[f32], b: &[f32], result: &mut [f32]) {
 }
 
 /// Multiply two arrays of f32 using SSE.
+///
+/// SAFE public wrapper with runtime detection and scalar fallback.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub fn mul_floats_sse(a: &[f32], b: &[f32], result: &mut [f32]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), result.len());
 
+    if std::is_x86_feature_detected!("sse2") {
+        // SAFETY: SSE2 confirmed at runtime, satisfying `mul_floats_sse2`.
+        unsafe { mul_floats_sse2(a, b, result) };
+    } else {
+        for ((r, &x), &y) in result.iter_mut().zip(a).zip(b) {
+            *r = x * y;
+        }
+    }
+}
+
+/// SSE2 implementation of [`mul_floats_sse`].
+///
+/// # Safety
+/// The CPU must support SSE2.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "sse2")]
+unsafe fn mul_floats_sse2(a: &[f32], b: &[f32], result: &mut [f32]) {
     let chunks = a.len() / 4;
     let remainder = a.len() % 4;
 
+    // SAFETY: SSE2 guaranteed by target feature; only full 4-lane chunks are read
+    // and written via unaligned intrinsics, all in-bounds of the equal-length slices.
     unsafe {
         for i in 0..chunks {
             let offset = i * 4;
@@ -111,37 +173,47 @@ pub fn mul_floats_sse(a: &[f32], b: &[f32], result: &mut [f32]) {
 /// Dot product of two f32 arrays using SSE.
 ///
 /// Demonstrates horizontal operations (summing across vector lanes).
+///
+/// SAFE public wrapper with runtime detection and scalar fallback.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[must_use]
 pub fn dot_product_sse(a: &[f32], b: &[f32]) -> f32 {
     assert_eq!(a.len(), b.len());
 
+    if std::is_x86_feature_detected!("sse2") {
+        // SAFETY: SSE2 confirmed at runtime, satisfying `dot_product_sse2`.
+        unsafe { dot_product_sse2(a, b) }
+    } else {
+        a.iter().zip(b).map(|(&x, &y)| x * y).sum()
+    }
+}
+
+/// SSE2 implementation of [`dot_product_sse`].
+///
+/// Uses an SSE2-only horizontal reduction (`hsum_ps_sse2`) instead of the SSE3
+/// `_mm_movehdup_ps`, so it stays within the x86_64 SSE2 baseline.
+///
+/// # Safety
+/// The CPU must support SSE2.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "sse2")]
+unsafe fn dot_product_sse2(a: &[f32], b: &[f32]) -> f32 {
     let chunks = a.len() / 4;
     let remainder = a.len() % 4;
 
-    // Accumulator vector (4 partial sums)
-    let mut sum_vec = unsafe { _mm_setzero_ps() };
-
-    unsafe {
+    // SAFETY: SSE2 guaranteed by target feature. `_mm_setzero_ps` and the loop's
+    // unaligned loads over full 4-lane chunks stay in-bounds of the equal-length
+    // slices. `hsum_ps_sse2` requires SSE2, which is satisfied here.
+    let mut result = unsafe {
+        let mut sum_vec = _mm_setzero_ps();
         for i in 0..chunks {
             let offset = i * 4;
             let va = _mm_loadu_ps(a.as_ptr().add(offset));
             let vb = _mm_loadu_ps(b.as_ptr().add(offset));
-
-            // Multiply and accumulate
             let prod = _mm_mul_ps(va, vb);
             sum_vec = _mm_add_ps(sum_vec, prod);
         }
-    }
-
-    // Horizontal sum: reduce 4 lanes to 1
-    let mut result = unsafe {
-        // Shuffle and add to reduce
-        let shuf = _mm_movehdup_ps(sum_vec); // Duplicate high halves
-        let sums = _mm_add_ps(sum_vec, shuf);
-        let shuf = _mm_movehl_ps(shuf, sums);
-        let sums = _mm_add_ss(sums, shuf);
-        _mm_cvtss_f32(sums) // Extract lowest float
+        hsum_ps_sse2(sum_vec)
     };
 
     // Add remainder with scalar code
@@ -153,28 +225,40 @@ pub fn dot_product_sse(a: &[f32], b: &[f32]) -> f32 {
 }
 
 /// Sum all elements in f32 array using SSE.
+///
+/// SAFE public wrapper with runtime detection and scalar fallback.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[must_use]
 pub fn sum_floats_sse(data: &[f32]) -> f32 {
+    if std::is_x86_feature_detected!("sse2") {
+        // SAFETY: SSE2 confirmed at runtime, satisfying `sum_floats_sse2`.
+        unsafe { sum_floats_sse2(data) }
+    } else {
+        data.iter().sum()
+    }
+}
+
+/// SSE2 implementation of [`sum_floats_sse`].
+///
+/// Uses the SSE2-only `hsum_ps_sse2` reduction (no SSE3 `_mm_movehdup_ps`).
+///
+/// # Safety
+/// The CPU must support SSE2.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "sse2")]
+unsafe fn sum_floats_sse2(data: &[f32]) -> f32 {
     let chunks = data.len() / 4;
     let remainder = data.len() % 4;
 
-    let mut sum_vec = unsafe { _mm_setzero_ps() };
-
-    unsafe {
+    // SAFETY: SSE2 guaranteed by target feature; unaligned loads over full 4-lane
+    // chunks stay in-bounds of `data`. `hsum_ps_sse2` requires SSE2, satisfied here.
+    let mut result = unsafe {
+        let mut sum_vec = _mm_setzero_ps();
         for i in 0..chunks {
             let v = _mm_loadu_ps(data.as_ptr().add(i * 4));
             sum_vec = _mm_add_ps(sum_vec, v);
         }
-    }
-
-    // Horizontal sum
-    let mut result = unsafe {
-        let shuf = _mm_movehdup_ps(sum_vec);
-        let sums = _mm_add_ps(sum_vec, shuf);
-        let shuf = _mm_movehl_ps(shuf, sums);
-        let sums = _mm_add_ss(sums, shuf);
-        _mm_cvtss_f32(sums)
+        hsum_ps_sse2(sum_vec)
     };
 
     for i in (chunks * 4)..(chunks * 4 + remainder) {
@@ -185,6 +269,8 @@ pub fn sum_floats_sse(data: &[f32]) -> f32 {
 }
 
 /// Find maximum value in f32 array using SSE.
+///
+/// SAFE public wrapper with runtime detection and scalar fallback.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[must_use]
 pub fn max_floats_sse(data: &[f32]) -> f32 {
@@ -192,20 +278,34 @@ pub fn max_floats_sse(data: &[f32]) -> f32 {
         return f32::NEG_INFINITY;
     }
 
+    if std::is_x86_feature_detected!("sse2") {
+        // SAFETY: SSE2 confirmed at runtime, satisfying `max_floats_sse2`.
+        unsafe { max_floats_sse2(data) }
+    } else {
+        data.iter().copied().fold(f32::NEG_INFINITY, f32::max)
+    }
+}
+
+/// SSE2 implementation of [`max_floats_sse`].
+///
+/// # Safety
+/// The CPU must support SSE2. `data` must be non-empty (the wrapper guarantees it).
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "sse2")]
+unsafe fn max_floats_sse2(data: &[f32]) -> f32 {
     let chunks = data.len() / 4;
     let remainder = data.len() % 4;
 
-    let mut max_vec = unsafe { _mm_set1_ps(f32::NEG_INFINITY) };
-
-    unsafe {
+    // SAFETY: SSE2 guaranteed by target feature. All intrinsics used
+    // (`_mm_set1_ps`, `_mm_max_ps`, `_mm_shuffle_ps`, `_mm_cvtss_f32`) are
+    // SSE/SSE2. Unaligned loads over full 4-lane chunks stay in-bounds of `data`.
+    let mut result = unsafe {
+        let mut max_vec = _mm_set1_ps(f32::NEG_INFINITY);
         for i in 0..chunks {
             let v = _mm_loadu_ps(data.as_ptr().add(i * 4));
             max_vec = _mm_max_ps(max_vec, v);
         }
-    }
-
-    // Horizontal max
-    let mut result = unsafe {
+        // Horizontal max
         let shuf = _mm_shuffle_ps(max_vec, max_vec, 0b00_00_11_10);
         let max1 = _mm_max_ps(max_vec, shuf);
         let shuf = _mm_shuffle_ps(max1, max1, 0b00_00_00_01);
@@ -323,14 +423,37 @@ pub unsafe fn sum_floats_avx(data: &[f32]) -> f32 {
 // ============================================================================
 
 /// Add two arrays of i32 using SSE2 (4 integers at a time).
+///
+/// SAFE public wrapper with runtime detection and scalar fallback.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub fn add_i32_sse(a: &[i32], b: &[i32], result: &mut [i32]) {
     assert_eq!(a.len(), b.len());
     assert_eq!(a.len(), result.len());
 
+    if std::is_x86_feature_detected!("sse2") {
+        // SAFETY: SSE2 confirmed at runtime, satisfying `add_i32_sse2`.
+        unsafe { add_i32_sse2(a, b, result) };
+    } else {
+        for ((r, &x), &y) in result.iter_mut().zip(a).zip(b) {
+            *r = x.wrapping_add(y);
+        }
+    }
+}
+
+/// SSE2 implementation of [`add_i32_sse`].
+///
+/// # Safety
+/// The CPU must support SSE2.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "sse2")]
+unsafe fn add_i32_sse2(a: &[i32], b: &[i32], result: &mut [i32]) {
     let chunks = a.len() / 4;
     let remainder = a.len() % 4;
 
+    // SAFETY: SSE2 guaranteed by target feature. Unaligned 128-bit loads/stores
+    // over full 4-lane chunks stay in-bounds of the equal-length slices; the
+    // `.cast()` reinterprets `*const i32`/`*mut i32` as the `__m128i` pointer
+    // type expected by the unaligned intrinsics (no alignment requirement).
     unsafe {
         for i in 0..chunks {
             let offset = i * 4;
@@ -408,10 +531,23 @@ pub unsafe fn sum_i32_avx2(data: &[i32]) -> i32 {
 // Alignment
 // ============================================================================
 
-/// Aligned array for optimal SIMD performance.
+/// A growable `f32` buffer, kept as a teaching example about alignment.
 ///
-/// SIMD operations are faster with aligned memory (16-byte for SSE, 32-byte for AVX).
-#[repr(align(32))]
+/// # Alignment caveat (important)
+///
+/// A previous version of this type carried `#[repr(align(32))]` and claimed its
+/// data was 32-byte aligned for AVX. That was misleading: `#[repr(align)]` only
+/// raises the alignment of the `AlignedVec` *handle* — the pointer/len/capacity
+/// struct that lives on the stack — NOT the heap buffer that `Vec<f32>` owns.
+/// The heap allocation is only aligned to `align_of::<f32>()` (4 bytes).
+///
+/// Because the underlying data is therefore NOT over-aligned, callers must use
+/// unaligned SIMD loads/stores (`_mm_loadu_ps`, `_mm256_loadu_ps`), exactly as
+/// the functions in this module already do. Achieving genuinely over-aligned
+/// heap storage requires a custom allocation (e.g. `std::alloc::alloc` with a
+/// 32-byte `Layout`, or a crate like `aligned-vec`), which we deliberately avoid
+/// here to keep the example allocator-safe. The misleading attribute has been
+/// removed and the docs corrected rather than adding a risky custom allocator.
 pub struct AlignedVec {
     data: Vec<f32>,
 }
@@ -447,16 +583,36 @@ impl AlignedVec {
 // ============================================================================
 
 /// Count elements greater than threshold using SSE comparisons.
+///
+/// SAFE public wrapper with runtime detection and scalar fallback.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[must_use]
 pub fn count_greater_sse(data: &[f32], threshold: f32) -> usize {
+    if std::is_x86_feature_detected!("sse2") {
+        // SAFETY: SSE2 confirmed at runtime, satisfying `count_greater_sse2`.
+        unsafe { count_greater_sse2(data, threshold) }
+    } else {
+        data.iter().filter(|&&x| x > threshold).count()
+    }
+}
+
+/// SSE2 implementation of [`count_greater_sse`].
+///
+/// # Safety
+/// The CPU must support SSE2.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[target_feature(enable = "sse2")]
+unsafe fn count_greater_sse2(data: &[f32], threshold: f32) -> usize {
     let chunks = data.len() / 4;
     let remainder = data.len() % 4;
 
-    let threshold_vec = unsafe { _mm_set1_ps(threshold) };
     let mut count = 0;
 
+    // SAFETY: SSE2 guaranteed by target feature. `_mm_set1_ps`, `_mm_cmpgt_ps`
+    // and `_mm_movemask_ps` are SSE/SSE2; unaligned loads over full 4-lane chunks
+    // stay in-bounds of `data`.
     unsafe {
+        let threshold_vec = _mm_set1_ps(threshold);
         for i in 0..chunks {
             let v = _mm_loadu_ps(data.as_ptr().add(i * 4));
 
@@ -485,7 +641,18 @@ pub fn count_greater_sse(data: &[f32], threshold: f32) -> usize {
 /// Portable SIMD examples using std::simd (requires nightly).
 ///
 /// This is the future of SIMD in Rust - cross-platform vectorization.
-#[cfg(feature = "simd-patterns")]
+///
+/// # Building this module
+///
+/// `std::simd` is a nightly-only API guarded by `#![feature(portable_simd)]`, so
+/// this module is gated on the `nightly_portable_simd` cfg flag rather than a
+/// Cargo feature. That keeps `cargo build --all-features` working on stable
+/// (a Cargo feature would be turned on by `--all-features` and fail with E0658).
+///
+/// To compile it on nightly:
+/// 1. Add `#![cfg_attr(nightly_portable_simd, feature(portable_simd))]` to the crate root.
+/// 2. Build with `RUSTFLAGS="--cfg nightly_portable_simd" cargo +nightly build`.
+#[cfg(nightly_portable_simd)]
 #[allow(dead_code)]
 mod portable_simd {
     use std::simd::prelude::*;
@@ -688,6 +855,38 @@ mod tests {
         let data = vec![1.0, 5.0, 3.0, 8.0, 2.0, 7.0, 9.0, 4.0];
         let count = count_greater_sse(&data, 5.0);
         assert_eq!(count, 3); // 8.0, 7.0, 9.0
+    }
+
+    /// Exercises every SAFE SSE wrapper. Each wrapper performs runtime feature
+    /// detection internally (SSE2 path or scalar fallback), so this test is sound
+    /// on any x86/x86_64 CPU regardless of SSE2 availability, and produces the
+    /// same results either way.
+    #[test]
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    fn test_sse_safe_wrappers() {
+        // Non-multiple-of-4 length to exercise the scalar remainder tail too.
+        let a = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let b = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+
+        let mut add = vec![0.0; 5];
+        add_floats_sse(&a, &b, &mut add);
+        assert_eq!(add, vec![11.0, 22.0, 33.0, 44.0, 55.0]);
+
+        let mut mul = vec![0.0; 5];
+        mul_floats_sse(&a, &b, &mut mul);
+        assert_eq!(mul, vec![10.0, 40.0, 90.0, 160.0, 250.0]);
+
+        // dot = 10+40+90+160+250 = 550
+        assert!((dot_product_sse(&a, &b) - 550.0).abs() < 1e-3);
+        assert!((sum_floats_sse(&a) - 15.0).abs() < f32::EPSILON);
+        assert!((max_floats_sse(&a) - 5.0).abs() < f32::EPSILON);
+        assert_eq!(count_greater_sse(&a, 2.5), 3);
+
+        let ia = vec![1, 2, 3, 4, 5];
+        let ib = vec![10, 20, 30, 40, 50];
+        let mut isum = vec![0; 5];
+        add_i32_sse(&ia, &ib, &mut isum);
+        assert_eq!(isum, vec![11, 22, 33, 44, 55]);
     }
 
     #[test]
