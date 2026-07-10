@@ -10,6 +10,10 @@
 //! and iterator design patterns. Implementing a custom iterator for this traversal
 //! transforms a standard algorithm into a reusable, idiomatic tool.
 //!
+//! Note: BFS with a queue is the single canonical solution for level-order traversal
+//! (O(n) time, O(w) space), so the brute-force/optimized/optimal progression does not
+//! meaningfully apply here. The alternative approaches are noted at the bottom of the file.
+//!
 //! ## Examples
 //!
 //! ```

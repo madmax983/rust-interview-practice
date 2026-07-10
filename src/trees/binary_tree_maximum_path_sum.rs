@@ -61,6 +61,46 @@ impl TreeNode {
     }
 }
 
+/// Brute force approach: recompute each node's best downward path independently.
+///
+/// For every node we treat it as the "peak" of the path (the highest node on it) and
+/// compute the best downward path into its left and right subtrees with a *separate*
+/// traversal each time. The answer is the maximum over all nodes of
+/// `node.val + max(0, left_down) + max(0, right_down)`.
+///
+/// Because the downward-path computation (`max_down`) re-walks each subtree from scratch
+/// for every node, work is heavily duplicated. The optimal version below folds both the
+/// downward gain and the global maximum into a single post-order pass.
+///
+/// Time: O(n^2) - for each of the n nodes, `max_down` may walk its entire subtree (O(n)).
+/// Space: O(h) - recursion stack, tree height (O(n) worst case for a skewed tree).
+#[must_use]
+#[allow(clippy::needless_pass_by_value)]
+pub fn max_path_sum_brute_force(root: Option<Box<TreeNode>>) -> i32 {
+    // Best downward path sum that starts at `node` and descends (always includes `node`).
+    fn max_down(node: &Option<Box<TreeNode>>) -> i32 {
+        match node {
+            None => 0,
+            Some(n) => n.val + cmp::max(0, cmp::max(max_down(&n.left), max_down(&n.right))),
+        }
+    }
+
+    // Visit every node, treating each as the peak of a candidate path.
+    fn visit(node: &Option<Box<TreeNode>>, best: &mut i32) {
+        if let Some(n) = node {
+            let left_down = cmp::max(0, max_down(&n.left));
+            let right_down = cmp::max(0, max_down(&n.right));
+            *best = cmp::max(*best, n.val + left_down + right_down);
+            visit(&n.left, best);
+            visit(&n.right, best);
+        }
+    }
+
+    let mut best = i32::MIN;
+    visit(&root, &mut best);
+    best
+}
+
 /// Optimal approach: Post-order Traversal with Mutable State
 ///
 /// We need to find the maximum path sum. A path might look like an inverted 'V',
@@ -252,5 +292,51 @@ mod tests {
         root.right = Some(Box::new(n8));
 
         assert_eq!(max_path_sum(Some(Box::new(root))), 48);
+    }
+
+    // Rebuilds the [-10, 9, 20(15,7)] tree used in `test_negative_values`.
+    fn negative_values_tree() -> Option<Box<TreeNode>> {
+        let mut root = TreeNode::new(-10);
+        root.left = leaf(9);
+        let mut right = TreeNode::new(20);
+        right.left = leaf(15);
+        right.right = leaf(7);
+        root.right = Some(Box::new(right));
+        Some(Box::new(root))
+    }
+
+    #[test]
+    fn test_brute_force_examples() {
+        // Simple positive tree: 2 -> 1 -> 3
+        let mut root = TreeNode::new(1);
+        root.left = leaf(2);
+        root.right = leaf(3);
+        assert_eq!(max_path_sum_brute_force(Some(Box::new(root))), 6);
+
+        // Negative-root tree, best path 15 -> 20 -> 7 = 42
+        assert_eq!(max_path_sum_brute_force(negative_values_tree()), 42);
+
+        // All negatives: single largest node wins
+        let mut neg = TreeNode::new(-3);
+        neg.left = leaf(-5);
+        neg.right = leaf(-2);
+        assert_eq!(max_path_sum_brute_force(Some(Box::new(neg))), -2);
+    }
+
+    #[test]
+    fn test_brute_force_single_node() {
+        assert_eq!(max_path_sum_brute_force(leaf(5)), 5);
+    }
+
+    #[test]
+    fn test_all_approaches_agree() {
+        assert_eq!(
+            max_path_sum_brute_force(negative_values_tree()),
+            max_path_sum_optimal(negative_values_tree())
+        );
+        assert_eq!(
+            max_path_sum_brute_force(leaf(-7)),
+            max_path_sum_optimal(leaf(-7))
+        );
     }
 }

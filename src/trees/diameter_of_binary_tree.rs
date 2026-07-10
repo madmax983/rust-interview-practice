@@ -22,15 +22,20 @@
 //!
 //! ## Approach
 //!
-//! We provide two implementations:
+//! Both implementations run in the same asymptotic complexity (`O(N)` time, `O(H)` stack
+//! space); they differ in state-management technique, so we label them by relative quality:
 //!
-//! 1. **Mutable State Passing (Idiomatic)**: We pass `&mut i32` to the recursive helper function. This closely mirrors the "global variable" approach from other languages but does so safely.
+//! - **Brute force (Pure Functional, Tuple Return)**: The helper function returns
+//!   `(current_height, max_diameter_so_far)`. This avoids side-effects entirely but threads
+//!   and copies an extra value through every return.
 //!    - **Time**: `O(N)` - Every node is visited once.
-//!    - **Space**: `O(H)` - Call stack depth equals tree height.
+//!    - **Space**: `O(H)` - Call stack depth equals tree height (`O(N)` worst case, skewed).
 //!
-//! 2. **Pure Functional (Tuple Return)**: The helper function returns `(current_height, max_diameter_so_far)`. This avoids side-effects entirely.
+//! - **Optimal (Mutable Reference State)**: We pass `&mut i32` to the recursive helper. This
+//!   mirrors the "global variable" approach from other languages but does so safely, and tends
+//!   to compile to tighter code. This is the main entry point.
 //!    - **Time**: `O(N)` - Every node is visited once.
-//!    - **Space**: `O(H)` - Call stack depth equals tree height.
+//!    - **Space**: `O(H)` - Call stack depth equals tree height (`O(N)` worst case, skewed).
 
 use std::cmp;
 
@@ -54,14 +59,14 @@ impl TreeNode {
     }
 }
 
-/// Idiomatic Approach: Mutable Reference State
+/// Optimal approach: mutable reference state (idiomatic).
 ///
 /// We use a helper function that returns the height of the current subtree.
 /// While calculating the height, we update a shared mutable counter (`&mut i32`)
 /// with the maximum diameter found so far.
 ///
-/// Time: O(N)
-/// Space: O(H)
+/// Time: O(N) - every node is visited once.
+/// Space: O(H) - recursion stack, tree height (O(N) worst case for a skewed tree).
 ///
 /// # Rust Insight
 /// By taking `&mut diameter` as an argument, we guarantee safe, exclusive access
@@ -69,7 +74,7 @@ impl TreeNode {
 /// mutability (like `RefCell`) or atomic counters (`AtomicI32`), keeping it a zero-cost abstraction.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn diameter_of_binary_tree_mut_ref(root: Option<Box<TreeNode>>) -> i32 {
+pub fn diameter_of_binary_tree_optimal(root: Option<Box<TreeNode>>) -> i32 {
     // Helper function that returns the height of the tree, while updating the maximum diameter.
     fn height(node: &Option<Box<TreeNode>>, max_diameter: &mut i32) -> i32 {
         match node {
@@ -92,13 +97,14 @@ pub fn diameter_of_binary_tree_mut_ref(root: Option<Box<TreeNode>>) -> i32 {
     max_diameter
 }
 
-/// Pure Functional Approach: Returning Tuples
+/// Brute force approach: pure functional recursion returning tuples.
 ///
 /// Instead of side-effects, our helper function returns both pieces of information
-/// we care about: `(height, max_diameter)`.
+/// we care about: `(height, max_diameter)`. Same complexity as the optimal version,
+/// but it threads and copies an extra value through every return.
 ///
-/// Time: O(N)
-/// Space: O(H)
+/// Time: O(N) - every node is visited once.
+/// Space: O(H) - recursion stack, tree height (O(N) worst case for a skewed tree).
 ///
 /// # Gotcha
 /// Returning multiple values as a tuple is elegant, but it requires allocating and copying
@@ -107,7 +113,7 @@ pub fn diameter_of_binary_tree_mut_ref(root: Option<Box<TreeNode>>) -> i32 {
 /// small tuples away entirely.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn diameter_of_binary_tree_functional(root: Option<Box<TreeNode>>) -> i32 {
+pub fn diameter_of_binary_tree_brute_force(root: Option<Box<TreeNode>>) -> i32 {
     // Returns (height of current subtree, max diameter found in current subtree)
     fn helper(node: &Option<Box<TreeNode>>) -> (i32, i32) {
         match node {
@@ -128,10 +134,10 @@ pub fn diameter_of_binary_tree_functional(root: Option<Box<TreeNode>>) -> i32 {
     helper(&root).1
 }
 
-/// Main entry point - defaults to the mutable reference approach.
+/// Main entry point - uses the optimal (mutable reference) approach.
 #[must_use]
 pub fn diameter_of_binary_tree(root: Option<Box<TreeNode>>) -> i32 {
-    diameter_of_binary_tree_mut_ref(root)
+    diameter_of_binary_tree_optimal(root)
 }
 
 /// ## Alternative Approaches
@@ -166,21 +172,21 @@ mod tests {
         root.right = leaf(3);
 
         let boxed_root = Some(Box::new(root));
-        assert_eq!(diameter_of_binary_tree_mut_ref(boxed_root.clone()), 3);
-        assert_eq!(diameter_of_binary_tree_functional(boxed_root), 3);
+        assert_eq!(diameter_of_binary_tree_optimal(boxed_root.clone()), 3);
+        assert_eq!(diameter_of_binary_tree_brute_force(boxed_root), 3);
     }
 
     #[test]
     fn test_edge_case_single_node() {
         let root = leaf(1);
-        assert_eq!(diameter_of_binary_tree_mut_ref(root.clone()), 0);
-        assert_eq!(diameter_of_binary_tree_functional(root), 0);
+        assert_eq!(diameter_of_binary_tree_optimal(root.clone()), 0);
+        assert_eq!(diameter_of_binary_tree_brute_force(root), 0);
     }
 
     #[test]
     fn test_edge_case_empty() {
-        assert_eq!(diameter_of_binary_tree_mut_ref(None), 0);
-        assert_eq!(diameter_of_binary_tree_functional(None), 0);
+        assert_eq!(diameter_of_binary_tree_optimal(None), 0);
+        assert_eq!(diameter_of_binary_tree_brute_force(None), 0);
     }
 
     #[test]
@@ -201,7 +207,7 @@ mod tests {
         n1.right = Some(Box::new(n2));
 
         let boxed_root = Some(Box::new(n1));
-        assert_eq!(diameter_of_binary_tree_mut_ref(boxed_root.clone()), 3);
-        assert_eq!(diameter_of_binary_tree_functional(boxed_root), 3);
+        assert_eq!(diameter_of_binary_tree_optimal(boxed_root.clone()), 3);
+        assert_eq!(diameter_of_binary_tree_brute_force(boxed_root), 3);
     }
 }
