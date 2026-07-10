@@ -64,6 +64,8 @@ fn demonstrate_fn_traits() {
     // FnOnce: Consumes captured values
     let vec = vec![1, 2, 3];
     let consume_vec = |x| {
+        // Demonstrates a closure taking ownership (FnOnce) for gittype practice.
+        #[allow(clippy::no_effect_underscore_binding)]
         let _owned = vec; // Takes ownership
         x + 1
     };
@@ -283,9 +285,9 @@ fn demonstrate_interview_patterns() {
     // Pattern 1: Frequency counting with closure
     let words = ["apple", "banana", "apple", "cherry", "banana"];
     let mut freq: HashMap<&str, i32> = HashMap::new();
-    words.iter().for_each(|&word| {
+    for &word in &words {
         *freq.entry(word).or_insert(0) += 1;
-    });
+    }
     println!("Frequency: {freq:?}");
 
     // Pattern 2: Custom sorting with closure

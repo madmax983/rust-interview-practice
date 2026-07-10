@@ -39,6 +39,8 @@ fn demonstrate_box_basics() {
 
     // Moving out of Box
     let boxed = Box::new(String::from("hello"));
+    // Demonstrates moving the String out of the Box for gittype practice.
+    #[allow(clippy::no_effect_underscore_binding)]
     let _owned = *boxed; // Moves the String out of the Box
     // boxed is no longer valid here
 }

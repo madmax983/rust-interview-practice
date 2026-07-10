@@ -11,8 +11,9 @@ pub fn unwrap_or_example(opt: Option<i32>) -> i32 {
     opt.unwrap_or(0) // Returns value if Some, otherwise returns 0
 }
 
-/// Pattern: Option - unwrap_or_else for computed defaults
-/// unwrap_or_else takes a closure, so the fallback is computed lazily (only
+/// Pattern: Option - `unwrap_or_else` for computed defaults.
+///
+/// `unwrap_or_else` takes a closure, so the fallback is computed lazily (only
 /// when the Option is None). Prefer this over eager `unwrap_or(expensive())`.
 #[must_use]
 #[allow(clippy::unnecessary_lazy_evaluations)] // Demonstrating the lazy closure form
@@ -22,6 +23,8 @@ pub fn unwrap_or_else_example(opt: Option<i32>) -> i32 {
 
 /// Pattern: Option - map to transform inner value
 #[must_use]
+// Demonstrates Option::map in isolation for gittype practice
+#[allow(clippy::single_option_map)]
 pub fn option_map_example(opt: Option<i32>) -> Option<i32> {
     opt.map(|x| x * 2) // If Some(x), returns Some(x*2); if None, returns None
 }
@@ -41,25 +44,21 @@ pub fn option_and_then_example(opt: Option<i32>) -> Option<i32> {
 }
 
 /// Pattern: Option - ok_or to convert to Result
-#[must_use]
 pub fn option_to_result(opt: Option<i32>) -> Result<i32, String> {
     opt.ok_or_else(|| "Value not found".to_string())
 }
 
 /// Pattern: Result - map for transforming success value
-#[must_use]
 pub fn result_map_example(res: Result<i32, String>) -> Result<i32, String> {
     res.map(|x| x * 2)
 }
 
 /// Pattern: Result - map_err for transforming error value
-#[must_use]
 pub fn result_map_err_example(res: Result<i32, String>) -> Result<i32, std::io::Error> {
     res.map_err(std::io::Error::other)
 }
 
 /// Pattern: Result - and_then for chaining operations
-#[must_use]
 pub fn result_and_then_example(res: Result<i32, String>) -> Result<i32, String> {
     res.and_then(|x| {
         if x > 0 {
@@ -71,7 +70,6 @@ pub fn result_and_then_example(res: Result<i32, String>) -> Result<i32, String> 
 }
 
 /// Pattern: ? operator for early return on error
-#[must_use]
 pub fn question_mark_example(value: i32) -> Result<i32, String> {
     let checked = check_positive(value)?; // ? unwraps Ok or returns Err early
     let doubled = double_value(checked)?; // Can chain multiple ? operations
@@ -86,6 +84,8 @@ fn check_positive(value: i32) -> Result<i32, String> {
     }
 }
 
+// Returns Result to demonstrate chaining multiple `?` operations for gittype practice
+#[allow(clippy::unnecessary_wraps)]
 const fn double_value(value: i32) -> Result<i32, String> {
     Ok(value * 2)
 }
@@ -112,7 +112,11 @@ pub fn match_result_example(res: Result<i32, String>) -> i32 {
 /// Pattern: if let for Option
 #[must_use]
 pub const fn if_let_option_example(opt: Option<i32>) -> i32 {
-    if let Some(x) = opt { x * 2 } else { 0 }
+    if let Some(x) = opt {
+        x * 2
+    } else {
+        0
+    }
 }
 
 /// Pattern: while let for iterating until empty
@@ -128,17 +132,15 @@ pub fn while_let_example(mut values: Vec<Option<i32>>) -> Vec<i32> {
 }
 
 /// Pattern: collecting Results into Result<Vec<_>>
-#[must_use]
 pub fn collect_results(values: Vec<i32>) -> Result<Vec<i32>, String> {
     values
         .iter()
         .map(|&x| check_positive(x)) // Each returns Result<i32, String>
         .collect::<Result<Vec<_>, _>>() // Collects into Result<Vec<...>, ...>
-    // If any Result is Err, entire collection fails
+                                        // If any Result is Err, entire collection fails
 }
 
 /// Pattern: transpose Option<Result> to Result<Option>
-#[must_use]
 pub const fn transpose_example(opt: Option<Result<i32, String>>) -> Result<Option<i32>, String> {
     opt.transpose()
 }

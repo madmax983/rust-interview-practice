@@ -5,6 +5,13 @@
 //!
 //! **WARNING:** Unsafe code requires extra care. Always document safety invariants.
 
+// intentional bit/byte/word manipulation for the demo
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 // ============================================================================
 // The Five Unsafe Superpowers
 // ============================================================================
@@ -46,6 +53,8 @@ unsafe fn dangerous_function() {
 
 static mut COUNTER: i32 = 0;
 
+// `f` demonstrates reinterpreting the same bytes as another type for gittype practice
+#[allow(dead_code)]
 union MyUnion {
     i: i32,
     f: f32,
@@ -164,6 +173,8 @@ pub const extern "C" fn rust_function(x: i32) -> i32 {
 }
 
 /// C-compatible struct.
+// Demonstrates a `repr(C)` FFI layout for gittype practice
+#[allow(dead_code)]
 #[repr(C)]
 struct CPoint {
     x: i32,
@@ -189,6 +200,8 @@ fn demonstrate_ffi_strings() {
 }
 
 /// Opaque C types.
+// Demonstrates the opaque-type FFI idiom for gittype practice
+#[allow(dead_code)]
 #[repr(C)]
 struct OpaqueType {
     _private: [u8; 0],
@@ -202,7 +215,8 @@ struct OpaqueType {
 /// Sync - type can be shared between threads.
 ///
 /// These are unsafe traits because implementing them incorrectly can cause data races.
-
+// Demonstrates hand-implementing Send/Sync for a raw-pointer type for gittype practice
+#[allow(dead_code)]
 struct MyType {
     data: *mut i32, // Raw pointer - not Send/Sync by default
 }
@@ -214,10 +228,13 @@ unsafe impl Sync for MyType {}
 /// `UnsafeCell` - interior mutability primitive.
 use std::cell::UnsafeCell;
 
+// Demonstrates building an interior-mutability cell with UnsafeCell for gittype practice
+#[allow(dead_code)]
 struct MyCell<T> {
     value: UnsafeCell<T>,
 }
 
+#[allow(dead_code)]
 impl<T> MyCell<T> {
     const fn new(value: T) -> Self {
         Self {
@@ -265,7 +282,8 @@ fn demonstrate_transmute() {
 }
 
 /// Uninitialized memory with `MaybeUninit`.
-#[allow(dead_code)]
+// Indexed loop writes each MaybeUninit slot by position; index form keeps the demo clear
+#[allow(dead_code, clippy::needless_range_loop)]
 fn demonstrate_maybe_uninit() {
     use std::mem::MaybeUninit;
 
@@ -331,12 +349,15 @@ fn safe_split_at_mut<T>(slice: &mut [T], mid: usize) -> (&mut [T], &mut [T]) {
 // ============================================================================
 
 /// Vector with unsafe internal implementation.
+// Demonstrates a hand-rolled Vec over raw pointers for gittype practice
+#[allow(dead_code)]
 struct MyVec<T> {
     ptr: *mut T,
     len: usize,
     capacity: usize,
 }
 
+#[allow(dead_code)]
 impl<T> MyVec<T> {
     /// Creates a new empty vector.
     const fn new() -> Self {
@@ -492,10 +513,15 @@ const UNSAFE_GUIDELINES: &str = "See module docs";
 // ============================================================================
 
 /// Pattern 1: Safe wrapper around unsafe operation.
+// Demonstrates a safe wrapper over unaligned pointer access for gittype practice
+#[allow(dead_code)]
 struct Buffer {
     data: Vec<u8>,
 }
 
+// The `*u8 -> *u32` casts are deliberate: access goes through read/write_unaligned,
+// so the alignment lint does not apply here.
+#[allow(dead_code, clippy::cast_ptr_alignment)]
 impl Buffer {
     fn new(size: usize) -> Self {
         Self {
@@ -557,6 +583,8 @@ impl Buffer {
 /// Pattern 2: `NonNull` for non-null raw pointers.
 use std::ptr::NonNull;
 
+// Demonstrates a NonNull-based linked node for gittype practice
+#[allow(dead_code)]
 struct LinkedNode {
     value: i32,
     next: Option<NonNull<Self>>,
@@ -565,6 +593,8 @@ struct LinkedNode {
 /// Pattern 3: `PhantomData` for unused lifetime parameters.
 use std::marker::PhantomData;
 
+// Demonstrates PhantomData tying a raw-pointer iterator to a lifetime for gittype practice
+#[allow(dead_code)]
 struct Iter<'a, T> {
     ptr: *const T,
     end: *const T,

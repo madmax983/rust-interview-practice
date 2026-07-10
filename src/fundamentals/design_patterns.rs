@@ -12,6 +12,8 @@ use std::rc::Rc;
 // ============================================================================
 
 /// Classic builder pattern with setters.
+// Fields are the builder's target; only read via derived Debug in this demo
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 struct Server {
     host: String,
@@ -73,6 +75,7 @@ fn demonstrate_builder() {
         .host("example.com")
         .port(443)
         .timeout(60)
+        .max_connections(1000)
         .build();
 
     println!("Server: {server:?}");
@@ -101,6 +104,8 @@ impl ConnectionBuilder<Initial> {
         }
     }
 
+    // Consumes `self` to enforce the type-state transition (can only be called on Initial)
+    #[allow(clippy::unused_self)]
     fn url(self, url: impl Into<String>) -> ConnectionBuilder<WithUrl> {
         ConnectionBuilder {
             url: Some(url.into()),
@@ -120,6 +125,8 @@ impl ConnectionBuilder<WithUrl> {
 }
 
 impl ConnectionBuilder<Ready> {
+    // `&self` requires the Ready state at compile time; the receiver enforces the type-state
+    #[allow(clippy::unused_self)]
     fn send(&self, data: &str) {
         println!("Sending: {data}");
     }
@@ -156,7 +163,7 @@ impl UserId {
         Self(id)
     }
 
-    const fn value(&self) -> u64 {
+    const fn value(self) -> u64 {
         self.0
     }
 }
@@ -166,7 +173,7 @@ impl ProductId {
         Self(id)
     }
 
-    const fn value(&self) -> u64 {
+    const fn value(self) -> u64 {
         self.0
     }
 }
@@ -272,6 +279,8 @@ impl FileHandle<Open> {
         }
     }
 
+    // Demonstrates closing directly from the Open state for gittype practice
+    #[allow(dead_code)]
     fn close(self) -> FileHandle<Closed> {
         println!("Closing file: {}", self.path);
         FileHandle {
@@ -282,6 +291,8 @@ impl FileHandle<Open> {
 }
 
 impl FileHandle<Reading> {
+    // `&self` requires the Reading state at compile time; the receiver enforces the type-state
+    #[allow(clippy::unused_self)]
     const fn get_data(&self) -> &'static str {
         "file contents"
     }
@@ -343,6 +354,8 @@ fn demonstrate_raii() {
 }
 
 /// Guard pattern for scoped resources.
+// Demonstrates the RAII guard pattern (Drop + Deref) for gittype practice
+#[allow(dead_code)]
 struct MutexGuard<'a, T> {
     data: &'a mut T,
 }
@@ -632,6 +645,11 @@ fn demonstrate_iterator() {
     for n in numbers {
         println!("{n}");
     }
+
+    // Infinite iterator: take a finite prefix
+    for n in Fibonacci::new().take(5) {
+        println!("fib: {n}");
+    }
 }
 
 /// Infinite iterator.
@@ -728,12 +746,16 @@ fn demonstrate_channel_observer() {
 // ============================================================================
 
 /// Adapter to implement foreign traits.
+// Demonstrates the adapter/newtype workaround for orphan rules for gittype practice
+#[allow(dead_code)]
 struct ExternalType {
     value: i32,
 }
 
 // Can't implement Display for ExternalType directly (orphan rules)
 // Use newtype wrapper:
+// Demonstrates the adapter/newtype workaround for orphan rules for gittype practice
+#[allow(dead_code)]
 struct DisplayAdapter(ExternalType);
 
 impl std::fmt::Display for DisplayAdapter {
@@ -743,6 +765,8 @@ impl std::fmt::Display for DisplayAdapter {
 }
 
 /// Transparent wrapper with Deref.
+// Demonstrates a transparent Deref wrapper for gittype practice
+#[allow(dead_code)]
 #[repr(transparent)]
 struct Wrapper<T>(T);
 

@@ -71,11 +71,20 @@ pub const fn if_let_single(value: Option<i32>) -> i32 {
 
 /// Pattern: if let with multiple patterns
 #[must_use]
-#[allow(clippy::manual_unwrap_or_default, clippy::manual_unwrap_or)] // Demonstrating if let / else on Result
+// Demonstrating if let / else on Result for gittype practice
+#[allow(
+    clippy::manual_unwrap_or_default,
+    clippy::manual_unwrap_or,
+    clippy::option_if_let_else
+)]
 pub fn if_let_multiple(value: Result<i32, String>) -> i32 {
     // A Result is exhaustive: if the Ok arm does not match, it must be Err,
     // so the else branch covers every remaining case (no dead arm needed).
-    if let Ok(x) = value { x } else { 0 }
+    if let Ok(x) = value {
+        x
+    } else {
+        0
+    }
 }
 
 /// Pattern: while let for iteration
@@ -103,6 +112,8 @@ pub const fn destructure_let(pair: (i32, i32)) -> i32 {
 
 /// Pattern: Match on slices
 #[must_use]
+// Distinct slice-pattern arms kept separate to demonstrate the syntax for gittype practice
+#[allow(clippy::match_same_arms)]
 pub fn match_slice(slice: &[i32]) -> i32 {
     match slice {
         [] => 0,             // Empty slice

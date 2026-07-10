@@ -3,6 +3,13 @@
 //! Performance optimization techniques: inlining, allocation optimization,
 //! cache-friendly patterns, and hot path optimization for production Rust.
 
+// intentional bit/byte/word manipulation for the demo
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+
 use std::collections::HashMap;
 
 // ============================================================================
@@ -10,6 +17,8 @@ use std::collections::HashMap;
 // ============================================================================
 
 /// Always inline - small, frequently called functions.
+// Deliberately demonstrates `#[inline(always)]` on a tiny hot-path function for gittype practice
+#[allow(clippy::inline_always)]
 #[inline(always)]
 const fn add_inline_always(a: i32, b: i32) -> i32 {
     a + b
@@ -58,7 +67,14 @@ fn demonstrate_inlining() {
 // Allocation Optimization
 // ============================================================================
 
-#[allow(dead_code)]
+// Pattern 4: Avoid cloning when possible - works with borrowed data, no allocation
+fn process_data(data: &[i32]) -> i32 {
+    data.iter().sum()
+}
+
+// Collections here demonstrate pre-allocation strategies; they are intentionally
+// not read back after being filled for gittype practice.
+#[allow(dead_code, clippy::collection_is_never_read)]
 fn demonstrate_allocation_optimization() {
     // Pattern 1: Pre-allocate with capacity
     let mut vec = Vec::with_capacity(1000); // Avoid reallocations
@@ -75,7 +91,7 @@ fn demonstrate_allocation_optimization() {
     let mut buffer = Vec::with_capacity(1024);
     for _ in 0..10 {
         buffer.clear(); // Doesn't deallocate
-        // Fill buffer with new data
+                        // Fill buffer with new data
         buffer.extend(0..100);
     }
 
@@ -93,11 +109,6 @@ fn demonstrate_allocation_optimization() {
     good.push_str("World");
 
     // Pattern 4: Avoid cloning when possible
-    fn process_data(data: &[i32]) -> i32 {
-        // Works with borrowed data, no allocation
-        data.iter().sum()
-    }
-
     let data = vec![1, 2, 3, 4, 5];
     let _ = process_data(&data); // No clone needed
 }
@@ -115,6 +126,8 @@ struct ParticlesSOA {
     mass: Vec<f32>,
 }
 
+// Exercised by unit tests; kept in the lib build to demonstrate SoA layout for gittype practice
+#[allow(dead_code)]
 impl ParticlesSOA {
     fn new(capacity: usize) -> Self {
         Self {
@@ -146,6 +159,8 @@ struct ParticlesAOS {
     particles: Vec<Particle>,
 }
 
+// Exercised by unit tests; kept in the lib build to demonstrate AoS layout for gittype practice
+#[allow(dead_code)]
 impl ParticlesAOS {
     fn new(capacity: usize) -> Self {
         Self {
@@ -181,7 +196,7 @@ struct CCompatible {
     c: u8,
 }
 
-#[repr(packed)] // No padding - may hurt performance
+#[repr(C, packed)] // No padding - may hurt performance
 #[allow(dead_code)]
 struct Packed {
     a: u8,
@@ -198,7 +213,8 @@ struct CacheLineAligned {
 // Iterator Optimization
 // ============================================================================
 
-#[allow(dead_code)]
+// `result` demonstrates `extend` over repeated `push`; it is intentionally not read back
+#[allow(dead_code, clippy::collection_is_never_read)]
 fn demonstrate_iterator_optimization() {
     let numbers: Vec<i32> = (0..1000).collect();
 
@@ -330,7 +346,8 @@ fn slow_complex_processing(item: &str) -> String {
 }
 
 /// Reducing bounds checks.
-#[allow(dead_code)]
+// The indexed loop is intentional to contrast bounds-checked indexing with the iterator form
+#[allow(dead_code, clippy::needless_range_loop)]
 fn sum_slice(slice: &[i32]) -> i32 {
     let mut _sum = 0;
 
@@ -487,6 +504,8 @@ struct LazyInit<T> {
     init: fn() -> T,
 }
 
+// Exercised by unit tests; kept in the lib build to demonstrate lazy init for gittype practice
+#[allow(dead_code)]
 impl<T> LazyInit<T> {
     const fn new(init: fn() -> T) -> Self {
         Self { value: None, init }
@@ -662,9 +681,9 @@ fn demonstrate_profiling() {
     }
 
     // 2. Add manual instrumentation points
-    let _start = std::time::Instant::now();
+    let start = std::time::Instant::now();
     expensive_computation(100);
-    let _duration = _start.elapsed();
+    let _duration = start.elapsed();
     // Log or aggregate durations
 
     // 3. Use criterion for micro-benchmarks
@@ -708,7 +727,7 @@ fn demonstrate_pitfalls() {
         good_str.push_str(&i.to_string());
     }
 
-    let _ = (bad, good, good_vec, good_str);
+    let _ = (bad, good, bad_vec, good_vec, good_str);
 }
 
 // ============================================================================
@@ -735,3 +754,31 @@ fn demonstrate_pitfalls() {
 /// - perf (Linux): `perf record -g target/release/app`
 #[allow(dead_code)]
 const PERFORMANCE_NOTES: &str = "See module docs";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_soa_and_aos_layouts() {
+        let mut soa = ParticlesSOA::new(4);
+        soa.x.push(1.0);
+        soa.x.push(2.0);
+        assert!((soa.sum_x() - 3.0).abs() < f32::EPSILON);
+
+        let mut aos = ParticlesAOS::new(4);
+        aos.particles.push(Particle {
+            x: 1.5,
+            y: 0.0,
+            z: 0.0,
+            mass: 1.0,
+        });
+        assert!((aos.sum_x() - 1.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_lazy_init() {
+        let mut lazy = LazyInit::new(|| 42_i32);
+        assert_eq!(*lazy.get(), 42);
+    }
+}

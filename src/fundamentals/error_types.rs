@@ -3,6 +3,16 @@
 //! Comprehensive error handling patterns: custom error types, thiserror for
 //! libraries, anyhow for applications, and error design best practices.
 
+// intentional bit/byte/word manipulation for the demo
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+// Demo helpers deliberately return Result even when infallible so the surrounding
+// `?` / `map_err` error-propagation patterns can be demonstrated for gittype practice.
+#![allow(clippy::unnecessary_wraps)]
+
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -12,7 +22,19 @@ use std::num::ParseIntError;
 // Error Fundamentals Recap
 // ============================================================================
 
-#[allow(dead_code)]
+// Error trait - all errors implement this
+fn handle_error(err: &dyn Error) {
+    println!("Error: {err}");
+    println!("Debug: {err:?}");
+
+    // Error source chain
+    if let Some(source) = err.source() {
+        println!("Caused by: {source}");
+    }
+}
+
+// `unwrap_or` on a literal `Some` intentionally demonstrates the combinator for gittype practice
+#[allow(dead_code, clippy::unnecessary_literal_unwrap)]
 fn demonstrate_error_basics() {
     // Option - represents presence or absence
     let opt: Option<i32> = Some(42);
@@ -23,17 +45,6 @@ fn demonstrate_error_basics() {
     match res {
         Ok(val) => println!("Success: {val}"),
         Err(e) => println!("Error: {e}"),
-    }
-
-    // Error trait - all errors implement this
-    fn handle_error(err: &dyn Error) {
-        println!("Error: {err}");
-        println!("Debug: {err:?}");
-
-        // Error source chain
-        if let Some(source) = err.source() {
-            println!("Caused by: {source}");
-        }
     }
 
     let err = io::Error::new(io::ErrorKind::NotFound, "file not found");
@@ -49,6 +60,8 @@ fn demonstrate_error_basics() {
 enum MyError {
     Io(io::Error),
     Parse(ParseIntError),
+    // Demonstrates a free-form error variant for gittype practice
+    #[allow(dead_code)]
     Custom(String),
 }
 
@@ -352,12 +365,13 @@ impl DetailedError {
         }
     }
 
+    #[must_use]
     pub fn with_context(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.context.push((key.into(), value.into()));
         self
     }
 
-    #[must_use] 
+    #[must_use]
     pub const fn code(&self) -> ErrorCode {
         self.code
     }
@@ -397,7 +411,8 @@ fn demonstrate_error_propagation() -> Result<i32, AppError> {
     let _result2 = other_operation().map_err(AppError::Internal)?;
 
     // Pattern 3: Wrapping with context
-    let _result3 = another_operation().map_err(|()| AppError::MissingField("config".to_string()))?;
+    let _result3 =
+        another_operation().map_err(|()| AppError::MissingField("config".to_string()))?;
 
     Ok(42)
 }
@@ -610,6 +625,8 @@ fn process_request() -> Result<(), AppError> {
     Ok(())
 }
 
+// Variants demonstrate validation error shapes for gittype practice
+#[allow(dead_code)]
 #[derive(Debug)]
 enum ValidationError {
     Missing(String),

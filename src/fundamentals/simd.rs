@@ -7,6 +7,15 @@
 //! providing significant performance improvements for data-parallel workloads.
 
 #![allow(clippy::missing_panics_doc)] // Examples may panic for demonstration
+// intentional bit/byte/word manipulation for the demo
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss
+)]
+// scalar-remainder loops index by chunk arithmetic; iterator form obscures the SIMD demo
+#![allow(clippy::needless_range_loop)]
 
 // ============================================================================
 // Platform Detection
@@ -45,7 +54,15 @@ pub fn has_fma() -> bool {
 // ============================================================================
 
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::{__m128, _mm_movehl_ps, _mm_add_ps, _mm_shuffle_ps, _mm_add_ss, _mm_cvtss_f32, _mm_loadu_ps, _mm_storeu_ps, _mm_mul_ps, _mm_setzero_ps, _mm_set1_ps, _mm_max_ps, _mm256_loadu_ps, _mm256_add_ps, _mm256_storeu_ps, _mm256_fmadd_ps, _mm256_setzero_ps, _mm256_castps256_ps128, _mm256_extractf128_ps, _mm_movehdup_ps, _mm_loadu_si128, _mm_add_epi32, _mm_storeu_si128, _mm256_loadu_si256, _mm256_add_epi32, _mm256_storeu_si256, _mm256_setzero_si256, _mm256_castsi256_si128, _mm256_extracti128_si256, _mm_hadd_epi32, _mm_cvtsi128_si32, _mm_cmpgt_ps, _mm_movemask_ps};
+use std::arch::x86_64::{
+    __m128, _mm256_add_epi32, _mm256_add_ps, _mm256_castps256_ps128, _mm256_castsi256_si128,
+    _mm256_extractf128_ps, _mm256_extracti128_si256, _mm256_fmadd_ps, _mm256_loadu_ps,
+    _mm256_loadu_si256, _mm256_setzero_ps, _mm256_setzero_si256, _mm256_storeu_ps,
+    _mm256_storeu_si256, _mm_add_epi32, _mm_add_ps, _mm_add_ss, _mm_cmpgt_ps, _mm_cvtsi128_si32,
+    _mm_cvtss_f32, _mm_hadd_epi32, _mm_loadu_ps, _mm_loadu_si128, _mm_max_ps, _mm_movehdup_ps,
+    _mm_movehl_ps, _mm_movemask_ps, _mm_mul_ps, _mm_set1_ps, _mm_setzero_ps, _mm_shuffle_ps,
+    _mm_storeu_ps, _mm_storeu_si128,
+};
 
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
@@ -328,6 +345,10 @@ unsafe fn max_floats_sse2(data: &[f32]) -> f32 {
 ///
 /// AVX processes 256 bits = 8 x 32-bit floats in parallel.
 /// Requires CPU support - check with `has_avx()`.
+///
+/// # Safety
+///
+/// The CPU must support AVX (verify with `has_avx()`); all three slices must have equal length.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[target_feature(enable = "avx")]
 pub unsafe fn add_floats_avx(a: &[f32], b: &[f32], result: &mut [f32]) {
@@ -356,6 +377,10 @@ pub unsafe fn add_floats_avx(a: &[f32], b: &[f32], result: &mut [f32]) {
 /// Fused multiply-add using AVX/FMA: result = a * b + c.
 ///
 /// FMA is more accurate and faster than separate multiply + add.
+///
+/// # Safety
+///
+/// The CPU must support AVX and FMA; all four slices must have equal length.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[target_feature(enable = "avx")]
 #[target_feature(enable = "fma")]
@@ -385,6 +410,10 @@ pub unsafe fn fma_floats(a: &[f32], b: &[f32], c: &[f32], result: &mut [f32]) {
 }
 
 /// Sum all elements using AVX.
+///
+/// # Safety
+///
+/// The CPU must support AVX (verify with `has_avx()`).
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[target_feature(enable = "avx")]
 #[must_use]
@@ -470,6 +499,10 @@ unsafe fn add_i32_sse2(a: &[i32], b: &[i32], result: &mut [i32]) {
 }
 
 /// Add two arrays of i32 using AVX2 (8 integers at a time).
+///
+/// # Safety
+///
+/// The CPU must support AVX2 (verify with `has_avx2()`); all three slices must have equal length.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[target_feature(enable = "avx2")]
 pub unsafe fn add_i32_avx2(a: &[i32], b: &[i32], result: &mut [i32]) {
@@ -496,6 +529,10 @@ pub unsafe fn add_i32_avx2(a: &[i32], b: &[i32], result: &mut [i32]) {
 }
 
 /// Sum array of i32 using AVX2.
+///
+/// # Safety
+///
+/// The CPU must support AVX2 (verify with `has_avx2()`).
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[target_feature(enable = "avx2")]
 #[must_use]
@@ -656,7 +693,7 @@ unsafe fn count_greater_sse2(data: &[f32], threshold: f32) -> usize {
 #[allow(dead_code)]
 mod portable_simd {
     use std::simd::prelude::*;
-    use std::simd::{StdFloat, f32x4, f32x8, i32x4};
+    use std::simd::{f32x4, f32x8, i32x4, StdFloat};
 
     /// Add arrays using portable SIMD (4-wide).
     pub fn add_floats_portable(a: &[f32], b: &[f32], result: &mut [f32]) {

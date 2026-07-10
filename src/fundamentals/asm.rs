@@ -369,6 +369,11 @@ pub unsafe extern "C" fn naked_identity(x: u64) -> u64 {
 }
 
 /// Naked function that adds two numbers.
+///
+/// # Safety
+///
+/// This is a naked function following the C ABI; it must only be called with the
+/// C calling convention and relies on the hand-written prologue/epilogue being correct.
 #[cfg(target_arch = "x86_64")]
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
@@ -385,6 +390,8 @@ pub unsafe extern "C" fn naked_add(a: u64, b: u64) -> u64 {
 // ============================================================================
 
 /// Spin loop hint - tells CPU we're in a spin loop for better power efficiency.
+// Single-instruction intrinsic wrapper: inline(always) is intended so the hint is emitted inline
+#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn spin_loop_hint() {
     #[cfg(target_arch = "x86_64")]
@@ -490,6 +497,8 @@ fn clobber_example() {
 // ============================================================================
 
 /// Platform-specific NOP (no operation).
+// Single-instruction intrinsic wrapper: inline(always) is intended so the NOP is emitted inline
+#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn nop() {
     #[cfg(target_arch = "x86_64")]
@@ -504,6 +513,8 @@ pub fn nop() {
 }
 
 /// Breakpoint instruction for debugging.
+// Single-instruction intrinsic wrapper: inline(always) is intended so the trap is emitted inline
+#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn breakpoint() {
     #[cfg(target_arch = "x86_64")]
