@@ -118,27 +118,32 @@ pub enum OpCode {
     Pop,
 }
 
-impl From<u8> for OpCode {
-    fn from(byte: u8) -> Self {
+impl TryFrom<u8> for OpCode {
+    type Error = u8;
+
+    /// Decodes a raw byte into an `OpCode`, returning the offending byte as the
+    /// error for any value that does not map to a known opcode. This keeps
+    /// decoding of untrusted bytecode fallible instead of panicking.
+    fn try_from(byte: u8) -> Result<Self, Self::Error> {
         match byte {
-            0 => Self::Return,
-            1 => Self::Constant,
-            2 => Self::Negate,
-            3 => Self::Add,
-            4 => Self::Subtract,
-            5 => Self::Multiply,
-            6 => Self::Divide,
-            7 => Self::Nil,
-            8 => Self::True,
-            9 => Self::False,
-            10 => Self::Not,
-            11 => Self::Equal,
-            12 => Self::Greater,
-            13 => Self::Less,
-            14 => Self::Jump,
-            15 => Self::JumpIfFalse,
-            16 => Self::Pop,
-            _ => panic!("Unknown opcode: {}", byte),
+            0 => Ok(Self::Return),
+            1 => Ok(Self::Constant),
+            2 => Ok(Self::Negate),
+            3 => Ok(Self::Add),
+            4 => Ok(Self::Subtract),
+            5 => Ok(Self::Multiply),
+            6 => Ok(Self::Divide),
+            7 => Ok(Self::Nil),
+            8 => Ok(Self::True),
+            9 => Ok(Self::False),
+            10 => Ok(Self::Not),
+            11 => Ok(Self::Equal),
+            12 => Ok(Self::Greater),
+            13 => Ok(Self::Less),
+            14 => Ok(Self::Jump),
+            15 => Ok(Self::JumpIfFalse),
+            16 => Ok(Self::Pop),
+            _ => Err(byte),
         }
     }
 }
@@ -298,7 +303,8 @@ impl VM {
         }
 
         loop {
-            let instruction = OpCode::from(read_byte!());
+            let instruction = OpCode::try_from(read_byte!())
+                .map_err(|byte| InterpretError::CompileError(format!("Unknown opcode: {byte}")))?;
 
             // RUST INSIGHT: Exhaustive pattern matching over `OpCode`
             // Rust ensures we handle every single opcode defined in our enum.
@@ -505,6 +511,22 @@ mod tests {
         assert_eq!(
             err,
             InterpretError::RuntimeError("Operands must be numbers".to_string())
+        );
+    }
+
+    #[test]
+    fn test_unknown_opcode_returns_err_not_panic() {
+        let mut chunk = Chunk::new();
+        let mut vm = VM::new();
+
+        // 255 is not a valid opcode; decoding must be fallible, not panic.
+        chunk.write_byte(255);
+        chunk.write_opcode(OpCode::Return);
+
+        let err = vm.interpret(&chunk).unwrap_err();
+        assert_eq!(
+            err,
+            InterpretError::CompileError("Unknown opcode: 255".to_string())
         );
     }
 }
