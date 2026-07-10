@@ -16,11 +16,12 @@
 //! The core recurrence relation is:
 //! `dp[i] = max(dp[i-1], dp[i-2] + nums[i])`
 //!
-//! We explore four implementations:
-//! 1.  **Brute Force**: Naive recursion. Tries all valid subsequences. Exponential time.
-//! 2.  **Memoization**: Top-Down DP. Caches results to avoid re-computation. O(n) time/space.
-//! 3.  **Tabulation**: Bottom-Up DP. Builds a `dp` table iteratively. O(n) time/space.
-//! 4.  **Optimal**: Space-optimized iterative solution using `fold`. O(n) time, O(1) space.
+//! We explore the three standard tiers plus one extra bottom-up variant:
+//! 1.  **Brute Force** (`rob_brute_force`): Naive recursion. Tries all valid subsequences. Exponential time.
+//! 2.  **Optimized** (`rob_optimized`): Top-Down DP with memoization. Caches results to avoid re-computation. O(n) time/space.
+//! 3.  **Optimal** (`rob_optimal`): Space-optimized iterative solution using `fold`. O(n) time, O(1) space.
+//! 4.  **Tabulation** (`rob_tabulation`): An alternate bottom-up O(n)-space variant, kept alongside the
+//!     memoized `rob_optimized` because both are instructive ways to reach the same O(n)/O(n) complexity tier.
 
 use std::cmp::max;
 
@@ -51,7 +52,7 @@ pub fn rob_brute_force(nums: Vec<i32>) -> i32 {
     solve(&nums, 0)
 }
 
-/// Memoized Approach: Top-Down DP
+/// Optimized approach: Top-Down DP (Memoization)
 ///
 /// We use a `Vec<Option<i32>>` to store results of subproblems `solve(i)`.
 /// - `None` indicates the subproblem hasn't been solved.
@@ -67,7 +68,7 @@ pub fn rob_brute_force(nums: Vec<i32>) -> i32 {
 /// # GOTCHA
 /// Be careful with `usize` indices. `nums.len()` returns `usize`.
 #[allow(clippy::needless_pass_by_value)]
-pub fn rob_memoized(nums: Vec<i32>) -> i32 {
+pub fn rob_optimized(nums: Vec<i32>) -> i32 {
     let n = nums.len();
     let mut memo = vec![None; n];
 
@@ -92,7 +93,11 @@ pub fn rob_memoized(nums: Vec<i32>) -> i32 {
     solve(&nums, 0, &mut memo)
 }
 
-/// Tabulation Approach: Bottom-Up DP
+/// Alternate optimized variant: Bottom-Up DP (Tabulation)
+///
+/// NOTE: This shares the same O(n) time / O(n) space tier as `rob_optimized` (the memoized
+/// top-down version). It is retained under a clearly-named suffix because bottom-up tabulation
+/// is an instructive counterpart to top-down memoization and a common interview talking point.
 ///
 /// We build a `dp` array where `dp[i]` represents the max money robbable from the first `i` houses.
 /// - `dp[i] = max(dp[i-1], dp[i-2] + nums[i])`
@@ -179,9 +184,9 @@ mod tests {
     }
 
     #[test]
-    fn test_memoized_basic() {
-        assert_eq!(rob_memoized(vec![1, 2, 3, 1]), 4);
-        assert_eq!(rob_memoized(vec![2, 7, 9, 3, 1]), 12);
+    fn test_optimized_basic() {
+        assert_eq!(rob_optimized(vec![1, 2, 3, 1]), 4);
+        assert_eq!(rob_optimized(vec![2, 7, 9, 3, 1]), 12);
     }
 
     #[test]
@@ -200,7 +205,7 @@ mod tests {
     fn test_empty() {
         let nums = vec![];
         assert_eq!(rob_brute_force(nums.clone()), 0);
-        assert_eq!(rob_memoized(nums.clone()), 0);
+        assert_eq!(rob_optimized(nums.clone()), 0);
         assert_eq!(rob_tabulation(nums.clone()), 0);
         assert_eq!(rob_optimal(nums), 0);
     }
@@ -209,7 +214,7 @@ mod tests {
     fn test_single_element() {
         let nums = vec![10];
         assert_eq!(rob_brute_force(nums.clone()), 10);
-        assert_eq!(rob_memoized(nums.clone()), 10);
+        assert_eq!(rob_optimized(nums.clone()), 10);
         assert_eq!(rob_tabulation(nums.clone()), 10);
         assert_eq!(rob_optimal(nums), 10);
     }
@@ -218,7 +223,7 @@ mod tests {
     fn test_two_elements() {
         let nums = vec![10, 20];
         assert_eq!(rob_brute_force(nums.clone()), 20);
-        assert_eq!(rob_memoized(nums.clone()), 20);
+        assert_eq!(rob_optimized(nums.clone()), 20);
         assert_eq!(rob_tabulation(nums.clone()), 20);
         assert_eq!(rob_optimal(nums), 20);
     }
@@ -235,7 +240,7 @@ mod tests {
         let nums = vec![1, 2, 3, 1, 1, 10, 2, 5, 8];
         let expected = rob_optimal(nums.clone());
         assert_eq!(rob_brute_force(nums.clone()), expected);
-        assert_eq!(rob_memoized(nums.clone()), expected);
+        assert_eq!(rob_optimized(nums.clone()), expected);
         assert_eq!(rob_tabulation(nums.clone()), expected);
     }
 }
