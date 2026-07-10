@@ -38,7 +38,7 @@
 //! - `0 <= s.length <= 200`
 //! - `s` consists of English letters (lower-case and upper-case), digits (`0-9`), `' '`, `'+'`, `'-'`, and `'.'`.
 
-/// Approach 1: Iterative Byte Traversal
+/// Brute Force Approach: Iterative Byte Traversal
 /// Time: O(N) - We traverse the string at most once.
 /// Space: O(1) - Constant extra space used for state tracking.
 ///
@@ -50,7 +50,7 @@
 /// We track the state manually using mutable variables.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-pub fn my_atoi_iterative(s: String) -> i32 {
+pub fn my_atoi_brute_force(s: String) -> i32 {
     // RUST INSIGHT: `as_bytes()` allows O(1) random access or fast sequential traversal
     // for ASCII-only strings, avoiding UTF-8 decoding overhead.
     let bytes = s.as_bytes();
@@ -111,7 +111,7 @@ pub fn my_atoi_iterative(s: String) -> i32 {
     result
 }
 
-/// Approach 2: State Machine
+/// Optimal Approach: State Machine (FSM)
 /// Time: O(N) - We consume each character exactly once.
 /// Space: O(1) - Constant extra space used for the State enum.
 ///
@@ -130,7 +130,7 @@ enum State {
 
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-pub fn my_atoi_state_machine(s: String) -> i32 {
+pub fn my_atoi_optimal(s: String) -> i32 {
     let mut state = State::Start;
     let mut sign: i32 = 1;
     let mut result: i32 = 0;
@@ -193,11 +193,11 @@ pub fn my_atoi_state_machine(s: String) -> i32 {
     result
 }
 
-/// Main entry point - uses the State Machine approach for its idiomatic Rust safety
+/// Main entry point - uses the optimal State Machine approach for its idiomatic Rust safety
 /// and explicitness.
 #[must_use]
 pub fn my_atoi(s: String) -> i32 {
-    my_atoi_state_machine(s)
+    my_atoi_optimal(s)
 }
 
 // =========================================================================================
@@ -216,100 +216,100 @@ mod tests {
 
     #[test]
     fn test_positive_number() {
-        assert_eq!(my_atoi_iterative("42".to_string()), 42);
-        assert_eq!(my_atoi_state_machine("42".to_string()), 42);
+        assert_eq!(my_atoi_brute_force("42".to_string()), 42);
+        assert_eq!(my_atoi_optimal("42".to_string()), 42);
         assert_eq!(my_atoi("42".to_string()), 42);
     }
 
     #[test]
     fn test_negative_with_whitespace() {
-        assert_eq!(my_atoi_iterative("   -042".to_string()), -42);
-        assert_eq!(my_atoi_state_machine("   -042".to_string()), -42);
+        assert_eq!(my_atoi_brute_force("   -042".to_string()), -42);
+        assert_eq!(my_atoi_optimal("   -042".to_string()), -42);
         assert_eq!(my_atoi("   -042".to_string()), -42);
     }
 
     #[test]
     fn test_trailing_characters() {
-        assert_eq!(my_atoi_iterative("1337c0d3".to_string()), 1337);
-        assert_eq!(my_atoi_state_machine("1337c0d3".to_string()), 1337);
+        assert_eq!(my_atoi_brute_force("1337c0d3".to_string()), 1337);
+        assert_eq!(my_atoi_optimal("1337c0d3".to_string()), 1337);
         assert_eq!(my_atoi("1337c0d3".to_string()), 1337);
     }
 
     #[test]
     fn test_zero_minus_one() {
-        assert_eq!(my_atoi_iterative("0-1".to_string()), 0);
-        assert_eq!(my_atoi_state_machine("0-1".to_string()), 0);
+        assert_eq!(my_atoi_brute_force("0-1".to_string()), 0);
+        assert_eq!(my_atoi_optimal("0-1".to_string()), 0);
         assert_eq!(my_atoi("0-1".to_string()), 0);
     }
 
     #[test]
     fn test_leading_words() {
-        assert_eq!(my_atoi_iterative("words and 987".to_string()), 0);
-        assert_eq!(my_atoi_state_machine("words and 987".to_string()), 0);
+        assert_eq!(my_atoi_brute_force("words and 987".to_string()), 0);
+        assert_eq!(my_atoi_optimal("words and 987".to_string()), 0);
         assert_eq!(my_atoi("words and 987".to_string()), 0);
     }
 
     #[test]
     fn test_empty_string() {
-        assert_eq!(my_atoi_iterative("".to_string()), 0);
-        assert_eq!(my_atoi_state_machine("".to_string()), 0);
+        assert_eq!(my_atoi_brute_force("".to_string()), 0);
+        assert_eq!(my_atoi_optimal("".to_string()), 0);
         assert_eq!(my_atoi("".to_string()), 0);
     }
 
     #[test]
     fn test_just_sign() {
-        assert_eq!(my_atoi_iterative("-".to_string()), 0);
-        assert_eq!(my_atoi_state_machine("-".to_string()), 0);
+        assert_eq!(my_atoi_brute_force("-".to_string()), 0);
+        assert_eq!(my_atoi_optimal("-".to_string()), 0);
         assert_eq!(my_atoi("-".to_string()), 0);
 
-        assert_eq!(my_atoi_iterative("+".to_string()), 0);
-        assert_eq!(my_atoi_state_machine("+".to_string()), 0);
+        assert_eq!(my_atoi_brute_force("+".to_string()), 0);
+        assert_eq!(my_atoi_optimal("+".to_string()), 0);
         assert_eq!(my_atoi("+".to_string()), 0);
     }
 
     #[test]
     fn test_overflow_positive() {
         // i32::MAX is 2147483647
-        assert_eq!(my_atoi_iterative("2147483648".to_string()), i32::MAX);
-        assert_eq!(my_atoi_state_machine("2147483648".to_string()), i32::MAX);
+        assert_eq!(my_atoi_brute_force("2147483648".to_string()), i32::MAX);
+        assert_eq!(my_atoi_optimal("2147483648".to_string()), i32::MAX);
         assert_eq!(my_atoi("2147483648".to_string()), i32::MAX);
 
-        assert_eq!(my_atoi_iterative("9999999999".to_string()), i32::MAX);
-        assert_eq!(my_atoi_state_machine("9999999999".to_string()), i32::MAX);
+        assert_eq!(my_atoi_brute_force("9999999999".to_string()), i32::MAX);
+        assert_eq!(my_atoi_optimal("9999999999".to_string()), i32::MAX);
         assert_eq!(my_atoi("9999999999".to_string()), i32::MAX);
     }
 
     #[test]
     fn test_overflow_negative() {
         // i32::MIN is -2147483648
-        assert_eq!(my_atoi_iterative("-2147483648".to_string()), i32::MIN);
-        assert_eq!(my_atoi_state_machine("-2147483648".to_string()), i32::MIN);
+        assert_eq!(my_atoi_brute_force("-2147483648".to_string()), i32::MIN);
+        assert_eq!(my_atoi_optimal("-2147483648".to_string()), i32::MIN);
         assert_eq!(my_atoi("-2147483648".to_string()), i32::MIN);
 
-        assert_eq!(my_atoi_iterative("-2147483649".to_string()), i32::MIN);
-        assert_eq!(my_atoi_state_machine("-2147483649".to_string()), i32::MIN);
+        assert_eq!(my_atoi_brute_force("-2147483649".to_string()), i32::MIN);
+        assert_eq!(my_atoi_optimal("-2147483649".to_string()), i32::MIN);
         assert_eq!(my_atoi("-2147483649".to_string()), i32::MIN);
 
-        assert_eq!(my_atoi_iterative("-9999999999".to_string()), i32::MIN);
-        assert_eq!(my_atoi_state_machine("-9999999999".to_string()), i32::MIN);
+        assert_eq!(my_atoi_brute_force("-9999999999".to_string()), i32::MIN);
+        assert_eq!(my_atoi_optimal("-9999999999".to_string()), i32::MIN);
         assert_eq!(my_atoi("-9999999999".to_string()), i32::MIN);
     }
 
     #[test]
     fn test_multiple_signs() {
-        assert_eq!(my_atoi_iterative("+-12".to_string()), 0);
-        assert_eq!(my_atoi_state_machine("+-12".to_string()), 0);
+        assert_eq!(my_atoi_brute_force("+-12".to_string()), 0);
+        assert_eq!(my_atoi_optimal("+-12".to_string()), 0);
         assert_eq!(my_atoi("+-12".to_string()), 0);
 
-        assert_eq!(my_atoi_iterative("-+12".to_string()), 0);
-        assert_eq!(my_atoi_state_machine("-+12".to_string()), 0);
+        assert_eq!(my_atoi_brute_force("-+12".to_string()), 0);
+        assert_eq!(my_atoi_optimal("-+12".to_string()), 0);
         assert_eq!(my_atoi("-+12".to_string()), 0);
     }
 
     #[test]
     fn test_whitespace_between_sign_and_digits() {
-        assert_eq!(my_atoi_iterative("- 12".to_string()), 0);
-        assert_eq!(my_atoi_state_machine("- 12".to_string()), 0);
+        assert_eq!(my_atoi_brute_force("- 12".to_string()), 0);
+        assert_eq!(my_atoi_optimal("- 12".to_string()), 0);
         assert_eq!(my_atoi("- 12".to_string()), 0);
     }
 }

@@ -38,6 +38,8 @@
 //! | Compare (`Ord`) | O(min(N, M)) | O(1) |
 //!
 //! *N is the length of the version string.*
+//!
+//! Note: single canonical implementation; the brute/optimized/optimal progression does not apply.
 
 use std::cmp::Ordering;
 use std::fmt;

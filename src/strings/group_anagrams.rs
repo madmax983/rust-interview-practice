@@ -43,14 +43,16 @@
 
 use std::collections::HashMap;
 
-/// Approach 1: Sort each string to use as a key.
+/// Brute force approach: Sort each string to use as a key.
 /// Time: O(N * K * log K) where N is the number of strings and K is the max length of a string.
 /// Space: O(N * K) to store the hash map.
 ///
 /// This is the most intuitive approach. Two strings are anagrams if and only if their sorted characters are identical.
+/// The per-string sort adds a `log K` factor, making it slower than the frequency-count approach.
+/// It does, however, handle arbitrary Unicode input correctly (see `group_anagrams_optimal` for the ASCII-only fast path).
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
-pub fn group_anagrams_sort(strs: Vec<String>) -> Vec<Vec<String>> {
+pub fn group_anagrams_brute_force(strs: Vec<String>) -> Vec<Vec<String>> {
     // RUST INSIGHT: `HashMap` ownership.
     // We need to store the strings in groups. The key is the sorted version (temporary),
     // and the value is a vector of original strings. The HashMap owns the keys and the values.
@@ -75,15 +77,19 @@ pub fn group_anagrams_sort(strs: Vec<String>) -> Vec<Vec<String>> {
     map.into_values().collect()
 }
 
-/// Approach 2: Frequency Count (Optimized for lowercase English letters).
-/// Time: O(N * K) - we iterate over each character of each string once.
+/// Optimal approach: Frequency Count (for lowercase English letters).
+/// Time: O(N * K) - we iterate over each character of each string once, no sorting.
 /// Space: O(N * K) - map storage.
 ///
 /// Instead of sorting, we count the frequency of each character 'a' through 'z'.
-/// The count array `[u8; 26]` serves as the hash map key.
+/// The count array `[u8; 26]` serves as the hash map key. This drops the `log K`
+/// factor of the sorting brute force, making it the fastest approach.
+///
+/// NOTE: This assumes ASCII lowercase input (per the problem constraints). It will
+/// panic on non-ASCII input; use `group_anagrams_brute_force` for arbitrary Unicode.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
-pub fn group_anagrams_frequency(strs: Vec<String>) -> Vec<Vec<String>> {
+pub fn group_anagrams_optimal(strs: Vec<String>) -> Vec<Vec<String>> {
     // Key is an array of 26 counts. `[u8; 26]` implements `Hash` and `Eq` automatically.
     // BOLT OPTIMIZATION: Pre-allocate capacity to avoid reallocations.
     // In the worst case (all unique strings), we need `strs.len()` capacity.
@@ -108,11 +114,13 @@ pub fn group_anagrams_frequency(strs: Vec<String>) -> Vec<Vec<String>> {
     map.into_values().collect()
 }
 
-/// Main entry point - defaults to the sorting approach as it's more general-purpose (handles Unicode).
-/// For strict LeetCode performance on English-only inputs, the frequency approach is faster.
+/// Main entry point - uses the optimal frequency-count approach.
+///
+/// Note: this assumes ASCII lowercase input per the LeetCode constraints. For arbitrary
+/// Unicode input, call `group_anagrams_brute_force` (the sorting approach) directly.
 #[must_use]
 pub fn group_anagrams(strs: Vec<String>) -> Vec<Vec<String>> {
-    group_anagrams_sort(strs)
+    group_anagrams_optimal(strs)
 }
 
 #[cfg(test)]
@@ -144,9 +152,9 @@ mod tests {
             vec!["nat".to_string(), "tan".to_string()],
         ];
 
-        let result_sort = normalize(group_anagrams_sort(input.clone()));
-        let result_freq = normalize(group_anagrams_frequency(input.clone()));
-        let result_main = normalize(group_anagrams(input)); // Should use sort internally
+        let result_sort = normalize(group_anagrams_brute_force(input.clone()));
+        let result_freq = normalize(group_anagrams_optimal(input.clone()));
+        let result_main = normalize(group_anagrams(input)); // Should use the optimal frequency approach internally
 
         // We compare normalized results because the order of groups and order within groups is not guaranteed
         // by the problem statement, but our `normalize` helper enforces a canonical order for testing.
@@ -192,12 +200,13 @@ mod tests {
 
     #[test]
     fn test_group_anagrams_unicode() {
-        // The frequency method (Approach 2) would fail or panic here if we didn't check constraints.
-        // But since we are testing `group_anagrams_sort` via the main entry point, it should work.
+        // The optimal frequency method would panic here (non-ASCII bytes).
+        // We test `group_anagrams_brute_force` (the sorting approach) directly,
+        // which is the Unicode-safe implementation.
         let input = vec!["café".to_string(), "féac".to_string()];
         let expected = vec![vec!["café".to_string(), "féac".to_string()]];
 
-        let result = normalize(group_anagrams(input));
+        let result = normalize(group_anagrams_brute_force(input));
         let expected_sorted = normalize(expected);
 
         assert_eq!(result, expected_sorted);

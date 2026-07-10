@@ -41,6 +41,8 @@
 //! | Match | O(MN) | O(M) |
 //!
 //! M = regex length, N = text length.
+//!
+//! Note: single canonical implementation; the brute/optimized/optimal progression does not apply.
 
 /// Represents a state in the NFA.
 #[derive(Debug, Clone, PartialEq)]

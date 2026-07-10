@@ -54,6 +54,8 @@
 //!   - Short-circuiting for common prefixes and suffixes.
 //!   - Bounding the maximum depth (e.g., falling back to a simpler algorithm if D > threshold).
 //! - We use a generic interface `&[T]` allowing diffing of chars, strings, or custom structs.
+//!
+//! Note: single canonical implementation; the brute/optimized/optimal progression does not apply.
 
 use std::fmt;
 

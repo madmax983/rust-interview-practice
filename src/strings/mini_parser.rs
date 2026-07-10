@@ -66,10 +66,10 @@ impl NestedInteger {
 }
 
 // =========================================================================================
-// Approach 1: Iterative Stack-Based Parser
+// Brute Force: Iterative Stack-Based Parser
 // =========================================================================================
 
-/// Iterative Approach: Stack
+/// Brute force approach: Iterative Stack.
 ///
 /// We iterate through the characters. If we see a `[`, we push a new `NestedInteger::List`
 /// onto our stack. When we parse a number, we push it into the list at the top of the stack.
@@ -78,12 +78,16 @@ impl NestedInteger {
 /// Time: O(N) - Single pass through the string.
 /// Space: O(D) - Stack depth corresponds to the maximum nesting depth of the string.
 ///
+/// This matches the recursive-descent approach in complexity but juggles the parse state
+/// manually (an explicit stack plus index tracking), which is more error-prone than the
+/// optimal recursive parser.
+///
 /// **Gotcha:**
 /// Parsing negative numbers and multi-digit numbers manually requires careful tracking of
 /// whether we are currently "building" a number. We must also handle the edge case where
 /// the string is just a single integer without brackets.
 #[must_use]
-pub fn deserialize_iterative(s: String) -> NestedInteger {
+pub fn deserialize_brute_force(s: String) -> NestedInteger {
     if !s.starts_with('[') {
         return NestedInteger::Int(s.parse().unwrap());
     }
@@ -232,7 +236,7 @@ mod tests {
         let input = "324".to_string();
         let expected = NestedInteger::Int(324);
 
-        assert_eq!(deserialize_iterative(input.clone()), expected);
+        assert_eq!(deserialize_brute_force(input.clone()), expected);
         assert_eq!(deserialize_optimal(input.clone()), expected);
         assert_eq!(deserialize(input), expected);
     }
@@ -242,7 +246,7 @@ mod tests {
         let input = "-42".to_string();
         let expected = NestedInteger::Int(-42);
 
-        assert_eq!(deserialize_iterative(input.clone()), expected);
+        assert_eq!(deserialize_brute_force(input.clone()), expected);
         assert_eq!(deserialize_optimal(input.clone()), expected);
         assert_eq!(deserialize(input), expected);
     }
@@ -259,7 +263,7 @@ mod tests {
             ]),
         ]);
 
-        assert_eq!(deserialize_iterative(input.clone()), expected);
+        assert_eq!(deserialize_brute_force(input.clone()), expected);
         assert_eq!(deserialize_optimal(input.clone()), expected);
         assert_eq!(deserialize(input), expected);
     }
@@ -269,7 +273,7 @@ mod tests {
         let input = "[]".to_string();
         let expected = NestedInteger::List(vec![]);
 
-        assert_eq!(deserialize_iterative(input.clone()), expected);
+        assert_eq!(deserialize_brute_force(input.clone()), expected);
         assert_eq!(deserialize_optimal(input.clone()), expected);
         assert_eq!(deserialize(input), expected);
     }
@@ -285,7 +289,7 @@ mod tests {
             NestedInteger::List(vec![NestedInteger::Int(-2), NestedInteger::Int(3)]),
         ]);
 
-        assert_eq!(deserialize_iterative(input.clone()), expected);
+        assert_eq!(deserialize_brute_force(input.clone()), expected);
         assert_eq!(deserialize_optimal(input.clone()), expected);
         assert_eq!(deserialize(input), expected);
     }
