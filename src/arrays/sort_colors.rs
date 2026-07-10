@@ -137,12 +137,12 @@ pub fn sort_colors(nums: &mut Vec<i32>) {
     sort_colors_optimal(nums);
 }
 
-/// ## Alternative Approaches
-///
-/// - **Quick Sort / Merge Sort**: The Brute Force approach utilizes standard unstable sort (which is
-///   Pattern-Defeating Quicksort in Rust). This is O(N log N) but usually quite fast due to caching.
-/// - **Lomuto / Hoare Partitioning**: Variations of Quicksort's partition scheme can be applied,
-///   but the Dutch National Flag algorithm (3-way partitioning) is perfectly specialized for exactly three values.
+// ## Alternative Approaches
+//
+// - **Quick Sort / Merge Sort**: The Brute Force approach utilizes standard unstable sort (which is
+//   Pattern-Defeating Quicksort in Rust). This is O(N log N) but usually quite fast due to caching.
+// - **Lomuto / Hoare Partitioning**: Variations of Quicksort's partition scheme can be applied,
+//   but the Dutch National Flag algorithm (3-way partitioning) is perfectly specialized for exactly three values.
 
 #[cfg(test)]
 mod tests {

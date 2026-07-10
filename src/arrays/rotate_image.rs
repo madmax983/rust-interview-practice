@@ -96,12 +96,12 @@ pub fn rotate(matrix: &mut [Vec<i32>]) {
     rotate_optimal(matrix);
 }
 
-/// ## Alternative Approaches
-///
-/// - **Cycle Replacement (Four-way swap)**: Instead of transposing and reversing, you can rotate the matrix
-///   ring by ring, swapping four elements at a time: `top-left -> top-right -> bottom-right -> bottom-left -> top-left`.
-///   This is also O(N^2) time and O(1) space, but the indexing math is more complex and error-prone compared
-///   to the Transpose + Reverse approach.
+// ## Alternative Approaches
+//
+// - **Cycle Replacement (Four-way swap)**: Instead of transposing and reversing, you can rotate the matrix
+//   ring by ring, swapping four elements at a time: `top-left -> top-right -> bottom-right -> bottom-left -> top-left`.
+//   This is also O(N^2) time and O(1) space, but the indexing math is more complex and error-prone compared
+//   to the Transpose + Reverse approach.
 
 #[cfg(test)]
 mod tests {

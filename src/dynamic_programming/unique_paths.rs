@@ -196,13 +196,11 @@ mod tests {
 
             assert_eq!(
                 bf, opt,
-                "Mismatch between brute force and optimized for ({}, {})",
-                m, n
+                "Mismatch between brute force and optimized for ({m}, {n})"
             );
             assert_eq!(
                 opt, optimal,
-                "Mismatch between optimized and optimal for ({}, {})",
-                m, n
+                "Mismatch between optimized and optimal for ({m}, {n})"
             );
         }
     }

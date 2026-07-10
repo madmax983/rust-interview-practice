@@ -113,12 +113,12 @@ pub fn rotate(nums: &mut Vec<i32>, k: i32) {
     rotate_optimal(nums, k);
 }
 
-/// ## Alternative Approaches
-///
-/// - **Cyclic Replacements**: An algorithm that computes the GCD of `n` and `k` and swaps
-///   elements in cycles. This is conceptually complex and prone to off-by-one errors but achieves
-///   `O(N)` time and `O(1)` space without reversing. Rust's built-in `rotate_right` often falls
-///   back to this or similar block-swapping strategies under the hood.
+// ## Alternative Approaches
+//
+// - **Cyclic Replacements**: An algorithm that computes the GCD of `n` and `k` and swaps
+//   elements in cycles. This is conceptually complex and prone to off-by-one errors but achieves
+//   `O(N)` time and `O(1)` space without reversing. Rust's built-in `rotate_right` often falls
+//   back to this or similar block-swapping strategies under the hood.
 
 #[cfg(test)]
 mod tests {

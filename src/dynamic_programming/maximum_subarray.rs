@@ -260,20 +260,17 @@ mod tests {
             assert_eq!(
                 max_sub_array_brute_force(nums.clone()),
                 expected,
-                "brute force mismatch for {:?}",
-                nums
+                "brute force mismatch for {nums:?}"
             );
             assert_eq!(
                 max_sub_array_optimized(nums.clone()),
                 expected,
-                "divide-and-conquer mismatch for {:?}",
-                nums
+                "divide-and-conquer mismatch for {nums:?}"
             );
             assert_eq!(
                 max_sub_array_functional(nums.clone()),
                 expected,
-                "functional mismatch for {:?}",
-                nums
+                "functional mismatch for {nums:?}"
             );
         }
     }

@@ -269,7 +269,7 @@ mod tests {
 
         // m should be roughly 95,850 bits, and k should be 7
         // (10000 * 9.58 bits/item)
-        assert!(filter.m > 90000 && filter.m < 100000);
+        assert!(filter.m > 90_000 && filter.m < 100_000);
         assert_eq!(filter.k, 7);
 
         filter.insert("test1");
@@ -298,15 +298,13 @@ mod tests {
             }
         }
 
-        let actual_fpr = false_positives as f64 / test_size as f64;
+        let actual_fpr = f64::from(false_positives) / test_size as f64;
 
         // The actual FPR should be close to the target FPR.
         // We allow some variance due to randomness of hashes.
         assert!(
             actual_fpr < target_fpr * 1.5,
-            "FPR was {} which is significantly higher than target {}",
-            actual_fpr,
-            target_fpr
+            "FPR was {actual_fpr} which is significantly higher than target {target_fpr}"
         );
     }
 
@@ -352,6 +350,6 @@ mod tests {
         let duration = start.elapsed();
         // Benchmark note: To actually measure performance, run `cargo test -- --nocapture`
         // or use `criterion` crate in a dedicated bench/.
-        println!("Benchmark completed in {:?}", duration);
+        println!("Benchmark completed in {duration:?}");
     }
 }

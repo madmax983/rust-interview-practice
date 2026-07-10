@@ -103,7 +103,7 @@ mod tests {
 
     #[test]
     fn test_parse_basic() {
-        let input = r#"
+        let input = r"
             ; This is a comment
             [server]
             host = localhost
@@ -111,7 +111,7 @@ mod tests {
 
             [database]
             url = postgres://user:pass@localhost/db
-        "#;
+        ";
 
         let ini = Ini::parse(input).unwrap();
 

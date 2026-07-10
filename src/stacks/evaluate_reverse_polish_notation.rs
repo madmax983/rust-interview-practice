@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn test_negative_numbers() {
         let tokens = to_string_vec(vec!["3", "-4", "+"]);
-        assert_eq!(eval_rpn(tokens.clone()), -1);
+        assert_eq!(eval_rpn(tokens), -1);
     }
 
     #[test]

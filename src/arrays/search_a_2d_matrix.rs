@@ -111,14 +111,14 @@ mod tests {
     fn test_brute_force_happy_path() {
         let matrix = vec![vec![1, 3, 5, 7], vec![10, 11, 16, 20], vec![23, 30, 34, 60]];
         assert!(search_matrix_brute_force(matrix.clone(), 3));
-        assert!(!search_matrix_brute_force(matrix.clone(), 13));
+        assert!(!search_matrix_brute_force(matrix, 13));
     }
 
     #[test]
     fn test_optimal_happy_path() {
         let matrix = vec![vec![1, 3, 5, 7], vec![10, 11, 16, 20], vec![23, 30, 34, 60]];
         assert!(search_matrix_optimal(matrix.clone(), 3));
-        assert!(!search_matrix_optimal(matrix.clone(), 13));
+        assert!(!search_matrix_optimal(matrix, 13));
     }
 
     #[test]
@@ -142,12 +142,12 @@ mod tests {
         // Single row
         let row_matrix = vec![vec![1, 3, 5, 7, 9]];
         assert!(search_matrix_optimal(row_matrix.clone(), 5));
-        assert!(!search_matrix_optimal(row_matrix.clone(), 4));
+        assert!(!search_matrix_optimal(row_matrix, 4));
 
         // Single column
         let col_matrix = vec![vec![1], vec![3], vec![5], vec![7], vec![9]];
         assert!(search_matrix_optimal(col_matrix.clone(), 5));
-        assert!(!search_matrix_optimal(col_matrix.clone(), 4));
+        assert!(!search_matrix_optimal(col_matrix, 4));
     }
 
     #[test]

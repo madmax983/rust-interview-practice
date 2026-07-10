@@ -519,8 +519,8 @@ mod tests {
     }
 
     /// Stress test: many threads concurrently `put`/`get`/`delete`. Before the
-    /// lock-order fix, `get` (keydir -> active_file) and `put`/`delete`
-    /// (active_file -> keydir) formed an ABBA cycle that could deadlock. We run
+    /// lock-order fix, `get` (keydir -> `active_file`) and `put`/`delete`
+    /// (`active_file` -> keydir) formed an ABBA cycle that could deadlock. We run
     /// the workload in a helper thread and wait on a channel with a timeout, so a
     /// regression fails the test instead of hanging forever.
     #[test]
@@ -561,8 +561,8 @@ mod tests {
             Ok(()) => {
                 coordinator.join().unwrap();
             }
-            Err(_) => panic!(
-                "concurrent get/put/delete did not finish within timeout (possible deadlock)"
+            Err(err) => panic!(
+                "concurrent get/put/delete did not finish within timeout (possible deadlock): {err}"
             ),
         }
 

@@ -504,10 +504,10 @@ mod tests {
 
     #[test]
     fn test_comments() {
-        let input = r#"
+        let input = r"
             # This is a comment
             key = 1 # Inline comment
-        "#;
+        ";
         let mut parser = Parser::new(input).unwrap();
         let result = parser.parse().unwrap();
 

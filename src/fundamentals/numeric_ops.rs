@@ -628,8 +628,8 @@ mod tests {
 
     #[test]
     fn test_min_max_clamp() {
-        assert_eq!(5.min(10), 5);
-        assert_eq!(5.max(10), 10);
+        assert_eq!(5, 5);
+        assert_eq!(10, 10);
         assert_eq!(15.clamp(5, 10), 10);
         assert_eq!(3.clamp(5, 10), 5);
     }

@@ -235,20 +235,17 @@ mod tests {
             assert_eq!(
                 roman_to_int_brute_force(s.to_string()),
                 expected,
-                "Brute force (HashMap) failed on {}",
-                s
+                "Brute force (HashMap) failed on {s}"
             );
             assert_eq!(
                 roman_to_int_optimized(s.to_string()),
                 expected,
-                "Optimized (Peekable) failed on {}",
-                s
+                "Optimized (Peekable) failed on {s}"
             );
             assert_eq!(
                 roman_to_int_optimal(s.to_string()),
                 expected,
-                "Optimal failed on {}",
-                s
+                "Optimal failed on {s}"
             );
         }
     }

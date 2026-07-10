@@ -463,6 +463,8 @@ fn decode_map(
 mod tests {
     use super::*;
 
+    // test helper: takes owned values so call sites can pass constructed `Value`s directly.
+    #[allow(clippy::needless_pass_by_value)]
     fn assert_roundtrip(value: Value<'_>) {
         let mut buf = Vec::new();
         encode(&mut buf, &value).unwrap();
@@ -484,7 +486,7 @@ mod tests {
         assert_roundtrip(Value::Integer(127)); // FixInt
         assert_roundtrip(Value::Integer(200)); // Uint8
         assert_roundtrip(Value::Integer(60000)); // Uint16
-        assert_roundtrip(Value::Integer(u32::MAX as u64)); // Uint32
+        assert_roundtrip(Value::Integer(u64::from(u32::MAX))); // Uint32
 
         assert_roundtrip(Value::NegativeInteger(-1)); // FixInt
         assert_roundtrip(Value::NegativeInteger(-32)); // FixInt

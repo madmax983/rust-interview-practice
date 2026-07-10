@@ -187,6 +187,9 @@ pub type MedianFinder = MedianFinderOptimal;
 
 #[cfg(test)]
 mod tests {
+    // test-code: medians here are exact f64 values (x.0 / x.5), so exact equality is correct.
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[test]

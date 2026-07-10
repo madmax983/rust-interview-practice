@@ -183,6 +183,9 @@ pub fn is_valid_bst(root: Option<Box<TreeNode>>) -> bool {
 
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     // Helper to create a leaf node

@@ -286,8 +286,8 @@ mod tests {
 
     #[test]
     fn test_concurrent() {
-        let (mut p, mut c) = channel(128);
         const COUNT: usize = 100_000;
+        let (mut p, mut c) = channel(128);
 
         let producer = thread::spawn(move || {
             for i in 0..COUNT {

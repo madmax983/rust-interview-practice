@@ -238,7 +238,7 @@ mod tests {
 
         // This is probabilistic, but with high probability it holds.
         // If it fails, either we got unlucky or implementation is wrong.
-        assert!(est <= 11, "Estimate {} too high for item with count 1", est);
+        assert!(est <= 11, "Estimate {est} too high for item with count 1");
     }
 
     #[test]

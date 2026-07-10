@@ -107,9 +107,12 @@ mod tests {
     #[test]
     fn test_stress_large_numbers() {
         // Requires using i64 internally to prevent overflow during accumulation
-        assert_eq!(Solution::min_eating_speed(vec![1000000000], 2), 500000000);
         assert_eq!(
-            Solution::min_eating_speed(vec![805306368, 805306368, 805306368], 1000000000),
+            Solution::min_eating_speed(vec![1_000_000_000], 2),
+            500_000_000
+        );
+        assert_eq!(
+            Solution::min_eating_speed(vec![805_306_368, 805_306_368, 805_306_368], 1_000_000_000),
             3
         );
     }

@@ -309,7 +309,7 @@ mod tests {
     fn test_parse_ranges() {
         let schedule = CronSchedule::from_str("1-5 * * * *").unwrap();
         // bits 1,2,3,4,5
-        assert_eq!(schedule.minutes, 0b111110);
+        assert_eq!(schedule.minutes, 0b11_1110);
     }
 
     #[test]

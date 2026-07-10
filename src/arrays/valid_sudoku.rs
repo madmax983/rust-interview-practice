@@ -221,7 +221,7 @@ mod tests {
 
         assert!(is_valid_sudoku_brute_force(board.clone()));
         assert!(is_valid_sudoku_optimized(board.clone()));
-        assert!(is_valid_sudoku_optimal(board.clone()));
+        assert!(is_valid_sudoku_optimal(board));
     }
 
     #[test]
@@ -241,7 +241,7 @@ mod tests {
 
         assert!(!is_valid_sudoku_brute_force(board.clone()));
         assert!(!is_valid_sudoku_optimized(board.clone()));
-        assert!(!is_valid_sudoku_optimal(board.clone()));
+        assert!(!is_valid_sudoku_optimal(board));
     }
 
     #[test]
@@ -261,7 +261,7 @@ mod tests {
 
         assert!(!is_valid_sudoku_brute_force(board.clone()));
         assert!(!is_valid_sudoku_optimized(board.clone()));
-        assert!(!is_valid_sudoku_optimal(board.clone()));
+        assert!(!is_valid_sudoku_optimal(board));
     }
 
     #[test]
@@ -281,7 +281,7 @@ mod tests {
 
         assert!(!is_valid_sudoku_brute_force(board.clone()));
         assert!(!is_valid_sudoku_optimized(board.clone()));
-        assert!(!is_valid_sudoku_optimal(board.clone()));
+        assert!(!is_valid_sudoku_optimal(board));
     }
 
     #[test]
@@ -300,6 +300,6 @@ mod tests {
 
         assert!(is_valid_sudoku_brute_force(board.clone()));
         assert!(is_valid_sudoku_optimized(board.clone()));
-        assert!(is_valid_sudoku_optimal(board.clone()));
+        assert!(is_valid_sudoku_optimal(board));
     }
 }

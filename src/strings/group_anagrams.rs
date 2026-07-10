@@ -175,8 +175,8 @@ mod tests {
 
     #[test]
     fn test_group_anagrams_single_empty_string() {
-        let input = vec!["".to_string()];
-        let expected = vec![vec!["".to_string()]];
+        let input = vec![String::new()];
+        let expected = vec![vec![String::new()]];
 
         let result = group_anagrams(input);
         assert_eq!(result, expected);

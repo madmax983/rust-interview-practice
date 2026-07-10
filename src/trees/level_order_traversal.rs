@@ -134,17 +134,20 @@ pub fn level_order(root: Option<Box<TreeNode>>) -> Vec<Vec<i32>> {
     })
 }
 
-/// # Alternative Approaches
-///
-/// 1. **Recursive DFS**: Pass the level index as an argument to a recursive function.
-///    Push values into `result[level]`. This is often shorter but uses stack space O(h)
-///    instead of queue space O(w).
-/// 2. **Two Vectors**: Use two vectors `current_level` and `next_level` instead of a queue.
-///    Swap them at the end of each level. This avoids `VecDeque` but is functionally equivalent.
-///    It can be slightly more cache-friendly for very large levels.
+// # Alternative Approaches
+//
+// 1. **Recursive DFS**: Pass the level index as an argument to a recursive function.
+//    Push values into `result[level]`. This is often shorter but uses stack space O(h)
+//    instead of queue space O(w).
+// 2. **Two Vectors**: Use two vectors `current_level` and `next_level` instead of a queue.
+//    Swap them at the end of each level. This avoids `VecDeque` but is functionally equivalent.
+//    It can be slightly more cache-friendly for very large levels.
 
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     // Helper to create a leaf node

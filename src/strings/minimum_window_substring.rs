@@ -253,10 +253,10 @@ pub fn min_window(s: String, t: String) -> String {
     min_window_optimal(s, t)
 }
 
-/// ## Alternative approaches
-///
-/// 1. **Binary Search + Fixed-Size Window Checking**: You could binary search the answer length `L` from `1` to `len(s)`, checking if any valid window of size `L` exists. Time complexity is O(N log N). This is worse than O(N) sliding window, so it's not implemented.
-/// 2. **Pre-filtering `s`**: Create a list of `(index, char)` for all characters in `s` that also appear in `t`. Then run the sliding window only over this filtered list. This helps if `s` is huge and `t` characters are sparse.
+// ## Alternative approaches
+//
+// 1. **Binary Search + Fixed-Size Window Checking**: You could binary search the answer length `L` from `1` to `len(s)`, checking if any valid window of size `L` exists. Time complexity is O(N log N). This is worse than O(N) sliding window, so it's not implemented.
+// 2. **Pre-filtering `s`**: Create a list of `(index, char)` for all characters in `s` that also appear in `t`. Then run the sliding window only over this filtered list. This helps if `s` is huge and `t` characters are sparse.
 
 #[cfg(test)]
 mod tests {
@@ -290,7 +290,7 @@ mod tests {
     fn test_impossible() {
         let s = "a".to_string();
         let t = "aa".to_string();
-        let expected = "".to_string();
+        let expected = String::new();
 
         assert_eq!(min_window_brute_force(s.clone(), t.clone()), expected);
         assert_eq!(min_window_optimized(s.clone(), t.clone()), expected);

@@ -624,8 +624,8 @@ mod tests {
     #[test]
     #[cfg(target_arch = "x86_64")]
     fn test_bswap_asm() {
-        assert_eq!(bswap_asm(0x0123456789ABCDEF), 0xEFCDAB8967452301);
-        assert_eq!(bswap_asm(0x1234), 0x3412000000000000);
+        assert_eq!(bswap_asm(0x0123_4567_89AB_CDEF), 0xEFCD_AB89_6745_2301);
+        assert_eq!(bswap_asm(0x1234), 0x3412_0000_0000_0000);
     }
 
     #[test]
@@ -633,7 +633,7 @@ mod tests {
     fn test_popcnt_asm() {
         if std::is_x86_feature_detected!("popcnt") {
             unsafe {
-                assert_eq!(popcnt_asm(0b1010101010), 5);
+                assert_eq!(popcnt_asm(0b10_1010_1010), 5);
                 assert_eq!(popcnt_asm(0b1111), 4);
                 assert_eq!(popcnt_asm(0), 0);
             }
@@ -657,12 +657,12 @@ mod tests {
         let mut value = 42u64;
         unsafe {
             // Should succeed: value is 42
-            let prev = atomic_cas(&mut value as *mut u64, 42, 100);
+            let prev = atomic_cas(&raw mut value, 42, 100);
             assert_eq!(prev, 42);
             assert_eq!(value, 100);
 
             // Should fail: value is 100, not 42
-            let prev = atomic_cas(&mut value as *mut u64, 42, 200);
+            let prev = atomic_cas(&raw mut value, 42, 200);
             assert_eq!(prev, 100);
             assert_eq!(value, 100); // Unchanged
         }
@@ -673,7 +673,7 @@ mod tests {
     fn test_atomic_fetch_add() {
         let mut value = 10u64;
         unsafe {
-            let prev = atomic_fetch_add(&mut value as *mut u64, 5);
+            let prev = atomic_fetch_add(&raw mut value, 5);
             assert_eq!(prev, 10);
             assert_eq!(value, 15);
         }
@@ -708,7 +708,7 @@ mod tests {
 
     #[test]
     #[cfg(target_arch = "x86_64")]
-    #[ignore] // Naked functions are unstable and may not work correctly in all contexts
+    #[ignore = "naked functions are unstable and may not work correctly in all contexts"]
     fn test_naked_functions() {
         unsafe {
             assert_eq!(naked_identity(42), 42);

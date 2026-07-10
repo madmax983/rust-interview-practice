@@ -460,13 +460,8 @@ mod tests {
     }
     #[test]
     fn test_decode_stack_overflow_prevention() {
-        let mut deeply_nested = Vec::new();
-        for _ in 0..1000 {
-            deeply_nested.push(b'l');
-        }
-        for _ in 0..1000 {
-            deeply_nested.push(b'e');
-        }
+        let mut deeply_nested = vec![b'l'; 1000];
+        deeply_nested.resize(2000, b'e');
         let result = decode(&deeply_nested);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Max recursion depth exceeded");

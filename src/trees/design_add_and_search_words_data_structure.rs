@@ -353,20 +353,17 @@ mod tests {
             assert_eq!(
                 d1.search(query.to_string()),
                 expected,
-                "Failed BruteForce for {}",
-                query
+                "Failed BruteForce for {query}"
             );
             assert_eq!(
                 d2.search(query.to_string()),
                 expected,
-                "Failed Optimized for {}",
-                query
+                "Failed Optimized for {query}"
             );
             assert_eq!(
                 d3.search(query.to_string()),
                 expected,
-                "Failed Optimal for {}",
-                query
+                "Failed Optimal for {query}"
             );
         }
     }

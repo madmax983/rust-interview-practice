@@ -39,12 +39,8 @@ jobs:
         run: cargo build --all-features --verbose
 
   clippy:
-    name: clippy (pedantic, non-blocking)
+    name: clippy (pedantic)
     runs-on: ubuntu-latest
-    # Non-blocking for now: a parallel lint sweep is still driving warnings to
-    # zero across the repo. Failures are visible in the checks list but do not
-    # block the PR. Flip continue-on-error to false once the sweep lands.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

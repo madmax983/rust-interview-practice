@@ -424,7 +424,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        format!("lsm_test_{}", now)
+        format!("lsm_test_{now}")
     }
 
     #[test]

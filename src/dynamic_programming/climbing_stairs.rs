@@ -130,11 +130,11 @@ mod tests {
         // The brute force approach takes too long for n=45, so we skip it in the stress test
         // or just test it with a smaller "large" number if we strictly need to test it.
         // We'll test up to 30 for brute force to keep test times reasonable.
-        assert_eq!(climb_stairs_brute_force(30), 1346269);
+        assert_eq!(climb_stairs_brute_force(30), 1_346_269);
 
         // For optimized and optimal, we can easily test the max constraint (n=45)
         // 45th Fibonacci-like number for stairs is 1836311903
-        assert_eq!(climb_stairs_optimized(45), 1836311903);
-        assert_eq!(climb_stairs_optimal(45), 1836311903);
+        assert_eq!(climb_stairs_optimized(45), 1_836_311_903);
+        assert_eq!(climb_stairs_optimal(45), 1_836_311_903);
     }
 }

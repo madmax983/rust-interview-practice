@@ -305,7 +305,7 @@ mod tests {
             received.push(val);
         }
 
-        received.sort();
+        received.sort_unstable();
         assert_eq!(received, vec![0, 1, 2, 3, 4]);
 
         for h in handles {
@@ -320,7 +320,7 @@ mod tests {
         // Fill channel
         tx.send(1).unwrap();
 
-        let tx_clone = tx.clone();
+        let tx_clone = tx;
         let handle = thread::spawn(move || {
             // This should block until rx receives
             tx_clone.send(2).unwrap();

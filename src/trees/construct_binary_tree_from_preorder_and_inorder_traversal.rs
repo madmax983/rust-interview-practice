@@ -205,15 +205,18 @@ pub fn build_tree(preorder: Vec<i32>, inorder: Vec<i32>) -> Option<Box<TreeNode>
     build_tree_optimal(preorder, inorder)
 }
 
-/// ## Alternative Approaches
-///
-/// - **Iterative with Stack**: You can build the tree iteratively using a stack, traversing
-///   `preorder` and using the stack and a pointer into `inorder` to figure out when to attach
-///   right children. This is O(n) space and time, but recursion is generally more idiomatic
-///   for tree construction unless stack overflow is a concern.
+// ## Alternative Approaches
+//
+// - **Iterative with Stack**: You can build the tree iteratively using a stack, traversing
+//   `preorder` and using the stack and a pointer into `inorder` to figure out when to attach
+//   right children. This is O(n) space and time, but recursion is generally more idiomatic
+//   for tree construction unless stack overflow is a concern.
 
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     fn leaf(val: i32) -> Option<Box<TreeNode>> {

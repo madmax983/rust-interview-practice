@@ -284,11 +284,11 @@ mod tests {
         for grid in grids {
             let brute = num_islands_brute_force(&grid);
 
-            let mut g_dfs = grid.clone();
-            let optimal = num_islands_optimal(&mut g_dfs);
+            let mut dfs_grid = grid.clone();
+            let optimal = num_islands_optimal(&mut dfs_grid);
 
-            let mut g_bfs = grid.clone();
-            let optimized = num_islands_optimized(&mut g_bfs);
+            let mut bfs_grid = grid.clone();
+            let optimized = num_islands_optimized(&mut bfs_grid);
 
             let wrapped = number_of_islands(grid);
 

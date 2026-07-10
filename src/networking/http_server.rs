@@ -519,10 +519,6 @@ mod tests {
 
     #[test]
     fn test_server_handle_connection() {
-        // Find a free port
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let addr = listener.local_addr().unwrap();
-
         struct TestHandler;
         impl Handler for TestHandler {
             fn handle(&self, req: HttpRequest) -> HttpResponse {
@@ -537,6 +533,10 @@ mod tests {
                 }
             }
         }
+
+        // Find a free port
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
 
         let handler = Arc::new(TestHandler);
         let handler_clone = Arc::clone(&handler);

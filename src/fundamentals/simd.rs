@@ -896,7 +896,7 @@ mod tests {
 
     /// Exercises every SAFE SSE wrapper. Each wrapper performs runtime feature
     /// detection internally (SSE2 path or scalar fallback), so this test is sound
-    /// on any x86/x86_64 CPU regardless of SSE2 availability, and produces the
+    /// on any `x86/x86_64` CPU regardless of SSE2 availability, and produces the
     /// same results either way.
     #[test]
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]

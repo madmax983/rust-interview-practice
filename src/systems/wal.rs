@@ -203,7 +203,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        format!("wal_test_{}.log", now)
+        format!("wal_test_{now}.log")
     }
 
     #[test]

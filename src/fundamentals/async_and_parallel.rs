@@ -38,7 +38,7 @@ mod tokio_patterns {
         println!("{data1}, {data2}");
     }
 
-    /// Spawn concurrent tasks with tokio::spawn.
+    /// Spawn concurrent tasks with `tokio::spawn`.
     #[allow(dead_code)]
     async fn demonstrate_spawn() {
         // Spawn tasks that run concurrently
@@ -82,7 +82,7 @@ mod tokio_patterns {
         }
     }
 
-    /// Timeout pattern with tokio::time::timeout.
+    /// Timeout pattern with `tokio::time::timeout`.
     #[allow(dead_code)]
     async fn demonstrate_timeout() {
         let slow_operation = async {
@@ -167,8 +167,9 @@ mod tokio_patterns {
         println!("Final count: {}", *counter.lock().await);
     }
 
-    /// Async read-write lock (RwLock).
-    #[allow(dead_code)]
+    /// Async read-write lock (`RwLock`).
+    // demonstrative: guards intentionally span the print/push to illustrate lock scope.
+    #[allow(dead_code, clippy::significant_drop_tightening)]
     async fn demonstrate_async_rwlock() {
         use std::sync::Arc;
         use tokio::sync::RwLock;
@@ -268,7 +269,7 @@ mod tokio_patterns {
                 _ = cancel_rx => {
                     println!("Task cancelled");
                 }
-                _ = sleep(Duration::from_secs(10)) => {
+                () = sleep(Duration::from_secs(10)) => {
                     println!("Task completed");
                 }
             }

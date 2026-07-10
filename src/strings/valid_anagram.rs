@@ -169,8 +169,8 @@ mod tests {
 
     #[test]
     fn test_empty_strings() {
-        let s = "".to_string();
-        let t = "".to_string();
+        let s = String::new();
+        let t = String::new();
 
         assert!(is_anagram_brute_force(s.clone(), t.clone()));
         assert!(is_anagram_optimized(s.clone(), t.clone()));

@@ -174,7 +174,6 @@ mod tests {
         let successors = |node: &char| -> Vec<(char, i32)> {
             match node {
                 'A' => vec![('B', 1)],
-                'C' => vec![],
                 _ => vec![],
             }
         };

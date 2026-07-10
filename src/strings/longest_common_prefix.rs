@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_no_common_prefix() {
         let input = vec!["dog".to_string(), "racecar".to_string(), "car".to_string()];
-        let expected = "".to_string();
+        let expected = String::new();
 
         assert_eq!(longest_common_prefix_brute_force(input.clone()), expected);
         assert_eq!(longest_common_prefix_optimized(input.clone()), expected);
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn test_empty_array() {
         let input: Vec<String> = vec![];
-        let expected = "".to_string();
+        let expected = String::new();
 
         assert_eq!(longest_common_prefix_brute_force(input.clone()), expected);
         assert_eq!(longest_common_prefix_optimized(input.clone()), expected);
@@ -227,8 +227,8 @@ mod tests {
 
     #[test]
     fn test_with_empty_string() {
-        let input = vec!["flower".to_string(), "".to_string(), "flight".to_string()];
-        let expected = "".to_string();
+        let input = vec!["flower".to_string(), String::new(), "flight".to_string()];
+        let expected = String::new();
 
         assert_eq!(longest_common_prefix_brute_force(input.clone()), expected);
         assert_eq!(longest_common_prefix_optimized(input.clone()), expected);

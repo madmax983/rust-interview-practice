@@ -185,7 +185,7 @@ mod tests {
         for &s in &inputs {
             let brute = reverse_words_brute_force(s.to_string());
             let optimal = reverse_words_optimal(s.to_string());
-            assert_eq!(brute, optimal, "brute vs optimal disagree on: {:?}", s);
+            assert_eq!(brute, optimal, "brute vs optimal disagree on: {s:?}");
             // Main entry point must match the optimal it dispatches to.
             assert_eq!(reverse_words(s.to_string()), optimal);
         }

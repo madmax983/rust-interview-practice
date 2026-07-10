@@ -501,7 +501,7 @@ mod tests {
     #[test]
     fn test_pool_discard() {
         let counter = Arc::new(AtomicUsize::new(0));
-        let c_clone = counter.clone();
+        let c_clone = counter;
 
         let pool = make_pool(2, move || {
             Ok::<usize, ()>(c_clone.fetch_add(1, Ordering::SeqCst))

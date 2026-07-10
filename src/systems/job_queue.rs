@@ -540,7 +540,7 @@ mod tests {
 
         // Enqueue a job that always fails, with max_retries = 1
         let payload = Box::new(TestJob {
-            counter: counter.clone(),
+            counter,
             should_fail: true,
         });
 

@@ -442,7 +442,7 @@ mod tests {
         let name_clone = name.clone();
         let greeting = Memo::new(move || format!("Hello, {}!", name_clone.get()));
 
-        let greeting_clone = greeting.clone();
+        let greeting_clone = greeting;
         let loud_greeting = Memo::new(move || greeting_clone.get().to_uppercase());
 
         assert_eq!(loud_greeting.get(), "HELLO, ALICE!");

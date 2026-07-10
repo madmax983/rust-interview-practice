@@ -253,8 +253,8 @@ mod tests {
         let l2 = ListNode::from_vec(l2_data.clone());
         let res_brute = add_two_numbers_brute_force(l1, l2);
 
-        let l1 = ListNode::from_vec(l1_data.clone());
-        let l2 = ListNode::from_vec(l2_data.clone());
+        let l1 = ListNode::from_vec(l1_data);
+        let l2 = ListNode::from_vec(l2_data);
         let res_opt = add_two_numbers_optimal(l1, l2);
 
         assert_eq!(res_brute.unwrap().to_vec(), res_opt.unwrap().to_vec());

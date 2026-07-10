@@ -557,7 +557,7 @@ mod tests {
 
         match done_rx.recv_timeout(Duration::from_secs(5)) {
             Ok(result) => assert!(result.is_err(), "call() must error on a closed connection"),
-            Err(_) => panic!("call() hung: reader exit did not wake the blocked caller"),
+            Err(err) => panic!("call() hung: reader exit did not wake the blocked caller: {err}"),
         }
     }
 
@@ -624,9 +624,9 @@ mod tests {
         for i in 0..10 {
             let c = Arc::clone(&client);
             handles.push(thread::spawn(move || {
-                let payload = format!("val:{}", i);
+                let payload = format!("val:{i}");
                 let res = c.call("uppercase", payload.as_bytes()).unwrap();
-                let expected = format!("VAL:{}", i);
+                let expected = format!("VAL:{i}");
                 assert_eq!(String::from_utf8(res).unwrap(), expected);
             }));
         }

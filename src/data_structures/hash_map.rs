@@ -418,10 +418,10 @@ mod tests {
 
         // Ensure all other elements are still reachable
         for i in 0..20 {
-            if i != 10 {
-                assert_eq!(map.get(&i), Some(&i));
-            } else {
+            if i == 10 {
                 assert_eq!(map.get(&i), None);
+            } else {
+                assert_eq!(map.get(&i), Some(&i));
             }
         }
     }

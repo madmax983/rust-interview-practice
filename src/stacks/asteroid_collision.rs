@@ -228,7 +228,7 @@ mod tests {
         let expected: Vec<i32> = vec![];
         assert_eq!(asteroid_collision_brute_force(input.clone()), expected);
         assert_eq!(asteroid_collision_optimized(input.clone()), expected);
-        assert_eq!(asteroid_collision_optimal(input.clone()), expected);
+        assert_eq!(asteroid_collision_optimal(input), expected);
     }
 
     #[test]
@@ -237,7 +237,7 @@ mod tests {
         let expected = vec![10];
         assert_eq!(asteroid_collision_brute_force(input.clone()), expected);
         assert_eq!(asteroid_collision_optimized(input.clone()), expected);
-        assert_eq!(asteroid_collision_optimal(input.clone()), expected);
+        assert_eq!(asteroid_collision_optimal(input), expected);
     }
 
     #[test]
@@ -247,7 +247,7 @@ mod tests {
         let expected = vec![-2, 1, 2];
         assert_eq!(asteroid_collision_brute_force(input.clone()), expected);
         assert_eq!(asteroid_collision_optimized(input.clone()), expected);
-        assert_eq!(asteroid_collision_optimal(input.clone()), expected);
+        assert_eq!(asteroid_collision_optimal(input), expected);
     }
 
     #[test]
@@ -256,7 +256,7 @@ mod tests {
         let expected = vec![-10];
         assert_eq!(asteroid_collision_brute_force(input.clone()), expected);
         assert_eq!(asteroid_collision_optimized(input.clone()), expected);
-        assert_eq!(asteroid_collision_optimal(input.clone()), expected);
+        assert_eq!(asteroid_collision_optimal(input), expected);
     }
 }
 

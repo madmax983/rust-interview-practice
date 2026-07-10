@@ -171,7 +171,7 @@ mod tests {
             expected
         );
         assert_eq!(largest_rectangle_area_optimized(heights.clone()), expected);
-        assert_eq!(largest_rectangle_area_optimal(heights.clone()), expected);
+        assert_eq!(largest_rectangle_area_optimal(heights), expected);
     }
 
     // Edge case: Empty array and single element array
@@ -199,10 +199,7 @@ mod tests {
             largest_rectangle_area_optimized(increasing.clone()),
             expected_inc
         );
-        assert_eq!(
-            largest_rectangle_area_optimal(increasing.clone()),
-            expected_inc
-        );
+        assert_eq!(largest_rectangle_area_optimal(increasing), expected_inc);
 
         let decreasing = vec![5, 4, 3, 2, 1];
         let expected_dec = 9; // Area formed by [5, 4, 3] is min(3)*3 = 9
@@ -214,10 +211,7 @@ mod tests {
             largest_rectangle_area_optimized(decreasing.clone()),
             expected_dec
         );
-        assert_eq!(
-            largest_rectangle_area_optimal(decreasing.clone()),
-            expected_dec
-        );
+        assert_eq!(largest_rectangle_area_optimal(decreasing), expected_dec);
     }
 }
 

@@ -289,8 +289,8 @@ mod tests {
 
         // Verify pruning happened
         let map = bus.subscribers.read().unwrap();
-        let subs = map.get(&Topic::System).unwrap();
-        let list = subs.lock().unwrap();
+        let topic_subs = map.get(&Topic::System).unwrap();
+        let list = topic_subs.lock().unwrap();
         assert_eq!(list.len(), 1);
     }
 

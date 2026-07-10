@@ -332,16 +332,14 @@ pub fn lowest_common_ancestor(
 mod tests {
     use super::*;
 
+    type NodeRef = Rc<RefCell<TreeNode>>;
+
     // Helper to create a leaf node
-    fn leaf(val: i32) -> Rc<RefCell<TreeNode>> {
+    fn leaf(val: i32) -> NodeRef {
         TreeNode::new(val)
     }
 
-    fn create_test_tree() -> (
-        Rc<RefCell<TreeNode>>,
-        Rc<RefCell<TreeNode>>,
-        Rc<RefCell<TreeNode>>,
-    ) {
+    fn create_test_tree() -> (NodeRef, NodeRef, NodeRef) {
         //      3
         //     / \
         //    5   1

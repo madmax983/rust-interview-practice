@@ -275,6 +275,9 @@ impl<T: Deserialize> Deserialize for Option<T> {
 
 #[cfg(test)]
 mod tests {
+    // test-code: serialization roundtrips are bit-exact, so exact float equality is correct.
+    #![allow(clippy::float_cmp)]
+
     use super::*;
 
     #[test]
@@ -379,7 +382,7 @@ mod tests {
 
         impl Deserialize for Player {
             fn deserialize(bytes: &mut &[u8]) -> Result<Self, DecodeError> {
-                Ok(Player {
+                Ok(Self {
                     id: u32::deserialize(bytes)?,
                     name: String::deserialize(bytes)?,
                     score: f32::deserialize(bytes)?,

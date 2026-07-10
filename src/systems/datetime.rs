@@ -305,7 +305,7 @@ mod tests {
     #[test]
     fn test_epoch_conversion_positive() {
         // 2023-10-27T12:30:45Z
-        let ts = 1698409845;
+        let ts = 1_698_409_845;
         let dt = DateTime::from_timestamp(ts);
         assert_eq!(dt.year, 2023);
         assert_eq!(dt.month, 10);

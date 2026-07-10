@@ -1026,6 +1026,7 @@ mod tests {
         //         std::hint::black_box(engine.execute("INSERT INTO t VALUES (1);").unwrap());
         //     });
         // });
-        assert!(true);
+        //
+        // This test intentionally has no runtime assertions; it documents the benchmark setup.
     }
 }

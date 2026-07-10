@@ -184,7 +184,7 @@ mod tests {
         let target = 2;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     #[test]
@@ -193,7 +193,7 @@ mod tests {
         let target = 5;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod tests {
         let target = 5;
         assert_eq!(search_brute_force(nums.clone(), target), 0);
         assert_eq!(search_optimized(nums.clone(), target), 0);
-        assert_eq!(search_optimal(nums.clone(), target), 0);
+        assert_eq!(search_optimal(nums, target), 0);
     }
 
     #[test]
@@ -211,7 +211,7 @@ mod tests {
         let target = 2;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     // Stress / Boundary Cases
@@ -221,7 +221,7 @@ mod tests {
         let target = 1;
         assert_eq!(search_brute_force(nums.clone(), target), 0);
         assert_eq!(search_optimized(nums.clone(), target), 0);
-        assert_eq!(search_optimal(nums.clone(), target), 0);
+        assert_eq!(search_optimal(nums, target), 0);
     }
 
     #[test]
@@ -230,7 +230,7 @@ mod tests {
         let target = 5;
         assert_eq!(search_brute_force(nums.clone(), target), 4);
         assert_eq!(search_optimized(nums.clone(), target), 4);
-        assert_eq!(search_optimal(nums.clone(), target), 4);
+        assert_eq!(search_optimal(nums, target), 4);
     }
 
     #[test]
@@ -239,7 +239,7 @@ mod tests {
         let target = 0;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     #[test]
@@ -248,7 +248,7 @@ mod tests {
         let target = 6;
         assert_eq!(search_brute_force(nums.clone(), target), -1);
         assert_eq!(search_optimized(nums.clone(), target), -1);
-        assert_eq!(search_optimal(nums.clone(), target), -1);
+        assert_eq!(search_optimal(nums, target), -1);
     }
 
     #[test]

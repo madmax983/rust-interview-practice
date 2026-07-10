@@ -247,8 +247,8 @@ mod tests {
         let res_rec = merge_two_lists_optimized(l1, l2);
         assert_eq!(res_rec.unwrap().to_vec(), vec![1, 1, 1, 1, 1]);
 
-        let l1 = ListNode::from_vec(v1.clone());
-        let l2 = ListNode::from_vec(v2.clone());
+        let l1 = ListNode::from_vec(v1);
+        let l2 = ListNode::from_vec(v2);
         let res_opt = merge_two_lists_optimal(l1, l2);
         assert_eq!(res_opt.unwrap().to_vec(), vec![1, 1, 1, 1, 1]);
     }

@@ -153,15 +153,15 @@ pub fn is_valid(s: String) -> bool {
     is_valid_optimal(s)
 }
 
-/// ## Alternative Approaches
-///
-/// - **Early Exit on Odd Lengths**: Since each opening bracket needs a closing bracket,
-///   strings with odd lengths can be immediately returned as `false`.
-/// - **Stackless Validation (Counter approach)**: If there is only ONE type of bracket
-///   (e.g., only `(` and `)`), you can simply use an integer counter instead of a stack,
-///   incrementing on open and decrementing on close (returning false if it goes negative).
-///   This drops space complexity to O(1). However, since there are three types that can
-///   be nested, a stack is strictly required for this problem.
+// ## Alternative Approaches
+//
+// - **Early Exit on Odd Lengths**: Since each opening bracket needs a closing bracket,
+//   strings with odd lengths can be immediately returned as `false`.
+// - **Stackless Validation (Counter approach)**: If there is only ONE type of bracket
+//   (e.g., only `(` and `)`), you can simply use an integer counter instead of a stack,
+//   incrementing on open and decrementing on close (returning false if it goes negative).
+//   This drops space complexity to O(1). However, since there are three types that can
+//   be nested, a stack is strictly required for this problem.
 
 #[cfg(test)]
 mod tests {
@@ -220,9 +220,9 @@ mod tests {
 
     #[test]
     fn test_empty_string() {
-        assert!(is_valid_brute_force("".to_string()));
-        assert!(is_valid_optimal("".to_string()));
-        assert!(is_valid_optimized("".to_string()));
+        assert!(is_valid_brute_force(String::new()));
+        assert!(is_valid_optimal(String::new()));
+        assert!(is_valid_optimized(String::new()));
     }
 
     // Stress/Boundary Tests

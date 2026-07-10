@@ -427,7 +427,7 @@ mod tests {
             .unwrap()
             .as_nanos();
         let count = COUNTER.fetch_add(1, Ordering::Relaxed);
-        dir.push(format!("lsm_test_{}_{}", now, count));
+        dir.push(format!("lsm_test_{now}_{count}"));
         fs::create_dir_all(&dir).unwrap();
         dir
     }

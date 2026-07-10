@@ -232,9 +232,9 @@ mod tests {
 
     #[test]
     fn test_edge_case_empty() {
-        assert_eq!(min_distance_optimal("".to_string(), "".to_string()), 0);
-        assert_eq!(min_distance_optimal("a".to_string(), "".to_string()), 1);
-        assert_eq!(min_distance_optimal("".to_string(), "abc".to_string()), 3);
+        assert_eq!(min_distance_optimal(String::new(), String::new()), 0);
+        assert_eq!(min_distance_optimal("a".to_string(), String::new()), 1);
+        assert_eq!(min_distance_optimal(String::new(), "abc".to_string()), 3);
     }
 
     #[test]

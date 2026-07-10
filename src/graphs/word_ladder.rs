@@ -272,10 +272,7 @@ mod tests {
             word_ladder_optimized(begin_word.clone(), end_word.clone(), word_list.clone()),
             0
         );
-        assert_eq!(
-            word_ladder_optimal(begin_word.clone(), end_word.clone(), word_list.clone()),
-            0
-        );
+        assert_eq!(word_ladder_optimal(begin_word, end_word, word_list), 0);
     }
 
     #[test]
@@ -292,10 +289,7 @@ mod tests {
             word_ladder_optimized(begin_word.clone(), end_word.clone(), word_list.clone()),
             2
         );
-        assert_eq!(
-            word_ladder_optimal(begin_word.clone(), end_word.clone(), word_list.clone()),
-            2
-        );
+        assert_eq!(word_ladder_optimal(begin_word, end_word, word_list), 2);
     }
 
     // Stress/Boundary tests
@@ -313,9 +307,6 @@ mod tests {
             word_ladder_optimized(begin_word.clone(), end_word.clone(), word_list.clone()),
             2
         );
-        assert_eq!(
-            word_ladder_optimal(begin_word.clone(), end_word.clone(), word_list.clone()),
-            2
-        );
+        assert_eq!(word_ladder_optimal(begin_word, end_word, word_list), 2);
     }
 }

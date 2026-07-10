@@ -229,7 +229,7 @@ mod tests {
     use std::thread;
 
     // Use a recent epoch for testing (e.g., 2024-01-01)
-    const TEST_EPOCH: u64 = 1704067200000;
+    const TEST_EPOCH: u64 = 1_704_067_200_000;
 
     #[test]
     fn test_unique_generation() {
@@ -240,7 +240,7 @@ mod tests {
         // This will span multiple milliseconds and test the sequence logic.
         for _ in 0..10_000 {
             let id = generator.generate();
-            assert!(ids.insert(id), "Duplicate ID generated: {}", id);
+            assert!(ids.insert(id), "Duplicate ID generated: {id}");
         }
     }
 

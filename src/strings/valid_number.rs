@@ -290,8 +290,7 @@ mod tests {
         for &s in VALID_CASES {
             assert!(
                 is_number_brute_force(s.to_string()),
-                "Brute force failed for valid case: {}",
-                s
+                "Brute force failed for valid case: {s}"
             );
         }
     }
@@ -301,8 +300,7 @@ mod tests {
         for &s in INVALID_CASES {
             assert!(
                 !is_number_brute_force(s.to_string()),
-                "Brute force failed for invalid case: {}",
-                s
+                "Brute force failed for invalid case: {s}"
             );
         }
     }
@@ -312,8 +310,7 @@ mod tests {
         for &s in VALID_CASES {
             assert!(
                 is_number_optimized(s.to_string()),
-                "Optimized failed for valid case: {}",
-                s
+                "Optimized failed for valid case: {s}"
             );
         }
     }
@@ -323,8 +320,7 @@ mod tests {
         for &s in INVALID_CASES {
             assert!(
                 !is_number_optimized(s.to_string()),
-                "Optimized failed for invalid case: {}",
-                s
+                "Optimized failed for invalid case: {s}"
             );
         }
     }
@@ -334,8 +330,7 @@ mod tests {
         for &s in VALID_CASES {
             assert!(
                 is_number_optimal(s.to_string()),
-                "Optimal failed for valid case: {}",
-                s
+                "Optimal failed for valid case: {s}"
             );
         }
     }
@@ -345,8 +340,7 @@ mod tests {
         for &s in INVALID_CASES {
             assert!(
                 !is_number_optimal(s.to_string()),
-                "Optimal failed for invalid case: {}",
-                s
+                "Optimal failed for invalid case: {s}"
             );
         }
     }
@@ -359,12 +353,8 @@ mod tests {
             let brute = is_number_brute_force(s.to_string());
             let optimized = is_number_optimized(s.to_string());
             let optimal = is_number_optimal(s.to_string());
-            assert_eq!(brute, optimized, "brute vs optimized disagree on: {}", s);
-            assert_eq!(
-                optimized, optimal,
-                "optimized vs optimal disagree on: {}",
-                s
-            );
+            assert_eq!(brute, optimized, "brute vs optimized disagree on: {s}");
+            assert_eq!(optimized, optimal, "optimized vs optimal disagree on: {s}");
         }
     }
 }

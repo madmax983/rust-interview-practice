@@ -356,7 +356,7 @@ mod tests {
         // 3. Worker 1 is busy executing A (and its subtasks).
         // 4. Worker 2 is idle. It should steal B, C, D from Worker 1.
 
-        let counter_clone = counter.clone();
+        let counter_clone = counter;
         pool.execute(move || {
             // This runs on Worker X.
             // Submit 100 tasks to Worker X's local queue.

@@ -157,6 +157,9 @@ pub fn max_depth(root: Option<Box<TreeNode>>) -> i32 {
 
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     // Helper to create a leaf node

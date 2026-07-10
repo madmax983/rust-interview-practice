@@ -141,6 +141,9 @@ pub fn diameter_of_binary_tree(root: Option<Box<TreeNode>>) -> i32 {
 ///   call-stack limits are a strict concern.
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     // Helper to create a leaf node

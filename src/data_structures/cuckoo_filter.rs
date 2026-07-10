@@ -412,7 +412,7 @@ mod tests {
             }
         }
 
-        println!("Inserted {} items into capacity 16", inserted);
+        println!("Inserted {inserted} items into capacity 16");
         assert!(inserted >= 15); // Should fit close to max
         assert!(inserted <= 16); // Hard limit
     }
@@ -433,7 +433,7 @@ mod tests {
             }
         }
 
-        assert!(fp_count < 5, "Too many false positives: {}", fp_count);
+        assert!(fp_count < 5, "Too many false positives: {fp_count}");
     }
 
     #[test]

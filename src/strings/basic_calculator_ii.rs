@@ -310,20 +310,17 @@ mod tests {
             assert_eq!(
                 calculate_brute_force(s.to_string()),
                 expected,
-                "Brute force failed for {}",
-                s
+                "Brute force failed for {s}"
             );
             assert_eq!(
                 calculate_optimized(s.to_string()),
                 expected,
-                "Optimized failed for {}",
-                s
+                "Optimized failed for {s}"
             );
             assert_eq!(
                 calculate_optimal(s.to_string()),
                 expected,
-                "Optimal failed for {}",
-                s
+                "Optimal failed for {s}"
             );
         }
     }

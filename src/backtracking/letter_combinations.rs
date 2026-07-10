@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_empty_input() {
-        let digits = "".to_string();
+        let digits = String::new();
         let expected: Vec<&str> = vec![];
         assert_combinations_eq(letter_combinations(digits), expected);
     }

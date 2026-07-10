@@ -193,7 +193,7 @@ mod tests {
 
         let l1 = ListNode::from_vec(v.clone());
         let l2 = ListNode::from_vec(v.clone());
-        let l3 = ListNode::from_vec(v.clone());
+        let l3 = ListNode::from_vec(v);
 
         let res1 = reverse_list_brute_force(l1);
         let res2 = reverse_list_optimized(l2);

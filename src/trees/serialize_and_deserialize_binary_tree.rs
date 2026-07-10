@@ -175,22 +175,22 @@ impl Default for Codec {
     }
 }
 
-/// # Alternative Approaches
-///
-/// 1. **Breadth-First Search (Level Order)**:
-///    Instead of DFS, use a Queue to serialize level by level. This is often
-///    more intuitive for humans to read but requires slightly more complex
-///    state management (Queue) during deserialization compared to the
-///    implicit stack of recursion.
-///
-/// 2. **Binary Format**:
-///    For production, serializing to a text string "1 2 3 N N" is inefficient.
-///    A binary format (like Protocol Buffers or a custom byte stream) would be
-///    much more compact and faster to parse.
-///
-/// 3. **Parentheses Notation**:
-///    "1(2)(3)" - This is another common format (like Lisp s-expressions),
-///    but parsing it often requires a more complex parser or stack-based approach.
+// # Alternative Approaches
+//
+// 1. **Breadth-First Search (Level Order)**:
+//    Instead of DFS, use a Queue to serialize level by level. This is often
+//    more intuitive for humans to read but requires slightly more complex
+//    state management (Queue) during deserialization compared to the
+//    implicit stack of recursion.
+//
+// 2. **Binary Format**:
+//    For production, serializing to a text string "1 2 3 N N" is inefficient.
+//    A binary format (like Protocol Buffers or a custom byte stream) would be
+//    much more compact and faster to parse.
+//
+// 3. **Parentheses Notation**:
+//    "1(2)(3)" - This is another common format (like Lisp s-expressions),
+//    but parsing it often requires a more complex parser or stack-based approach.
 
 #[cfg(test)]
 mod tests {

@@ -243,6 +243,6 @@ mod tests {
         let expected = rob_optimal(nums.clone());
         assert_eq!(rob_brute_force(nums.clone()), expected);
         assert_eq!(rob_optimized(nums.clone()), expected);
-        assert_eq!(rob_tabulation(nums.clone()), expected);
+        assert_eq!(rob_tabulation(nums), expected);
     }
 }

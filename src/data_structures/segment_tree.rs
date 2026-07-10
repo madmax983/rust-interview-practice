@@ -273,7 +273,7 @@ mod tests {
             "c".to_string(),
             "d".to_string(),
         ];
-        let op = |a: &String, b: &String| format!("{}{}", a, b);
+        let op = |a: &String, b: &String| format!("{a}{b}");
         let st = SegmentTree::new(&data, op, String::new());
 
         assert_eq!(st.query(0, 4), "abcd");

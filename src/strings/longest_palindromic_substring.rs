@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_edge_cases() {
-        let s1 = "".to_string();
+        let s1 = String::new();
         assert_eq!(longest_palindrome(s1), "");
 
         let s2 = "a".to_string();

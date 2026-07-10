@@ -296,11 +296,10 @@ mod tests {
 
     #[test]
     fn test_many0() {
-        let whitespace = take_while(|c| c.is_whitespace());
         // Custom parser to require at least 1 character for a word
         // Need to specify lifetimes to satisfy Rust's closure type inference
-        fn word<'a>(input: &'a str) -> ParseResult<'a, &'a str> {
-            let (next, w) = take_while(|c| c.is_alphabetic()).parse(input)?;
+        fn word(input: &str) -> ParseResult<'_, &str> {
+            let (next, w) = take_while(char::is_alphabetic).parse(input)?;
             if w.is_empty() {
                 Err(ParseError {
                     location: input,
@@ -310,6 +309,8 @@ mod tests {
                 Ok((next, w))
             }
         }
+
+        let whitespace = take_while(char::is_whitespace);
 
         // Parse a word, preceded by optional whitespace
         let ws_word = pair(whitespace, word).map(|(_, w)| w);

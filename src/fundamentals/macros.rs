@@ -771,7 +771,7 @@ mod tests {
         #[derive(Debug, PartialEq)]
         enum Node {
             Leaf(i32),
-            Branch { value: i32, children: Vec<Node> },
+            Branch { value: i32, children: Vec<Self> },
         }
 
         let leaf = tree!(7);

@@ -152,7 +152,7 @@ mod tests {
     // Edge Case tests
     #[test]
     fn test_empty_string() {
-        let input = "".to_string();
+        let input = String::new();
         assert!(is_palindrome_brute_force(input.clone()));
         assert!(is_palindrome_optimized(input.clone()));
         assert!(is_palindrome_optimal(input));

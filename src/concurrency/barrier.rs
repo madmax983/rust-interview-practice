@@ -193,7 +193,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Barrier requires at least 1 thread")]
     fn test_barrier_zero_threads() {
-        Barrier::new(0);
+        let _ = Barrier::new(0);
     }
 
     #[test]

@@ -160,7 +160,7 @@ mod tests {
     use super::*;
 
     fn vec_str(words: &[&str]) -> Vec<String> {
-        words.iter().map(|s| s.to_string()).collect()
+        words.iter().map(std::string::ToString::to_string).collect()
     }
 
     #[test]

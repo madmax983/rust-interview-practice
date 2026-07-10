@@ -339,27 +339,24 @@ mod tests {
         }
 
         fn decode(buf: &[u8]) -> Result<(Self, usize), &'static str> {
-            let mut person = Person::default();
+            let mut person = Self::default();
             let mut offset = 0;
 
             while offset < buf.len() {
                 let (field_number, wire_type, read) = Field::decode_tag(&buf[offset..])?;
                 offset += read;
 
-                match field_number {
-                    1 => {
-                        if wire_type != WireType::Varint {
-                            return Err("Type mismatch");
-                        }
-                        let (val, read) = Varint::decode(&buf[offset..])?;
-                        person.id = val;
-                        offset += read;
+                if field_number == 1 {
+                    if wire_type != WireType::Varint {
+                        return Err("Type mismatch");
                     }
-                    _ => {
-                        // Unknown field, skip it
-                        let read = Field::skip(wire_type, &buf[offset..])?;
-                        offset += read;
-                    }
+                    let (val, read) = Varint::decode(&buf[offset..])?;
+                    person.id = val;
+                    offset += read;
+                } else {
+                    // Unknown field, skip it
+                    let read = Field::skip(wire_type, &buf[offset..])?;
+                    offset += read;
                 }
             }
 

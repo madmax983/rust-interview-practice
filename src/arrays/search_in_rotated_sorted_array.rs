@@ -231,12 +231,12 @@ mod tests {
         let nums = vec![1, 2, 3, 4, 5, 6]; // Fully sorted
         assert_eq!(search(nums.clone(), 1), 0);
         assert_eq!(search(nums.clone(), 6), 5);
-        assert_eq!(search(nums.clone(), 7), -1);
+        assert_eq!(search(nums, 7), -1);
 
         let nums3 = vec![2, 1]; // Smallest rotated
         assert_eq!(search(nums3.clone(), 1), 1);
         assert_eq!(search(nums3.clone(), 2), 0);
-        assert_eq!(search(nums3.clone(), 3), -1);
+        assert_eq!(search(nums3, 3), -1);
     }
 
     #[test]

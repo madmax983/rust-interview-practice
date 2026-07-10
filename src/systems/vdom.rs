@@ -319,8 +319,8 @@ mod tests {
     impl VNode {
         fn to_element(&self) -> &VElement {
             match self {
-                VNode::Element(e) => e,
-                _ => panic!("Not an element"),
+                Self::Element(e) => e,
+                Self::Text(_) => panic!("Not an element"),
             }
         }
     }

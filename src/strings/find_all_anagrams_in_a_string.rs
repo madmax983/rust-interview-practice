@@ -205,7 +205,7 @@ mod tests {
 
         assert_eq!(find_anagrams_brute_force(s.clone(), p.clone()), expected);
         assert_eq!(find_anagrams_optimized(s.clone(), p.clone()), expected);
-        assert_eq!(find_anagrams_optimal(s.clone(), p.clone()), expected);
+        assert_eq!(find_anagrams_optimal(s, p), expected);
     }
 
     #[test]
@@ -216,7 +216,7 @@ mod tests {
 
         assert_eq!(find_anagrams_brute_force(s.clone(), p.clone()), expected);
         assert_eq!(find_anagrams_optimized(s.clone(), p.clone()), expected);
-        assert_eq!(find_anagrams_optimal(s.clone(), p.clone()), expected);
+        assert_eq!(find_anagrams_optimal(s, p), expected);
     }
 
     // Edge Case tests
@@ -228,7 +228,7 @@ mod tests {
 
         assert_eq!(find_anagrams_brute_force(s.clone(), p.clone()), expected);
         assert_eq!(find_anagrams_optimized(s.clone(), p.clone()), expected);
-        assert_eq!(find_anagrams_optimal(s.clone(), p.clone()), expected);
+        assert_eq!(find_anagrams_optimal(s, p), expected);
     }
 
     #[test]
@@ -239,7 +239,7 @@ mod tests {
 
         assert_eq!(find_anagrams_brute_force(s.clone(), p.clone()), expected);
         assert_eq!(find_anagrams_optimized(s.clone(), p.clone()), expected);
-        assert_eq!(find_anagrams_optimal(s.clone(), p.clone()), expected);
+        assert_eq!(find_anagrams_optimal(s, p), expected);
     }
 
     #[test]
@@ -250,7 +250,7 @@ mod tests {
 
         assert_eq!(find_anagrams_brute_force(s.clone(), p.clone()), expected);
         assert_eq!(find_anagrams_optimized(s.clone(), p.clone()), expected);
-        assert_eq!(find_anagrams_optimal(s.clone(), p.clone()), expected);
+        assert_eq!(find_anagrams_optimal(s, p), expected);
     }
 
     // Stress/Boundary tests
@@ -265,6 +265,6 @@ mod tests {
 
         // Testing the optimal and optimized approaches for large inputs
         assert_eq!(find_anagrams_optimized(s.clone(), p.clone()), expected);
-        assert_eq!(find_anagrams_optimal(s.clone(), p.clone()), expected);
+        assert_eq!(find_anagrams_optimal(s, p), expected);
     }
 }

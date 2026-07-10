@@ -268,6 +268,9 @@ impl HyperLogLog {
 
 #[cfg(test)]
 mod tests {
+    // test-code: counts are small in tests, so the u64->i64 error-margin casts cannot wrap.
+    #![allow(clippy::cast_possible_wrap)]
+
     use super::*;
 
     #[test]
@@ -279,7 +282,7 @@ mod tests {
 
         let count = hll.count();
         // For very small N, Linear Counting should be exact if no collisions
-        assert!(count == 3, "Count should be 3, got {}", count);
+        assert!(count == 3, "Count should be 3, got {count}");
     }
 
     #[test]
@@ -303,7 +306,7 @@ mod tests {
         }
 
         let count = hll.count();
-        let error = (count as i64 - n as i64).abs() as f64 / n as f64;
+        let error = (count as i64 - i64::from(n)).abs() as f64 / f64::from(n);
 
         println!(
             "Expected: {}, Got: {}, Error: {:.4}%",
@@ -351,20 +354,19 @@ mod tests {
         let count = hll.count();
         assert!(
             (9..=11).contains(&count),
-            "Expected 10 (+/- 1), got {}",
-            count
+            "Expected 10 (+/- 1), got {count}"
         );
     }
 
     #[test]
     #[should_panic(expected = "Precision p must be between 4 and 16")]
     fn test_invalid_p_low() {
-        HyperLogLog::new(3);
+        let _ = HyperLogLog::new(3);
     }
 
     #[test]
     #[should_panic(expected = "Precision p must be between 4 and 16")]
     fn test_invalid_p_high() {
-        HyperLogLog::new(17);
+        let _ = HyperLogLog::new(17);
     }
 }

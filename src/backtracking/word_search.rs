@@ -241,15 +241,15 @@ pub fn exist(board: Vec<Vec<char>>, word: String) -> bool {
     exist_optimal(board, word)
 }
 
-/// ## Alternative approaches
-///
-/// 1. **Trie (Prefix Tree)**: If searching for *multiple* words (Word Search II), building a Trie of the words allows checking for all words simultaneously during a single DFS traversal.
-///    - *Pros*: O(M * N * 3^L) total for W words, instead of O(W * M * N * 3^L).
-///    - *Cons*: Implementation complexity; overkill for a single word.
-///
-/// 2. **Bitmasking**: If the board size is small (e.g., < 64 cells), a `u64` bitmask can track visited status.
-///    - *Pros*: Faster than `Vec<bool>` or `HashSet`, O(1) space.
-///    - *Cons*: Strictly limited by board size (cannot handle arbitrary N).
+// ## Alternative approaches
+//
+// 1. **Trie (Prefix Tree)**: If searching for *multiple* words (Word Search II), building a Trie of the words allows checking for all words simultaneously during a single DFS traversal.
+//    - *Pros*: O(M * N * 3^L) total for W words, instead of O(W * M * N * 3^L).
+//    - *Cons*: Implementation complexity; overkill for a single word.
+//
+// 2. **Bitmasking**: If the board size is small (e.g., < 64 cells), a `u64` bitmask can track visited status.
+//    - *Pros*: Faster than `Vec<bool>` or `HashSet`, O(1) space.
+//    - *Cons*: Strictly limited by board size (cannot handle arbitrary N).
 
 #[cfg(test)]
 mod tests {

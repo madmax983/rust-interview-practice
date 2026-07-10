@@ -306,8 +306,6 @@ mod tests {
 
     #[test]
     fn test_drop() {
-        let drop_count = Arc::new(AtomicUsize::new(0));
-
         struct DropDetector {
             count: Arc<AtomicUsize>,
         }
@@ -317,6 +315,8 @@ mod tests {
                 self.count.fetch_add(1, Ordering::SeqCst);
             }
         }
+
+        let drop_count = Arc::new(AtomicUsize::new(0));
 
         {
             let cell = OnceCell::new();

@@ -212,12 +212,12 @@ mod tests {
         counts.insert("C", 0);
 
         for i in 0..1000 {
-            let key = format!("key_{}", i);
+            let key = format!("key_{i}");
             let node = ring.get_node(&key).unwrap();
             *counts.get_mut(node.as_str()).unwrap() += 1;
         }
 
-        println!("Distribution: {:?}", counts);
+        println!("Distribution: {counts:?}");
 
         // Check that no node is completely starving (basic sanity check)
         for (_, count) in counts {
@@ -234,8 +234,8 @@ mod tests {
 
         let mut assignments = std::collections::HashMap::new();
         for i in 0..100 {
-            let key = format!("key_{}", i);
-            assignments.insert(key, ring.get_node(&format!("key_{}", i)).unwrap().clone());
+            let key = format!("key_{i}");
+            assignments.insert(key, ring.get_node(&format!("key_{i}")).unwrap().clone());
         }
 
         ring.add_node("C");
@@ -246,8 +246,7 @@ mod tests {
                 // If it moved, it MUST have moved to C
                 assert_eq!(
                     new_node, "C",
-                    "Key moved from {} to {} (not C)",
-                    old_node, new_node
+                    "Key moved from {old_node} to {new_node} (not C)"
                 );
             }
         }

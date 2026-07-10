@@ -236,27 +236,25 @@ impl<K: Ord, V> RedBlackTree<K, V> {
         // Check standard RB properties
         // 1. No red node has a red child
         // 2. Black height is consistent
-        let (consistent_bh, _) = self.check_black_height(self.root.as_ref());
-        let no_consecutive_red = self.check_no_red_red(self.root.as_ref());
+        let (consistent_bh, _) = Self::check_black_height(self.root.as_deref());
+        let no_consecutive_red = Self::check_no_red_red(self.root.as_deref());
 
         consistent_bh && no_consecutive_red
     }
 
     #[cfg(test)]
-    fn check_black_height(&self, node: Option<&Box<Node<K, V>>>) -> (bool, usize) {
-        match node {
-            None => (true, 1), // Null is black
-            Some(n) => {
-                let (lok, lh) = self.check_black_height(n.left.as_ref());
-                let (rok, rh) = self.check_black_height(n.right.as_ref());
-                let bh = lh + if n.color == Color::Black { 1 } else { 0 };
-                (lok && rok && lh == rh, bh)
-            }
-        }
+    fn check_black_height(node: Option<&Node<K, V>>) -> (bool, usize) {
+        node.map_or((true, 1), |n| {
+            // Null is black
+            let (lok, lh) = Self::check_black_height(n.left.as_deref());
+            let (rok, rh) = Self::check_black_height(n.right.as_deref());
+            let bh = lh + usize::from(n.color == Color::Black);
+            (lok && rok && lh == rh, bh)
+        })
     }
 
     #[cfg(test)]
-    fn check_no_red_red(&self, node: Option<&Box<Node<K, V>>>) -> bool {
+    fn check_no_red_red(node: Option<&Node<K, V>>) -> bool {
         match node {
             None => true,
             Some(n) => {
@@ -265,7 +263,8 @@ impl<K: Ord, V> RedBlackTree<K, V> {
                 {
                     return false;
                 }
-                self.check_no_red_red(n.left.as_ref()) && self.check_no_red_red(n.right.as_ref())
+                Self::check_no_red_red(n.left.as_deref())
+                    && Self::check_no_red_red(n.right.as_deref())
             }
         }
     }

@@ -162,6 +162,9 @@ impl SplitMix64 {
 
 #[cfg(test)]
 mod tests {
+    // test-code: bounds are small constants, so the u64->usize index casts cannot truncate.
+    #![allow(clippy::cast_possible_truncation)]
+
     use super::*;
 
     #[test]

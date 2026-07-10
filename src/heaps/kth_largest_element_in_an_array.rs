@@ -172,24 +172,24 @@ mod tests {
         let input1 = vec![1];
         assert_eq!(find_kth_largest_brute_force(input1.clone(), 1), 1);
         assert_eq!(find_kth_largest_optimized(input1.clone(), 1), 1);
-        assert_eq!(find_kth_largest_optimal(input1.clone(), 1), 1);
+        assert_eq!(find_kth_largest_optimal(input1, 1), 1);
 
         // Negative numbers
         let input2 = vec![-1, -1];
         assert_eq!(find_kth_largest_brute_force(input2.clone(), 2), -1);
         assert_eq!(find_kth_largest_optimized(input2.clone(), 2), -1);
-        assert_eq!(find_kth_largest_optimal(input2.clone(), 2), -1);
+        assert_eq!(find_kth_largest_optimal(input2, 2), -1);
 
         // All identical numbers
         let input3 = vec![7, 7, 7, 7, 7];
         assert_eq!(find_kth_largest_brute_force(input3.clone(), 3), 7);
         assert_eq!(find_kth_largest_optimized(input3.clone(), 3), 7);
-        assert_eq!(find_kth_largest_optimal(input3.clone(), 3), 7);
+        assert_eq!(find_kth_largest_optimal(input3, 3), 7);
 
         // Extremely small and large values
         let input4 = vec![-10000, 10000, 0];
         assert_eq!(find_kth_largest_brute_force(input4.clone(), 2), 0);
         assert_eq!(find_kth_largest_optimized(input4.clone(), 2), 0);
-        assert_eq!(find_kth_largest_optimal(input4.clone(), 2), 0);
+        assert_eq!(find_kth_largest_optimal(input4, 2), 0);
     }
 }

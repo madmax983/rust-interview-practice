@@ -70,7 +70,7 @@ mod tests {
     fn test_happy_path() {
         let matrix = vec![vec![1, 3, 5, 7], vec![10, 11, 16, 20], vec![23, 30, 34, 60]];
         assert!(Solution::search_matrix(matrix.clone(), 3));
-        assert!(!Solution::search_matrix(matrix.clone(), 13));
+        assert!(!Solution::search_matrix(matrix, 13));
     }
 
     #[test]
@@ -85,10 +85,10 @@ mod tests {
     fn test_stress_boundaries() {
         let row_matrix = vec![vec![1, 3, 5, 7, 9]];
         assert!(Solution::search_matrix(row_matrix.clone(), 5));
-        assert!(!Solution::search_matrix(row_matrix.clone(), 4));
+        assert!(!Solution::search_matrix(row_matrix, 4));
 
         let col_matrix = vec![vec![1], vec![3], vec![5], vec![7], vec![9]];
         assert!(Solution::search_matrix(col_matrix.clone(), 5));
-        assert!(!Solution::search_matrix(col_matrix.clone(), 4));
+        assert!(!Solution::search_matrix(col_matrix, 4));
     }
 }

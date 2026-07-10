@@ -260,7 +260,7 @@ mod tests {
         let matrix = vec![vec![1, 2, 3]];
         let expected = vec![1, 2, 3];
         assert_eq!(spiral_order_brute_force(matrix.clone()), expected);
-        assert_eq!(spiral_order_optimal(matrix.clone()), expected);
+        assert_eq!(spiral_order_optimal(matrix), expected);
 
         // Single column
         let matrix_col = vec![vec![1], vec![2], vec![3]];

@@ -170,14 +170,12 @@ mod tests {
             assert_eq!(
                 can_partition_optimized(nums.clone()),
                 expected,
-                "2D vs 1D mismatch for {:?}",
-                nums
+                "2D vs 1D mismatch for {nums:?}"
             );
             assert_eq!(
                 can_partition(nums.clone()),
                 expected,
-                "wrapper mismatch for {:?}",
-                nums
+                "wrapper mismatch for {nums:?}"
             );
         }
     }

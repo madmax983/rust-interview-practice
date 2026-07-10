@@ -428,7 +428,7 @@ mod tests {
     #[test]
     fn test_precedence_ordering() {
         // Spec precedence example
-        let ordered = vec![
+        let ordered = [
             "1.0.0-alpha",
             "1.0.0-alpha.1",
             "1.0.0-alpha.beta",
@@ -446,7 +446,7 @@ mod tests {
         parsed.sort();
 
         for (i, v) in parsed.iter().enumerate() {
-            assert_eq!(v, &parsed_clone[i], "Ordering failed at index {}", i);
+            assert_eq!(v, &parsed_clone[i], "Ordering failed at index {i}");
         }
 
         // Additional edge cases

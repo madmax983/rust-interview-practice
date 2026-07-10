@@ -271,6 +271,8 @@ pub fn clone_graph(node: Option<Rc<RefCell<Node>>>) -> Option<Rc<RefCell<Node>>>
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
 
     // Helper to extract adjacency list from graph for easy comparison
@@ -278,15 +280,14 @@ mod tests {
     fn graph_to_adj(node: Option<Rc<RefCell<Node>>>) -> HashMap<i32, Vec<i32>> {
         let mut adj = HashMap::new();
         if let Some(n) = node {
-            let mut visited = HashMap::new();
+            let mut visited = HashSet::new();
             let mut stack = vec![n];
 
             while let Some(curr) = stack.pop() {
                 let val = curr.borrow().val;
-                if visited.contains_key(&val) {
+                if !visited.insert(val) {
                     continue;
                 }
-                visited.insert(val, ());
 
                 let neighbors: Vec<i32> = curr
                     .borrow()

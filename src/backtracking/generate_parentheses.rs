@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn test_zero_case() {
         // Technically constraints say 1 <= n <= 8, but it's good practice to handle 0.
-        let expected: Vec<String> = vec!["".to_string()];
+        let expected: Vec<String> = vec![String::new()];
         assert_eq!(generate_parenthesis_optimal(0), expected);
     }
 }

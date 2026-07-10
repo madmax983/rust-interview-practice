@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn test_repository_pattern_in_memory() {
-        let repo = DefaultUserRepository::default();
+        let repo = DefaultUserRepository;
 
         let new_user = NewUser {
             name: "Alice".to_string(),

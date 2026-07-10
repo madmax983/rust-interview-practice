@@ -162,11 +162,11 @@ mod tests {
         for (value, expected) in test_cases {
             let mut buf = Vec::new();
             encode_u64(&mut buf, value).unwrap();
-            assert_eq!(buf, expected, "Failed encoding {}", value);
+            assert_eq!(buf, expected, "Failed encoding {value}");
 
             let mut cursor = Cursor::new(buf);
             let decoded = decode_u64(&mut cursor).unwrap();
-            assert_eq!(decoded, value, "Failed decoding {}", value);
+            assert_eq!(decoded, value, "Failed decoding {value}");
         }
     }
 
@@ -191,11 +191,11 @@ mod tests {
         for (value, expected) in test_cases {
             let mut buf = Vec::new();
             encode_i64(&mut buf, value).unwrap();
-            assert_eq!(buf, expected, "Failed encoding {}", value);
+            assert_eq!(buf, expected, "Failed encoding {value}");
 
             let mut cursor = Cursor::new(buf);
             let decoded = decode_i64(&mut cursor).unwrap();
-            assert_eq!(decoded, value, "Failed decoding {}", value);
+            assert_eq!(decoded, value, "Failed decoding {value}");
         }
     }
 

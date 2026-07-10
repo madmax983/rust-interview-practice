@@ -190,7 +190,7 @@ mod tests {
         let target = 0;
         assert_eq!(two_sum_brute_force(input.clone(), target), vec![1, 2]);
         assert_eq!(two_sum_optimized(input.clone(), target), vec![1, 2]);
-        assert_eq!(two_sum_optimal(input.clone(), target), vec![1, 2]);
+        assert_eq!(two_sum_optimal(input, target), vec![1, 2]);
     }
 
     #[test]

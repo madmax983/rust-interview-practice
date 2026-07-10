@@ -566,7 +566,7 @@ mod tests {
         }
         let duration = start.elapsed();
         // Just printing for visibility, assert is mainly that it finishes quickly.
-        println!("Inserted 10k items in {:?}", duration);
+        println!("Inserted 10k items in {duration:?}");
         assert!(duration.as_secs() < 1);
     }
 }

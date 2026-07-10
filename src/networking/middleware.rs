@@ -354,7 +354,7 @@ mod tests {
         type Err = ();
 
         fn call(&self, req: String) -> Result<Self::Res, Self::Err> {
-            Ok(format!("ECHO: {}", req))
+            Ok(format!("ECHO: {req}"))
         }
     }
 

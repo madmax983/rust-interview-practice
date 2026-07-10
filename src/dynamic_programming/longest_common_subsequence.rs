@@ -266,11 +266,11 @@ mod tests {
     fn test_edge_cases() {
         // One string is empty
         assert_eq!(
-            longest_common_subsequence("".to_string(), "abc".to_string()),
+            longest_common_subsequence(String::new(), "abc".to_string()),
             0
         );
         assert_eq!(
-            longest_common_subsequence("abc".to_string(), "".to_string()),
+            longest_common_subsequence("abc".to_string(), String::new()),
             0
         );
         // Single characters

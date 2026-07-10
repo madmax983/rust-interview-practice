@@ -201,7 +201,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Index out of bounds")]
     fn test_out_of_bounds() {
         let mut uf = UnionFind::new(5);
         uf.find(10);

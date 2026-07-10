@@ -189,7 +189,7 @@ mod tests {
         let points = vec![vec![1, 3], vec![-2, 2]];
         let k = 1;
         let expected = vec![vec![-2, 2]];
-        assert_same_points(k_closest_brute_force(points.clone(), k), expected.clone());
+        assert_same_points(k_closest_brute_force(points, k), expected);
     }
 
     #[test]
@@ -197,7 +197,7 @@ mod tests {
         let points = vec![vec![3, 3], vec![5, -1], vec![-2, 4]];
         let k = 2;
         let expected = vec![vec![3, 3], vec![-2, 4]];
-        assert_same_points(k_closest_optimized(points.clone(), k), expected.clone());
+        assert_same_points(k_closest_optimized(points, k), expected);
     }
 
     #[test]
@@ -205,7 +205,7 @@ mod tests {
         let points = vec![vec![3, 3], vec![5, -1], vec![-2, 4]];
         let k = 2;
         let expected = vec![vec![3, 3], vec![-2, 4]];
-        assert_same_points(k_closest_optimal(points.clone(), k), expected.clone());
+        assert_same_points(k_closest_optimal(points, k), expected);
     }
 
     #[test]
@@ -215,7 +215,7 @@ mod tests {
         let expected = vec![vec![1, 3], vec![-2, 2], vec![2, -2]];
         assert_same_points(k_closest_optimal(points.clone(), k), expected.clone());
         assert_same_points(k_closest_optimized(points.clone(), k), expected.clone());
-        assert_same_points(k_closest_brute_force(points.clone(), k), expected.clone());
+        assert_same_points(k_closest_brute_force(points, k), expected);
     }
 
     #[test]
@@ -224,7 +224,7 @@ mod tests {
         let points = vec![vec![1, 1], vec![-1, 1], vec![1, -1], vec![-1, -1]];
         let k = 2;
         // Any 2 points are valid, but we need to verify length and that they are drawn from the original.
-        let result = k_closest_optimal(points.clone(), k);
+        let result = k_closest_optimal(points, k);
         assert_eq!(result.len(), 2);
         for p in result {
             assert_eq!(p[0] * p[0] + p[1] * p[1], 2);

@@ -166,14 +166,14 @@ pub fn length_of_lis(nums: Vec<i32>) -> i32 {
     length_of_lis_optimal(nums)
 }
 
-/// Alternative Approach: Segment Tree
-/// We can use a Segment Tree or Fenwick Tree (Binary Indexed Tree) to query the maximum LIS length
-/// for values smaller than current `nums[i]` in O(log M) time, where M is the range of values.
-/// This is useful if we need to count the number of LIS or handle updates.
-///
-/// Alternative Approach: Printing the Subsequence
-/// To reconstruct the actual LIS, we need to store the `predecessor` index for each element
-/// in the DP or Patience Sort approach, then backtrack from the end.
+// Alternative Approach: Segment Tree
+// We can use a Segment Tree or Fenwick Tree (Binary Indexed Tree) to query the maximum LIS length
+// for values smaller than current `nums[i]` in O(log M) time, where M is the range of values.
+// This is useful if we need to count the number of LIS or handle updates.
+//
+// Alternative Approach: Printing the Subsequence
+// To reconstruct the actual LIS, we need to store the `predecessor` index for each element
+// in the DP or Patience Sort approach, then backtrack from the end.
 
 #[cfg(test)]
 mod tests {
@@ -203,31 +203,31 @@ mod tests {
         let empty: Vec<i32> = vec![];
         assert_eq!(length_of_lis_brute_force(empty.clone()), 0);
         assert_eq!(length_of_lis_optimized(empty.clone()), 0);
-        assert_eq!(length_of_lis_optimal(empty.clone()), 0);
+        assert_eq!(length_of_lis_optimal(empty), 0);
 
         // Case 2: Sorted
         let sorted = vec![1, 2, 3, 4, 5];
         assert_eq!(length_of_lis_brute_force(sorted.clone()), 5);
         assert_eq!(length_of_lis_optimized(sorted.clone()), 5);
-        assert_eq!(length_of_lis_optimal(sorted.clone()), 5);
+        assert_eq!(length_of_lis_optimal(sorted), 5);
 
         // Case 3: Reverse Sorted
         let reverse = vec![5, 4, 3, 2, 1];
         assert_eq!(length_of_lis_brute_force(reverse.clone()), 1);
         assert_eq!(length_of_lis_optimized(reverse.clone()), 1);
-        assert_eq!(length_of_lis_optimal(reverse.clone()), 1);
+        assert_eq!(length_of_lis_optimal(reverse), 1);
 
         // Case 4: Duplicates
         let dups = vec![7, 7, 7, 7];
         assert_eq!(length_of_lis_brute_force(dups.clone()), 1);
         assert_eq!(length_of_lis_optimized(dups.clone()), 1);
-        assert_eq!(length_of_lis_optimal(dups.clone()), 1);
+        assert_eq!(length_of_lis_optimal(dups), 1);
 
         // Case 5: Wiggle
         let wiggle = vec![1, 3, 6, 7, 9, 4, 10, 5, 6];
         // LIS: [1, 3, 6, 7, 9, 10] -> 6
         assert_eq!(length_of_lis_brute_force(wiggle.clone()), 6);
         assert_eq!(length_of_lis_optimized(wiggle.clone()), 6);
-        assert_eq!(length_of_lis_optimal(wiggle.clone()), 6);
+        assert_eq!(length_of_lis_optimal(wiggle), 6);
     }
 }

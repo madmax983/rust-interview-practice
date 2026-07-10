@@ -216,7 +216,7 @@ mod tests {
         container.register_transient(move || {
             let count = counter_clone.fetch_add(1, Ordering::SeqCst);
             MockService {
-                value: count as i32,
+                value: i32::try_from(count).unwrap(),
             }
         });
 

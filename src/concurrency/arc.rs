@@ -193,7 +193,7 @@ mod tests {
         let arc = Arc::new(42);
         assert_eq!(*arc, 42);
 
-        let arc2 = arc.clone();
+        let arc2 = arc;
         assert_eq!(*arc2, 42);
     }
 

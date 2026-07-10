@@ -196,6 +196,9 @@ pub fn is_symmetric(root: Option<Box<TreeNode>>) -> bool {
 
 #[cfg(test)]
 mod tests {
+    // test-code: helpers return Option<Box<TreeNode>> to match the tree's child field type.
+    #![allow(clippy::unnecessary_wraps)]
+
     use super::*;
 
     fn build_symmetric_tree() -> Option<Box<TreeNode>> {

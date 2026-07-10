@@ -318,15 +318,11 @@ mod tests {
             }
         }
 
-        let actual_rate = false_positives as f64 / trials as f64;
-        println!("Expected FPR: {}, Actual FPR: {}", p, actual_rate);
+        let actual_rate = f64::from(false_positives) / trials as f64;
+        println!("Expected FPR: {p}, Actual FPR: {actual_rate}");
 
         // Allow some variance, but it shouldn't be way off (e.g. > 2*p)
-        assert!(
-            actual_rate < p * 2.0 + 0.01,
-            "FPR too high: {}",
-            actual_rate
-        );
+        assert!(actual_rate < p * 2.0 + 0.01, "FPR too high: {actual_rate}");
     }
 
     #[test]
@@ -363,7 +359,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = format!("test_bloom_filter_{}.bin", now);
+        let path = format!("test_bloom_filter_{now}.bin");
 
         let mut bf = BloomFilter::new(100, 0.01);
         bf.add("persist");

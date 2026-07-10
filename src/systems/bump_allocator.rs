@@ -207,8 +207,8 @@ mod tests {
         let val = arena.alloc(100u32);
 
         // Check alignment
-        let ptr_addr = val as *const _ as usize;
-        assert_eq!(ptr_addr % 4, 0, "Address {} is not aligned to 4", ptr_addr);
+        let ptr_addr = std::ptr::from_ref(val) as usize;
+        assert_eq!(ptr_addr % 4, 0, "Address {ptr_addr} is not aligned to 4");
     }
 
     #[test]

@@ -222,7 +222,7 @@ mod tests {
         // Build a string "A B C D E F ..." repeating many times.
         let mut s = String::with_capacity(100_000);
         for i in 0..10_000 {
-            let c = (b'A' + (i % 26) as u8) as char;
+            let c = (b'A' + u8::try_from(i % 26).unwrap()) as char;
             s.push(c);
         }
         let k = 50;

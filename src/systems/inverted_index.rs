@@ -393,8 +393,8 @@ mod tests {
         assert_eq!(engine.documents.get(&1).unwrap().total_terms, 1);
 
         // Stale terms must no longer reference doc 1 (Invariant #2).
-        assert!(engine.index.get("a").is_none());
-        assert!(engine.index.get("b").is_none());
+        assert!(!engine.index.contains_key("a"));
+        assert!(!engine.index.contains_key("b"));
 
         // The new term references doc 1 exactly once (no duplicate postings).
         let c_postings = engine.index.get("c").unwrap();

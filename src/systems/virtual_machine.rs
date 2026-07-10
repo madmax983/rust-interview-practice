@@ -437,6 +437,9 @@ impl Default for VM {
 
 #[cfg(test)]
 mod tests {
+    // test-code: constant indices are small and cast to u8 bytecode operands by design.
+    #![allow(clippy::cast_possible_truncation)]
+
     use super::*;
 
     #[test]

@@ -472,7 +472,7 @@ mod tests {
 
     struct Node {
         val: i32,
-        next: RefCell<Option<Gc<Node>>>,
+        next: RefCell<Option<Gc<Self>>>,
     }
 
     impl Trace for Node {

@@ -107,10 +107,10 @@ impl TimeMapVec {
     }
 }
 
-/// Alternative approaches:
-/// 1. `binary_search_by_key`: You could use `values.binary_search_by_key(&timestamp, |&(ts, _)| ts)`.
-///    However, it returns `Result<usize, usize>`, which requires a `match` to handle `Ok` (exact match)
-///    and `Err` (insertion point). `partition_point` expresses the "less than or equal to" intent more cleanly.
+// Alternative approaches:
+// 1. `binary_search_by_key`: You could use `values.binary_search_by_key(&timestamp, |&(ts, _)| ts)`.
+//    However, it returns `Result<usize, usize>`, which requires a `match` to handle `Ok` (exact match)
+//    and `Err` (insertion point). `partition_point` expresses the "less than or equal to" intent more cleanly.
 
 #[cfg(test)]
 mod tests {
@@ -160,7 +160,7 @@ mod tests {
         let mut time_map = TimeMapVec::new();
 
         for i in 1..=100 {
-            time_map.set(format!("key{}", i % 5), format!("val{}", i), i);
+            time_map.set(format!("key{}", i % 5), format!("val{i}"), i);
         }
 
         assert_eq!(time_map.get("key0", 50), "val50");

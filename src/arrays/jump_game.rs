@@ -181,23 +181,23 @@ mod tests {
 
     #[test]
     fn test_can_jump_happy_path() {
-        assert_eq!(can_jump(vec![2, 3, 1, 1, 4]), true);
-        assert_eq!(can_jump_brute_force(vec![2, 3, 1, 1, 4]), true);
-        assert_eq!(can_jump_optimized(vec![2, 3, 1, 1, 4]), true);
-        assert_eq!(can_jump_optimal(vec![2, 3, 1, 1, 4]), true);
+        assert!(can_jump(vec![2, 3, 1, 1, 4]));
+        assert!(can_jump_brute_force(vec![2, 3, 1, 1, 4]));
+        assert!(can_jump_optimized(vec![2, 3, 1, 1, 4]));
+        assert!(can_jump_optimal(vec![2, 3, 1, 1, 4]));
     }
 
     #[test]
     fn test_can_jump_edge_cases() {
         // Failing path
-        assert_eq!(can_jump_brute_force(vec![3, 2, 1, 0, 4]), false);
-        assert_eq!(can_jump_optimized(vec![3, 2, 1, 0, 4]), false);
-        assert_eq!(can_jump_optimal(vec![3, 2, 1, 0, 4]), false);
+        assert!(!can_jump_brute_force(vec![3, 2, 1, 0, 4]));
+        assert!(!can_jump_optimized(vec![3, 2, 1, 0, 4]));
+        assert!(!can_jump_optimal(vec![3, 2, 1, 0, 4]));
 
         // Single element
-        assert_eq!(can_jump_brute_force(vec![0]), true);
-        assert_eq!(can_jump_optimized(vec![0]), true);
-        assert_eq!(can_jump_optimal(vec![0]), true);
+        assert!(can_jump_brute_force(vec![0]));
+        assert!(can_jump_optimized(vec![0]));
+        assert!(can_jump_optimal(vec![0]));
     }
 
     #[test]
@@ -224,13 +224,13 @@ mod tests {
         // Vector of 10,000 ones ending in 0.
         let mut nums = vec![1; 10000];
         nums.push(0);
-        assert_eq!(can_jump(nums.clone()), true);
-        assert_eq!(can_jump_optimized(nums), true);
+        assert!(can_jump(nums.clone()));
+        assert!(can_jump_optimized(nums));
 
         // Vector of 10,000 zeros (except first element). Should fail immediately.
         let mut fail_nums = vec![0; 10000];
         fail_nums[0] = 0;
-        assert_eq!(can_jump(fail_nums.clone()), false);
-        assert_eq!(can_jump_optimized(fail_nums), false);
+        assert!(!can_jump(fail_nums.clone()));
+        assert!(!can_jump_optimized(fail_nums));
     }
 }

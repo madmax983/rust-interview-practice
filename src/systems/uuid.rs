@@ -223,7 +223,7 @@ mod tests {
         // Manually construct a known UUID
         let mut bytes = [0u8; 16];
         for (i, b) in bytes.iter_mut().enumerate() {
-            *b = i as u8;
+            *b = u8::try_from(i).unwrap();
         }
 
         // Apply v4 bits to make it a technically valid layout (even though not random)
