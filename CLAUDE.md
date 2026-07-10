@@ -97,7 +97,7 @@ that are essential for fluent coding — patterns you'll type repeatedly in any 
   `--features async-parallel`.
 - `serde_patterns.rs` — serde serialization/deserialization patterns. Requires
   `--features serde-patterns`.
-- `cli_patterns.rs` — ratatui TUI development (components, layouts, events). Requires
+- `cli_patterns.rs` — ratatui 0.29 TUI development (components, layouts, events). Requires
   `--features cli-patterns`.
 
 ## Feature Flags
@@ -108,7 +108,7 @@ All feature flags are declared in `Cargo.toml`. Everything except `crc32fast` is
 |---------|----------------|---------|
 | `async-parallel` | tokio, tokio-stream, futures, rayon | `fundamentals::async_and_parallel` |
 | `serde-patterns` | serde, serde_json, serde_yaml, toml, bincode | `fundamentals::serde_patterns` |
-| `cli-patterns` | ratatui, crossterm, clap | `fundamentals::cli_patterns` |
+| `cli-patterns` | ratatui 0.29, crossterm, clap | `fundamentals::cli_patterns` |
 | `testing-extras` | proptest | property-based testing helpers |
 | `simd-patterns` | *(nothing)* | **no-op**, retained for backward compatibility only |
 
@@ -281,6 +281,20 @@ cargo fmt
 cargo clippy -- -W clippy::pedantic -W clippy::nursery
 cargo test
 ```
+
+## Continuous Integration
+
+CI runs on every push and pull request to `trunk` via `.github/workflows/ci.yml`.
+It has three jobs:
+
+- **fmt** — `cargo fmt --all -- --check` (blocking).
+- **test & build** — `cargo test` on default features, `cargo test --features serde-patterns`,
+  and builds for `cli-patterns`, `async-parallel`, and `--all-features` on stable (blocking).
+- **clippy** — `cargo clippy --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
+  -D warnings`, currently **non-blocking** (`continue-on-error: true`) while the repo-wide lint
+  sweep finishes; flip it to blocking once the sweep lands.
+
+Run these locally before pushing to keep CI green.
 
 ## Testing Standards
 
