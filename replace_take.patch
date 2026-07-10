@@ -1,6 +1,0 @@
-<<<<<<< SEARCH
-        let peers = self.peers.clone();
-        for peer in peers {
-=======
-        for &peer in &self.peers {
->>>>>>> REPLACE
