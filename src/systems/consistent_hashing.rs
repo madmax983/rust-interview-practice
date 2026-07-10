@@ -63,8 +63,8 @@ impl ConsistentHashRing {
     ///
     /// # Arguments
     /// * `virtual_nodes` - Number of points on the ring each node is responsible for.
-    ///                     Higher values provide better distribution balance but increase memory/lookup cost.
-    ///                     (e.g., 100-200 is common in production).
+    ///   Higher values provide better distribution balance but increase memory/lookup cost.
+    ///   (e.g., 100-200 is common in production).
     #[must_use] 
     pub const fn new(virtual_nodes: usize) -> Self {
         Self {
@@ -79,7 +79,7 @@ impl ConsistentHashRing {
         let mut newly_added = false;
         for i in 0..self.virtual_nodes {
             let key = format!("{node_id}:{i}");
-            let hash = self.hash_key(&key);
+            let hash = Self::hash_key(&key);
             if self.ring.insert(hash, node_id.to_string()).is_none() {
                 newly_added = true;
             }
@@ -101,7 +101,7 @@ impl ConsistentHashRing {
         let mut newly_removed = false;
         for i in 0..self.virtual_nodes {
             let key = format!("{node_id}:{i}");
-            let hash = self.hash_key(&key);
+            let hash = Self::hash_key(&key);
             // We only remove if the value matches, in case of hash collision (unlikely but possible)
             // GOTCHA: Cannot remove while holding a reference from get()
             let should_remove = self.ring.get(&hash).is_some_and(|val| val == node_id);
@@ -124,7 +124,7 @@ impl ConsistentHashRing {
             return None;
         }
 
-        let hash = self.hash_key(key);
+        let hash = Self::hash_key(key);
 
         // RUST INSIGHT:
         // BTreeMap::range gives us an iterator over entries with keys >= hash.
@@ -139,7 +139,7 @@ impl ConsistentHashRing {
     }
 
     /// Helper to hash a key using `DefaultHasher`.
-    fn hash_key(&self, key: &str) -> u64 {
+    fn hash_key(key: &str) -> u64 {
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
         hasher.finish()

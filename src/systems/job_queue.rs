@@ -18,6 +18,9 @@
 //! signaling with condition variables, and how to safely isolate failing tasks so they don't
 //! crash the main event loop.
 
+// The queue-state lock is intentionally held across the enqueue/dequeue critical sections.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::error::Error;
@@ -85,6 +88,10 @@ pub type JobId = String;
 /// mutable state without risking partial-state leaks between retries. If a job requires
 /// mutable state, the implementer is forced to use interior mutability (e.g., `Mutex`, `Atomic`).
 pub trait Runnable: Send + 'static {
+    /// Executes the job's work.
+    ///
+    /// # Errors
+    /// Returns `Err` if the job fails; the queue will retry it up to its retry limit.
     fn run(&self) -> Result<(), Box<dyn Error + Send + Sync>>;
 }
 
@@ -126,7 +133,7 @@ impl fmt::Debug for Job {
             .field("queue", &self.queue)
             .field("attempts", &self.attempts)
             .field("status", &self.status)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -213,6 +220,9 @@ impl JobQueue {
     }
 
     /// Enqueues a job for immediate execution.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
     pub fn enqueue(&self, job: Job) {
         // PRODUCTION NOTE: In a real system (Redis/Postgres), enqueueing is an atomic transaction
         // that ensures durability before signaling workers.
@@ -230,6 +240,9 @@ impl JobQueue {
     }
 
     /// Schedules a job to be executed after a specific delay.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
     pub fn enqueue_in(&self, job: Job, delay: Duration) {
         let execute_at = Instant::now() + delay;
         let mut state = self.state.lock().unwrap();
@@ -305,6 +318,9 @@ impl JobQueue {
     }
 
     /// Signals all workers to shut down.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
     pub fn shutdown(&self) {
         let mut state = self.state.lock().unwrap();
         state.is_shutting_down = true;
@@ -312,6 +328,9 @@ impl JobQueue {
     }
 
     /// Returns the number of jobs currently in the dead letter queue.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
     #[must_use]
     pub fn dead_letter_count(&self) -> usize {
         self.state.lock().unwrap().dead_letters.len()
@@ -328,7 +347,6 @@ impl Default for JobQueue {
 pub struct Worker {
     id: usize,
     queue_name: String,
-    job_queue: JobQueue,
     handle: Option<thread::JoinHandle<()>>,
 }
 
@@ -338,7 +356,8 @@ impl Worker {
     pub fn start(id: usize, queue_name: impl Into<String>, job_queue: JobQueue) -> Self {
         let queue_name = queue_name.into();
         let queue_name_clone = queue_name.clone();
-        let job_queue_clone = job_queue.clone();
+        // The worker thread takes sole ownership of this handle to the shared queue.
+        let job_queue_clone = job_queue;
 
         let handle = thread::spawn(move || {
             loop {
@@ -380,9 +399,20 @@ impl Worker {
         Self {
             id,
             queue_name,
-            job_queue,
             handle: Some(handle),
         }
+    }
+
+    /// Returns this worker's numeric identifier.
+    #[must_use]
+    pub const fn id(&self) -> usize {
+        self.id
+    }
+
+    /// Returns the name of the queue this worker polls.
+    #[must_use]
+    pub fn queue_name(&self) -> &str {
+        &self.queue_name
     }
 
     /// Waits for the worker thread to finish.
@@ -450,6 +480,10 @@ mod tests {
         let counter = Arc::new(AtomicUsize::new(0));
 
         let mut worker = Worker::start(1, "default", queue.clone());
+
+        // Worker exposes its identity and bound queue.
+        assert_eq!(worker.id(), 1);
+        assert_eq!(worker.queue_name(), "default");
 
         // Enqueue 5 jobs
         for _ in 0..5 {

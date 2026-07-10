@@ -15,6 +15,9 @@
 //! leap year rules, and how to safely cast and calculate complex offsets. It exposes the hidden
 //! complexity of what seems like simple "time math".
 
+// Truncation and sign reinterpretation are intentional in this calendar/epoch bit math.
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+
 use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -94,6 +97,9 @@ impl DateTime {
     }
 
     /// Returns the current UTC `DateTime` using system time.
+    ///
+    /// # Panics
+    /// Panics if the system clock is set before the UNIX epoch (1970-01-01).
     #[must_use]
     pub fn now() -> Self {
         // RUST INSIGHT: `SystemTime` handles the OS-level interaction to get the current time,

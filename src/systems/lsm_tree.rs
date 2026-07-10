@@ -47,6 +47,11 @@
 //!
 //! *M = items in `MemTable`, K = number of `SSTables`, S = items per `SSTable`.*
 //!
+// Truncating usize lengths to u32 on-disk fields is intentional in this SSTable format.
+#![allow(clippy::cast_possible_truncation)]
+// MemTable/SSTable locks are intentionally held across flush/read critical sections.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::BTreeMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufReader, BufWriter, Read, Seek, SeekFrom, Write};
@@ -63,8 +68,22 @@ use std::sync::{Mutex, RwLock};
 /// (e.g., swapping a simple `HashMap` for this LSM Tree) without changing the
 /// consuming application code.
 pub trait KeyValueStore<K, V> {
+    /// Inserts or updates a key with the given value.
+    ///
+    /// # Errors
+    /// Returns `Err` if persisting the write (e.g. flushing the `MemTable` to an `SSTable`) fails.
     fn put(&self, key: K, value: V) -> io::Result<()>;
+
+    /// Looks up the current value for a key.
+    ///
+    /// # Errors
+    /// Returns `Err` if reading from an `SSTable` on disk fails.
     fn get(&self, key: &K) -> io::Result<Option<Value>>;
+
+    /// Deletes a key by writing a tombstone.
+    ///
+    /// # Errors
+    /// Returns `Err` if persisting the tombstone (e.g. flushing to disk) fails.
     fn delete(&self, key: K) -> io::Result<()>;
 }
 
@@ -207,11 +226,10 @@ impl SSTable {
             if &key == target_key {
                 if v_len_marker == TOMBSTONE_MARKER {
                     return Ok(Some(Entry::Tombstone));
-                } else {
-                    let mut val = vec![0u8; v_len_marker as usize];
-                    reader.read_exact(&mut val)?;
-                    return Ok(Some(Entry::Data(val)));
                 }
+                let mut val = vec![0u8; v_len_marker as usize];
+                reader.read_exact(&mut val)?;
+                return Ok(Some(Entry::Data(val)));
             }
             // Skip Value if not target
             if v_len_marker != TOMBSTONE_MARKER {
@@ -277,6 +295,9 @@ impl<K: AsRef<[u8]>, V: AsRef<[u8]>> KeyValueStore<K, V> for LsmTree {
 
 impl LsmTree {
     /// Opens or creates an LSM tree in the specified directory.
+    ///
+    /// # Errors
+    /// Returns `Err` if the directory cannot be created or existing `SSTable` files cannot be read.
     pub fn open<P: AsRef<Path>>(path: P, flush_threshold: usize) -> io::Result<Self> {
         let base_path = path.as_ref().to_path_buf();
         if !base_path.exists() {
@@ -364,6 +385,9 @@ impl LsmTree {
     }
 
     /// Explicitly forces a flush of the `MemTable` to disk.
+    ///
+    /// # Errors
+    /// Returns `Err` if writing the new `SSTable` to disk fails.
     pub fn force_flush(&self) -> io::Result<()> {
         self.flush_memtable()
     }

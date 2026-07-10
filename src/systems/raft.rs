@@ -209,10 +209,10 @@ impl<T: Clone> RaftNode<T> {
 
         // Extract term from message to check if we need to step down
         let msg_term = match &env.msg {
-            Message::RequestVote { term, .. } => *term,
-            Message::RequestVoteResponse { term, .. } => *term,
-            Message::AppendEntries { term, .. } => *term,
-            Message::AppendEntriesResponse { term, .. } => *term,
+            Message::RequestVote { term, .. }
+            | Message::RequestVoteResponse { term, .. }
+            | Message::AppendEntries { term, .. }
+            | Message::AppendEntriesResponse { term, .. } => *term,
         };
 
         // RUST INSIGHT: We handle the common term-checking logic up front.
@@ -251,7 +251,7 @@ impl<T: Clone> RaftNode<T> {
                     leader_id,
                     prev_log_index,
                     prev_log_term,
-                    entries,
+                    &entries,
                     leader_commit,
                 );
             }
@@ -373,6 +373,8 @@ impl<T: Clone> RaftNode<T> {
         }
     }
 
+    // Arguments mirror the fields of the `AppendEntries` RPC message.
+    #[allow(clippy::too_many_arguments)]
     fn handle_append_entries(
         &mut self,
         from: u64,
@@ -380,7 +382,7 @@ impl<T: Clone> RaftNode<T> {
         _leader_id: u64,
         prev_log_index: usize,
         prev_log_term: u64,
-        entries: Vec<LogEntry<T>>,
+        entries: &[LogEntry<T>],
         leader_commit: usize,
     ) {
         // If we are a candidate and we receive an AppendEntries with a term >= current_term,

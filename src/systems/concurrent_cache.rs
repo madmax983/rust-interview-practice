@@ -14,6 +14,9 @@
 //! segments, reducing contention by a factor of `N`. You'll learn how to map keys to shards and
 //! coordinate locking.
 
+// Truncating a 64-bit hash to a shard index is intentional.
+#![allow(clippy::cast_possible_truncation)]
+
 use crate::systems::lru_cache::LRUCache;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -46,7 +49,10 @@ impl<K: Hash + Eq + Clone + Send + 'static, V: Send + 'static> ConcurrentLruCach
     /// Creates a new Concurrent LRU Cache.
     /// `capacity` is the total capacity across all shards.
     /// `num_shards` should be a power of two for better distribution (though we use modulo here for simplicity).
-    #[must_use] 
+    ///
+    /// # Panics
+    /// Panics if `capacity` or `num_shards` is 0.
+    #[must_use]
     pub fn new(capacity: usize, num_shards: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");
         assert!(num_shards > 0, "Number of shards must be greater than 0");
@@ -68,6 +74,9 @@ impl<K: Hash + Eq + Clone + Send + 'static, V: Send + 'static> ConcurrentLruCach
     }
 
     /// Gets the value associated with the key.
+    ///
+    /// # Panics
+    /// Panics if the shard's mutex is poisoned (a thread panicked while holding the lock).
     pub fn get(&self, key: &K) -> Option<V>
     where
         V: Clone,
@@ -83,6 +92,9 @@ impl<K: Hash + Eq + Clone + Send + 'static, V: Send + 'static> ConcurrentLruCach
     }
 
     /// Inserts a key-value pair into the cache.
+    ///
+    /// # Panics
+    /// Panics if the shard's mutex is poisoned (a thread panicked while holding the lock).
     pub fn put(&self, key: K, val: V) {
         let idx = self.get_shard_index(&key);
         let mut shard = self.shards[idx].lock().unwrap();

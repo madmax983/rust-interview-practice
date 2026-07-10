@@ -189,11 +189,16 @@ pub struct ARCCache<K, V> {
 // The `map` owns the nodes (conceptually), or rather the `ARCCache` owns the allocated Boxes.
 // We implement Send/Sync manually as NonNull is !Send/!Sync, but our usage is safe because
 // we never expose raw pointers and the struct owns all data it points to.
+// Send is upheld manually (see SAFETY note above); the raw NonNull fields are owned exclusively.
+#[allow(clippy::non_send_fields_in_send_ty)]
 unsafe impl<K: Send, V: Send> Send for ARCCache<K, V> {}
 unsafe impl<K: Sync, V: Sync> Sync for ARCCache<K, V> {}
 
 impl<K: Hash + Eq + Clone + fmt::Debug, V> ARCCache<K, V> {
     /// Creates a new ARC Cache with the given capacity.
+    ///
+    /// # Panics
+    /// Panics if `capacity` is 0.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");

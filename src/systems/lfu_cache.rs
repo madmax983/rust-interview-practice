@@ -172,11 +172,16 @@ pub struct LFUCache<K, V> {
 // UNSAFE JUSTIFICATION:
 // Same as LRU, we own the nodes via the `key_map`. The `freq_map` just organizes them.
 // We implement Send/Sync manually because `NonNull` is !Send/!Sync.
+// Send is upheld manually (see SAFETY note above); the raw NonNull fields are owned exclusively.
+#[allow(clippy::non_send_fields_in_send_ty)]
 unsafe impl<K: Send, V: Send> Send for LFUCache<K, V> {}
 unsafe impl<K: Sync, V: Sync> Sync for LFUCache<K, V> {}
 
 impl<K: Hash + Eq + Clone, V> LFUCache<K, V> {
     /// Creates a new LFU Cache with the given capacity.
+    ///
+    /// # Panics
+    /// Panics if `capacity` is 0.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");
@@ -218,7 +223,8 @@ impl<K: Hash + Eq + Clone, V> LFUCache<K, V> {
 
             // Create new node
             let node = Box::new(Node::new(key.clone(), val));
-            let node_ptr = NonNull::new(Box::into_raw(node)).unwrap();
+            // SAFETY: `Box::into_raw` never returns a null pointer, so this cannot be null.
+            let node_ptr = unsafe { NonNull::new_unchecked(Box::into_raw(node)) };
 
             self.key_map.insert(key, node_ptr);
 

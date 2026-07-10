@@ -89,6 +89,9 @@ impl BuddyAllocator {
     /// Creates a new Buddy Allocator.
     ///
     /// Both `total_size` and `min_block_size` must be powers of two.
+    ///
+    /// # Panics
+    /// Panics if `total_size` or `min_block_size` is not a power of two.
     #[must_use]
     pub fn new(total_size: usize, min_block_size: usize) -> Self {
         assert!(

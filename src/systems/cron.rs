@@ -18,6 +18,9 @@
 //! compiling a schedule into a few integers turns an otherwise expensive conditional check
 //! into a few CPU clock cycles of bitwise `AND`s.
 
+// Narrowing casts between bitmask widths are intentional in this bitwise scheduler.
+#![allow(clippy::cast_possible_truncation)]
+
 // =========================================================================================
 // Architecture
 // =========================================================================================
@@ -104,7 +107,8 @@ impl Schedule for CronSchedule {
     /// Checks if a given timestamp matches the cron schedule.
     ///
     /// Takes simple 0-indexed primitives (except DOM/Month which are 1-indexed by convention).
-
+    // `dom_*`/`dow_*` are the clearest domain names despite being visually similar.
+    #[allow(clippy::similar_names)]
     fn matches(&self, minute: u8, hour: u8, day_of_month: u8, month: u8, day_of_week: u8) -> bool {
         let min_match = (self.minutes & (1 << minute)) != 0;
         let hr_match = (self.hours & (1 << hour)) != 0;
@@ -129,6 +133,8 @@ impl Schedule for CronSchedule {
 impl FromStr for CronSchedule {
     type Err = CronError;
 
+    // `dom_*`/`dow_*` are the clearest domain names despite being visually similar.
+    #[allow(clippy::similar_names)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split_whitespace().collect();
         if parts.len() != 5 {

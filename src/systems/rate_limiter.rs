@@ -15,6 +15,9 @@
 //! Sliding Window logs teach you about time-series data management.
 //! Distributed rate limiting forces you to think about atomicity and race conditions across network boundaries.
 
+// The bucket/log locks are intentionally held across the refill-and-check critical sections.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -62,6 +65,9 @@ impl RateLimiter {
 
     /// Attempts to acquire `tokens` from the bucket.
     /// Returns `true` if successful, `false` if not enough tokens.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
     pub fn try_acquire(&self, tokens_needed: f64) -> bool {
         let mut state = self.state.lock().unwrap();
         self.refill(&mut state);
@@ -125,6 +131,11 @@ impl SlidingWindowRateLimiter {
         }
     }
 
+    /// Attempts to record a request against the sliding-window limit.
+    /// Returns `true` if within the limit, `false` if the request should be rejected.
+    ///
+    /// # Panics
+    /// Panics if the internal log mutex is poisoned.
     pub fn try_acquire(&self) -> bool {
         let mut log = self.log.lock().unwrap();
         let now = Instant::now();
@@ -165,6 +176,9 @@ pub trait RateLimitStore: Send + Sync {
     /// * `limit` - Max requests in the window.
     ///
     /// Returns `Ok(true)` if allowed, `Ok(false)` if limited.
+    ///
+    /// # Errors
+    /// Returns `Err` if the underlying store cannot be accessed (e.g. a backend/lock failure).
     fn check_and_update(&self, key: &str, window: Duration, limit: usize) -> Result<bool, String>;
 }
 

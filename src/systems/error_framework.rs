@@ -221,11 +221,17 @@ impl<C: fmt::Display> StdError for DynContextError<C> {
 /// Extension trait to provide `.context()` on `Result` and `Option`.
 pub trait ContextExt<T> {
     /// Adds context to the error.
+    ///
+    /// # Errors
+    /// Returns `Err` (wrapping the original error with the added context) if `self` is `Err`.
     fn context<C>(self, context: C) -> Result<T, Error>
     where
         C: fmt::Display + Send + Sync + 'static;
 
     /// Lazily adds context to the error.
+    ///
+    /// # Errors
+    /// Returns `Err` (wrapping the original error with context from `f`) if `self` is `Err`.
     fn with_context<C, F>(self, f: F) -> Result<T, Error>
     where
         C: fmt::Display + Send + Sync + 'static,

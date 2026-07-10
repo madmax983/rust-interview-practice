@@ -16,10 +16,16 @@
 //! firing events from within an event handler, and manage the lifetimes of subscribers safely
 //! using weak references or explicit unsubscription.
 
+// Subscriber locks are intentionally held across push/retain critical sections.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::sync::{Arc, Mutex, RwLock, Weak};
+
+// Topic -> list of weak subscriber senders, guarded per-topic for fine-grained pruning.
+type SubscriberMap<T, M> = RwLock<HashMap<T, Mutex<Vec<Weak<SyncSender<M>>>>>>;
 
 // =========================================================================================
 // Architecture
@@ -87,11 +93,17 @@ pub struct Subscription<M> {
 
 impl<M> Subscription<M> {
     /// Wait for the next message on this subscription.
+    ///
+    /// # Errors
+    /// Returns `Err(RecvError)` if the channel is disconnected (the bus dropped all senders).
     pub fn recv(&self) -> Result<M, std::sync::mpsc::RecvError> {
         self.receiver.recv()
     }
 
     /// Tries to receive the next message without blocking.
+    ///
+    /// # Errors
+    /// Returns `Err(TryRecvError)` if no message is currently available or the channel is disconnected.
     pub fn try_recv(&self) -> Result<M, std::sync::mpsc::TryRecvError> {
         self.receiver.try_recv()
     }
@@ -101,7 +113,7 @@ impl<M> Subscription<M> {
 pub struct EventBus<T, M> {
     // Map of Topic -> List of Weak Senders
     // The inner Mutex allows pruning dead subscribers while only holding a read lock on the HashMap.
-    subscribers: RwLock<HashMap<T, Mutex<Vec<Weak<SyncSender<M>>>>>>,
+    subscribers: SubscriberMap<T, M>,
     capacity: usize,
 }
 
@@ -123,6 +135,9 @@ where
     /// Forces a sweep of dead subscriptions across all topics.
     /// Normally handled automatically during `publish`, but can be called manually
     /// if topics are rarely published to.
+    ///
+    /// # Panics
+    /// Panics if the subscriber `RwLock` or a per-topic mutex is poisoned.
     pub fn clean_dead_subscriptions(&self) {
         let map = self.subscribers.read().unwrap();
         for subs in map.values() {
@@ -162,7 +177,7 @@ where
         let mut map = self.subscribers.write().unwrap();
         // Double check in case another thread inserted it while we waited for write lock
         let subs = map.entry(topic).or_insert_with(|| Mutex::new(Vec::new()));
-        let mut list = subs.lock().unwrap();
+        let list = subs.get_mut().unwrap();
         list.push(weak_sender);
 
         Subscription {
@@ -176,29 +191,25 @@ where
     fn publish(&self, topic: &T, message: M) -> usize {
         let map = self.subscribers.read().unwrap();
 
-        let subs = match map.get(topic) {
-            Some(subs) => subs,
-            None => return 0, // No subscribers for topic
+        let Some(subs) = map.get(topic) else {
+            return 0; // No subscribers for topic
         };
 
         let mut list = subs.lock().unwrap();
         let mut delivered = 0;
 
         list.retain(|weak_sender| {
-            if let Some(sender) = weak_sender.upgrade() {
-                // RUST INSIGHT: We clone the message for each subscriber.
-                // If the message is large, `M` should be an `Arc<ActualData>` to avoid deep copies.
-                // The `try_send` prevents a slow subscriber from blocking the publisher.
-                // If their queue is full, we drop the message (standard Pub/Sub behavior for slow consumers).
+            // RUST INSIGHT: We clone the message for each subscriber.
+            // If the message is large, `M` should be an `Arc<ActualData>` to avoid deep copies.
+            // The `try_send` prevents a slow subscriber from blocking the publisher.
+            // If their queue is full, we drop the message (standard Pub/Sub behavior for slow consumers).
+            // A dead subscriber (`upgrade` returns `None`) is pruned by returning `false`.
+            weak_sender.upgrade().is_some_and(|sender| {
                 if sender.try_send(message.clone()).is_ok() {
                     delivered += 1;
                 }
                 true
-            } else {
-                // The subscriber dropped their Subscription handle.
-                // Remove it.
-                false
-            }
+            })
         });
 
         delivered

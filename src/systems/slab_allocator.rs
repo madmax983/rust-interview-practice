@@ -78,9 +78,15 @@ pub struct Slab<T> {
     len: usize,
 }
 
+impl<T> Default for Slab<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Slab<T> {
     /// Creates a new empty Slab.
-    #[must_use] 
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             entries: Vec::new(),

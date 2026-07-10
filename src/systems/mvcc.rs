@@ -46,6 +46,9 @@
 //! - Readers never block writers. Writers never block readers.
 //! - Write-Write conflicts abort the transaction that commits second (First-Commiter-Wins).
 
+// The global-store lock is intentionally held across conflict detection and write application.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::{HashMap, HashSet};
 use std::sync::{Mutex, RwLock};
 
@@ -68,6 +71,10 @@ pub trait MvccTransactionApi<K, V> {
     fn set(&mut self, key: K, val: V);
 
     /// Attempts to commit the transaction. Returns `Err` on write-write conflicts.
+    ///
+    /// # Errors
+    /// Returns `Err` if a write-write conflict is detected (another transaction committed
+    /// a change to a key in this transaction's write set after this transaction started).
     fn commit(self) -> Result<(), &'static str>;
 }
 

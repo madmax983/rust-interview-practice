@@ -138,11 +138,17 @@ enum Node {
 /// This shows how traits enable swappable strategies (e.g., compile-time vs runtime engines).
 pub trait Engine {
     /// Parses a raw template string into a compiled format.
+    ///
+    /// # Errors
+    /// Returns `Err` if the template is syntactically invalid (e.g. unclosed tags or blocks).
     fn parse(input: &str) -> Result<Self, TemplateError>
     where
         Self: Sized;
 
     /// Renders the compiled template using the provided context.
+    ///
+    /// # Errors
+    /// Returns `Err` if a value cannot be rendered (e.g. rendering a complex type as text).
     fn render(&self, context: &Context) -> Result<String, TemplateError>;
 }
 
@@ -171,14 +177,13 @@ impl Engine for Template {
         // BOLT OPTIMIZATION: Pre-allocate a reasonable capacity to avoid small reallocations.
         let mut output = String::with_capacity(1024);
         let root_context = RenderContext::Root(context);
-        self.render_nodes(&self.nodes, &root_context, &mut output)?;
+        Self::render_nodes(&self.nodes, &root_context, &mut output)?;
         Ok(output)
     }
 }
 
 impl Template {
     fn render_nodes(
-        &self,
         nodes: &[Node],
         context: &RenderContext<'_>,
         output: &mut String,
@@ -213,7 +218,7 @@ impl Template {
                     };
 
                     if is_truthy {
-                        self.render_nodes(body, context, output)?;
+                        Self::render_nodes(body, context, output)?;
                     }
                 }
                 Node::For(iterator_name, list_name, body) => {
@@ -227,7 +232,7 @@ impl Template {
                                 key: iterator_name,
                                 value: item,
                             };
-                            self.render_nodes(body, &scoped_context, output)?;
+                            Self::render_nodes(body, &scoped_context, output)?;
                         }
                     }
                 }

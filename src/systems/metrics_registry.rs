@@ -17,6 +17,9 @@
 //! You learn how to use atomic operations for counters/gauges and lock-free or low-contention
 //! approaches for histograms. You also learn how to serialize state for external scrapers like Prometheus.
 
+// Registry `RwLock` guards are intentionally held across the read/insert/export critical sections.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
@@ -224,6 +227,9 @@ impl Registry {
     }
 
     /// Registers a counter or returns the existing one.
+    ///
+    /// # Panics
+    /// Panics if the counters `RwLock` is poisoned.
     pub fn counter(&self, name: &str) -> Arc<Counter> {
         // Check with read lock first
         if let Some(counter) = self.counters.read().unwrap().get(name) {
@@ -240,6 +246,9 @@ impl Registry {
     }
 
     /// Registers a gauge or returns the existing one.
+    ///
+    /// # Panics
+    /// Panics if the gauges `RwLock` is poisoned.
     pub fn gauge(&self, name: &str) -> Arc<Gauge> {
         if let Some(gauge) = self.gauges.read().unwrap().get(name) {
             return Arc::clone(gauge);
@@ -253,6 +262,9 @@ impl Registry {
     }
 
     /// Registers a histogram or returns the existing one.
+    ///
+    /// # Panics
+    /// Panics if the histograms `RwLock` is poisoned.
     pub fn histogram(&self, name: &str, buckets: Vec<f64>) -> Arc<Histogram> {
         if let Some(hist) = self.histograms.read().unwrap().get(name) {
             return Arc::clone(hist);
@@ -266,17 +278,20 @@ impl Registry {
     }
 
     /// Exports all registered metrics in the Prometheus text format.
+    ///
+    /// # Panics
+    /// Panics if any of the metric `RwLock`s are poisoned.
     pub fn export_prometheus(&self) -> String {
+        use std::fmt::Write;
+
         // ⚡ BOLT OPTIMIZATION: Pre-allocate the String buffer to avoid reallocations during metrics export.
         // A capacity of 1024 bytes is a reasonable starting point for a small number of metrics.
         let mut output = String::with_capacity(1024);
 
-        use std::fmt::Write;
-
-        /// ⚡ BOLT OPTIMIZATION: Avoid intermediate string allocations during metrics export.
-        /// Replaced `output.push_str(&format!(...))` with `writeln!(output, ...)`.
-        /// `format!` creates an intermediate String on the heap, which is then copied into `output` and dropped.
-        /// `writeln!` writes directly into the `String` buffer, eliminating the intermediate allocation.
+        // ⚡ BOLT OPTIMIZATION: Avoid intermediate string allocations during metrics export.
+        // Replaced `output.push_str(&format!(...))` with `writeln!(output, ...)`.
+        // `format!` creates an intermediate String on the heap, which is then copied into `output` and dropped.
+        // `writeln!` writes directly into the `String` buffer, eliminating the intermediate allocation.
         // Export Counters
         let counters = self.counters.read().unwrap();
         for (name, counter) in counters.iter() {

@@ -16,6 +16,9 @@
 //! It teaches you about bitwise operations, epoch offsets, handling clock drift (NTP sync issues),
 //! and concurrency control (Mutex vs Atomics) for sequence generation.
 
+// Word truncation is intentional when packing millisecond timestamps into 64-bit IDs.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 

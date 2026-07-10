@@ -32,6 +32,9 @@
 //! | Reset | O(1) | O(1) |
 //! | Drop | O(1) | O(N) |
 
+// Sign reinterpretation is intentional in this low-level allocator pointer arithmetic.
+#![allow(clippy::cast_sign_loss)]
+
 use std::alloc::{Layout, alloc, dealloc};
 use std::cell::UnsafeCell;
 use std::ptr::NonNull;

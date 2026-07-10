@@ -16,6 +16,9 @@
 //! thread synchronization with `Condvar`, and the powerful RAII (Resource Acquisition Is Initialization)
 //! pattern in Rust to automatically return connections to the pool when they are dropped.
 
+// Pool-state locks are intentionally held across the wait/pop loops that manage connections.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
@@ -71,6 +74,9 @@ pub trait ManageConnection: Send + Sync + 'static {
     type Error: Send + 'static;
 
     /// Attempts to create a new connection.
+    ///
+    /// # Errors
+    /// Returns `Err` if establishing the connection fails (e.g. the backend is unreachable).
     fn connect(&self) -> Result<Self::Connection, Self::Error>;
 
     // PRODUCTION NOTE: A real pool trait would also include `is_valid` (ping)
@@ -148,6 +154,9 @@ impl<M: ManageConnection> Drop for ActiveCountGuard<'_, M> {
 
 impl<M: ManageConnection> ConnectionPool<M> {
     /// Creates a new connection pool with a maximum size and a connection manager.
+    ///
+    /// # Panics
+    /// Panics if `max_size` is 0.
     #[must_use]
     pub fn new(max_size: usize, manager: M) -> Self {
         assert!(max_size > 0, "max_size must be greater than 0");
@@ -166,6 +175,12 @@ impl<M: ManageConnection> ConnectionPool<M> {
 
     /// Retrieves a connection from the pool.
     /// Blocks indefinitely until a connection becomes available.
+    ///
+    /// # Errors
+    /// Returns `Err(PoolError::Factory(_))` if the manager fails to create a new connection.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex or condvar is poisoned.
     pub fn get(&self) -> Result<PooledConnection<M>, PoolError<M::Error>> {
         let mut state = self.shared.state.lock().unwrap();
 
@@ -213,6 +228,13 @@ impl<M: ManageConnection> ConnectionPool<M> {
     }
 
     /// Retrieves a connection from the pool, waiting up to `timeout`.
+    ///
+    /// # Errors
+    /// Returns `Err(PoolError::Timeout)` if no connection becomes available within `timeout`,
+    /// or `Err(PoolError::Factory(_))` if the manager fails to create a new connection.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex or condvar is poisoned.
     pub fn get_timeout(
         &self,
         timeout: Duration,
@@ -274,14 +296,20 @@ impl<M: ManageConnection> ConnectionPool<M> {
     }
 
     /// Returns the number of connections currently created and available in the pool.
-    #[must_use] 
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
+    #[must_use]
     pub fn idle_count(&self) -> usize {
         let state = self.shared.state.lock().unwrap();
         state.idle.len()
     }
 
     /// Returns the number of connections currently checked out by clients.
-    #[must_use] 
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned.
+    #[must_use]
     pub fn active_count(&self) -> usize {
         let state = self.shared.state.lock().unwrap();
         state.active_count

@@ -16,6 +16,9 @@
 //! W-TinyLFU solves both by using a tiny Count-Min Sketch for frequency estimation, and a small
 //! Window LRU cache to admit new items before promoting them to the Main cache.
 
+// Precision loss is acceptable when deriving the sketch's error bound from its width.
+#![allow(clippy::cast_precision_loss)]
+
 use crate::data_structures::count_min_sketch::CountMinSketch;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -120,6 +123,9 @@ pub struct WTinyLfuCache<K, V> {
 
 impl<K: Hash + Eq + Clone, V> WTinyLfuCache<K, V> {
     /// Creates a new `WTinyLfuCache` with the given capacity.
+    ///
+    /// # Panics
+    /// Panics if `capacity` is 0.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Capacity must be greater than 0");

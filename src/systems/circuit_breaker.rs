@@ -15,6 +15,9 @@
 //! You learn how to balance "failing fast" (Open state) with "self-healing" (Half-Open state),
 //! and how to handle time-based transitions safely.
 
+// The state lock is intentionally held across the state-machine inspect/mutate blocks.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -87,6 +90,13 @@ impl CircuitBreaker {
     /// The closure must return a `Result<T, E>`.
     /// - `Ok(T)` is considered a success.
     /// - `Err(E)` is considered a failure.
+    ///
+    /// # Errors
+    /// Returns `Err(Error::CircuitOpen)` if the circuit is open and rejecting calls, or
+    /// `Err(Error::OperationFailed(_))` if the closure `f` itself returns an error.
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned (a thread panicked while holding the lock).
     pub fn call<T, E, F>(&self, f: F) -> Result<T, Error<E>>
     where
         F: FnOnce() -> Result<T, E>,
@@ -94,6 +104,8 @@ impl CircuitBreaker {
         // 1. Check State
         {
             let mut inner = self.state.lock().unwrap();
+            // Closed and HalfOpen both proceed, but are kept distinct for documentation clarity.
+            #[allow(clippy::match_same_arms)]
             match inner.state {
                 State::Closed => {
                     // Allowed to proceed.
@@ -163,7 +175,10 @@ impl CircuitBreaker {
     }
 
     /// Returns true if the circuit is currently accepting requests (Closed or Half-Open).
-    #[must_use] 
+    ///
+    /// # Panics
+    /// Panics if the internal state mutex is poisoned (a thread panicked while holding the lock).
+    #[must_use]
     pub fn is_accepting(&self) -> bool {
         let inner = self.state.lock().unwrap();
         match inner.state {

@@ -73,6 +73,7 @@ impl VElement {
         }
     }
 
+    #[must_use]
     pub fn with_attr(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.attributes.insert(key.into(), value.into());
         self

@@ -174,6 +174,8 @@ impl Twitter {
 
     /// Follower follows a followee.
     /// If the operation is invalid, it should be a no-op.
+    // `follower_id`/`followee_id` are the domain terms even though they look similar.
+    #[allow(clippy::similar_names)]
     pub fn follow(&mut self, follower_id: UserId, followee_id: UserId) {
         // Prevent self-following in the explicit set (though logic usually handles it)
         // The problem description typically implies explicit follows.
@@ -190,6 +192,8 @@ impl Twitter {
 
     /// Follower unfollows a followee.
     /// If the operation is invalid, it should be a no-op.
+    // `follower_id`/`followee_id` are the domain terms even though they look similar.
+    #[allow(clippy::similar_names)]
     pub fn unfollow(&mut self, follower_id: UserId, followee_id: UserId) {
         if let Some(set) = self.follows.get_mut(&follower_id) {
             set.remove(&followee_id);

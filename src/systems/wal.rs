@@ -32,6 +32,9 @@
 //! | Flush | O(Disk Latency) | O(1) |
 //! | Replay | O(N) | O(1) |
 
+// Truncating a u64 on-disk length to usize is intentional when sizing the read buffer.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::collections::hash_map::DefaultHasher;
 use std::fs::{File, OpenOptions};
 use std::hash::{Hash, Hasher};
@@ -45,11 +48,15 @@ pub struct Wal {
 
 impl Wal {
     /// Opens or creates a WAL at the specified path.
+    ///
+    /// # Errors
+    /// Returns `Err` if the file cannot be opened/created or cannot be cloned for buffered writing.
     pub fn open<P: AsRef<Path>>(path: P) -> io::Result<Self> {
         let file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
+            .truncate(false)
             .open(&path)?;
 
         let writer = BufWriter::new(file.try_clone()?);
@@ -59,6 +66,9 @@ impl Wal {
 
     /// Appends an entry to the WAL.
     // RUST INSIGHT: We take `&[u8]` which is a slice, avoiding ownership transfer until we write.
+    ///
+    /// # Errors
+    /// Returns `Err` if writing the checksum, length, or payload to the buffered writer fails.
     pub fn append(&mut self, payload: &[u8]) -> io::Result<()> {
         let checksum = Self::calculate_checksum(payload);
         let len = payload.len() as u64;
@@ -75,12 +85,18 @@ impl Wal {
 
     /// Flushes the WAL to disk, ensuring durability.
     // GOTCHA: `BufWriter::flush` only flushes to the OS cache. `File::sync_all` is needed for disk durability.
+    ///
+    /// # Errors
+    /// Returns `Err` if flushing the buffer or syncing the file to stable storage fails.
     pub fn flush(&mut self) -> io::Result<()> {
         self.writer.flush()?;
         self.writer.get_ref().sync_all()
     }
 
     /// Clears the WAL by truncating the file to 0 length.
+    ///
+    /// # Errors
+    /// Returns `Err` if truncating, seeking, or re-cloning the file handle fails.
     pub fn clear(&mut self) -> io::Result<()> {
         // Truncate file
         self.file.set_len(0)?;
@@ -94,6 +110,10 @@ impl Wal {
     // RUST INSIGHT: Returning an iterator would be ideal, but requires careful lifetime management with the file.
     // For simplicity, we return a Vec of payloads.
     // PRODUCTION NOTE: A real WAL would return an iterator to avoid loading everything into RAM.
+    ///
+    /// # Errors
+    /// Returns `Err` if flushing before reading fails or if an unexpected I/O error occurs
+    /// while reading entries (a clean EOF or corrupt trailing entry stops replay without error).
     pub fn replay(&mut self) -> io::Result<Vec<Vec<u8>>> {
         // Ensure everything is flushed before reading
         self.flush()?;

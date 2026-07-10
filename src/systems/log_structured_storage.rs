@@ -48,6 +48,9 @@
 //! *   **Compaction**: Background threads merging `SSTables` to reclaim space and improve read speed. (Our `compact` is manual).
 //! *   **Binary Format**: Protobuf or custom binary for space efficiency.
 
+// Truncating usize/u64 lengths into the 32-bit on-disk record fields is intentional.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::collections::{BTreeMap, HashMap};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufReader, Read, Write};
@@ -108,6 +111,13 @@ pub struct LsmTree {
 
 impl LsmTree {
     /// Opens or creates an LSM Tree in the given directory.
+    ///
+    /// # Errors
+    /// Returns `Err` if the directory cannot be created, or the WAL/`SSTable`/Bloom-filter
+    /// files cannot be opened or read while restoring state.
+    ///
+    /// # Panics
+    /// Panics if a WAL entry's length prefix is malformed (fewer than 8 bytes were expected).
     pub fn new<P: AsRef<Path>>(dir: P, threshold_bytes: usize) -> io::Result<Self> {
         let dir = dir.as_ref().to_path_buf();
         fs::create_dir_all(&dir)?;
@@ -161,11 +171,7 @@ impl LsmTree {
             // Sort by timestamp extracted from filename
             paths.sort_by_key(|p| {
                 let filename = p.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                let timestamp_str = if filename.starts_with("compacted_") {
-                    &filename["compacted_".len()..]
-                } else {
-                    filename
-                };
+                let timestamp_str = filename.strip_prefix("compacted_").unwrap_or(filename);
                 timestamp_str.parse::<u128>().unwrap_or(0)
             });
             sstables = paths;
@@ -204,8 +210,13 @@ impl LsmTree {
     }
 
     /// Writes a key-value pair.
+    ///
+    /// # Errors
+    /// Returns `Err` if flushing the memtable or appending to the WAL fails.
     pub fn put(&mut self, key: String, value: String) -> io::Result<()> {
-        let entry_size = key.len() + value.len();
+        let key_len = key.len();
+        let value_len = value.len();
+        let entry_size = key_len + value_len;
 
         if self.memtable_size + entry_size > self.threshold && !self.memtable.is_empty() {
             self.flush()?;
@@ -213,25 +224,28 @@ impl LsmTree {
 
         // 1. Write to WAL
         // Format: [Key Len (8)] [Key Bytes] [Value Bytes]
-        let mut wal_entry = Vec::with_capacity(8 + key.len() + value.len());
-        wal_entry.extend_from_slice(&(key.len() as u64).to_le_bytes());
+        let mut wal_entry = Vec::with_capacity(8 + key_len + value_len);
+        wal_entry.extend_from_slice(&(key_len as u64).to_le_bytes());
         wal_entry.extend_from_slice(key.as_bytes());
         wal_entry.extend_from_slice(value.as_bytes());
 
         self.wal.append(&wal_entry)?;
 
-        // 2. Insert into Memtable
-        if let Some(old_val) = self.memtable.insert(key.clone(), value.clone()) {
+        // 2. Insert into Memtable (moving the owned key/value in, no clone needed)
+        if let Some(old_val) = self.memtable.insert(key, value) {
             self.memtable_size -= old_val.len();
-            self.memtable_size += value.len();
+            self.memtable_size += value_len;
         } else {
-            self.memtable_size += key.len() + value.len();
+            self.memtable_size += key_len + value_len;
         }
 
         Ok(())
     }
 
     /// Reads a value.
+    ///
+    /// # Errors
+    /// Returns `Err` if reading an `SSTable` from disk fails.
     pub fn get(&self, key: &str) -> io::Result<Option<String>> {
         // 1. Check Memtable
         if let Some(val) = self.memtable.get(key) {
@@ -247,7 +261,7 @@ impl LsmTree {
                 continue;
             }
 
-            if let Some(val) = self.scan_sstable(sst_path, key)? {
+            if let Some(val) = Self::scan_sstable(sst_path, key)? {
                 return Ok(Some(val));
             }
         }
@@ -256,6 +270,12 @@ impl LsmTree {
     }
 
     /// Manually flush memtable to disk.
+    ///
+    /// # Errors
+    /// Returns `Err` if writing the new `SSTable` or its Bloom filter, or clearing the WAL, fails.
+    ///
+    /// # Panics
+    /// Panics if the system clock is set before the UNIX epoch.
     pub fn flush(&mut self) -> io::Result<()> {
         if self.memtable.is_empty() {
             return Ok(());
@@ -273,6 +293,7 @@ impl LsmTree {
         let file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(&sst_path)?;
 
         let mut writer = std::io::BufWriter::new(file);
@@ -304,6 +325,13 @@ impl LsmTree {
 
     /// Compaction (Sketch): Merge all `SSTables` into one.
     /// In reality, this would be leveled or tiered compaction.
+    ///
+    /// # Errors
+    /// Returns `Err` if reading the existing `SSTables`, writing the merged `SSTable`/Bloom filter,
+    /// or deleting the old files fails.
+    ///
+    /// # Panics
+    /// Panics if the system clock is set before the UNIX epoch.
     pub fn compact(&mut self) -> io::Result<()> {
         if self.sstables.is_empty() {
             return Ok(());
@@ -332,6 +360,7 @@ impl LsmTree {
         let file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(&new_path)?;
         let mut writer = std::io::BufWriter::new(file);
 
@@ -366,7 +395,7 @@ impl LsmTree {
     }
 
     // Naive linear scan of SSTable
-    fn scan_sstable(&self, path: &Path, key: &str) -> io::Result<Option<String>> {
+    fn scan_sstable(path: &Path, key: &str) -> io::Result<Option<String>> {
         let file = File::open(path)?;
         let mut reader = BufReader::new(file);
 

@@ -107,6 +107,10 @@ impl CliParser {
     }
 
     /// Parses a sequence of string arguments.
+    ///
+    /// # Errors
+    /// Returns `Err` with a message if an argument is malformed, an unknown option is
+    /// encountered, a required value is missing, or a required option is not supplied.
     pub fn parse<I, S>(&self, args: I) -> Result<ParseResult, String>
     where
         I: IntoIterator<Item = S>,
@@ -135,11 +139,9 @@ impl CliParser {
                     return Err("Invalid argument: '--'".to_string());
                 }
 
-                let (key, value) = if let Some(idx) = kv.find('=') {
-                    (&kv[..idx], Some(&kv[idx + 1..]))
-                } else {
-                    (kv, None)
-                };
+                let (key, value) = kv
+                    .find('=')
+                    .map_or((kv, None), |idx| (&kv[..idx], Some(&kv[idx + 1..])));
 
                 let config_idx = self
                     .long_map

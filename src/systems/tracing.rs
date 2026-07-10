@@ -14,6 +14,9 @@
 //! It teaches you about `std::thread_local!`, RAII guards for state management,
 //! and how to decouple event emission from event collection using the `Subscriber` pattern.
 
+// Truncating a 128-bit millisecond timestamp to u64 is intentional.
+#![allow(clippy::cast_possible_truncation)]
+
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::{Arc, Mutex};
@@ -112,12 +115,18 @@ thread_local! {
 }
 
 /// Sets the global subscriber.
+///
+/// # Panics
+/// Panics if the global subscriber mutex is poisoned.
 pub fn set_global_subscriber(subscriber: impl Subscriber + 'static) {
     let mut global = GLOBAL_SUBSCRIBER.lock().unwrap();
     *global = Some(Arc::new(subscriber));
 }
 
 /// Emits an event to the global subscriber, attaching the current thread's span context.
+///
+/// # Panics
+/// Panics if the global subscriber mutex is poisoned.
 pub fn dispatch_event(level: Level, message: impl Into<String>, fields: Vec<Field>) {
     // RUST INSIGHT: Clone the `Arc<dyn Subscriber>` out and drop the guard BEFORE
     // invoking the subscriber. `std::sync::Mutex` is not reentrant, so holding the

@@ -16,6 +16,9 @@
 //! to terms (the inverted index itself), and how relevance is calculated mathematically using TF-IDF
 //! so that rare words carry more weight than common ones.
 
+// Precision loss is acceptable in TF-IDF floating-point scoring math.
+#![allow(clippy::cast_precision_loss)]
+
 use std::collections::{HashMap, HashSet};
 
 // =========================================================================================
@@ -146,7 +149,6 @@ impl InvertedIndex {
         let doc_meta = self.documents.get(&posting.doc_id).unwrap();
 
         // Term Frequency (TF): Term occurrences / Total terms in document
-        #[allow(clippy::cast_precision_loss)]
         let tf = (posting.term_frequency as f64) / (doc_meta.total_terms as f64);
 
         // Inverse Document Frequency (IDF): ln(Total docs / Docs containing term)

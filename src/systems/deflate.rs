@@ -16,6 +16,9 @@
 //! how sliding window compression (LZ77) eliminates redundant data over space, and how
 //! Huffman coding eliminates redundancy over symbol frequency. It also forces you to handle
 //! bit-level IO operations in Rust, crossing standard byte boundaries.
+//!
+// Byte/word truncation is intentional in this bit-level compression codec.
+#![allow(clippy::cast_possible_truncation)]
 
 use std::collections::{BinaryHeap, HashMap};
 
@@ -186,6 +189,10 @@ pub trait Compressor {
     fn compress(data: &[u8]) -> Vec<u8>;
 
     /// Decompresses data compressed by this algorithm.
+    ///
+    /// # Errors
+    /// Returns `Err` if the input is malformed or truncated (invalid Huffman tree,
+    /// unexpected end of stream, or an invalid match distance).
     fn decompress(data: &[u8]) -> Result<Vec<u8>, &'static str>;
 }
 
@@ -307,15 +314,15 @@ impl Compressor for Deflate {
                         out.push(symbol as u8);
                     }
                     break;
+                }
+
+                let bit = reader
+                    .read_bit()
+                    .ok_or("Unexpected end of stream navigating tree")?;
+                if bit {
+                    current = current.right.as_ref().unwrap();
                 } else {
-                    let bit = reader
-                        .read_bit()
-                        .ok_or("Unexpected end of stream navigating tree")?;
-                    if bit {
-                        current = current.right.as_ref().unwrap();
-                    } else {
-                        current = current.left.as_ref().unwrap();
-                    }
+                    current = current.left.as_ref().unwrap();
                 }
             }
         }

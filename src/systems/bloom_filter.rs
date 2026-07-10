@@ -13,6 +13,13 @@
 //! **Why build it yourself?**
 //! Understanding Bloom Filters is essential for system design involving large-scale data. Building one teaches you about bit manipulation, hash functions, the mathematics behind false positive probabilities, and the Kirsch-Mitzenmacher optimization (simulating multiple hash functions from a single hash).
 
+// Casts between float sizing math, hash words, and bit indices are intentional here.
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss
+)]
+
 // =========================================================================================
 // Architecture
 // =========================================================================================
@@ -112,7 +119,10 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
 
     /// Creates an optimally sized Bloom filter given the expected number of items (`n`)
     /// and the desired false positive probability (`p`).
-    #[must_use] 
+    ///
+    /// # Panics
+    /// Panics if `false_positive_rate` is not strictly between 0.0 and 1.0.
+    #[must_use]
     pub fn with_rate(expected_items: usize, false_positive_rate: f64) -> Self {
         assert!(
             false_positive_rate > 0.0 && false_positive_rate < 1.0,
@@ -144,7 +154,7 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
     /// is strongly preferred for Bloom filters since collision resistance against attackers isn't usually the
     /// primary concern for internal database structures.
     #[inline]
-    fn get_hash_halves(&self, item: &T) -> (u32, u32) {
+    fn get_hash_halves(item: &T) -> (u32, u32) {
         let mut hasher = DefaultHasher::new();
         item.hash(&mut hasher);
         let hash64 = hasher.finish();
@@ -179,7 +189,7 @@ impl<T: Hash + ?Sized> BloomFilter<T> {
 
 impl<T: Hash + ?Sized> ProbabilisticSet<T> for BloomFilter<T> {
     fn insert(&mut self, item: &T) {
-        let (h1, h2) = self.get_hash_halves(item);
+        let (h1, h2) = Self::get_hash_halves(item);
 
         for i in 0..self.k {
             // Kirsch-Mitzenmacher optimization: h_i = h1 + i * h2
@@ -193,7 +203,7 @@ impl<T: Hash + ?Sized> ProbabilisticSet<T> for BloomFilter<T> {
     }
 
     fn contains(&self, item: &T) -> bool {
-        let (h1, h2) = self.get_hash_halves(item);
+        let (h1, h2) = Self::get_hash_halves(item);
 
         for i in 0..self.k {
             let h_i = h1.wrapping_add(i.wrapping_mul(h2));
