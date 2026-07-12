@@ -1,4 +1,5 @@
 pub mod arc_cache;
+pub mod graphql;
 pub mod bitcask;
 pub mod bloom_filter;
 pub mod buddy_allocator;
