@@ -31,7 +31,7 @@
 //! - `1 <= price <= 10^5`
 //! - At most `10^4` calls will be made to `next`.
 
-/// The StockSpanner uses a Monotonic Stack to efficiently compute the span.
+/// The `StockSpanner` uses a Monotonic Stack to efficiently compute the span.
 ///
 /// Time: O(1) amortized per `next` call. While a single call could trigger multiple pops,
 /// each price is pushed and popped exactly once over the lifetime of the structure.
@@ -49,11 +49,13 @@ pub struct StockSpanner {
 
 impl StockSpanner {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { stack: Vec::new() }
     }
 
     /// Optimized Monotonic Stack implementation
+    /// # Panics
+    /// This function will not panic. The `unwrap` is protected by a prior `is_some` check.
     pub fn next(&mut self, price: i32) -> i32 {
         let mut span = 1;
 
@@ -63,8 +65,9 @@ impl StockSpanner {
         // inside the block to avoid losing values that shouldn't be popped.
         while let Some(&(last_price, _last_span)) = self.stack.last() {
             if last_price <= price {
-                let (_, popped_span) = self.stack.pop().unwrap(); // safe because of `last()` check
-                span += popped_span;
+                if let Some((_, popped_span)) = self.stack.pop() {
+                    span += popped_span;
+                }
             } else {
                 break;
             }

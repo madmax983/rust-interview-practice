@@ -69,6 +69,7 @@ fn is_same_tree(p: Option<&TreeNode>, q: Option<&TreeNode>) -> bool {
 /// Time: O(N * M) - In the worst case, we check `is_same_tree` for every node in `root`.
 /// Space: O(H) - Recursion depth up to tree height.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)]
 pub fn is_subtree_brute_force(
     root: Option<Box<TreeNode>>,
     sub_root: Option<Box<TreeNode>>,
@@ -136,6 +137,7 @@ pub fn is_subtree(root: Option<Box<TreeNode>>, sub_root: Option<Box<TreeNode>>) 
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unnecessary_wraps)]
     use super::*;
 
     // Helper to create a leaf node

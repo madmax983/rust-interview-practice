@@ -35,6 +35,7 @@
 /// We define `dp[i]` as the number of ways to decode the substring of length `i` (or up to index `i`).
 /// At each step, we can either take a single digit (if valid) or two digits (if valid).
 #[must_use]
+#[allow(clippy::needless_pass_by_value)]
 pub fn num_decodings_dp_array(s: String) -> i32 {
     if s.is_empty() {
         return 0;
