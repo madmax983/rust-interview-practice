@@ -502,7 +502,7 @@ mod tests {
 
     #[test]
     // Keep the paired bit-mask checks in the same `assert!(mask cmp 0)` form for clarity.
-    #[allow(clippy::bool_assert_comparison)]
+    #[allow(unknown_lints, clippy::manual_assert_eq)]
     fn test_check_bit_set() {
         let n = 0b0001;
         assert!((n & (1 << 0)) != 0);
