@@ -24,7 +24,7 @@
 //!
 //! ## Idiomatic Rust
 //!
-//! - **`.as_bytes()` vs `.chars()`**: Since LeetCode strings for this problem are strictly digits (`'0'`-`'9'`),
+//! - **`.as_bytes()` vs `.chars()`**: Since `LeetCode` strings for this problem are strictly digits (`'0'`-`'9'`),
 //!   using `.as_bytes()` is safe, idiomatic, and significantly faster because it avoids the overhead of UTF-8
 //!   validation and multi-byte character boundary checking on every iteration.
 //! - **Space optimization**: Maintaining just `prev1` and `prev2` rather than a full `Vec` makes it clean and highly efficient.
@@ -38,6 +38,7 @@
 //!   initially but has `O(N)` space.
 
 #[allow(clippy::needless_pass_by_value)]
+#[must_use]
 pub fn num_decodings(s: String) -> i32 {
     let bytes = s.as_bytes();
 
