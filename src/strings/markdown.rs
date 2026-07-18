@@ -91,6 +91,7 @@ impl MarkdownRenderer for MarkdownParser {
 }
 
 impl MarkdownParser {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             output: String::with_capacity(1024),
@@ -99,6 +100,7 @@ impl MarkdownParser {
         }
     }
 
+    #[must_use]
     pub fn parse(&mut self, input: &str) -> String {
         let lines: Vec<&str> = input.lines().collect();
         let mut i = 0;
@@ -147,11 +149,11 @@ impl MarkdownParser {
 
             // Blockquote
             if let Some(stripped) = line.strip_prefix("> ") {
-                if self.state != BlockState::Blockquote {
+                if self.state == BlockState::Blockquote {
+                    self.buffer.push(' ');
+                } else {
                     self.flush_block();
                     self.state = BlockState::Blockquote;
-                } else {
-                    self.buffer.push(' ');
                 }
                 self.buffer.push_str(stripped);
                 i += 1;
@@ -171,12 +173,12 @@ impl MarkdownParser {
             }
 
             // Paragraph (Fallback)
-            if self.state != BlockState::Paragraph {
-                self.flush_block();
-                self.state = BlockState::Paragraph;
-            } else {
+            if self.state == BlockState::Paragraph {
                 // If appending to existing paragraph, add a space (since .lines() strips newlines)
                 self.buffer.push(' ');
+            } else {
+                self.flush_block();
+                self.state = BlockState::Paragraph;
             }
             self.buffer.push_str(line.trim());
 
@@ -274,7 +276,7 @@ impl MarkdownParser {
                 // Inside code, ignore other formatting
                 result.push(c);
             } else if c == '*' {
-                if let Some(&'*') = chars.peek() {
+                if chars.peek() == Some(&'*') {
                     chars.next(); // Consume second '*'
                     if in_bold {
                         result.push_str("</strong>");
