@@ -150,6 +150,11 @@ impl ZigzagIteratorOptimal {
         Self { iters }
     }
 
+    /// Get the next element.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the popped iterator is unexpectedly empty.
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> i32 {
         if let Some(mut iter) = self.iters.pop_front() {
