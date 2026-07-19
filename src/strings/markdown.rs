@@ -73,6 +73,7 @@ impl Default for StateMachineParser {
 }
 
 impl StateMachineParser {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             state: ParserState::Normal,
@@ -95,12 +96,12 @@ impl StateMachineParser {
                     let content = self.parse_inline(&trimmed_string);
                     // GOTCHA:
                     // Using write! directly appends to the String buffer without additional allocation.
-                    let _ = write!(&mut self.output, "<p>{}</p>", content);
+                    let _ = write!(&mut self.output, "<p>{content}</p>");
                 }
             }
             ParserState::CodeBlock => {
                 let trimmed = self.buffer.trim_end();
-                let _ = write!(&mut self.output, "<pre><code>{}</code></pre>", trimmed);
+                let _ = write!(&mut self.output, "<pre><code>{trimmed}</code></pre>");
             }
         }
         self.buffer.clear();
@@ -115,7 +116,7 @@ impl StateMachineParser {
 
         while let Some(c) = chars.next() {
             if c == '*' {
-                if let Some(&'*') = chars.peek() {
+                if chars.peek() == Some(&'*') {
                     chars.next(); // Consume second '*'
                     if self.in_bold {
                         result.push_str("</b>");
@@ -170,15 +171,15 @@ impl MarkdownParser for StateMachineParser {
                         // PRODUCTION NOTE:
                         // Proper bounds checking is critical when slicing strings manually, as
                         // missing spaces or truncated delimiters can cause out-of-bounds panics.
-                        let mut start_idx = level;
-                        if line.len() > level && line[level..].starts_with(' ') {
-                            start_idx = level + 1;
-                        }
+                        let start_idx = if line.len() > level && line[level..].starts_with(' ') {
+                            level + 1
+                        } else {
+                            level
+                        };
 
                         if start_idx <= line.len() {
                             let content = self.parse_inline(line[start_idx..].trim_end());
-                            let _ =
-                                write!(&mut self.output, "<h{}>{}</h{}>", level, content, level);
+                            let _ = write!(&mut self.output, "<h{level}>{content}</h{level}>");
 
                             // Reset state because headers are immediately flushed without entering the buffer.
                             self.in_bold = false;
