@@ -1,7 +1,7 @@
 //! # 281. Zigzag Iterator
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/zigzag-iterator/
+//! Link: <https://leetcode.com/problems/zigzag-iterator/>
 //!
 //! Why this matters in Rust: This problem is a fantastic exercise in implementing the
 //! `Iterator` trait and managing multiple internal state streams. It contrasts the naive
@@ -43,7 +43,7 @@ pub struct ZigzagIteratorBruteForce {
 impl ZigzagIteratorBruteForce {
     /// Initializes the `ZigzagIteratorBruteForce` object.
     #[must_use]
-    #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+    #[allow(clippy::needless_pass_by_value)] // `LeetCode` signature
     pub fn new(v1: Vec<i32>, v2: Vec<i32>) -> Self {
         let mut combined = Vec::with_capacity(v1.len() + v2.len());
         let mut iter1 = v1.into_iter();
@@ -82,14 +82,14 @@ impl Iterator for ZigzagIteratorBruteForce {
 
 // RUST INSIGHT: We implement `Iterator` directly, which gives us `next()`, `has_next()`
 // implicitly via `.peekable()` or simply `.is_some()` on the return of `next()`.
-// For LeetCode, we sometimes need to provide explicit `next()` and `has_next()` methods
+// For `LeetCode`, we sometimes need to provide explicit `next()` and `has_next()` methods
 // outside of the trait to match the platform signature, but implementing `Iterator` is idiomatic.
 
 /// Optimal implementation: A zero-allocation custom iterator.
 ///
 /// Maintains two internal iterators and a boolean flag to track whose turn it is.
 ///
-/// Note: The LeetCode problem signature typically demands `next(&mut self) -> i32`
+/// Note: The `LeetCode` problem signature typically demands `next(&mut self) -> i32`
 /// and `has_next(&self) -> bool`. Here, we provide idiomatic Rust.
 #[derive(Debug)]
 pub struct ZigzagIterator {
@@ -102,7 +102,7 @@ pub struct ZigzagIterator {
 impl ZigzagIterator {
     /// Initializes the `ZigzagIterator` object.
     #[must_use]
-    #[allow(clippy::needless_pass_by_value)] // LeetCode signature
+    #[allow(clippy::needless_pass_by_value)] // `LeetCode` signature
     pub fn new(v1: Vec<i32>, v2: Vec<i32>) -> Self {
         Self {
             iter1: v1.into_iter(),
@@ -138,19 +138,19 @@ impl Iterator for ZigzagIterator {
     }
 }
 
-// To perfectly match LeetCode's expected API if required:
+// To perfectly match `LeetCode`'s expected API if required:
 impl ZigzagIterator {
-    /// LeetCode specific `next` method.
+    /// `LeetCode` specific `next` method.
     /// Panics if called when `has_next` is false.
     ///
     /// # Panics
     /// Panics if called when there are no more elements.
-    #[allow(clippy::should_implement_trait)] // Intentionally matching LeetCode signature
+    #[allow(clippy::should_implement_trait)] // Intentionally matching `LeetCode` signature
     pub fn next(&mut self) -> i32 {
         Iterator::next(self).unwrap()
     }
 
-    /// LeetCode specific `has_next` method.
+    /// `LeetCode` specific `has_next` method.
     /// Requires creating a peekable iterator internally if implemented purely.
     /// Since `std::vec::IntoIter` implements `ExactSizeIterator`, we can cheat here
     /// by checking lengths without consuming.

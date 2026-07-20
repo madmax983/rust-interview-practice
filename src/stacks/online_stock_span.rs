@@ -1,7 +1,7 @@
 //! # 901. Online Stock Span
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/online-stock-span/
+//! Link: <https://leetcode.com/problems/online-stock-span/>
 //!
 //! Why this matters in Rust: This problem perfectly illustrates state management
 //! using a custom struct holding a `Vec` as a stack. It demonstrates how to safely
@@ -47,7 +47,7 @@ pub struct StockSpanner {
 impl StockSpanner {
     /// Initializes the `StockSpanner` object.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { stack: Vec::new() }
     }
 
