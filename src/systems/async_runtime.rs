@@ -205,7 +205,7 @@ pub struct Task {
     #[allow(clippy::type_complexity)]
     future: Mutex<Option<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>>,
     /// Channel to send itself back to the executor when woken.
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
 impl Wake for Task {
