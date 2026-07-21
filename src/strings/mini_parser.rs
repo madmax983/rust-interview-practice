@@ -210,7 +210,7 @@ fn parse_integer(iter: &mut Peekable<Chars>) -> NestedInteger {
     let mut val: i32 = 0;
     let mut sign = 1;
 
-    if let Some(&'-') = iter.peek() {
+    if iter.peek() == Some(&'-') {
         sign = -1;
         iter.next();
     }
