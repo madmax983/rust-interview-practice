@@ -205,22 +205,29 @@ fn parse_list(iter: &mut Peekable<Chars>) -> NestedInteger {
 }
 
 fn parse_integer(iter: &mut Peekable<Chars>) -> NestedInteger {
-    let mut num_str = String::new();
+    // ⚡ BOLT OPTIMIZATION: Avoid intermediate `String` allocation.
+    // Parse the integer directly from the character stream.
+    let mut val: i32 = 0;
+    let mut sign = 1;
+
+    if let Some(&'-') = iter.peek() {
+        sign = -1;
+        iter.next();
+    }
 
     // RUST INSIGHT: `while let` with a condition on the peeked value is
     // a very idiomatic way to consume tokens matching a certain criteria
     // without over-consuming.
     while let Some(&c) = iter.peek() {
-        if c == '-' || c.is_ascii_digit() {
-            num_str.push(c);
+        if c.is_ascii_digit() {
+            val = val * 10 + (c as i32 - '0' as i32);
             iter.next(); // Actually consume the character
         } else {
             break;
         }
     }
 
-    let val = num_str.parse::<i32>().expect("Failed to parse integer");
-    NestedInteger::Int(val)
+    NestedInteger::Int(val * sign)
 }
 
 /// Main entry point - uses optimal recursive approach
