@@ -44,17 +44,14 @@
 //! // RUST INSIGHT:
 //! // Rust's async model is "pull-based". Futures do nothing unless actively polled.
 //! // The `Waker` is the mechanism for a future to say "I'm ready to be polled again".
-
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, mpsc};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread;
 use std::time::Duration;
-
 /// A dynamically dispatched, pinned future that produces no output.
 type BoxFuture = Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
-
 /// A task submitted to the executor.
 ///
 /// It wraps a future and a channel to reschedule itself when woken.
@@ -64,9 +61,8 @@ type BoxFuture = Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
 // allocation overhead and lock contention.
 pub struct Task {
     future: Mutex<Option<BoxFuture>>,
-    task_sender: mpsc::SyncSender<Arc<Task>>,
+    task_sender: mpsc::SyncSender<Arc<Self>>,
 }
-
 impl Wake for Task {
     fn wake(self: Arc<Self>) {
         // GOTCHA:
@@ -77,13 +73,11 @@ impl Wake for Task {
         let _ = self.task_sender.send(self.clone());
     }
 }
-
 /// Spawns new tasks onto the executor.
 #[derive(Clone)]
 pub struct Spawner {
     task_sender: mpsc::SyncSender<Arc<Task>>,
 }
-
 impl Spawner {
     /// Spawns a future onto the executor.
     pub fn spawn(&self, future: impl Future<Output = ()> + Send + 'static) {
@@ -92,31 +86,27 @@ impl Spawner {
             future: Mutex::new(Some(future)),
             task_sender: self.task_sender.clone(),
         });
-
         // Push the task into the queue for its first poll.
         let _ = self.task_sender.send(task);
     }
 }
-
 /// Executes tasks by polling them when they are ready.
 pub struct Executor {
     ready_queue: mpsc::Receiver<Arc<Task>>,
 }
-
 impl Executor {
     /// Runs the executor, continuously pulling tasks from the queue and polling them.
     /// Exits when all `Spawner`s (and the executor's internal references) are dropped
     /// and the queue is empty.
+    #[allow(clippy::missing_panics_doc)]
     pub fn run(&self) {
         while let Ok(task) = self.ready_queue.recv() {
             // Take the future out of the task. We need to lock it briefly.
             let mut future_slot = task.future.lock().unwrap();
-
             if let Some(mut future) = future_slot.take() {
                 // Create a Waker from the task itself.
                 let waker = Waker::from(task.clone());
                 let mut context = Context::from_waker(&waker);
-
                 // Poll the future.
                 match future.as_mut().poll(&mut context) {
                     Poll::Pending => {
@@ -132,7 +122,6 @@ impl Executor {
         }
     }
 }
-
 /// Creates a new executor and spawner pair.
 #[must_use]
 pub fn new_executor_and_spawner() -> (Executor, Spawner) {
@@ -140,29 +129,25 @@ pub fn new_executor_and_spawner() -> (Executor, Spawner) {
     let (task_sender, ready_queue) = mpsc::sync_channel(10_000);
     (Executor { ready_queue }, Spawner { task_sender })
 }
-
 /// A simple future that waits for a specific duration.
 /// This demonstrates how a Reactor interacts with the Executor.
 pub struct TimerFuture {
     state: Arc<Mutex<TimerState>>,
 }
-
 struct TimerState {
     completed: bool,
     waker: Option<Waker>,
 }
-
 impl TimerFuture {
     /// Creates a new `TimerFuture` that completes after `duration`.
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn new(duration: Duration) -> Self {
         let state = Arc::new(Mutex::new(TimerState {
             completed: false,
             waker: None,
         }));
-
         let state_clone = Arc::clone(&state);
-
         // UNSAFE JUSTIFICATION: No unsafe is used here. We simply spawn an OS thread
         // to act as our "reactor", simulating an I/O completion event.
         // In a real runtime (like `tokio`), epoll/kqueue/IOCP is used instead of
@@ -175,14 +160,11 @@ impl TimerFuture {
                 waker.wake();
             }
         });
-
         Self { state }
     }
 }
-
 impl Future for TimerFuture {
     type Output = ();
-
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut state = self.state.lock().unwrap();
         if state.completed {
@@ -194,7 +176,6 @@ impl Future for TimerFuture {
         }
     }
 }
-
 // =========================================================================================
 // Footer
 // =========================================================================================
@@ -215,74 +196,56 @@ impl Future for TimerFuture {
 // 1. Implement a rudimentary I/O reactor using the `mio` crate for non-blocking sockets.
 // 2. Extend the Spawner to support JoinHandles that can return values from completed tasks.
 // 3. Build a multi-threaded thread-pool executor.
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Instant;
-
     #[test]
     fn test_simple_async_execution() {
         let (executor, spawner) = new_executor_and_spawner();
-
         let counter = Arc::new(AtomicUsize::new(0));
         let counter_clone = Arc::clone(&counter);
-
         spawner.spawn(async move {
             counter_clone.fetch_add(1, Ordering::SeqCst);
         });
-
         // Drop the spawner so the executor will terminate when the queue is empty.
         drop(spawner);
         executor.run();
-
         assert_eq!(counter.load(Ordering::SeqCst), 1);
     }
-
     #[test]
     fn test_timer_future() {
         let (executor, spawner) = new_executor_and_spawner();
-
         let counter = Arc::new(AtomicUsize::new(0));
         let counter_clone = Arc::clone(&counter);
-
         let start = Instant::now();
-
         spawner.spawn(async move {
             TimerFuture::new(Duration::from_millis(50)).await;
             counter_clone.fetch_add(1, Ordering::SeqCst);
         });
-
         drop(spawner);
         executor.run();
-
         assert!(start.elapsed() >= Duration::from_millis(50));
         assert_eq!(counter.load(Ordering::SeqCst), 1);
     }
-
     #[test]
     fn test_multiple_spawns_and_interleaving() {
         let (executor, spawner) = new_executor_and_spawner();
-
         let results = Arc::new(Mutex::new(Vec::new()));
-
         let r1 = Arc::clone(&results);
         spawner.spawn(async move {
             TimerFuture::new(Duration::from_millis(100)).await;
             r1.lock().unwrap().push("slow");
         });
-
         let r2 = Arc::clone(&results);
         spawner.spawn(async move {
             TimerFuture::new(Duration::from_millis(10)).await;
             r2.lock().unwrap().push("fast");
         });
-
         drop(spawner);
         executor.run();
-
-        let final_results = results.lock().unwrap();
+        let final_results = results.lock().unwrap().clone();
         assert_eq!(final_results.len(), 2);
         // "fast" should complete before "slow"
         assert_eq!(final_results[0], "fast");
