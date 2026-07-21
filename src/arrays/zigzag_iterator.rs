@@ -1,7 +1,7 @@
 //! # 281. Zigzag Iterator
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/zigzag-iterator/
+//! Link: <https://leetcode.com/problems/zigzag-iterator/>
 //!
 //! Why this matters in Rust: This problem illustrates custom `Iterator` implementations and managing
 //! state across multiple underlying iterators. It provides a great contrast between brute force
@@ -26,7 +26,7 @@
 //! - Space Complexity: O(1) auxiliary space beyond the provided iterators.
 //!
 //! Why idiomatic Rust: We implement the standard `std::iter::Iterator` trait for our `ZigzagIterator`
-//! when possible, but for LeetCode compatibility, we also provide a custom struct exposing `next(&mut self) -> i32`
+//! when possible, but for `LeetCode` compatibility, we also provide a custom struct exposing `next(&mut self) -> i32`
 //! and `has_next(&self) -> bool` methods. We use `Option` heavily to handle exhausted iterators safely
 //! without index bounds checking.
 //!
@@ -67,6 +67,9 @@ impl ZigzagIteratorBruteForce {
         }
     }
 
+    /// # Panics
+    ///
+    /// Panics if called when `has_next` is false.
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> i32 {
         // LeetCode's interface assumes `next` is only called if `has_next` is true.
@@ -104,6 +107,9 @@ impl ZigzagIteratorOptimal {
     // GOTCHA: LeetCode requires a `next(&mut self) -> i32` method, not returning an `Option`.
     // This deviates from idiomatic Rust. We use `#[allow(clippy::should_implement_trait)]` to
     // silence the pedantic clippy warning.
+    /// # Panics
+    ///
+    /// Panics if called when `has_next` is false.
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> i32 {
         // Pop the iterator whose turn it is

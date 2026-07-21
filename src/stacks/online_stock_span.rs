@@ -1,7 +1,7 @@
 //! # 901. Online Stock Span
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/online-stock-span/
+//! Link: <https://leetcode.com/problems/online-stock-span/>
 //!
 //! Why this matters in Rust: This problem perfectly demonstrates the power of a monotonic stack
 //! to optimize O(n^2) brute force solutions down to amortized O(1) per operation. It showcases
@@ -46,7 +46,7 @@ pub struct StockSpannerBruteForce {
 
 impl StockSpannerBruteForce {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { prices: Vec::new() }
     }
 
@@ -87,7 +87,7 @@ pub struct StockSpannerOptimal {
 
 impl StockSpannerOptimal {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { stack: Vec::new() }
     }
 
@@ -156,7 +156,7 @@ mod tests {
         let prices = [10, 20, 30, 40, 50];
 
         for (i, &p) in prices.iter().enumerate() {
-            let expected_span = (i + 1) as i32;
+            let expected_span = i32::try_from(i + 1).unwrap();
             assert_eq!(spanner_bf.next(p), expected_span);
             assert_eq!(spanner_opt.next(p), expected_span);
         }
