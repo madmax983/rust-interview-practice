@@ -50,7 +50,7 @@
 //!
 //! # Tradeoffs vs. Alternatives
 //! - **No AST**: This is a direct string-to-string parser. Production parsers like `pulldown-cmark` build an AST (or event stream) to allow filtering, manipulation, and rendering to non-HTML targets.
-//! - **Limited Spec**: This only supports a tiny subset of CommonMark (no tables, blockquotes, complex nested lists).
+//! - **Limited Spec**: This only supports a tiny subset of `CommonMark` (no tables, blockquotes, complex nested lists).
 
 use std::fmt::Write;
 
@@ -68,7 +68,7 @@ pub fn parse_markdown(input: &str) -> String {
     let mut html = String::with_capacity(input.len() * 2);
     let mut block_state = BlockState::None;
 
-    let lines = input.lines().peekable();
+    let lines = input.lines();
 
     for line in lines {
         let trimmed = line.trim();
@@ -130,15 +130,14 @@ pub fn parse_markdown(input: &str) -> String {
         }
 
         // Paragraphs
-        if block_state != BlockState::Paragraph {
+        if block_state == BlockState::Paragraph {
+            // Continuation of paragraph
+            html.push(' ');
+        } else {
             close_block(&mut html, &mut block_state);
             html.push_str("<p>");
             block_state = BlockState::Paragraph;
-        } else {
-            // Continuation of paragraph
-            html.push(' ');
         }
-
         html.push_str(&parse_inline(trimmed));
     }
 

@@ -102,7 +102,7 @@ struct Task {
     future: Mutex<Option<BoxFuture<'static, ()>>>,
 
     /// The channel used to send the task back to the executor when woken.
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
 // RUST INSIGHT:
@@ -226,7 +226,7 @@ struct TimerReactor {
 }
 
 impl TimerReactor {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             timers: Mutex::new(BinaryHeap::new()),
         }
