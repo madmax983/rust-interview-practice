@@ -129,7 +129,7 @@ impl ZigzagIterator {
 }
 
 /// Idiomatic Rust standard library approach: Implementing the `Iterator` trait
-/// This isn't the LeetCode signature, but it is how you would actually do this in a real Rust crate.
+/// This isn't the `LeetCode` signature, but it is how you would actually do this in a real Rust crate.
 pub struct IdiomaticZigzagIterator<I1, I2> {
     iter1: I1,
     iter2: I2,
@@ -251,12 +251,12 @@ mod tests {
         let v1: Vec<i32> = vec![];
         let v2 = vec![1];
         let iter = IdiomaticZigzagIterator::new(v1.into_iter(), v2.into_iter());
-        assert_eq!(iter.collect::<Vec<_>>(), vec![1]);
+        assert_eq!(iter.collect::<Vec<i32>>(), vec![1]);
 
         // Both empty
         let v1: Vec<i32> = vec![];
         let v2: Vec<i32> = vec![];
         let iter = IdiomaticZigzagIterator::new(v1.into_iter(), v2.into_iter());
-        assert_eq!(iter.collect::<Vec<_>>(), vec![]);
+        assert_eq!(iter.collect::<Vec<i32>>(), Vec::<i32>::new());
     }
 }
