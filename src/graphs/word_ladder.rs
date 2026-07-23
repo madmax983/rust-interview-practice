@@ -186,9 +186,10 @@ pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<
         let mut next_set = HashSet::new();
 
         // Process all words in the current level boundary
-        for word in begin_set {
-            let mut current_word_bytes = word.clone();
-
+        // ⚡ BOLT OPTIMIZATION: `begin_set` is being consumed, so we can iterate over owned values.
+        // We take ownership of `current_word_bytes` by using `mut` in the pattern instead of
+        // cloning a borrowed reference. This removes O(N) heap allocations per level traversal.
+        for mut current_word_bytes in begin_set {
             for i in 0..current_word_bytes.len() {
                 let original_byte = current_word_bytes[i];
 
