@@ -81,7 +81,7 @@ struct Task {
     // for `async` blocks since they can contain self-referential local variables.
     future: Mutex<Option<BoxFuture<'static, ()>>>,
     /// Channel to send the task back to the executor when it wakes up.
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
 impl Wake for Task {
@@ -180,7 +180,7 @@ pub struct TimerReactor {
 }
 
 impl TimerReactor {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             timers: Mutex::new(BTreeMap::new()),
             next_id: AtomicUsize::new(0),
@@ -204,6 +204,7 @@ impl TimerReactor {
                 // Swap unexpired back into `timers`, leaving expired timers in `timers` temporarily,
                 // then swap them. A more efficient way is:
                 std::mem::swap(&mut *timers, &mut unexpired);
+                drop(timers);
                 let expired = unexpired;
 
                 for (_instant, state) in expired {
@@ -269,6 +270,10 @@ impl Future for Sleep {
 }
 
 /// Suspends execution for a given duration.
+///
+/// # Panics
+///
+/// Panics if the timer reactor lock is poisoned.
 #[must_use]
 pub fn sleep(duration: Duration) -> Sleep {
     let reactor = get_reactor();
