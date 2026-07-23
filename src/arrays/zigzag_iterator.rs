@@ -1,4 +1,4 @@
-//! # LeetCode 281: Zigzag Iterator
+//! # `LeetCode` 281: Zigzag Iterator
 //!
 //! **Difficulty:** Medium
 //!
@@ -17,7 +17,7 @@
 //! we push it to the back of the queue.
 //!
 //! **Time Complexity:** $O(1)$ per `next()` and `has_next()` call.
-//! **Space Complexity:** $O(K)$ where $K$ is the number of iterators (2 for the LeetCode specific version),
+//! **Space Complexity:** $O(K)$ where $K$ is the number of iterators (2 for the `LeetCode` specific version),
 //! since we only store the iterator objects and do not duplicate the underlying elements.
 //!
 //! ## Alternative approaches
@@ -112,7 +112,7 @@ where
     }
 }
 
-/// The specific struct that satisfies the LeetCode API, which doesn't use standard `Iterator`.
+/// The specific struct that satisfies the `LeetCode` API, which doesn't use standard `Iterator`.
 pub struct ZigzagIterator {
     iters: VecDeque<std::vec::IntoIter<i32>>,
 }
