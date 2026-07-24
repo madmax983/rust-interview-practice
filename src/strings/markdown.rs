@@ -49,7 +49,7 @@ pub struct MarkdownParser {
 
 impl MarkdownParser {
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             output: String::new(),
             state: ParserState::Normal,
@@ -80,7 +80,7 @@ impl MarkdownParser {
                 // Close block
                 self.output.push_str("<pre><code>");
                 self.output
-                    .push_str(&self.escape_html(&self.code_block_content));
+                    .push_str(&Self::escape_html(&self.code_block_content));
                 self.output.push_str("</code></pre>\n");
                 self.code_block_content.clear();
                 self.state = ParserState::Normal;
@@ -124,7 +124,7 @@ impl MarkdownParser {
                     // GOTCHA: Single-line elements must be flushed to the HTML buffer immediately
                     // upon parsing. Do not buffer them.
                     let text = &trimmed[level + 1..];
-                    let parsed = self.parse_inline(text);
+                    let parsed = Self::parse_inline(text);
                     self.output
                         .push_str(&format!("<h{}>{}</h{}>\n", level, parsed, level));
                     return;
@@ -140,7 +140,7 @@ impl MarkdownParser {
             self.output.push(' ');
         }
 
-        let parsed = self.parse_inline(trimmed);
+        let parsed = Self::parse_inline(trimmed);
         self.output.push_str(&parsed);
     }
 
@@ -152,7 +152,7 @@ impl MarkdownParser {
     }
 
     /// Parses inline formatting like **bold** and *italic*
-    fn parse_inline(&self, text: &str) -> String {
+    fn parse_inline(text: &str) -> String {
         let mut result = String::with_capacity(text.len());
         let chars: Vec<char> = text.chars().collect();
         let mut i = 0;
@@ -200,7 +200,7 @@ impl MarkdownParser {
         result
     }
 
-    fn escape_html(&self, text: &str) -> String {
+    fn escape_html(text: &str) -> String {
         let mut result = String::with_capacity(text.len());
         for c in text.chars() {
             match c {

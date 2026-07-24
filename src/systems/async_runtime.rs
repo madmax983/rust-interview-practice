@@ -266,7 +266,7 @@ mod arc_wake {
     }
 
     pub fn waker_ref<W: ArcWake + 'static>(wake: &Arc<W>) -> Waker {
-        let ptr = Arc::into_raw(wake.clone()) as *const ();
+        let ptr = Arc::into_raw(wake.clone()).cast::<()>();
 
         let vtable = &RawWakerVTable::new(
             clone_arc_raw::<W>,
@@ -280,11 +280,11 @@ mod arc_wake {
     }
 
     unsafe fn clone_arc_raw<W: ArcWake + 'static>(data: *const ()) -> RawWaker {
-        let arc = unsafe { Arc::from_raw(data as *const W) };
+        let arc = unsafe { Arc::from_raw(data.cast::<W>()) };
         let cloned = arc.clone();
         let _ = Arc::into_raw(arc);
 
-        let ptr = Arc::into_raw(cloned) as *const ();
+        let ptr = Arc::into_raw(cloned).cast::<()>();
         let vtable = &RawWakerVTable::new(
             clone_arc_raw::<W>,
             wake_arc_raw::<W>,
@@ -295,18 +295,18 @@ mod arc_wake {
     }
 
     unsafe fn wake_arc_raw<W: ArcWake + 'static>(data: *const ()) {
-        let arc = unsafe { Arc::from_raw(data as *const W) };
+        let arc = unsafe { Arc::from_raw(data.cast::<W>()) };
         ArcWake::wake(arc);
     }
 
     unsafe fn wake_by_ref_arc_raw<W: ArcWake + 'static>(data: *const ()) {
-        let arc = unsafe { Arc::from_raw(data as *const W) };
+        let arc = unsafe { Arc::from_raw(data.cast::<W>()) };
         ArcWake::wake_by_ref(&arc);
         let _ = Arc::into_raw(arc);
     }
 
     unsafe fn drop_arc_raw<W: ArcWake + 'static>(data: *const ()) {
-        drop(unsafe { Arc::from_raw(data as *const W) });
+        drop(unsafe { Arc::from_raw(data.cast::<W>()) });
     }
 }
 
