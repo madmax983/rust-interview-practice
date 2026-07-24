@@ -1,0 +1,17 @@
+--- src/systems/async_runtime.rs
++++ src/systems/async_runtime.rs
+@@ -29,6 +29,14 @@
+ //! ## Missing Features
+ //! - No I/O reactor (only timers).
+ //! - No work-stealing thread pool (single-threaded executor).
++//!
++//! ## Suggested Next Steps / Extensions
++//! - Implement an I/O reactor using `mio` or `epoll` directly.
++//! - Add a multithreaded work-stealing executor.
++//! - Build a `JoinHandle` to return results from spawned tasks.
++//!
++//! ## Benchmarking Note
++//! To benchmark this runtime against `tokio`, use `criterion` to spawn and await 10,000 short sleep tasks in a loop, measuring the overhead of task creation and waking vs Tokio's optimized wheel timer.
+
+ use std::collections::BTreeMap;
+ use std::future::Future;
