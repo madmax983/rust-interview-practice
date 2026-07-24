@@ -37,7 +37,7 @@
 //! - **Global Reactor**: A `OnceLock` singleton is used for the reactor to easily create and register timers from anywhere without passing the reactor explicitly.
 //!
 //! ## Alternative Approaches
-//! - A real production runtime like `tokio` uses lock-free queues, epoll/kqueue/io_uring for I/O, and specialized wheel timers for `O(1)` timer overhead.
+//! - A real production runtime like `tokio` uses lock-free queues, `epoll/kqueue/io_uring` for I/O, and specialized wheel timers for `O(1)` timer overhead.
 //!
 //! ## Missing Features
 //! - No I/O reactor (only timers).
@@ -55,7 +55,7 @@ use std::collections::BTreeMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread;
@@ -116,10 +116,7 @@ impl MiniExecutor {
         // PRODUCTION NOTE: Tokio uses a highly optimized lock-free queue (like crossbeam's).
         // We use the standard library's bounded channel for simplicity and backpressure.
         let (task_sender, ready_queue) = sync_channel(10_000);
-        (
-            Self { ready_queue },
-            Spawner { task_sender },
-        )
+        (Self { ready_queue }, Spawner { task_sender })
     }
 }
 
@@ -158,7 +155,7 @@ pub struct TimerReactor {
 impl TimerReactor {
     /// Creates a new timer reactor.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             timers: Mutex::new(BTreeMap::new()),
             id_counter: AtomicUsize::new(0),
@@ -175,6 +172,10 @@ impl Default for TimerReactor {
 static REACTOR: OnceLock<&'static TimerReactor> = OnceLock::new();
 
 /// Gets the global timer reactor instance, initializing it and its background thread if necessary.
+///
+/// # Panics
+///
+/// Panics if the `Mutex` lock on `timers` is poisoned.
 #[must_use]
 pub fn get_reactor() -> &'static TimerReactor {
     REACTOR.get_or_init(|| {
@@ -311,11 +312,11 @@ mod tests {
         let (executor, spawner) = MiniExecutor::new();
         let counter = Arc::new(AtomicUsize::new(0));
 
-        for i in 0..5 {
+        for i in 0_u64..5 {
             let counter_clone = Arc::clone(&counter);
             spawner.spawn(async move {
                 // Variable timeout to test out-of-order completion
-                let sleep = Sleep::new(Duration::from_millis(10 + i as u64 * 2));
+                let sleep = Sleep::new(Duration::from_millis(10 + i * 2));
                 sleep.await;
                 counter_clone.fetch_add(1, Ordering::SeqCst);
             });
