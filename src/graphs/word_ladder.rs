@@ -186,8 +186,8 @@ pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<
         let mut next_set = HashSet::new();
 
         // Process all words in the current level boundary
-        for word in begin_set {
-            let mut current_word_bytes = word.clone();
+        for mut current_word_bytes in begin_set {
+            // ⚡ BOLT OPTIMIZATION: Avoid cloning the word since we already own it from the consumed HashSet, eliminating one heap allocation per evaluated word.
 
             for i in 0..current_word_bytes.len() {
                 let original_byte = current_word_bytes[i];
