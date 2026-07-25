@@ -21,14 +21,14 @@
 //! In a real scenario, you would benchmark this runtime by spawning N tasks that each sleep for M milliseconds and measuring total execution time vs `tokio` using `criterion`.
 //!
 //! **Design decisions and tradeoffs vs. alternatives:**
-//! - **BTreeMap vs. Timer Wheel:** We chose `BTreeMap` for the timer queue for its simplicity, trading off the O(1) amortized performance of a hashed timer wheel for O(log N) inserts.
+//! - **`BTreeMap` vs. Timer Wheel:** We chose `BTreeMap` for the timer queue for its simplicity, trading off the O(1) amortized performance of a hashed timer wheel for O(log N) inserts.
 //! - **Mutex vs. Lock-free queues:** The task future is wrapped in a `Mutex` to satisfy `Sync` for the Waker, and we use a basic channel for the ready queue instead of a lock-free work-stealing deque.
 //!
 //! **Components:**
 //! 1. **Executor**: Runs spawned futures by continually calling their `poll` method when woken.
 //! 2. **Spawner**: Creates tasks and pushes them into the executor's task queue.
 //! 3. **Task**: Wraps a `Future` alongside a mechanism to schedule it (push back to the queue) when woken.
-//! 4. **TimerReactor**: Manages `Sleep` futures, keeping track of when they should complete using a thread and a `BTreeMap`.
+//! 4. **`TimerReactor`**: Manages `Sleep` futures, keeping track of when they should complete using a thread and a `BTreeMap`.
 //!
 //! **Diagram:**
 //! ```text
@@ -63,7 +63,7 @@ use std::collections::BTreeMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread;
@@ -87,9 +87,9 @@ pub struct TimerReactor {
 }
 
 impl TimerReactor {
-    /// Creates and starts a new TimerReactor on a background thread.
+    /// Creates and starts a new `TimerReactor` on a background thread.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             timers: Mutex::new(BTreeMap::new()),
             id_generator: AtomicUsize::new(0),
@@ -97,27 +97,83 @@ impl TimerReactor {
     }
 
     /// Starts the reactor thread that continuously checks for expired timers.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal mutex is poisoned.
     pub fn start(self: Arc<Self>) {
-        thread::spawn(move || {
-            loop {
+        thread::spawn(move || loop {
+            let now = Instant::now();
+            let mut timers_to_wake = Vec::new();
+
+            // Scope for the mutex lock
+            {
+                let mut timers = self.timers.lock().unwrap();
+
+                // Split the map at the current time
+                // All timers with keys < (now, 0) are expired.
+                let mut keys_to_remove = Vec::new();
+                for (key, waker) in timers.iter() {
+                    if key.0 <= now {
+                        // PRODUCTION NOTE: A real runtime like Tokio uses a hierarchical timer wheel
+                        // for O(1) amortized inserts and fires, rather than a BTreeMap which is O(log N).
+                        timers_to_wake.push(waker.clone());
+                        keys_to_remove.push(*key);
+                    } else {
+                        // Since it's sorted, we can stop at the first non-expired timer.
+                        break;
+                    }
+                }
+
+                for key in keys_to_remove {
+                    timers.remove(&key);
+                }
+            }
+
+            // Wake the futures outside the lock to avoid potential deadlocks if a waker does something complex.
+            for waker in timers_to_wake {
+                waker.wake();
+            }
+
+            // Sleep briefly to prevent 100% CPU usage.
+            thread::sleep(Duration::from_millis(1));
+        });
+    }
+
+    /// Registers a waker to be called when the specified `when` Instant is reached.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal mutex is poisoned.
+    pub fn register_timer(&self, when: Instant, waker: Waker) {
+        let id = self.id_generator.fetch_add(1, Ordering::SeqCst);
+        let mut timers = self.timers.lock().unwrap();
+        timers.insert((when, id), waker);
+    }
+
+    /// Initializes the global timer reactor if not already initialized.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal mutex is poisoned.
+    pub fn get() -> &'static Self {
+        TIMER_REACTOR.get_or_init(|| {
+            let reactor = Box::new(Self::new());
+            let static_reactor: &'static Self = Box::leak(reactor);
+
+            // Start the background thread using the static reference
+            thread::spawn(move || loop {
                 let now = Instant::now();
                 let mut timers_to_wake = Vec::new();
 
-                // Scope for the mutex lock
                 {
-                    let mut timers = self.timers.lock().unwrap();
-
-                    // Split the map at the current time
-                    // All timers with keys < (now, 0) are expired.
+                    let mut timers = static_reactor.timers.lock().unwrap();
                     let mut keys_to_remove = Vec::new();
                     for (key, waker) in timers.iter() {
                         if key.0 <= now {
-                            // PRODUCTION NOTE: A real runtime like Tokio uses a hierarchical timer wheel
-                            // for O(1) amortized inserts and fires, rather than a BTreeMap which is O(log N).
                             timers_to_wake.push(waker.clone());
                             keys_to_remove.push(*key);
                         } else {
-                            // Since it's sorted, we can stop at the first non-expired timer.
                             break;
                         }
                     }
@@ -127,59 +183,11 @@ impl TimerReactor {
                     }
                 }
 
-                // Wake the futures outside the lock to avoid potential deadlocks if a waker does something complex.
                 for waker in timers_to_wake {
                     waker.wake();
                 }
 
-                // Sleep briefly to prevent 100% CPU usage.
                 thread::sleep(Duration::from_millis(1));
-            }
-        });
-    }
-
-    /// Registers a waker to be called when the specified `when` Instant is reached.
-    pub fn register_timer(&self, when: Instant, waker: Waker) {
-        let id = self.id_generator.fetch_add(1, Ordering::SeqCst);
-        let mut timers = self.timers.lock().unwrap();
-        timers.insert((when, id), waker);
-    }
-
-    /// Initializes the global timer reactor if not already initialized.
-    pub fn get() -> &'static TimerReactor {
-        TIMER_REACTOR.get_or_init(|| {
-            let reactor = Box::new(TimerReactor::new());
-            let static_reactor: &'static TimerReactor = Box::leak(reactor);
-
-            // Start the background thread using the static reference
-            thread::spawn(move || {
-                loop {
-                    let now = Instant::now();
-                    let mut timers_to_wake = Vec::new();
-
-                    {
-                        let mut timers = static_reactor.timers.lock().unwrap();
-                        let mut keys_to_remove = Vec::new();
-                        for (key, waker) in timers.iter() {
-                            if key.0 <= now {
-                                timers_to_wake.push(waker.clone());
-                                keys_to_remove.push(*key);
-                            } else {
-                                break;
-                            }
-                        }
-
-                        for key in keys_to_remove {
-                            timers.remove(&key);
-                        }
-                    }
-
-                    for waker in timers_to_wake {
-                        waker.wake();
-                    }
-
-                    thread::sleep(Duration::from_millis(1));
-                }
             });
 
             static_reactor
@@ -244,7 +252,7 @@ struct Task {
     /// and `poll` needs mutable access. `Pin<Box>` ensures the future doesn't move in memory.
     future: Mutex<Option<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>>,
     /// Channel to send the task back to the executor when woken.
-    task_sender: Sender<Arc<Task>>,
+    task_sender: Sender<Arc<Self>>,
 }
 
 impl Wake for Task {

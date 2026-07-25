@@ -51,11 +51,13 @@
 //! **Invariants:**
 //! - Inline formatting state (e.g., `in_bold`) MUST be explicitly reset when flushing out block elements to prevent format leakage into subsequent blocks.
 //! - When slicing strings, always check bounds (e.g., `&line[level + 1..]`) to avoid out-of-bounds panics on truncated inputs.
-//! - When iterating over `.lines()`, explicit `\n` characters must be manually re-appended to the block content buffer for verbatim blocks like CodeBlocks.
+//! - When iterating over `.lines()`, explicit `\n` characters must be manually re-appended to the block content buffer for verbatim blocks like `CodeBlocks`.
 //!
 //! **Complexity:**
 //! - **Time Complexity**: O(N) where N is the length of the string, as we process each character exactly once or twice.
 //! - **Space Complexity**: O(N) to store the rendered HTML output. Intermediate states avoid large AST allocations.
+
+use std::fmt::Write;
 
 #[derive(Debug, PartialEq)]
 enum BlockState {
@@ -68,7 +70,7 @@ pub trait MarkdownParser {
     fn parse(&self, input: &str) -> String;
 }
 
-/// A state-machine based implementation of the MarkdownParser trait.
+/// A state-machine based implementation of the `MarkdownParser` trait.
 pub struct StateMachineParser;
 
 impl MarkdownParser for StateMachineParser {
@@ -131,7 +133,7 @@ impl MarkdownParser for StateMachineParser {
                         };
 
                         let formatted = format_inline(content);
-                        output.push_str(&format!("<h{}>{}</h{}>\n", level, formatted, level));
+                        let _ = writeln!(output, "<h{level}>{formatted}</h{level}>");
                     } else if line.starts_with('*') && line.len() > 1 && line[1..].starts_with(' ')
                     {
                         if !in_list {
@@ -139,7 +141,7 @@ impl MarkdownParser for StateMachineParser {
                             in_list = true;
                         }
                         let content = &line[2..];
-                        output.push_str(&format!("<li>{}</li>\n", format_inline(content)));
+                        let _ = writeln!(output, "<li>{}</li>", format_inline(content));
                     } else if line.is_empty() {
                         if in_list {
                             output.push_str("</ul>\n");
@@ -150,7 +152,7 @@ impl MarkdownParser for StateMachineParser {
                             output.push_str("</ul>\n");
                             in_list = false;
                         }
-                        output.push_str(&format!("<p>{}</p>\n", format_inline(line)));
+                        let _ = writeln!(output, "<p>{}</p>", format_inline(line));
                     }
                 }
             }
