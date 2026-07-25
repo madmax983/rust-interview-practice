@@ -63,7 +63,7 @@ use std::collections::BTreeMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread;
@@ -102,41 +102,43 @@ impl TimerReactor {
     ///
     /// Panics if the internal mutex is poisoned.
     pub fn start(self: Arc<Self>) {
-        thread::spawn(move || loop {
-            let now = Instant::now();
-            let mut timers_to_wake = Vec::new();
+        thread::spawn(move || {
+            loop {
+                let now = Instant::now();
+                let mut timers_to_wake = Vec::new();
 
-            // Scope for the mutex lock
-            {
-                let mut timers = self.timers.lock().unwrap();
+                // Scope for the mutex lock
+                {
+                    let mut timers = self.timers.lock().unwrap();
 
-                // Split the map at the current time
-                // All timers with keys < (now, 0) are expired.
-                let mut keys_to_remove = Vec::new();
-                for (key, waker) in timers.iter() {
-                    if key.0 <= now {
-                        // PRODUCTION NOTE: A real runtime like Tokio uses a hierarchical timer wheel
-                        // for O(1) amortized inserts and fires, rather than a BTreeMap which is O(log N).
-                        timers_to_wake.push(waker.clone());
-                        keys_to_remove.push(*key);
-                    } else {
-                        // Since it's sorted, we can stop at the first non-expired timer.
-                        break;
+                    // Split the map at the current time
+                    // All timers with keys < (now, 0) are expired.
+                    let mut keys_to_remove = Vec::new();
+                    for (key, waker) in timers.iter() {
+                        if key.0 <= now {
+                            // PRODUCTION NOTE: A real runtime like Tokio uses a hierarchical timer wheel
+                            // for O(1) amortized inserts and fires, rather than a BTreeMap which is O(log N).
+                            timers_to_wake.push(waker.clone());
+                            keys_to_remove.push(*key);
+                        } else {
+                            // Since it's sorted, we can stop at the first non-expired timer.
+                            break;
+                        }
+                    }
+
+                    for key in keys_to_remove {
+                        timers.remove(&key);
                     }
                 }
 
-                for key in keys_to_remove {
-                    timers.remove(&key);
+                // Wake the futures outside the lock to avoid potential deadlocks if a waker does something complex.
+                for waker in timers_to_wake {
+                    waker.wake();
                 }
-            }
 
-            // Wake the futures outside the lock to avoid potential deadlocks if a waker does something complex.
-            for waker in timers_to_wake {
-                waker.wake();
+                // Sleep briefly to prevent 100% CPU usage.
+                thread::sleep(Duration::from_millis(1));
             }
-
-            // Sleep briefly to prevent 100% CPU usage.
-            thread::sleep(Duration::from_millis(1));
         });
     }
 
@@ -162,32 +164,34 @@ impl TimerReactor {
             let static_reactor: &'static Self = Box::leak(reactor);
 
             // Start the background thread using the static reference
-            thread::spawn(move || loop {
-                let now = Instant::now();
-                let mut timers_to_wake = Vec::new();
+            thread::spawn(move || {
+                loop {
+                    let now = Instant::now();
+                    let mut timers_to_wake = Vec::new();
 
-                {
-                    let mut timers = static_reactor.timers.lock().unwrap();
-                    let mut keys_to_remove = Vec::new();
-                    for (key, waker) in timers.iter() {
-                        if key.0 <= now {
-                            timers_to_wake.push(waker.clone());
-                            keys_to_remove.push(*key);
-                        } else {
-                            break;
+                    {
+                        let mut timers = static_reactor.timers.lock().unwrap();
+                        let mut keys_to_remove = Vec::new();
+                        for (key, waker) in timers.iter() {
+                            if key.0 <= now {
+                                timers_to_wake.push(waker.clone());
+                                keys_to_remove.push(*key);
+                            } else {
+                                break;
+                            }
+                        }
+
+                        for key in keys_to_remove {
+                            timers.remove(&key);
                         }
                     }
 
-                    for key in keys_to_remove {
-                        timers.remove(&key);
+                    for waker in timers_to_wake {
+                        waker.wake();
                     }
-                }
 
-                for waker in timers_to_wake {
-                    waker.wake();
+                    thread::sleep(Duration::from_millis(1));
                 }
-
-                thread::sleep(Duration::from_millis(1));
             });
 
             static_reactor
