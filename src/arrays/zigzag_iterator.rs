@@ -18,7 +18,7 @@
 //!
 //! We provide two implementations:
 //! 1. `GenericZigzagIter`: A purely idiomatic, generic implementation using Rust's `Iterator` trait.
-//! 2. `ZigzagIterator`: A specific wrapper to satisfy the LeetCode platform's required `next()`
+//! 2. `ZigzagIterator`: A specific wrapper to satisfy the `LeetCode` platform's required `next()`
 //!    and `has_next()` methods, utilizing `std::vec::IntoIter` which implements `ExactSizeIterator`.
 //!
 //! ## Alternative Approaches
@@ -72,7 +72,7 @@ where
     }
 }
 
-/// The specific struct for LeetCode #281 compatibility.
+/// The specific struct for `LeetCode` #281 compatibility.
 pub struct ZigzagIterator {
     iter1: std::vec::IntoIter<i32>,
     iter2: std::vec::IntoIter<i32>,
