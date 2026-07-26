@@ -26,7 +26,7 @@ use std::{
 /// A task is a boxed future that can send itself back to the executor when woken.
 struct Task {
     future: Mutex<Option<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>>,
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
 impl std::task::Wake for Task {
@@ -63,6 +63,10 @@ pub struct Executor {
 impl Executor {
     /// Runs the executor, polling tasks until the queue is empty.
     /// In a real runtime, this would block and wait for new tasks.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the task's future slot lock is poisoned.
     pub fn run(&self) {
         while let Ok(task) = self.ready_queue.try_recv() {
             let mut future_slot = task.future.lock().unwrap();
@@ -100,7 +104,7 @@ struct TimerReactor {
 }
 
 impl TimerReactor {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             timers: Mutex::new(BTreeMap::new()),
             counter: AtomicUsize::new(0),

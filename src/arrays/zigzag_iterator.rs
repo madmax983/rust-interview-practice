@@ -105,6 +105,9 @@ impl ZigzagIterator {
         Self { iters }
     }
 
+    /// # Panics
+    ///
+    /// Panics if called when there are no elements left to iterate.
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> i32 {
         if let Some(mut it) = self.iters.pop_front() {

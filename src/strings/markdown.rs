@@ -27,6 +27,7 @@ use std::fmt::Write;
 /// **Idiomatic Rust:**
 /// The use of `lines()` iterator combined with `strip_prefix` and `match` makes the parsing logic
 /// declarative and easy to read.
+#[must_use]
 pub fn parse_markdown(input: &str) -> String {
     let mut output = String::new();
     let mut in_code_block = false;
