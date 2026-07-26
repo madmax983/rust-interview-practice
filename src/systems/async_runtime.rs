@@ -36,7 +36,7 @@
 //!
 //! Footer:
 //! - Comparison to Canonical Crates: Crates like `tokio` or `async-std` use sophisticated
-//!   epoll/kqueue/io_uring backends for I/O readiness, whereas our minimal reactor only
+//!   `epoll/kqueue/io_uring` backends for I/O readiness, whereas our minimal reactor only
 //!   handles timers on a separate sleeping thread. They also use work-stealing multithreaded
 //!   executors, whereas ours is a simple single-threaded MPSC queue.
 //! - Missing vs Production: We don't handle I/O (sockets, files), we don't have task cancellation
@@ -99,7 +99,7 @@ impl Default for TimerReactor {
 impl TimerReactor {
     /// Creates a new `TimerReactor`.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             timers: Mutex::new(BTreeMap::new()),
             next_id: AtomicUsize::new(0),
