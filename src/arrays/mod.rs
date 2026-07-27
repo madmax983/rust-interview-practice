@@ -26,3 +26,4 @@ pub mod trapping_rain_water;
 pub mod two_sum;
 pub mod two_sum_ii;
 pub mod valid_sudoku;
+pub mod zigzag_iterator;
