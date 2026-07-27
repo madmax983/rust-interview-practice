@@ -112,7 +112,7 @@ struct TimerReactor {
 }
 
 impl TimerReactor {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             next_id: AtomicUsize::new(0),
             timers: Mutex::new(BTreeMap::new()),
@@ -231,7 +231,7 @@ struct Task {
     /// but `poll` requires `Pin<&mut Future>`.
     future: Mutex<Option<BoxFuture<'static, ()>>>,
     /// Channel to send the task back to the executor when woken.
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
 type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -288,6 +288,9 @@ impl Executor {
 
     /// Runs the executor, pulling tasks from the queue and polling them.
     /// This method blocks until the queue is disconnected (all spawners dropped).
+    ///
+    /// # Panics
+    /// Panics if the internal task future mutex is poisoned.
     pub fn run(&self) {
         // Loop over tasks received on the channel.
         while let Ok(task) = self.ready_queue.recv() {
