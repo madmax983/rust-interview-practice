@@ -95,6 +95,9 @@ pub struct Executor {
 
 impl Executor {
     /// Runs the executor until the spawner is dropped and the queue is empty.
+    ///
+    /// # Panics
+    /// Panics if the internal `Mutex` protecting the future slot is poisoned.
     pub fn run(&self) {
         while let Ok(task) = self.ready_queue.recv() {
             let mut future_slot = task.future.lock().unwrap();
@@ -128,6 +131,9 @@ pub struct TaskSpawner {
 
 impl TaskSpawner {
     /// Spawns a new future onto the executor.
+    ///
+    /// # Panics
+    /// Panics if the spawner's channel is full or disconnected.
     pub fn spawn_task(&self, future: impl Future<Output = ()> + 'static + Send) {
         let future = Box::pin(future);
         let task = Arc::new(Task {

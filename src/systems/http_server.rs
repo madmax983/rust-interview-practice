@@ -6,7 +6,7 @@
 //!
 //! **Real-world Usage:**
 //! - Core logic inside web frameworks
-//! - Reverse proxies (e.g., Nginx, HAProxy)
+//! - Reverse proxies (e.g., Nginx, `HAProxy`)
 //! - Embedded systems requiring lightweight web interfaces
 //!
 //! **Why build it yourself?**
@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
+use std::fmt::Write as FmtWrite;
 use std::thread;
 
 // =========================================================================================
@@ -92,7 +93,7 @@ pub struct HttpRequest {
 }
 
 impl HttpRequest {
-    /// Parses a raw byte stream into an HttpRequest.
+    /// Parses a raw byte stream into an `HttpRequest`.
     ///
     /// # Errors
     /// Returns an error message if parsing fails.
@@ -179,7 +180,7 @@ impl HttpResponse {
         let mut response_str = format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_text);
 
         for (k, v) in &self.headers {
-            response_str.push_str(&format!("{k}: {v}\r\n"));
+            let _ = write!(response_str, "{k}: {v}\r\n");
         }
 
         response_str.push_str("\r\n");
@@ -198,7 +199,7 @@ pub struct ThreadPool {
 }
 
 impl ThreadPool {
-    /// Creates a new ThreadPool.
+    /// Creates a new `ThreadPool`.
     ///
     /// # Panics
     /// Panics if size is 0.
@@ -210,8 +211,8 @@ impl ThreadPool {
         let receiver = Arc::new(Mutex::new(receiver));
 
         let mut workers = Vec::with_capacity(size);
-        for id in 0..size {
-            workers.push(Worker::new(id, Arc::clone(&receiver)));
+        for _ in 0..size {
+            workers.push(Worker::new(Arc::clone(&receiver)));
         }
 
         Self {
@@ -220,6 +221,10 @@ impl ThreadPool {
         }
     }
 
+    /// Executes a job on the thread pool.
+    ///
+    /// # Panics
+    /// Panics if the channel is disconnected.
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
@@ -244,12 +249,11 @@ impl Drop for ThreadPool {
 }
 
 struct Worker {
-    _id: usize,
     thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-    fn new(_id: usize, receiver: Arc<Mutex<std::sync::mpsc::Receiver<Job>>>) -> Self {
+    fn new(receiver: Arc<Mutex<std::sync::mpsc::Receiver<Job>>>) -> Self {
         let thread = thread::spawn(move || {
             loop {
                 let message = receiver.lock().unwrap().recv();
@@ -266,18 +270,20 @@ impl Worker {
         });
 
         Self {
-            _id,
             thread: Some(thread),
         }
     }
 }
+
+/// A type alias for the route handler map to avoid type complexity.
+type RouteMap = HashMap<String, Arc<dyn Fn(&HttpRequest) -> HttpResponse + Send + Sync>>;
 
 /// A minimal HTTP Server.
 pub struct HttpServer {
     address: String,
     pool: ThreadPool,
     // Basic routing: Path -> Handler
-    routes: Arc<HashMap<String, Arc<dyn Fn(&HttpRequest) -> HttpResponse + Send + Sync>>>,
+    routes: Arc<RouteMap>,
 }
 
 impl HttpServer {
@@ -293,6 +299,9 @@ impl HttpServer {
 
     /// Adds a route to the server. (Builder pattern for tests/setup).
     /// Note: This consumes self and returns a new server, simple for setup but not dynamic.
+    ///
+    /// # Panics
+    /// Panics if a route is added after the server has started and shared its routes `Arc`.
     #[must_use]
     pub fn add_route<F>(mut self, path: &str, handler: F) -> Self
     where
@@ -304,10 +313,7 @@ impl HttpServer {
     }
 
     /// Handles a single TCP connection.
-    fn handle_connection(
-        mut stream: TcpStream,
-        routes: Arc<HashMap<String, Arc<dyn Fn(&HttpRequest) -> HttpResponse + Send + Sync>>>,
-    ) {
+    fn handle_connection(mut stream: TcpStream, routes: &Arc<RouteMap>) {
         let mut buffer = [0; 1024];
 
         // PRODUCTION NOTE: Real servers read in loops to handle large requests,
@@ -318,13 +324,9 @@ impl HttpServer {
             }
 
             let response = match HttpRequest::parse(&buffer[..bytes_read]) {
-                Ok(request) => {
-                    if let Some(handler) = routes.get(&request.path) {
-                        handler(&request)
-                    } else {
-                        HttpResponse::not_found()
-                    }
-                }
+                Ok(request) => routes
+                    .get(&request.path)
+                    .map_or_else(HttpResponse::not_found, |handler| handler(&request)),
                 Err(_) => HttpResponse::bad_request(),
             };
 
@@ -334,13 +336,16 @@ impl HttpServer {
     }
 
     /// Starts listening for connections (Blocking).
+    ///
+    /// # Panics
+    /// Panics if the address cannot be bound.
     pub fn run(&self) {
         let listener = TcpListener::bind(&self.address).unwrap();
 
         for stream in listener.incoming().flatten() {
             let routes_clone = Arc::clone(&self.routes);
             self.pool.execute(move || {
-                Self::handle_connection(stream, routes_clone);
+                Self::handle_connection(stream, &routes_clone);
             });
         }
     }
@@ -382,7 +387,7 @@ mod tests {
         assert_eq!(req.path, "/hello");
         assert_eq!(req.version, "HTTP/1.1");
         assert_eq!(
-            req.headers.get("Host").map(|s| s.as_str()),
+            req.headers.get("Host").map(std::string::String::as_str),
             Some("localhost")
         );
     }
