@@ -15,10 +15,10 @@
 //! and how abstractions like `Request` and `Response` are built from plain bytes.
 
 use std::collections::HashMap;
+use std::fmt::Write as FmtWrite;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::fmt::Write as FmtWrite;
 use std::thread;
 
 // =========================================================================================
