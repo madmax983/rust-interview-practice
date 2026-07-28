@@ -252,7 +252,7 @@ mod tests {
         }
         assert_eq!(result, vec![1]);
 
-        let id = ZigzagIteratorIdiomatic::new(Vec::<i32>::new(), v2.clone());
+        let id = ZigzagIteratorIdiomatic::new(Vec::<i32>::new(), v2);
         let res_id: Vec<i32> = id.collect();
         assert_eq!(res_id, vec![1]);
 
@@ -266,7 +266,7 @@ mod tests {
         }
         assert_eq!(result, vec![1]);
 
-        let id2 = ZigzagIteratorIdiomatic::new(v1.clone(), Vec::<i32>::new());
+        let id2 = ZigzagIteratorIdiomatic::new(v1, Vec::<i32>::new());
         let res_id2: Vec<i32> = id2.collect();
         assert_eq!(res_id2, vec![1]);
 
