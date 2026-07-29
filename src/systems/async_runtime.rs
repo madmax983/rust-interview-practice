@@ -86,7 +86,7 @@ pub struct TimerReactor {
 }
 
 impl TimerReactor {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             timers: Mutex::new(BTreeMap::new()),
             next_id: AtomicUsize::new(0),
@@ -139,7 +139,7 @@ impl TimerReactor {
         REACTOR.get_or_init(|| {
             let reactor = Box::new(Self::new());
             // Leak the box to get a static reference
-            let ref_reactor: &'static TimerReactor = Box::leak(reactor);
+            let ref_reactor: &'static Self = Box::leak(reactor);
             ref_reactor.start();
             ref_reactor
         })
@@ -196,7 +196,7 @@ struct Task {
     // We use a Boxed Future. Pinning is required because Futures can be self-referential
     // across await points.
     future: Mutex<Option<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>>,
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
 impl ArcWake for Task {
@@ -262,6 +262,10 @@ pub struct Spawner {
 
 impl Spawner {
     /// Spawns a future onto the executor.
+    /// Spawns a future onto the executor.
+    ///
+    /// # Panics
+    /// Panics if the internal queue is full or closed.
     pub fn spawn(&self, future: impl Future<Output = ()> + Send + 'static) {
         let future = Box::pin(future);
         let task = Arc::new(Task {
@@ -280,6 +284,11 @@ pub struct Executor {
 impl Executor {
     /// Runs the executor, polling tasks until the queue is empty.
     /// In a real runtime, this would block indefinitely waiting for new tasks.
+    /// Runs the executor, polling tasks until the queue is empty.
+    /// In a real runtime, this would block indefinitely waiting for new tasks.
+    ///
+    /// # Panics
+    /// Panics if the task's future mutex is poisoned.
     pub fn run(&self) {
         while let Ok(task) = self.ready_queue.recv() {
             let mut future_slot = task.future.lock().unwrap();

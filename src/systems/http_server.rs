@@ -29,7 +29,7 @@
 //! ```
 //!
 //! **Invariants:**
-//! 1. The ThreadPool maintains a fixed number of worker threads.
+//! 1. The `ThreadPool` maintains a fixed number of worker threads.
 //! 2. Requests are parsed according to a simplified HTTP/1.1 specification.
 //! 3. Responses are properly formatted with standard HTTP/1.1 status lines and headers.
 //!
@@ -107,7 +107,7 @@ pub struct ThreadPool {
 }
 
 impl ThreadPool {
-    /// Creates a new ThreadPool with the specified number of threads.
+    /// Creates a new `ThreadPool` with the specified number of threads.
     ///
     /// # Panics
     /// Panics if `size` is 0.
@@ -348,7 +348,7 @@ pub struct HttpServer {
 }
 
 impl HttpServer {
-    /// Creates a new HttpServer with the specified worker count and request handler.
+    /// Creates a new `HttpServer` with the specified worker count and request handler.
     #[must_use]
     pub fn new(workers: usize, handler: impl Handler + 'static) -> Self {
         Self {
@@ -361,21 +361,19 @@ impl HttpServer {
     ///
     /// # Panics
     /// Panics if the stream cannot be cloned.
+    #[allow(clippy::needless_pass_by_value)]
     fn handle_connection(mut stream: TcpStream, handler: Arc<dyn Handler>) {
         let request = {
             let mut reader = BufReader::new(&mut stream);
             Request::parse(&mut reader)
         };
 
-        match request {
-            Ok(req) => {
-                let response = handler.handle(req);
-                let _ = stream.write_all(&response.into_bytes());
-            }
-            Err(_) => {
-                let response = Response::new(StatusCode::BadRequest, "Bad Request");
-                let _ = stream.write_all(&response.into_bytes());
-            }
+        if let Ok(req) = request {
+            let response = handler.handle(req);
+            let _ = stream.write_all(&response.into_bytes());
+        } else {
+            let response = Response::new(StatusCode::BadRequest, "Bad Request");
+            let _ = stream.write_all(&response.into_bytes());
         }
         let _ = stream.flush();
     }
@@ -482,6 +480,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::similar_names)]
     fn test_handler() {
         let handler = FnHandler(|req: Request| {
             if req.path == "/test" {
