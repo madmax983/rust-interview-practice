@@ -114,7 +114,7 @@ impl TimerReactor {
                 // keep that and take the remaining (which are < the key).
                 // We use a slightly hacky approach for simplicity: collect expired keys.
                 let mut expired = Vec::new();
-                for (key, _) in timers.iter() {
+                for key in timers.keys() {
                     if key.0 <= now {
                         expired.push(*key);
                     } else {
