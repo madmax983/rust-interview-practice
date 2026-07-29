@@ -31,7 +31,7 @@
 //! // would be required if we used `std::iter::Peekable::peek()`.
 //!
 //! // GOTCHA:
-//! // The LeetCode method signatures use `next(&mut self) -> i32`. This differs from Rust's
+//! // The `LeetCode` method signatures use `next(&mut self) -> i32`. This differs from Rust's
 //! // standard `Iterator::next(&mut self) -> Option<Item>`, forcing us to explicitly bypass
 //! // standard trait implementation for the exact signature match.
 
@@ -178,7 +178,7 @@ where
 }
 
 /// Optimal Approach: Specialized for exactly 2 lists, zero-allocation.
-/// Wraps our generic educational implementation to meet the LeetCode API.
+/// Wraps our generic educational implementation to meet the `LeetCode` API.
 pub struct ZigzagIteratorOptimal {
     inner: ZigzagIteratorGeneric<std::vec::IntoIter<i32>, std::vec::IntoIter<i32>>,
 }
@@ -253,7 +253,7 @@ mod tests {
 
         let mut brute = ZigzagIteratorBruteForce::new(v1.clone(), v2.clone());
         let mut optz = ZigzagIteratorOptimized::new(v1.clone(), v2.clone());
-        let mut optm = ZigzagIteratorOptimal::new(v1.clone(), v2.clone());
+        let mut optimal = ZigzagIteratorOptimal::new(v1, v2);
 
         let mut res_brute = Vec::new();
         while brute.has_next() {
@@ -265,14 +265,14 @@ mod tests {
             res_optz.push(optz.next());
         }
 
-        let mut res_optm = Vec::new();
-        while optm.has_next() {
-            res_optm.push(optm.next());
+        let mut res_optimal = Vec::new();
+        while optimal.has_next() {
+            res_optimal.push(optimal.next());
         }
 
         assert_eq!(res_brute, vec![1, 2, 3]);
         assert_eq!(res_optz, vec![1, 2, 3]);
-        assert_eq!(res_optm, vec![1, 2, 3]);
+        assert_eq!(res_optimal, vec![1, 2, 3]);
     }
 
     #[test]
@@ -282,11 +282,11 @@ mod tests {
 
         let brute = ZigzagIteratorBruteForce::new(v1.clone(), v2.clone());
         let optz = ZigzagIteratorOptimized::new(v1.clone(), v2.clone());
-        let optm = ZigzagIteratorOptimal::new(v1.clone(), v2.clone());
+        let optimal = ZigzagIteratorOptimal::new(v1, v2);
 
         assert!(!brute.has_next());
         assert!(!optz.has_next());
-        assert!(!optm.has_next());
+        assert!(!optimal.has_next());
     }
 
     #[test]
@@ -296,7 +296,7 @@ mod tests {
 
         let mut brute = ZigzagIteratorBruteForce::new(v1.clone(), v2.clone());
         let mut optz = ZigzagIteratorOptimized::new(v1.clone(), v2.clone());
-        let mut optm = ZigzagIteratorOptimal::new(v1.clone(), v2.clone());
+        let mut optimal = ZigzagIteratorOptimal::new(v1, v2);
 
         let mut res_brute = Vec::new();
         while brute.has_next() {
@@ -308,13 +308,13 @@ mod tests {
             res_optz.push(optz.next());
         }
 
-        let mut res_optm = Vec::new();
-        while optm.has_next() {
-            res_optm.push(optm.next());
+        let mut res_optimal = Vec::new();
+        while optimal.has_next() {
+            res_optimal.push(optimal.next());
         }
 
         assert_eq!(res_brute, vec![1, 6, 2, 3, 4, 5]);
         assert_eq!(res_optz, vec![1, 6, 2, 3, 4, 5]);
-        assert_eq!(res_optm, vec![1, 6, 2, 3, 4, 5]);
+        assert_eq!(res_optimal, vec![1, 6, 2, 3, 4, 5]);
     }
 }
