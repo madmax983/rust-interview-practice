@@ -54,13 +54,13 @@
 //! | Feature          | This Implementation | Tokio / smol                           |
 //! |------------------|---------------------|----------------------------------------|
 //! | **Executor**     | Single-threaded MPSC| Work-stealing, multi-threaded         |
-//! | **Reactor**      | Thread.sleep + Map  | epoll/kqueue/io_uring                 |
+//! | **Reactor**      | Thread.sleep + Map  | `epoll/kqueue/io_uring`               |
 //! | **Waker alloc**  | `Arc` per task      | Slab allocated or inline              |
 //! | **Timers**       | Background thread   | Hierarchical hashed wheel timers       |
 //!
 //! **Missing Features:**
 //! - I/O polling (TCP/UDP).
-//! - Task cancellation (dropping the JoinHandle).
+//! - Task cancellation (dropping the `JoinHandle`).
 //! - Local sets (executing `!Send` futures).
 //
 // **Suggested Next Steps:**
@@ -104,10 +104,10 @@ struct Task {
     /// future during polling.
     future: Mutex<Option<BoxFuture<'static, ()>>>,
     /// The channel back to the Executor to re-schedule this task.
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
-/// The VTable that tells Rust how to clone, wake, and drop our custom Waker.
+/// The `VTable` that tells Rust how to clone, wake, and drop our custom Waker.
 /// This must be static as `RawWaker` requires a `'static` lifetime.
 static VTABLE: RawWakerVTable =
     RawWakerVTable::new(task_clone, task_wake, task_wake_by_ref, task_drop);
@@ -254,16 +254,16 @@ pub struct TimerReactor {
 impl TimerReactor {
     /// Initializes the global timer reactor thread.
     /// In a real system (like Tokio), the reactor is tightly coupled with the executor,
-    /// usually running on the same threads using epoll/io_uring.
+    /// usually running on the same threads using `epoll/io_uring`.
     pub fn init() {
         REACTOR.get_or_init(|| {
-            let reactor = Box::new(TimerReactor {
+            let reactor = Box::new(Self {
                 timers: Mutex::new(BTreeMap::new()),
                 counter: AtomicUsize::new(0),
             });
 
             // Leak the box to get a 'static reference.
-            let reactor_ref: &'static TimerReactor = Box::leak(reactor);
+            let reactor_ref: &'static Self = Box::leak(reactor);
 
             // Spawn the background thread to process timers.
             thread::spawn(move || {
