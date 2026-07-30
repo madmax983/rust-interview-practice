@@ -56,6 +56,9 @@ impl ZigzagIteratorBruteForce {
         }
     }
 
+    /// # Panics
+    ///
+    /// Panics if called when `has_next()` returns `false`.
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> i32 {
         self.data.next().unwrap()
@@ -89,6 +92,9 @@ impl ZigzagIteratorOptimal {
         }
     }
 
+    /// # Panics
+    ///
+    /// Panics if called when `has_next()` returns `false`.
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> i32 {
         if self.turn {
