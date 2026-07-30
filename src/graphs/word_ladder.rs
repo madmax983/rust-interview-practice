@@ -165,13 +165,13 @@ pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<
     let mut begin_set = HashSet::new();
     let mut end_set = HashSet::new();
 
-    begin_set.insert(begin_word_bytes.clone());
-    end_set.insert(end_word_bytes.clone());
-
     // Remove the starting and ending boundaries so we don't self-loop or trivially match
     // already visited perimeters in redundant ways.
     word_set.remove(&begin_word_bytes);
     word_set.remove(&end_word_bytes);
+
+    begin_set.insert(begin_word_bytes);
+    end_set.insert(end_word_bytes);
 
     let mut level = 1;
 
@@ -186,9 +186,9 @@ pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<
         let mut next_set = HashSet::new();
 
         // Process all words in the current level boundary
-        for word in begin_set {
-            let mut current_word_bytes = word.clone();
-
+        // ⚡ BOLT OPTIMIZATION: Consume the `HashSet` directly rather than iterating and cloning.
+        // This eliminates one `Vec<u8>` heap allocation per evaluated word in the BFS hot path.
+        for mut current_word_bytes in begin_set {
             for i in 0..current_word_bytes.len() {
                 let original_byte = current_word_bytes[i];
 
