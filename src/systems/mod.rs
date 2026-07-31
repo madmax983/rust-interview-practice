@@ -1,4 +1,5 @@
 pub mod arc_cache;
+pub mod async_runtime;
 pub mod bitcask;
 pub mod bloom_filter;
 pub mod buddy_allocator;
@@ -16,6 +17,7 @@ pub mod design_twitter;
 pub mod ecs;
 pub mod error_framework;
 pub mod garbage_collector;
+pub mod http_server;
 pub mod inverted_index;
 pub mod job_queue;
 pub mod lfu_cache;
