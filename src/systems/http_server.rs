@@ -123,6 +123,8 @@ pub struct ThreadPool {
 }
 
 impl ThreadPool {
+    /// # Panics
+    /// Panics if `size` is 0.
     #[must_use]
     pub fn new(size: usize) -> Self {
         assert!(size > 0);

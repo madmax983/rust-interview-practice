@@ -37,7 +37,7 @@
 //! **Time/Space Complexity:**
 //! - Task Spawn: O(1) time, O(1) space per task
 //! - Task Wake: O(1) time (channel send)
-//! - Timer Register: O(log N) time (BTreeMap insert)
+//! - Timer Register: O(log N) time (`BTreeMap` insert)
 //!
 //! **Design Decisions and Tradeoffs:**
 //! - Uses a simple MPSC channel for the task queue, avoiding complex work-stealing algorithms.
@@ -69,7 +69,7 @@ use std::time::{Duration, Instant};
 static REACTOR: OnceLock<&'static TimerReactor> = OnceLock::new();
 
 pub struct TimerReactor {
-    /// BTreeMap of timers, keyed by (Instant, id) to disambiguate identical Instants.
+    /// `BTreeMap` of timers, keyed by (Instant, id) to disambiguate identical Instants.
     timers: Mutex<BTreeMap<(Instant, usize), Waker>>,
     timer_id: AtomicUsize,
 }
@@ -84,6 +84,8 @@ impl TimerReactor {
     }
 
     /// Register a new timer for the given duration.
+    /// # Panics
+    /// Panics if the internal timer lock cannot be acquired.
     pub fn register(&self, duration: Duration, waker: Waker) {
         let when = Instant::now() + duration;
         let id = self.timer_id.fetch_add(1, Ordering::Relaxed);
@@ -94,13 +96,15 @@ impl TimerReactor {
     }
 
     /// Background loop to wake expired timers.
+    /// # Panics
+    /// Panics if the internal timer lock cannot be acquired.
     pub fn run_loop(&self) {
         loop {
             let now = Instant::now();
             let mut timers = self.timers.lock().unwrap();
 
             let mut expired = Vec::new();
-            for (&key, _waker) in timers.iter() {
+            for &key in timers.keys() {
                 if key.0 <= now {
                     expired.push(key);
                 } else {
@@ -147,27 +151,27 @@ static VTABLE: RawWakerVTable =
     RawWakerVTable::new(clone_waker, wake_waker, wake_by_ref_waker, drop_waker);
 
 fn clone_waker(ptr: *const ()) -> RawWaker {
-    let arc = unsafe { Arc::from_raw(ptr as *const Task) };
+    let arc = unsafe { Arc::from_raw(ptr.cast::<Task>()) };
     // RUST INSIGHT: We clone the Arc to increase the reference count, but then immediately
     // turn both back into raw pointers to avoid dropping them.
     let _ = Arc::into_raw(arc.clone());
     let ptr2 = Arc::into_raw(arc);
-    RawWaker::new(ptr2 as *const (), &VTABLE)
+    RawWaker::new(ptr2.cast::<()>(), &VTABLE)
 }
 
 fn wake_waker(ptr: *const ()) {
-    let arc = unsafe { Arc::from_raw(ptr as *const Task) };
+    let arc = unsafe { Arc::from_raw(ptr.cast::<Task>()) };
     arc.schedule();
 }
 
 fn wake_by_ref_waker(ptr: *const ()) {
-    let arc = unsafe { Arc::from_raw(ptr as *const Task) };
+    let arc = unsafe { Arc::from_raw(ptr.cast::<Task>()) };
     arc.schedule();
     let _ = Arc::into_raw(arc);
 }
 
 fn drop_waker(ptr: *const ()) {
-    let _arc = unsafe { Arc::from_raw(ptr as *const Task) };
+    let _arc = unsafe { Arc::from_raw(ptr.cast::<Task>()) };
 }
 
 // =========================================================================================
@@ -176,7 +180,7 @@ fn drop_waker(ptr: *const ()) {
 
 struct Task {
     future: Mutex<Option<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>>,
-    task_sender: SyncSender<Arc<Task>>,
+    task_sender: SyncSender<Arc<Self>>,
 }
 
 impl Task {
@@ -190,11 +194,13 @@ pub struct Executor {
 }
 
 impl Executor {
+    /// # Panics
+    /// Panics if the task future lock cannot be acquired.
     pub fn run(&self) {
         while let Ok(task) = self.task_receiver.recv() {
             let mut future_slot = task.future.lock().unwrap();
             if let Some(mut future) = future_slot.take() {
-                let ptr = Arc::into_raw(Arc::clone(&task)) as *const ();
+                let ptr = Arc::into_raw(Arc::clone(&task)).cast::<()>();
                 let raw_waker = RawWaker::new(ptr, &VTABLE);
                 // UNSAFE JUSTIFICATION: We constructed the RawWaker safely with our VTABLE,
                 // which correctly manages the Arc reference count.
