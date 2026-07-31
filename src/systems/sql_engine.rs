@@ -880,9 +880,10 @@ impl<S: StorageEngine> SqlEngine<S> {
         }
     }
 
-    fn evaluate_expr(expr: &Expr, row: &Row, schema: &TableSchema) -> Result<Value> {
+    // ⚡ BOLT OPTIMIZATION: Return references to avoid cloning `Value` (which may contain `String`) during WHERE clause evaluation.
+    fn evaluate_expr<'a>(expr: &'a Expr, row: &'a Row, schema: &TableSchema) -> Result<&'a Value> {
         match expr {
-            Expr::Literal(val) => Ok(val.clone()),
+            Expr::Literal(val) => Ok(val),
             Expr::Ident(col_name) => {
                 let idx = schema
                     .columns
@@ -893,7 +894,7 @@ impl<S: StorageEngine> SqlEngine<S> {
                             "Column '{col_name}' not found in WHERE clause"
                         ))
                     })?;
-                Ok(row.values[idx].clone())
+                Ok(&row.values[idx])
             }
             Expr::BinaryOp { .. } => Err(SqlError::ExecutionError(
                 "Nested binary operations not supported".into(),
