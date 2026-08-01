@@ -27,7 +27,7 @@
 //! Space complexity: O(N) in the worst case if prices are strictly decreasing.
 //!
 //! We implement two solutions:
-//! 1. `StockSpanner`: A traditional mutable, stateful struct that matches the LeetCode API.
+//! 1. `StockSpanner`: A traditional mutable, stateful struct that matches the `LeetCode` API.
 //! 2. `StockSpanIter`: An iterator adapter to lazily yield the spans of a sequence of prices, showing zero-cost abstractions.
 
 /// A stateful struct to calculate the online stock span.
@@ -77,7 +77,7 @@ pub struct StockSpanIter<I> {
 }
 
 impl<I> StockSpanIter<I> {
-    pub fn new(iter: I) -> Self {
+    pub const fn new(iter: I) -> Self {
         Self {
             iter,
             stack: Vec::new(),
