@@ -27,7 +27,7 @@
 //! ```
 //!
 //! **Invariants:**
-//! 1. The ThreadPool maintains exactly `N` worker threads.
+//! 1. The `ThreadPool` maintains exactly `N` worker threads.
 //! 2. Incoming connections are placed in a channel queue; if full, TCP backlog handles it.
 //! 3. Responses are always well-formed HTTP/1.1 (CRLF terminated headers).
 //!
@@ -253,7 +253,7 @@ impl Router {
     }
 
     /// Adds a route to the router.
-    pub fn add_route<H: Handler>(&mut self, method: HttpMethod, path: &str, handler: H) {
+    pub fn add_route<H: Handler>(&mut self, method: &HttpMethod, path: &str, handler: H) {
         let key = format!("{} {path}", method.as_str());
         self.routes.insert(key, Arc::new(handler));
     }
@@ -262,11 +262,7 @@ impl Router {
     #[must_use]
     pub fn route(&self, req: &Request) -> Response {
         let key = format!("{} {}", req.method.as_str(), req.path);
-        if let Some(handler) = self.routes.get(&key) {
-            handler.handle(req)
-        } else {
-            Response::new(404, "Not Found")
-        }
+        self.routes.get(&key).map_or_else(|| Response::new(404, "Not Found"), |handler| handler.handle(req))
     }
 }
 
@@ -279,7 +275,7 @@ pub struct ThreadPool {
 }
 
 impl ThreadPool {
-    /// Creates a new ThreadPool.
+    /// Creates a new `ThreadPool`.
     ///
     /// # Panics
     ///
@@ -373,7 +369,7 @@ pub struct HttpServer {
 }
 
 impl HttpServer {
-    /// Creates a new HttpServer.
+    /// Creates a new `HttpServer`.
     #[must_use]
     pub fn new(router: Router, threads: usize) -> Self {
         Self {
@@ -401,7 +397,7 @@ impl HttpServer {
     ///
     /// # Errors
     /// Returns an error if accepting a connection fails.
-    pub fn run_with_listener(self, listener: TcpListener) -> std::io::Result<()> {
+    pub fn run_with_listener(self, listener: &TcpListener) -> std::io::Result<()> {
         for stream in listener.incoming() {
             let stream = stream?;
             let router = Arc::clone(&self.router);
@@ -419,7 +415,7 @@ impl HttpServer {
     /// Returns an error if binding to the address fails.
     pub fn run(self, addr: &str) -> std::io::Result<()> {
         let listener = TcpListener::bind(addr)?;
-        self.run_with_listener(listener)
+        self.run_with_listener(&listener)
     }
 }
 
@@ -431,13 +427,13 @@ mod tests {
     #[test]
     fn test_server_routing() {
         let mut router = Router::new();
-        router.add_route(HttpMethod::Get, "/hello", |_req: &Request| {
+        router.add_route(&HttpMethod::Get, "/hello", |_req: &Request| {
             let mut res = Response::new(200, "OK");
             res.body = b"Hello, World!".to_vec();
             res
         });
 
-        router.add_route(HttpMethod::Post, "/echo", |req: &Request| {
+        router.add_route(&HttpMethod::Post, "/echo", |req: &Request| {
             let mut res = Response::new(200, "OK");
             res.body = req.body.clone();
             res
@@ -451,7 +447,7 @@ mod tests {
 
         // Spawn server thread
         std::thread::spawn(move || {
-            let _ = server.run_with_listener(listener);
+            let _ = server.run_with_listener(&listener);
         });
 
         // Give server a moment to start (though binding is already complete)
