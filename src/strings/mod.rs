@@ -1,6 +1,7 @@
 pub mod aho_corasick;
 pub mod basic_calculator_ii;
 pub mod find_all_anagrams_in_a_string;
+pub mod first_unique_character_in_a_string;
 pub mod group_anagrams;
 pub mod longest_common_prefix;
 pub mod longest_palindromic_substring;
