@@ -68,6 +68,7 @@ pub struct TarHeader {
 }
 
 impl TarHeader {
+    #[must_use]
     pub fn new(name: &str, size: u64) -> Self {
         Self {
             name: name.to_string(),
@@ -88,7 +89,7 @@ impl TarHeader {
         block[0..name_len].copy_from_slice(&name_bytes[0..name_len]);
 
         // mode (8)
-        write_octal(&mut block[100..108], self.mode as u64);
+        write_octal(&mut block[100..108], u64::from(self.mode));
 
         // uid (8), gid (8) - dummy values
         write_octal(&mut block[108..116], 1000);
@@ -113,24 +114,25 @@ impl TarHeader {
         // Calculate and write checksum
         let mut checksum = 0;
         for &byte in &block {
-            checksum += byte as u64;
+            checksum += u64::from(byte);
         }
 
         // Checksum is 6 octal digits followed by null and space
-        let chk_str = format!("{:06o}\0 ", checksum);
+        let chk_str = format!("{checksum:06o}\0 ");
         block[148..156].copy_from_slice(chk_str.as_bytes());
 
         block
     }
 
     /// Parses a header from a 512-byte block. Returns None if it's an empty block.
+    #[must_use]
     pub fn from_block(block: &[u8; 512]) -> Option<Self> {
         if block.iter().all(|&b| b == 0) {
             return None;
         }
 
         let name = parse_string(&block[0..100]);
-        let mode = parse_octal(&block[100..108]) as u32;
+        let mode = u32::try_from(parse_octal(&block[100..108])).unwrap_or(0);
         let size = parse_octal(&block[124..136]);
         let typeflag = block[156];
 
@@ -145,7 +147,7 @@ impl TarHeader {
 
 // Helper to write an octal string into a fixed-size buffer
 fn write_octal(buf: &mut [u8], value: u64) {
-    let s = format!("{:o}", value);
+    let s = format!("{value:o}");
     let len = s.len();
     let buf_len = buf.len();
 
@@ -165,7 +167,7 @@ fn parse_octal(buf: &[u8]) -> u64 {
     let mut val = 0;
     for &b in buf {
         if (b'0'..=b'7').contains(&b) {
-            val = (val << 3) | (b - b'0') as u64;
+            val = (val << 3) | u64::from(b - b'0');
         } else if (b == 0 || b == b' ') && val != 0 {
             break;
         }
@@ -184,10 +186,12 @@ pub struct TarWriter<W: Write> {
 }
 
 impl<W: Write> TarWriter<W> {
-    pub fn new(writer: W) -> Self {
+    pub const fn new(writer: W) -> Self {
         Self { writer }
     }
 
+    /// # Errors
+    /// Returns an error if writing to the underlying writer fails.
     pub fn append_file(&mut self, name: &str, data: &[u8]) -> io::Result<()> {
         let header = TarHeader::new(name, data.len() as u64);
         self.writer.write_all(&header.to_block())?;
@@ -204,6 +208,8 @@ impl<W: Write> TarWriter<W> {
         Ok(())
     }
 
+    /// # Errors
+    /// Returns an error if writing to the underlying writer fails.
     pub fn finish(mut self) -> io::Result<()> {
         // Two empty blocks mark EOF
         let empty = [0u8; 1024];
@@ -216,10 +222,12 @@ pub struct TarReader<R: Read> {
 }
 
 impl<R: Read> TarReader<R> {
-    pub fn new(reader: R) -> Self {
+    pub const fn new(reader: R) -> Self {
         Self { reader }
     }
 
+    /// # Errors
+    /// Returns an error if reading from the underlying reader fails.
     pub fn next_entry(&mut self) -> io::Result<Option<(TarHeader, Vec<u8>)>> {
         let mut block = [0u8; 512];
         let n = self.reader.read(&mut block)?;
@@ -227,16 +235,16 @@ impl<R: Read> TarReader<R> {
             return Ok(None);
         }
 
-        let header = match TarHeader::from_block(&block) {
-            Some(h) => h,
-            None => return Ok(None), // Empty block means EOF
+        let Some(header) = TarHeader::from_block(&block) else {
+            return Ok(None); // Empty block means EOF
         };
 
-        let mut data = vec![0u8; header.size as usize];
+        let size = usize::try_from(header.size).unwrap_or(0);
+        let mut data = vec![0u8; size];
         self.reader.read_exact(&mut data)?;
 
         // Skip padding
-        let padding = 512 - (header.size as usize % 512);
+        let padding = 512 - (size % 512);
         if padding < 512 {
             let mut pad_buf = vec![0u8; padding];
             self.reader.read_exact(&mut pad_buf)?;
