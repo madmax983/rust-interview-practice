@@ -159,11 +159,9 @@ mod tests {
         let mut spanner_opt = StockSpannerOptimal::new();
 
         let prices = vec![1, 2, 3, 4, 5];
-        let mut expected_span = 1;
-        for price in prices {
+        for (expected_span, price) in (1..).zip(prices) {
             assert_eq!(spanner_bf.next(price), expected_span);
             assert_eq!(spanner_opt.next(price), expected_span);
-            expected_span += 1;
         }
     }
 
@@ -173,11 +171,9 @@ mod tests {
         let mut spanner_opt = StockSpannerOptimal::new();
 
         let prices = vec![10, 10, 10, 10];
-        let mut expected_span = 1;
-        for price in prices {
+        for (expected_span, price) in (1..).zip(prices) {
             assert_eq!(spanner_bf.next(price), expected_span);
             assert_eq!(spanner_opt.next(price), expected_span);
-            expected_span += 1;
         }
     }
 }
