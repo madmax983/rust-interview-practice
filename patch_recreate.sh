@@ -1,3 +1,4 @@
+cat << 'EOF2' > src/systems/http_server.rs
 //! # Multithreaded HTTP/1.1 Server
 //!
 //! Implements a minimal, multithreaded HTTP/1.1 server from scratch.
@@ -474,8 +475,7 @@ mod tests {
 
     #[test]
     fn test_request_parsing_valid() {
-        let raw_request =
-            b"POST /api/data HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\n\r\nhello";
+        let raw_request = b"POST /api/data HTTP/1.1\r\nHost: localhost\r\nContent-Length: 5\r\n\r\nhello";
         let reader = Cursor::new(raw_request);
         let req = Request::parse(reader).expect("Failed to parse valid request");
 
@@ -532,3 +532,4 @@ mod tests {
         assert!(output.ends_with("\r\nok"));
     }
 }
+EOF2

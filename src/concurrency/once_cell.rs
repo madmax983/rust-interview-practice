@@ -169,7 +169,7 @@ impl<T> OnceCell<T> {
                                 }
                             }
 
-                            let mut guard = PanicGuard {
+                            let mut _guard = PanicGuard {
                                 cell: self,
                                 finished: false,
                             };
@@ -182,7 +182,7 @@ impl<T> OnceCell<T> {
                                 *self.value.get() = Some(val);
                             }
 
-                            guard.finished = true; // Disarm the panic guard
+                            _guard.finished = true; // Disarm the panic guard
 
                             // Publish the value to other threads.
                             self.state.store(COMPLETE, Ordering::Release);
