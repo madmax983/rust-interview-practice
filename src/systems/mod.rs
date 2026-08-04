@@ -14,6 +14,7 @@ pub mod deflate;
 pub mod dependency_injection;
 pub mod design_twitter;
 pub mod ecs;
+pub mod http_server;
 pub mod error_framework;
 pub mod garbage_collector;
 pub mod inverted_index;
