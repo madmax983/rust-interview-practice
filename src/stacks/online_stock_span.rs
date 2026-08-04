@@ -49,7 +49,7 @@ pub struct StockSpanner {
 impl StockSpanner {
     /// Creates a new, empty `StockSpanner`.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { stack: Vec::new() }
     }
 
