@@ -77,10 +77,10 @@ impl ListNode {
     }
 }
 
-/// Optimized approach: Using a VecDeque
+/// Optimized approach: Using a `VecDeque`
 ///
 /// Time: O(N) - One pass to dismantle, one pass to rebuild.
-/// Space: O(N) - Storing all nodes in a VecDeque.
+/// Space: O(N) - Storing all nodes in a `VecDeque`.
 ///
 /// This approach is very clean and avoids complex pointer manipulation by fully
 /// dismantling the list into a double-ended queue, then rebuilding it.
@@ -253,6 +253,7 @@ mod tests {
 
     // Stress/Boundary Tests
     #[test]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn test_large_list() {
         let size = 10_000;
         let mut values = Vec::with_capacity(size);
