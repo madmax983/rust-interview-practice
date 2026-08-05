@@ -82,42 +82,45 @@ pub fn sha1(data: &[u8]) -> [u8; 20] {
         for (i, block) in chunk.chunks(4).enumerate() {
             w[i] = u32::from_be_bytes([block[0], block[1], block[2], block[3]]);
         }
+        #[allow(clippy::needless_range_loop)]
         for i in 16..80 {
             w[i] = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]).rotate_left(1);
         }
 
-        let mut a = h0;
-        let mut b = h1;
-        let mut c = h2;
-        let mut d = h3;
-        let mut e = h4;
+        #[allow(clippy::many_single_char_names)]
+        let mut a_var = h0;
+        let mut b_var = h1;
+        let mut c_var = h2;
+        let mut d_var = h3;
+        let mut e_var = h4;
 
+        #[allow(clippy::needless_range_loop)]
         for i in 0..80 {
-            let (f, k) = match i {
-                0..=19 => ((b & c) | ((!b) & d), 0x5A82_7999),
-                20..=39 => (b ^ c ^ d, 0x6ED9_EBA1),
-                40..=59 => ((b & c) | (b & d) | (c & d), 0x8F1B_BCDC),
-                _ => (b ^ c ^ d, 0xCA62_C1D6),
+            let (f_var, k_var) = match i {
+                0..=19 => ((b_var & c_var) | ((!b_var) & d_var), 0x5A82_7999),
+                20..=39 => (b_var ^ c_var ^ d_var, 0x6ED9_EBA1),
+                40..=59 => ((b_var & c_var) | (b_var & d_var) | (c_var & d_var), 0x8F1B_BCDC),
+                _ => (b_var ^ c_var ^ d_var, 0xCA62_C1D6),
             };
 
-            let temp = a
+            let temp = a_var
                 .rotate_left(5)
-                .wrapping_add(f)
-                .wrapping_add(e)
-                .wrapping_add(k)
+                .wrapping_add(f_var)
+                .wrapping_add(e_var)
+                .wrapping_add(k_var)
                 .wrapping_add(w[i]);
-            e = d;
-            d = c;
-            c = b.rotate_left(30);
-            b = a;
-            a = temp;
+            e_var = d_var;
+            d_var = c_var;
+            c_var = b_var.rotate_left(30);
+            b_var = a_var;
+            a_var = temp;
         }
 
-        h0 = h0.wrapping_add(a);
-        h1 = h1.wrapping_add(b);
-        h2 = h2.wrapping_add(c);
-        h3 = h3.wrapping_add(d);
-        h4 = h4.wrapping_add(e);
+        h0 = h0.wrapping_add(a_var);
+        h1 = h1.wrapping_add(b_var);
+        h2 = h2.wrapping_add(c_var);
+        h3 = h3.wrapping_add(d_var);
+        h4 = h4.wrapping_add(e_var);
     }
 
     let mut out = [0_u8; 20];
@@ -174,7 +177,8 @@ impl GitObject {
                 let mut content = Vec::new();
                 for entry in entries {
                     // Format: `<mode> <name>\0<20_byte_hash>`
-                    content.extend_from_slice(format!("{} {}\0", entry.mode, entry.name).as_bytes());
+                    content
+                        .extend_from_slice(format!("{} {}\0", entry.mode, entry.name).as_bytes());
                     content.extend_from_slice(&entry.hash);
                 }
                 let mut buf = format!("tree {}\0", content.len()).into_bytes();
@@ -189,12 +193,12 @@ impl GitObject {
                 message,
             } => {
                 let mut content = String::new();
-                content.push_str(&format!("tree {tree_hash}\n"));
+                let _ = writeln!(content, "tree {tree_hash}");
                 if let Some(parent) = parent_hash {
-                    content.push_str(&format!("parent {parent}\n"));
+                    let _ = writeln!(content, "parent {parent}");
                 }
-                content.push_str(&format!("author {author}\n"));
-                content.push_str(&format!("committer {committer}\n\n"));
+                let _ = writeln!(content, "author {author}");
+                let _ = writeln!(content, "committer {committer}\n");
                 content.push_str(message);
 
                 let mut buf = format!("commit {}\0", content.len()).into_bytes();
@@ -274,7 +278,10 @@ mod tests {
     #[test]
     fn test_sha1_known_value() {
         let hash = sha1(b"hello world");
-        assert_eq!(hash_to_hex(&hash), "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed");
+        assert_eq!(
+            hash_to_hex(&hash),
+            "2aae6c35c94fcfb415dbe95f408b9ce91ee846ed"
+        );
     }
 
     #[test]

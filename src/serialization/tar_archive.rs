@@ -107,7 +107,8 @@ fn parse_octal(buf: &[u8]) -> io::Result<u64> {
     if s.is_empty() {
         return Ok(0);
     }
-    u64::from_str_radix(&s, 8).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid octal"))
+    u64::from_str_radix(&s, 8)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid octal"))
 }
 
 /// Calculates the checksum of a header block.
@@ -115,9 +116,9 @@ fn calculate_checksum(header: &[u8; 512]) -> u64 {
     let mut sum: u64 = 0;
     for (i, &b) in header.iter().enumerate() {
         if (148..156).contains(&i) {
-            sum += b' ' as u64;
+            sum += u64::from(b' ');
         } else {
-            sum += b as u64;
+            sum += u64::from(b);
         }
     }
     sum
@@ -129,12 +130,28 @@ fn calculate_checksum(header: &[u8; 512]) -> u64 {
 /// one that buffers entire files).
 pub trait TarStrategy {
     /// Writes a single file entry into the archive stream.
-    fn write_entry<W: Write>(&self, writer: &mut W, filename: &str, data: &[u8], mode: u32, mtime: u64) -> io::Result<()>;
+    ///
+    /// # Errors
+    /// Returns an `io::Result` if the underlying writer fails.
+    fn write_entry<W: Write>(
+        &self,
+        writer: &mut W,
+        filename: &str,
+        data: &[u8],
+        mode: u32,
+        mtime: u64,
+    ) -> io::Result<()>;
 
     /// Writes the end-of-archive marker.
+    ///
+    /// # Errors
+    /// Returns an `io::Result` if the underlying writer fails.
     fn write_finish<W: Write>(&self, writer: &mut W) -> io::Result<()>;
 
     /// Reads all entries from the archive stream.
+    ///
+    /// # Errors
+    /// Returns an `io::Result` if the underlying reader fails or if the archive is malformed.
     fn read_archive<R: Read>(&self, reader: &mut R) -> io::Result<Vec<TarEntry>>;
 }
 
@@ -181,7 +198,7 @@ pub fn write_entry<W: Write>(
     header[..name_len].copy_from_slice(&name_bytes[..name_len]);
 
     // Mode (100-107)
-    format_octal(&mut header[100..108], mode as u64);
+    format_octal(&mut header[100..108], u64::from(mode));
 
     // UID (108-115) - Default to 0 (root)
     format_octal(&mut header[108..116], 0);
@@ -254,7 +271,10 @@ pub fn read_archive<R: Read>(reader: &mut R) -> io::Result<Vec<TarEntry>> {
                 if read_bytes == 0 {
                     return Ok(entries);
                 }
-                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Unexpected EOF reading header"));
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "Unexpected EOF reading header",
+                ));
             }
             read_bytes += n;
         }
@@ -269,19 +289,24 @@ pub fn read_archive<R: Read>(reader: &mut R) -> io::Result<Vec<TarEntry>> {
         let filename = String::from_utf8_lossy(&header[0..filename_end]).into_owned();
 
         // Parse metadata
-        let mode = parse_octal(&header[100..108])? as u32;
-        let size = parse_octal(&header[124..136])? as usize;
+        let mode = u32::try_from(parse_octal(&header[100..108])?)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid mode"))?;
+        let size = usize::try_from(parse_octal(&header[124..136])?)
+            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid size"))?;
         let mtime = parse_octal(&header[136..148])?;
         let type_flag = header[156];
 
         // RUST INSIGHT: Validating the checksum is crucial because a corrupted header might declare a massive size,
         // causing us to allocate gigabytes of memory or read endlessly.
-        let declared_checksum = parse_octal(&header[148..156]).unwrap_or_else(|_| u64::MAX); // fallback if it's corrupt
+        let declared_checksum = parse_octal(&header[148..156]).unwrap_or(u64::MAX); // fallback if it's corrupt
         let actual_checksum = calculate_checksum(&header);
 
         // Some tars pad checksums with spaces, some with nulls. We just check numeric equality.
         if declared_checksum != actual_checksum {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Checksum mismatch"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Checksum mismatch",
+            ));
         }
 
         // Read data
@@ -347,23 +372,11 @@ mod tests {
         let mut archive = Vec::new();
 
         // Write first file
-        write_entry(
-            &mut archive,
-            "hello.txt",
-            b"Hello, Tar!",
-            0o644,
-            1600000000,
-        ).unwrap();
+        write_entry(&mut archive, "hello.txt", b"Hello, Tar!", 0o644, 1_600_000_000).unwrap();
 
         // Write second file (requires padding)
         let data2 = vec![b'A'; 600];
-        write_entry(
-            &mut archive,
-            "big_file.bin",
-            &data2,
-            0o755,
-            1600000001,
-        ).unwrap();
+        write_entry(&mut archive, "big_file.bin", &data2, 0o755, 1_600_000_001).unwrap();
 
         write_finish(&mut archive).unwrap();
 
@@ -376,26 +389,20 @@ mod tests {
         assert_eq!(entries[0].filename, "hello.txt");
         assert_eq!(entries[0].size, 11);
         assert_eq!(entries[0].mode, 0o644);
-        assert_eq!(entries[0].mtime, 1600000000);
+        assert_eq!(entries[0].mtime, 1_600_000_000);
         assert_eq!(entries[0].data, b"Hello, Tar!");
 
         assert_eq!(entries[1].filename, "big_file.bin");
         assert_eq!(entries[1].size, 600);
         assert_eq!(entries[1].mode, 0o755);
-        assert_eq!(entries[1].mtime, 1600000001);
+        assert_eq!(entries[1].mtime, 1_600_000_001);
         assert_eq!(entries[1].data, data2);
     }
 
     #[test]
     fn test_checksum_validation() {
         let mut archive = Vec::new();
-        write_entry(
-            &mut archive,
-            "test.txt",
-            b"test",
-            0o644,
-            0,
-        ).unwrap();
+        write_entry(&mut archive, "test.txt", b"test", 0o644, 0).unwrap();
 
         // Corrupt the header checksum
         archive[148] = b'9';
