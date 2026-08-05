@@ -372,7 +372,14 @@ mod tests {
         let mut archive = Vec::new();
 
         // Write first file
-        write_entry(&mut archive, "hello.txt", b"Hello, Tar!", 0o644, 1_600_000_000).unwrap();
+        write_entry(
+            &mut archive,
+            "hello.txt",
+            b"Hello, Tar!",
+            0o644,
+            1_600_000_000,
+        )
+        .unwrap();
 
         // Write second file (requires padding)
         let data2 = vec![b'A'; 600];

@@ -99,7 +99,10 @@ pub fn sha1(data: &[u8]) -> [u8; 20] {
             let (f_var, k_var) = match i {
                 0..=19 => ((b_var & c_var) | ((!b_var) & d_var), 0x5A82_7999),
                 20..=39 => (b_var ^ c_var ^ d_var, 0x6ED9_EBA1),
-                40..=59 => ((b_var & c_var) | (b_var & d_var) | (c_var & d_var), 0x8F1B_BCDC),
+                40..=59 => (
+                    (b_var & c_var) | (b_var & d_var) | (c_var & d_var),
+                    0x8F1B_BCDC,
+                ),
                 _ => (b_var ^ c_var ^ d_var, 0xCA62_C1D6),
             };
 
