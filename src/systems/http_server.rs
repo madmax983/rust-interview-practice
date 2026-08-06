@@ -23,14 +23,14 @@
 //! - Thread Pool Dispatch: Time: O(1). Space: O(W) where W is number of workers.
 //!
 //! ### Design Decisions
-//! - **Thread Pool**: We implement a basic `ThreadPool` using `std::thread` and `mpsc::channel` to avoid spawning a new thread per request (which is vulnerable to DoS).
+//! - **Thread Pool**: We implement a basic `ThreadPool` using `std::thread` and `mpsc::channel` to avoid spawning a new thread per request (which is vulnerable to `DoS`).
 //! - **Traits**: We use a `Handler` trait to allow swappable request routing strategies.
 //! - **Parsing**: We use standard `BufReader` and string manipulation. A production parser would use state machines or zero-copy parsing (like `httparse`).
 
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 /// HTTP Method
@@ -106,10 +106,17 @@ impl HttpRequest {
         }
 
         let mut body = Vec::new();
-        if let Some(length) = headers.get("content-length").and_then(|s| s.parse::<usize>().ok()) {
-            body.resize(length, 0);
-            // GOTCHA: `read_exact` blocks until exactly `length` bytes are read.
-            let _ = reader.read_exact(&mut body);
+        if let Some(length) = headers
+            .get("content-length")
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|&l| l > 0)
+        {
+            #[allow(unknown_lints, clippy::read_zero_byte_vec)]
+            {
+                body.resize(length, 0);
+                // GOTCHA: `read_exact` blocks until exactly `length` bytes are read.
+                let _ = reader.read_exact(&mut body);
+            }
         }
 
         Some(Self {
@@ -151,14 +158,16 @@ impl HttpResponse {
     /// # Errors
     /// Returns an error if writing to the stream fails.
     pub fn write_to(&self, stream: &mut TcpStream) -> std::io::Result<()> {
+        use std::fmt::Write as _;
         let mut response = String::new();
-        response.push_str(&format!(
+        let _ = write!(
+            response,
             "HTTP/1.1 {} {}\r\n",
             self.status_code, self.status_text
-        ));
+        );
 
         for (key, value) in &self.headers {
-            response.push_str(&format!("{key}: {value}\r\n"));
+            let _ = write!(response, "{key}: {value}\r\n");
         }
 
         response.push_str("\r\n");
@@ -200,7 +209,7 @@ pub struct ThreadPool {
 }
 
 impl ThreadPool {
-    /// Creates a new ThreadPool.
+    /// Creates a new `ThreadPool`.
     ///
     /// # Panics
     /// Panics if size is 0.
@@ -256,18 +265,20 @@ struct Worker {
 
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Self {
-        let thread = thread::spawn(move || loop {
-            // PRODUCTION NOTE: lock().unwrap() will panic if the mutex is poisoned (another thread panicked while holding it).
-            // A production server should handle worker panics by restarting the worker.
-            let message = receiver.lock().expect("Mutex poisoned").recv();
+        let thread = thread::spawn(move || {
+            loop {
+                // PRODUCTION NOTE: lock().unwrap() will panic if the mutex is poisoned (another thread panicked while holding it).
+                // A production server should handle worker panics by restarting the worker.
+                let message = receiver.lock().expect("Mutex poisoned").recv();
 
-            match message {
-                Ok(job) => {
-                    job();
-                }
-                Err(_) => {
-                    // Channel closed, time to shut down.
-                    break;
+                match message {
+                    Ok(job) => {
+                        job();
+                    }
+                    Err(_) => {
+                        // Channel closed, time to shut down.
+                        break;
+                    }
                 }
             }
         });
@@ -304,10 +315,7 @@ impl<H: Handler + 'static> HttpServer<H> {
         let pool = ThreadPool::new(4);
 
         for stream in listener.incoming() {
-            let mut stream = match stream {
-                Ok(s) => s,
-                Err(_) => continue,
-            };
+            let Ok(mut stream) = stream else { continue };
 
             let handler = Arc::clone(&self.handler);
 
