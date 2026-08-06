@@ -208,18 +208,28 @@ pub fn lowest_common_ancestor_optimized(
     let p_unwrapped = p.as_ref().unwrap();
     let q_unwrapped = q.as_ref().unwrap();
 
-    if Rc::ptr_eq(&node, p_unwrapped) || Rc::ptr_eq(&node, q_unwrapped) {
-        return Some(node);
+    fn dfs(
+        node: Option<Rc<RefCell<TreeNode>>>,
+        p_ref: &Rc<RefCell<TreeNode>>,
+        q_ref: &Rc<RefCell<TreeNode>>,
+    ) -> Option<Rc<RefCell<TreeNode>>> {
+        let node = node?;
+
+        if Rc::ptr_eq(&node, p_ref) || Rc::ptr_eq(&node, q_ref) {
+            return Some(node);
+        }
+
+        let left = dfs(node.borrow().left.clone(), p_ref, q_ref);
+        let right = dfs(node.borrow().right.clone(), p_ref, q_ref);
+
+        if left.is_some() && right.is_some() {
+            return Some(node);
+        }
+
+        left.or(right)
     }
 
-    let left = lowest_common_ancestor_optimized(node.borrow().left.clone(), p.clone(), q.clone());
-    let right = lowest_common_ancestor_optimized(node.borrow().right.clone(), p.clone(), q.clone());
-
-    if left.is_some() && right.is_some() {
-        return Some(node);
-    }
-
-    left.or(right)
+    dfs(Some(node), p_unwrapped, q_unwrapped)
 }
 
 // =========================================================================================
