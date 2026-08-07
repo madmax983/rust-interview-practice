@@ -28,7 +28,7 @@
 //! - HTTP parsing must handle malformed requests gracefully without panicking.
 //!
 //! ## Time/Space Complexity
-//! - **Routing**: O(1) time complexity using a HashMap.
+//! - **Routing**: O(1) time complexity using a `HashMap`.
 //! - **Parsing**: O(N) time where N is the length of the HTTP request.
 //! - **Space**: O(N) space to buffer the request body and headers.
 //!
@@ -40,7 +40,7 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 /// Represents an HTTP method.
@@ -68,7 +68,9 @@ impl HttpRequest {
     /// Returns an error if the request format is invalid.
     pub fn parse(reader: &mut impl BufRead) -> Result<Self, String> {
         let mut request_line = String::new();
-        reader.read_line(&mut request_line).map_err(|e| e.to_string())?;
+        reader
+            .read_line(&mut request_line)
+            .map_err(|e| e.to_string())?;
 
         let parts: Vec<&str> = request_line.split_whitespace().collect();
         if parts.len() != 3 {
@@ -88,7 +90,9 @@ impl HttpRequest {
         let mut headers = HashMap::new();
         loop {
             let mut header_line = String::new();
-            reader.read_line(&mut header_line).map_err(|e| e.to_string())?;
+            reader
+                .read_line(&mut header_line)
+                .map_err(|e| e.to_string())?;
             let header_line = header_line.trim_end();
             if header_line.is_empty() {
                 break;
@@ -162,7 +166,11 @@ impl HttpResponse {
     /// # Errors
     /// Returns an error if the underlying writer fails.
     pub fn write_to(&self, writer: &mut impl Write) -> std::io::Result<()> {
-        write!(writer, "HTTP/1.1 {} {}\r\n", self.status_code, self.status_text)?;
+        write!(
+            writer,
+            "HTTP/1.1 {} {}\r\n",
+            self.status_code, self.status_text
+        )?;
         for (key, value) in &self.headers {
             write!(writer, "{key}: {value}\r\n")?;
         }
@@ -194,17 +202,19 @@ struct Worker {
 
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Self {
-        let thread = thread::spawn(move || loop {
-            let message = receiver.lock().unwrap().recv();
-            match message {
-                Ok(job) => {
-                    // RUST INSIGHT: We execute the job outside the lock by using `recv`
-                    // to acquire ownership, dropping the lock when the statement finishes.
-                    job();
-                }
-                Err(_) => {
-                    // Channel closed
-                    break;
+        let thread = thread::spawn(move || {
+            loop {
+                let message = receiver.lock().unwrap().recv();
+                match message {
+                    Ok(job) => {
+                        // RUST INSIGHT: We execute the job outside the lock by using `recv`
+                        // to acquire ownership, dropping the lock when the statement finishes.
+                        job();
+                    }
+                    Err(_) => {
+                        // Channel closed
+                        break;
+                    }
                 }
             }
         });
@@ -299,37 +309,33 @@ impl HttpServer {
     }
 
     /// Handles a single client connection.
-    pub fn handle_client(mut stream: TcpStream, handlers: Arc<HashMap<String, Arc<dyn Handler>>>) {
+    pub fn handle_client(mut stream: TcpStream, handlers: &Arc<HashMap<String, Arc<dyn Handler>>>) {
         let mut reader = BufReader::new(&mut stream);
-        match HttpRequest::parse(&mut reader) {
-            Ok(req) => {
-                // GOTCHA: We must drop the reader to reclaim mutable access to `stream` for writing.
-                // Alternatively, we could write via stream while reader exists, but dropping is cleaner.
-                drop(reader);
-                let response = if let Some(handler) = handlers.get(&req.path) {
-                    handler.handle(&req)
-                } else {
-                    HttpResponse::not_found()
-                };
-                let _ = response.write_to(&mut stream);
-            }
-            Err(_) => {
-                drop(reader);
-                let response = HttpResponse::bad_request();
-                let _ = response.write_to(&mut stream);
-            }
+        if let Ok(req) = HttpRequest::parse(&mut reader) {
+            // GOTCHA: We must drop the reader to reclaim mutable access to `stream` for writing.
+            // Alternatively, we could write via stream while reader exists, but dropping is cleaner.
+            drop(reader);
+            let response = handlers.get(&req.path).map_or_else(
+                HttpResponse::not_found,
+                |handler| handler.handle(&req)
+            );
+            let _ = response.write_to(&mut stream);
+        } else {
+            drop(reader);
+            let response = HttpResponse::bad_request();
+            let _ = response.write_to(&mut stream);
         }
     }
 
     /// Runs the HTTP server, listening on the provided `TcpListener`.
-    pub fn run(self, listener: TcpListener) {
+    pub fn run(self, listener: &TcpListener) {
         let handlers = Arc::new(self.handlers);
         for stream in listener.incoming() {
             match stream {
                 Ok(stream) => {
                     let handlers_clone = Arc::clone(&handlers);
                     self.pool.execute(move || {
-                        Self::handle_client(stream, handlers_clone);
+                        Self::handle_client(stream, &handlers_clone);
                     });
                 }
                 Err(e) => {
@@ -395,7 +401,8 @@ mod tests {
     #[test]
     fn test_http_response_format() {
         let mut resp = HttpResponse::ok(b"hello".to_vec());
-        resp.headers.insert("X-Custom".to_string(), "Value".to_string());
+        resp.headers
+            .insert("X-Custom".to_string(), "Value".to_string());
 
         let mut buf = Vec::new();
         resp.write_to(&mut buf).unwrap();
@@ -408,8 +415,9 @@ mod tests {
 
     #[test]
     fn test_server_routing() {
-        let server = HttpServer::new(2)
-            .route("/test", |_: &HttpRequest| HttpResponse::ok(b"test passed".to_vec()));
+        let server = HttpServer::new(2).route("/test", |_: &HttpRequest| {
+            HttpResponse::ok(b"test passed".to_vec())
+        });
 
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let addr = listener.local_addr().unwrap();
@@ -417,7 +425,7 @@ mod tests {
         let server_thread = thread::spawn(move || {
             let handlers = Arc::new(server.handlers);
             if let Ok((stream, _)) = listener.accept() {
-                HttpServer::handle_client(stream, handlers);
+                HttpServer::handle_client(stream, &handlers);
             }
         });
 
