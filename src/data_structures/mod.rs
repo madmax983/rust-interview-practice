@@ -18,6 +18,7 @@ pub mod lru_cache;
 pub mod merkle_tree;
 pub mod quadtree;
 pub mod radix_trie;
+pub mod randomized_set;
 pub mod ring_buffer;
 pub mod rope;
 pub mod segment_tree;
