@@ -5,7 +5,7 @@
 //! - `RandomizedSet()` Initializes the `RandomizedSet` object.
 //! - `bool insert(int val)` Inserts an item `val` into the set if not present.
 //! - `bool remove(int val)` Removes an item `val` from the set if present.
-//! - `int `getRandom()`` Returns a random element from the current set of elements.
+//! - `int getRandom()` Returns a random element from the current set of elements.
 //!
 //! ## Why this matters in Rust
 //! This problem perfectly demonstrates the interplay between `Vec` (for fast `O(1)` random access by index)
