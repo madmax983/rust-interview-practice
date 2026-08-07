@@ -1,11 +1,11 @@
-//! # 380. Insert Delete GetRandom O(1)
+//! # 380. Insert Delete `GetRandom` O(1)
 //! Link: <https://leetcode.com/problems/insert-delete-getrandom-o1/>
 //!
 //! Implement the `RandomizedSet` class:
 //! - `RandomizedSet()` Initializes the `RandomizedSet` object.
 //! - `bool insert(int val)` Inserts an item `val` into the set if not present.
 //! - `bool remove(int val)` Removes an item `val` from the set if present.
-//! - `int getRandom()` Returns a random element from the current set of elements.
+//! - `int `getRandom()`` Returns a random element from the current set of elements.
 //!
 //! ## Why this matters in Rust
 //! This problem perfectly demonstrates the interplay between `Vec` (for fast `O(1)` random access by index)
@@ -13,6 +13,7 @@
 //! to satisfy complex time complexity constraints, and introduces safe random number generation in Rust.
 
 // Expected `i32` for values/random output by Leetcode, intentionally casting indices to/from `usize`/`u64` for random selection.
+// Added backticks around GetRandom to satisfy clippy::doc_markdown
 #![allow(clippy::cast_possible_truncation)]
 
 use crate::cryptography::rand::{Prng, RngCore};
