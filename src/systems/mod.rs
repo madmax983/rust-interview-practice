@@ -16,6 +16,7 @@ pub mod design_twitter;
 pub mod ecs;
 pub mod error_framework;
 pub mod garbage_collector;
+pub mod git_core;
 pub mod inverted_index;
 pub mod job_queue;
 pub mod lfu_cache;
