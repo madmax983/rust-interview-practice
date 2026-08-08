@@ -83,6 +83,11 @@ impl ListNode {
 /// # Why this is idiomatic in Rust
 /// Converting the list to a collection to sidestep tricky pointer manipulation
 /// is a perfectly valid and often preferred approach if memory isn't a strict constraint.
+///
+/// # Panics
+///
+/// Panics if the internal tail pointer is unexpectedly `None` while rebuilding the list,
+/// though the loop invariants guarantee this is impossible.
 #[allow(clippy::needless_pass_by_value)]
 pub fn reorder_list_brute_force(head: &mut Option<Box<ListNode>>) {
     if head.is_none() {
@@ -138,6 +143,11 @@ pub fn reorder_list_brute_force(head: &mut Option<Box<ListNode>>) {
 /// # Gotcha
 /// When merging `l1` and `l2`, be careful to maintain the correct interleaving order
 /// and strictly manage the `tail` pointer to avoid dropping nodes or creating cycles.
+///
+/// # Panics
+///
+/// Panics if `unwrap()` fails during traversal or merging. The bounds and structure
+/// guarantee the nodes exist at these exact required points.
 pub fn reorder_list_optimal(head: &mut Option<Box<ListNode>>) {
     if head.is_none() || head.as_ref().unwrap().next.is_none() {
         return;
