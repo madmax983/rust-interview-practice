@@ -204,7 +204,10 @@ impl<R: Read> TarReader<R> {
                 break;
             }
             if read_len < BLOCK_SIZE {
-                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Truncated tar header"));
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "Truncated tar header",
+                ));
             }
 
             // Two consecutive zero blocks indicate the end of the archive
@@ -230,7 +233,10 @@ impl<R: Read> TarReader<R> {
             if expected_chksum != actual_chksum {
                 // Return an error rather than panicking in production
                 // For educational brevity we just log/ignore or error
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "Checksum mismatch"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Checksum mismatch",
+                ));
             }
 
             // Read Data
