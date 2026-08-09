@@ -50,11 +50,12 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Finds the alien dictionary ordering of characters.
 #[must_use]
+#[allow(clippy::needless_pass_by_value)]
 pub fn alien_order(words: Vec<String>) -> String {
     // RUST INSIGHT: We work with byte representations `&[u8]` of Strings.
     // Since the problem constraints usually guarantee English lowercase letters,
     // bytes are safe, avoid UTF-8 overhead, and let us use quick byte-level indexing.
-    let words_bytes: Vec<&[u8]> = words.iter().map(|w| w.as_bytes()).collect();
+    let words_bytes: Vec<&[u8]> = words.iter().map(String::as_bytes).collect();
 
     // Step 1: Initialize graph and in-degree maps.
     let mut adj: HashMap<u8, HashSet<u8>> = HashMap::new();
@@ -155,21 +156,14 @@ mod tests {
 
     #[test]
     fn test_edge_case_invalid_prefix() {
-        let words = vec![
-            "abc".to_string(),
-            "ab".to_string(),
-        ];
+        let words = vec!["abc".to_string(), "ab".to_string()];
         let result = alien_order(words);
         assert_eq!(result, "");
     }
 
     #[test]
     fn test_stress_boundary_cycle() {
-        let words = vec![
-            "z".to_string(),
-            "x".to_string(),
-            "z".to_string(),
-        ];
+        let words = vec!["z".to_string(), "x".to_string(), "z".to_string()];
         let result = alien_order(words);
         assert_eq!(result, "");
     }
