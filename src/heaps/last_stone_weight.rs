@@ -43,6 +43,9 @@ use std::collections::BinaryHeap;
 /// # Gotcha
 /// `.sort()` is overkill when we only need the maximum elements. Repeated sorting
 /// is inefficient and should trigger you to think "Priority Queue / Heap".
+///
+/// # Panics
+/// Panics if the vector length is reduced unexpectedly while `len() > 1`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn last_stone_weight_brute_force(mut stones: Vec<i32>) -> i32 {
@@ -63,7 +66,7 @@ pub fn last_stone_weight_brute_force(mut stones: Vec<i32>) -> i32 {
     stones.pop().unwrap_or(0)
 }
 
-/// Optimal approach: Max-Heap (BinaryHeap)
+/// Optimal approach: Max-Heap (`BinaryHeap`)
 ///
 /// Rust's `BinaryHeap` is a max-heap by default, making it the perfect data structure
 /// for this problem. We can populate the heap in O(n) time and extract/insert in O(log n).
@@ -78,9 +81,12 @@ pub fn last_stone_weight_brute_force(mut stones: Vec<i32>) -> i32 {
 /// it builds in O(n) time without repeatedly calling `.push()`.
 ///
 /// # Rust Insight
-/// We convert the `Vec` directly into a `BinaryHeap` using `From`. This takes ownership
+/// We convert the `Vec` directly into a ``BinaryHeap`` using `From`. This takes ownership
 /// of the underlying allocation, avoiding any new heap allocations. This is a zero-cost
 /// abstraction in action.
+///
+/// # Panics
+/// Panics if the heap logic fails and a pop returns `None` while `len() > 1`.
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // LeetCode signature
 pub fn last_stone_weight_optimal(stones: Vec<i32>) -> i32 {
