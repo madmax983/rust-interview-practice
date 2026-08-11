@@ -110,9 +110,12 @@ pub fn reorder_list_brute_force(head: Option<Box<ListNode>>) -> Option<Box<ListN
     ListNode::from_vec(reordered)
 }
 
-/// Optimized approach: Store detached nodes in a VecDeque, then re-link.
+/// Optimized approach: Store detached nodes in a `VecDeque`, then re-link.
 /// Time: O(N)
-/// Space: O(N) for pointers in VecDeque
+/// Space: O(N) for pointers in `VecDeque`
+///
+/// # Panics
+/// Panics if the `VecDeque` yields a node but the tail cannot be mutably dereferenced.
 #[must_use]
 pub fn reorder_list_optimized(mut head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     let mut deque = VecDeque::new();
@@ -149,6 +152,10 @@ pub fn reorder_list_optimized(mut head: Option<Box<ListNode>>) -> Option<Box<Lis
 /// 2. Split list.
 /// 3. Reverse second half.
 /// 4. Merge alternating.
+///
+/// # Panics
+/// Panics if a node cannot be mutably dereferenced during the merge step, or if unwrapping
+/// an unexpectedly `None` node.
 #[must_use]
 pub fn reorder_list_optimal(head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     let mut head = head;
