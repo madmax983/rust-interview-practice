@@ -41,7 +41,7 @@ mod basic_tests {
 
     #[test]
     // This test intentionally contrasts `assert!` with `assert_eq!`, so keep the boolean form.
-    #[allow(clippy::manual_assert_eq)]
+    #[allow(unknown_lints, clippy::manual_assert_eq, clippy::manual_assert)]
     fn test_assertions() {
         // assert! - boolean condition
         assert!(2 + 2 == 4);
@@ -641,7 +641,7 @@ mod error_tests {
 /// # Examples
 ///
 /// ```
-/// # // Hidden setup line (starts with #)
+/// # // Hidden setup line (starts with #[allow(unknown_lints, clippy::manual_assert_eq, clippy::manual_assert)]
 /// # fn add(a: i32, b: i32) -> i32 { a + b }
 /// assert_eq!(add(2, 2), 4);
 /// assert_eq!(add(-1, 1), 0);
