@@ -641,7 +641,7 @@ mod error_tests {
 /// # Examples
 ///
 /// ```
-/// # // Hidden setup line (starts with #[allow(unknown_lints, clippy::manual_assert_eq, clippy::manual_assert)]
+/// # // Hidden setup line (starts with #)
 /// # fn add(a: i32, b: i32) -> i32 { a + b }
 /// assert_eq!(add(2, 2), 4);
 /// assert_eq!(add(-1, 1), 0);
