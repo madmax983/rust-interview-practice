@@ -153,7 +153,7 @@ fn parse_octal(bytes: &[u8]) -> Option<u64> {
         }
         // RUST INSIGHT: Pattern matching on byte literals is a clean, zero-cost abstraction for ASCII parsing.
         if (b'0'..=b'7').contains(&b) {
-            val = val * 8 + (b - b'0') as u64;
+            val = val * 8 + u64::from(b - b'0');
             started = true;
         } else {
             return None; // Invalid octal character
@@ -192,9 +192,9 @@ fn calculate_checksum(header: &[u8; BLOCK_SIZE]) -> u32 {
     for (i, &b) in header.iter().enumerate() {
         // The checksum field (bytes 148-155) is treated as all spaces (32) during calculation.
         if (148..156).contains(&i) {
-            sum += b' ' as u32;
+            sum += u32::from(b' ');
         } else {
-            sum += b as u32;
+            sum += u32::from(b);
         }
     }
     sum
@@ -215,6 +215,8 @@ impl<W: Write> TarWriter<W> {
     }
 
     /// Appends a new file entry to the archive.
+    /// # Errors
+    /// Returns an error if the archive is already finished or an I/O error occurs.
     pub fn append(&mut self, header: &TarHeader, data: &[u8]) -> io::Result<()> {
         if self.finished {
             return Err(io::Error::other("Archive already finished"));
@@ -223,9 +225,9 @@ impl<W: Write> TarWriter<W> {
         let mut block = [0u8; BLOCK_SIZE];
 
         write_string(&mut block[0..100], &header.name);
-        write_octal(&mut block[100..108], header.mode as u64);
-        write_octal(&mut block[108..116], header.uid as u64);
-        write_octal(&mut block[116..124], header.gid as u64);
+        write_octal(&mut block[100..108], u64::from(header.mode));
+        write_octal(&mut block[108..116], u64::from(header.uid));
+        write_octal(&mut block[116..124], u64::from(header.gid));
         write_octal(&mut block[124..136], header.size);
         write_octal(&mut block[136..148], header.mtime);
 
@@ -244,7 +246,7 @@ impl<W: Write> TarWriter<W> {
         // GOTCHA: Checksum is terminated by a null and a space in some older tars, but
         // standard USTAR is 6 octal digits followed by null and space.
         let mut chksum_buf = [b'0'; 8];
-        write_octal(&mut chksum_buf[0..7], checksum as u64);
+        write_octal(&mut chksum_buf[0..7], u64::from(checksum));
         chksum_buf[6] = 0;
         chksum_buf[7] = b' ';
         block[148..156].copy_from_slice(&chksum_buf);
@@ -266,6 +268,8 @@ impl<W: Write> TarWriter<W> {
     }
 
     /// Finishes the archive by writing the required two empty EOF blocks.
+    /// # Errors
+    /// Returns an error if an I/O error occurs.
     pub fn finish(&mut self) -> io::Result<()> {
         if !self.finished {
             let eof_blocks = [0u8; BLOCK_SIZE * 2];
@@ -298,6 +302,8 @@ impl<R: Read> TarReader<R> {
 
     /// Reads the next entry in the archive.
     /// Returns `None` if the end of the archive (empty blocks) is reached.
+    /// # Errors
+    /// Returns an error if the checksum is invalid or an I/O error occurs.
     pub fn read_next(&mut self) -> io::Result<Option<TarEntry>> {
         let mut block = [0u8; BLOCK_SIZE];
         let mut bytes_read = 0;
@@ -323,7 +329,8 @@ impl<R: Read> TarReader<R> {
         }
 
         // Verify checksum
-        let expected_checksum = parse_octal(&block[148..156]).unwrap_or(0) as u32;
+        let expected_checksum =
+            u32::try_from(parse_octal(&block[148..156]).unwrap_or(0)).unwrap_or(0);
         let actual_checksum = calculate_checksum(&block);
         if expected_checksum != actual_checksum {
             return Err(io::Error::new(
@@ -334,9 +341,9 @@ impl<R: Read> TarReader<R> {
 
         let header = TarHeader {
             name: read_string(&block[0..100]),
-            mode: parse_octal(&block[100..108]).unwrap_or(0) as u32,
-            uid: parse_octal(&block[108..116]).unwrap_or(0) as u32,
-            gid: parse_octal(&block[116..124]).unwrap_or(0) as u32,
+            mode: u32::try_from(parse_octal(&block[100..108]).unwrap_or(0)).unwrap_or(0),
+            uid: u32::try_from(parse_octal(&block[108..116]).unwrap_or(0)).unwrap_or(0),
+            gid: u32::try_from(parse_octal(&block[116..124]).unwrap_or(0)).unwrap_or(0),
             size: parse_octal(&block[124..136]).unwrap_or(0),
             mtime: parse_octal(&block[136..148]).unwrap_or(0),
             typeflag: FileType::from_byte(block[156]),
@@ -345,11 +352,11 @@ impl<R: Read> TarReader<R> {
             gname: read_string(&block[297..329]),
         };
 
-        let mut data = vec![0u8; header.size as usize];
+        let mut data = vec![0u8; usize::try_from(header.size).unwrap_or(0)];
         self.inner.read_exact(&mut data)?;
 
         // Consume padding
-        let remainder = (header.size as usize) % BLOCK_SIZE;
+        let remainder = usize::try_from(header.size).unwrap_or(0) % BLOCK_SIZE;
         if remainder != 0 {
             let padding = BLOCK_SIZE - remainder;
             let mut pad_buf = vec![0u8; padding];
@@ -360,6 +367,8 @@ impl<R: Read> TarReader<R> {
     }
 
     /// Reads all remaining entries into a vector.
+    /// # Errors
+    /// Returns an error if reading from the archive fails.
     pub fn read_all(&mut self) -> io::Result<Vec<TarEntry>> {
         let mut entries = Vec::new();
         while let Some(entry) = self.read_next()? {

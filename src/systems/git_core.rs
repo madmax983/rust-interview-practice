@@ -65,10 +65,10 @@ use std::io;
 // but output it as a 40-character hex string just like Git.
 // UNSAFE JUSTIFICATION: No unsafe used. We use a simple hash function for demonstration.
 fn mock_sha1(data: &[u8]) -> String {
-    let mut hash: u32 = 0x811c9dc5;
+    let mut hash: u32 = 0x811c_9dc5;
     for &b in data {
-        hash ^= b as u32;
-        hash = hash.wrapping_mul(0x01000193);
+        hash ^= u32::from(b);
+        hash = hash.wrapping_mul(0x0100_0193);
     }
     // Repeat to pad to 40 hex chars for realism
     format!(
@@ -163,8 +163,8 @@ impl GitObject {
                 for p in parents {
                     out.extend_from_slice(format!("parent {}\n", p.0).as_bytes());
                 }
-                out.extend_from_slice(format!("author {}\n", author).as_bytes());
-                out.extend_from_slice(format!("committer {}\n", committer).as_bytes());
+                out.extend_from_slice(format!("author {author}\n").as_bytes());
+                out.extend_from_slice(format!("committer {committer}\n").as_bytes());
                 out.extend_from_slice(b"\n");
                 out.extend_from_slice(message.as_bytes());
                 out
@@ -172,7 +172,7 @@ impl GitObject {
         }
     }
 
-    /// Deserializes raw object data (excluding the header) into a GitObject.
+    /// Deserializes raw object data (excluding the header) into a `GitObject`.
     fn deserialize_data(kind: &str, data: &[u8]) -> io::Result<Self> {
         match kind {
             "blob" => Ok(GitObject::Blob(data.to_vec())),
@@ -265,6 +265,7 @@ pub struct ObjectDatabase {
 }
 
 impl ObjectDatabase {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             store: std::collections::HashMap::new(),
@@ -272,6 +273,8 @@ impl ObjectDatabase {
     }
 
     /// Writes an object to the database, returning its SHA-1 hash.
+    /// # Errors
+    /// Returns an error if writing to the database fails.
     pub fn write_object(&mut self, obj: &GitObject) -> io::Result<Oid> {
         let kind = obj.type_str();
         let data = obj.serialize_data();
@@ -293,6 +296,8 @@ impl ObjectDatabase {
     }
 
     /// Reads an object from the database by its SHA-1 hash.
+    /// # Errors
+    /// Returns an error if the object is not found or is invalid.
     pub fn read_object(&self, oid: &Oid) -> io::Result<GitObject> {
         let compressed = self
             .store
