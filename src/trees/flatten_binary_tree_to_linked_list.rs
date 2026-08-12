@@ -31,14 +31,14 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq, Eq)]
 pub struct TreeNode {
     pub val: i32,
-    pub left: Option<Rc<RefCell<TreeNode>>>,
-    pub right: Option<Rc<RefCell<TreeNode>>>,
+    pub left: Option<Rc<RefCell<Self>>>,
+    pub right: Option<Rc<RefCell<Self>>>,
 }
 
 impl TreeNode {
     #[inline]
     #[must_use]
-    pub fn new(val: i32) -> Self {
+    pub const fn new(val: i32) -> Self {
         Self {
             val,
             left: None,
@@ -49,14 +49,9 @@ impl TreeNode {
 
 /// Recursively flattens the tree.
 /// Returns the tail of the flattened tree to make appending O(1).
-fn flatten_recursive_helper(
-    node: Option<Rc<RefCell<TreeNode>>>,
-) -> Option<Rc<RefCell<TreeNode>>> {
-    if node.is_none() {
-        return None;
-    }
-
-    let node_rc = node.unwrap();
+#[allow(clippy::needless_pass_by_value)]
+fn flatten_recursive_helper(node: Option<Rc<RefCell<TreeNode>>>) -> Option<Rc<RefCell<TreeNode>>> {
+    let node_rc = node.as_ref()?;
 
     // We clone the Rc to maintain a handle to the children,
     // which allows us to temporarily borrow mutably later without conflict.
@@ -104,7 +99,7 @@ pub fn flatten_recursive(root: &mut Option<Rc<RefCell<TreeNode>>>) {
 pub fn flatten(root: &mut Option<Rc<RefCell<TreeNode>>>) {
     let mut current = root.clone();
 
-    while let Some(node) = current {
+    while let Some(node) = current.clone() {
         let mut node_ref = node.borrow_mut();
 
         // RUST INSIGHT: We check if `left` exists. If it does, we need to wire it up.
@@ -123,7 +118,7 @@ pub fn flatten(root: &mut Option<Rc<RefCell<TreeNode>>>) {
 
             // Wire the rightmost node's right pointer to the current node's right child
             if let Some(r) = rightmost {
-                r.borrow_mut().right = node_ref.right.clone();
+                r.borrow_mut().right.clone_from(&node_ref.right);
             }
 
             // Move left tree to right tree and nullify left
@@ -131,7 +126,7 @@ pub fn flatten(root: &mut Option<Rc<RefCell<TreeNode>>>) {
         }
 
         // Move to the next node (which is now guaranteed to be on the right)
-        current = node_ref.right.clone();
+        current.clone_from(&node_ref.right);
     }
 }
 
@@ -139,19 +134,20 @@ pub fn flatten(root: &mut Option<Rc<RefCell<TreeNode>>>) {
 mod tests {
     use super::*;
 
-    fn to_vec(root: &Option<Rc<RefCell<TreeNode>>>) -> Vec<Option<i32>> {
+    fn to_vec(root: Option<&Rc<RefCell<TreeNode>>>) -> Vec<Option<i32>> {
         let mut result = Vec::new();
-        let mut current = root.clone();
+        let mut current = root.cloned();
 
-        while let Some(node) = current {
+        while let Some(node) = current.clone() {
             let node_ref = node.borrow();
             result.push(Some(node_ref.val));
 
-            if node_ref.left.is_some() {
-                panic!("Left child should be None after flattening");
-            }
+            assert!(
+                node_ref.left.is_none(),
+                "Left child should be None after flattening"
+            );
 
-            current = node_ref.right.clone();
+            current.clone_from(&node_ref.right);
         }
 
         result
@@ -177,7 +173,7 @@ mod tests {
         let mut root_opt = Some(root);
         flatten(&mut root_opt);
 
-        let vals = to_vec(&root_opt);
+        let vals = to_vec(root_opt.as_ref());
         assert_eq!(vals, vec![Some(1), Some(2), Some(3), Some(5), Some(6)]);
     }
 
@@ -185,14 +181,14 @@ mod tests {
     fn test_flatten_empty_tree() {
         let mut root: Option<Rc<RefCell<TreeNode>>> = None;
         flatten(&mut root);
-        assert_eq!(to_vec(&root), vec![]);
+        assert_eq!(to_vec(root.as_ref()), vec![]);
     }
 
     #[test]
     fn test_flatten_single_node() {
         let mut root = Some(Rc::new(RefCell::new(TreeNode::new(0))));
         flatten(&mut root);
-        assert_eq!(to_vec(&root), vec![Some(0)]);
+        assert_eq!(to_vec(root.as_ref()), vec![Some(0)]);
     }
 
     #[test]
@@ -212,7 +208,7 @@ mod tests {
         let mut root_opt = Some(root);
         flatten(&mut root_opt);
 
-        let vals = to_vec(&root_opt);
+        let vals = to_vec(root_opt.as_ref());
         assert_eq!(vals, vec![Some(1), Some(2), Some(3)]);
     }
 }
