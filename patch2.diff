@@ -1,7 +1,0 @@
---- src/systems/git_core.rs
-+++ src/systems/git_core.rs
-@@ -193,3 +193,3 @@
-         // RUST INSIGHT:
--// Explicitly typing the match arm returns to a byte slice `&[u8]` allows us to return string literals of different lengths (e.g. b"tree" vs b"commit").
-+        // Explicitly typing the match arm returns to a byte slice `&[u8]` allows us to return byte string literals of different lengths (e.g. b"tree" vs b"commit") without a compiler error.
-         let ty: &[u8] = match self {
