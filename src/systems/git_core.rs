@@ -58,6 +58,7 @@ use std::fmt::Write;
 
 /// A simple SHA-1 hasher implemented from scratch for educational purposes.
 ///
+#[allow(clippy::many_single_char_names)]
 /// # Panics
 /// Panics if the internal `write!` macro fails when converting hex string,
 /// which in practice should never happen.
@@ -89,12 +90,7 @@ pub fn sha1(data: &[u8]) -> [u8; 20] {
     for chunk in message.chunks_exact(64) {
         let mut w = [0u32; 80];
         for (i, byte_chunk) in chunk.chunks_exact(4).enumerate() {
-            w[i] = u32::from_be_bytes([
-                byte_chunk[0],
-                byte_chunk[1],
-                byte_chunk[2],
-                byte_chunk[3],
-            ]);
+            w[i] = u32::from_be_bytes([byte_chunk[0], byte_chunk[1], byte_chunk[2], byte_chunk[3]]);
         }
         for i in 16..80 {
             w[i] = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]).rotate_left(1);

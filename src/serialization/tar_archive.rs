@@ -102,7 +102,7 @@ pub struct TarArchive {
 impl TarArchive {
     /// Creates a new, empty Tar archive.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             entries: Vec::new(),
         }
@@ -164,7 +164,7 @@ impl TarArchive {
             // calculate checksum
             let checksum = calculate_checksum(&header);
             // USTAR checksum is 6 digits + null + space
-            let mut checksum_str = format!("{:06o}\0 ", checksum).into_bytes();
+            let mut checksum_str = format!("{checksum:06o}\0 ").into_bytes();
             if checksum_str.len() > 8 {
                 checksum_str.truncate(8);
             }
@@ -223,7 +223,7 @@ impl TarArchive {
             let mtime = parse_octal(&header[136..148]).unwrap_or(0);
 
             // Read file data
-            let mut data = vec![0u8; size as usize];
+            let mut data = vec![0u8; usize::try_from(size).unwrap_or(0)];
             reader.read_exact(&mut data)?;
 
             archive.entries.push(TarEntry {
@@ -235,7 +235,7 @@ impl TarArchive {
             });
 
             // Consume padding
-            let remainder = (size as usize) % BLOCK_SIZE;
+            let remainder = usize::try_from(size).unwrap_or(0) % BLOCK_SIZE;
             if remainder > 0 {
                 let padding = BLOCK_SIZE - remainder;
                 let mut pad_buf = vec![0u8; padding];

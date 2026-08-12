@@ -47,6 +47,12 @@
 //! - Deflate compression (zlib) is omitted here for educational clarity (normally objects are zlib compressed on disk).
 //! - Streaming APIs for huge files.
 //! - Packfile support (Git packs objects together to save space).
+//!
+//! **Suggested next steps / extensions:**
+//! - Implement `flate2` for zlib compression of objects.
+//! - Support reading/writing Packfiles (`.pack` and `.idx`).
+//!
+//! **Benchmarking Note:** Use `criterion` to benchmark the SHA-1 hasher against `sha1` crate and measure the throughput of `GitObject::serialize`.
 
 use std::fmt::Write;
 
@@ -83,12 +89,7 @@ pub fn sha1(data: &[u8]) -> [u8; 20] {
     for chunk in message.chunks_exact(64) {
         let mut w = [0u32; 80];
         for (i, byte_chunk) in chunk.chunks_exact(4).enumerate() {
-            w[i] = u32::from_be_bytes([
-                byte_chunk[0],
-                byte_chunk[1],
-                byte_chunk[2],
-                byte_chunk[3],
-            ]);
+            w[i] = u32::from_be_bytes([byte_chunk[0], byte_chunk[1], byte_chunk[2], byte_chunk[3]]);
         }
         for i in 16..80 {
             w[i] = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]).rotate_left(1);
@@ -185,7 +186,7 @@ impl GitObject {
         let mut content = Vec::new();
 
         // RUST INSIGHT:
-// Explicitly typing the match arm returns to a byte slice `&[u8]` allows us to return string literals of different lengths (e.g. b"tree" vs b"commit").
+        // Explicitly typing the match arm returns to a byte slice `&[u8]` allows us to return byte string literals of different lengths (e.g. b"tree" vs b"commit") without a compiler error.
         let ty: &[u8] = match self {
             Self::Blob(data) => {
                 content.extend_from_slice(data);

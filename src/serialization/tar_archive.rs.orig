@@ -40,6 +40,12 @@
 //! - Streaming APIs (we use `Vec<u8>` for simplicity).
 //! - GNU/PAX extensions (we only support standard 100-character filenames and 8GB size limit of USTAR).
 //! - Directory entries (we only implement regular files).
+//!
+//! **Suggested next steps / extensions:**
+//! - Implement GNU tar extensions to support long filenames (>100 characters).
+//! - Add support for parsing directory entries and symlinks.
+//!
+//! **Benchmarking Note:** Use `criterion` to benchmark read and write speeds of large archives (e.g. 100MB+) against the standard `tar` crate.
 
 use std::io::{self, Read, Write};
 
@@ -56,6 +62,7 @@ fn format_octal(value: u64, width: usize) -> Vec<u8> {
 fn parse_octal(bytes: &[u8]) -> Option<u64> {
     let s = std::str::from_utf8(bytes).ok()?;
     // Trim nulls and spaces
+    // GOTCHA: USTAR format pads with nulls and spaces, failure to trim both will cause radix parsing to fail.
     let s = s.trim_matches(|c| c == '\0' || c == ' ');
     if s.is_empty() {
         return Some(0);
@@ -120,6 +127,8 @@ impl TarArchive {
         for entry in &self.entries {
             let mut header = [0u8; BLOCK_SIZE];
 
+            // RUST INSIGHT: Array slice copying (`copy_from_slice`) allows safe and performant memory moves,
+            // preventing buffer overflows that are common when writing C-style structs in C/C++.
             // name: 100 bytes
             let name_bytes = entry.name.as_bytes();
             let name_len = name_bytes.len().min(100);
