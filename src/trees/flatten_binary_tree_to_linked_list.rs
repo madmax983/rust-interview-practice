@@ -79,6 +79,7 @@ pub fn flatten_brute_force(root: &Option<Rc<RefCell<TreeNode>>>) {
     let mut nodes = Vec::new();
 
     // Helper to collect nodes in preorder
+    #[allow(clippy::items_after_statements, clippy::ref_option)]
     fn preorder(node: &Option<Rc<RefCell<TreeNode>>>, nodes: &mut Vec<Rc<RefCell<TreeNode>>>) {
         if let Some(n) = node {
             // RUST INSIGHT: Cloning an Rc only increments the reference count (O(1)),
@@ -117,7 +118,11 @@ pub fn flatten_optimized(root: &Option<Rc<RefCell<TreeNode>>>) {
     // Shared state to keep track of the previously visited node in our reverse post-order traversal
     let mut prev: Option<Rc<RefCell<TreeNode>>> = None;
 
-    fn reverse_post_order(node: &Option<Rc<RefCell<TreeNode>>>, prev: &mut Option<Rc<RefCell<TreeNode>>>) {
+    #[allow(clippy::items_after_statements, clippy::ref_option)]
+    fn reverse_post_order(
+        node: &Option<Rc<RefCell<TreeNode>>>,
+        prev: &mut Option<Rc<RefCell<TreeNode>>>,
+    ) {
         if let Some(n) = node {
             // Traverse right then left
             // RUST INSIGHT: We must drop the borrow before recursive calls to avoid
@@ -133,7 +138,7 @@ pub fn flatten_optimized(root: &Option<Rc<RefCell<TreeNode>>>) {
 
             // Now safely borrow `n` mutably to update pointers.
             let mut current = n.borrow_mut();
-            current.right = prev.clone();
+            current.right.clone_from(prev);
             current.left = None;
 
             // Update prev for the next step up the call stack
@@ -175,7 +180,10 @@ pub fn flatten_optimal(root: &Option<Rc<RefCell<TreeNode>>>) {
             }
 
             // Rewire: rightmost node's right child becomes current's right child
-            rightmost.borrow_mut().right = current_node.borrow().right.clone();
+            rightmost
+                .borrow_mut()
+                .right
+                .clone_from(&current_node.borrow().right);
 
             // Move left subtree to right, and nullify left
             let mut current_mut = current_node.borrow_mut();
@@ -199,12 +207,16 @@ mod tests {
     use super::*;
 
     // Helper to extract a vec of values from a flattened tree (following right pointers)
+    #[allow(clippy::ref_option)]
     fn to_vec(root: &Option<Rc<RefCell<TreeNode>>>) -> Vec<i32> {
         let mut result = Vec::new();
         let mut curr = root.clone();
         while let Some(node) = curr {
             let n = node.borrow();
-            assert!(n.left.is_none(), "Flattened tree must not have left children!");
+            assert!(
+                n.left.is_none(),
+                "Flattened tree must not have left children!"
+            );
             result.push(n.val);
             curr = n.right.clone();
         }
@@ -212,7 +224,7 @@ mod tests {
     }
 
     // Helper to build a test tree
-    fn build_test_tree() -> Option<Rc<RefCell<TreeNode>>> {
+    fn build_test_tree() -> Rc<RefCell<TreeNode>> {
         //       1
         //      / \
         //     2   5
@@ -233,26 +245,26 @@ mod tests {
         root.left = Some(Rc::new(RefCell::new(node2)));
         root.right = Some(Rc::new(RefCell::new(node5)));
 
-        Some(Rc::new(RefCell::new(root)))
+        Rc::new(RefCell::new(root))
     }
 
     #[test]
     fn test_flatten_brute_force() {
-        let root = build_test_tree();
+        let root = Some(build_test_tree());
         flatten_brute_force(&root);
         assert_eq!(to_vec(&root), vec![1, 2, 3, 4, 5, 6]);
     }
 
     #[test]
     fn test_flatten_optimized() {
-        let root = build_test_tree();
+        let root = Some(build_test_tree());
         flatten_optimized(&root);
         assert_eq!(to_vec(&root), vec![1, 2, 3, 4, 5, 6]);
     }
 
     #[test]
     fn test_flatten_optimal() {
-        let root = build_test_tree();
+        let root = Some(build_test_tree());
         flatten_optimal(&root);
         assert_eq!(to_vec(&root), vec![1, 2, 3, 4, 5, 6]);
     }
@@ -261,7 +273,8 @@ mod tests {
     fn test_empty_tree() {
         let root = None;
         flatten_optimal(&root);
-        assert_eq!(to_vec(&root), vec![]);
+        let expected: Vec<i32> = vec![];
+        assert_eq!(to_vec(&root), expected);
     }
 
     #[test]
