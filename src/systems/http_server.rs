@@ -8,7 +8,7 @@
 //! **Real-world Usage:**
 //! - Web servers and reverse proxies (Nginx, Apache, Caddy)
 //! - Application frameworks serving web traffic
-//! - Embedded servers for IoT devices or admin dashboards
+//! - Embedded servers for `IoT` devices or admin dashboards
 //!
 //! **Why build it yourself?**
 //! Building an HTTP server from scratch demystifies how "the web" actually works over plain TCP.
@@ -19,7 +19,7 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 // =========================================================================================
@@ -87,6 +87,7 @@ pub struct Response {
 
 impl Response {
     /// Creates a simple response with standard headers.
+    #[must_use]
     pub fn new(status_code: u16, status_text: &str, body: Option<String>) -> Self {
         let mut headers = HashMap::new();
         if let Some(ref b) = body {
@@ -103,11 +104,13 @@ impl Response {
     }
 
     /// Serializes the response into raw bytes for writing to a TCP stream.
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
+        use std::fmt::Write;
         let mut res = format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_text);
 
         for (k, v) in &self.headers {
-            res.push_str(&format!("{}: {}\r\n", k, v));
+            let _ = write!(res, "{k}: {v}\r\n");
         }
 
         res.push_str("\r\n");
@@ -120,6 +123,9 @@ impl Response {
 }
 
 /// Parses an incoming raw HTTP request from a TCP Stream.
+///
+/// # Errors
+/// Returns an error if the request line is empty, malformed, or if there is an underlying I/O error reading from the stream.
 pub fn parse_request(stream: &mut TcpStream) -> Result<Request, String> {
     // RUST INSIGHT: We initialize BufReader with `&mut stream` instead of `stream.try_clone().unwrap()`.
     // This perfectly abides by Rust's borrowing rules: the reader borrows the stream mutably for the read phase,
@@ -127,14 +133,16 @@ pub fn parse_request(stream: &mut TcpStream) -> Result<Request, String> {
     let mut reader = BufReader::new(stream);
 
     let mut request_line = String::new();
-    reader.read_line(&mut request_line).map_err(|e| e.to_string())?;
+    reader
+        .read_line(&mut request_line)
+        .map_err(|e| e.to_string())?;
 
     if request_line.is_empty() {
         return Err("Empty request line".to_string());
     }
 
-    // GOTCHA: HTTP lines end in \r\n. We must trim whitespace before parsing.
-    let parts: Vec<&str> = request_line.trim_end().split_whitespace().collect();
+    // GOTCHA: HTTP lines end in \r\n.
+    let parts: Vec<&str> = request_line.split_whitespace().collect();
     if parts.len() != 3 {
         return Err("Malformed request line".to_string());
     }
@@ -148,7 +156,9 @@ pub fn parse_request(stream: &mut TcpStream) -> Result<Request, String> {
 
     loop {
         let mut header_line = String::new();
-        reader.read_line(&mut header_line).map_err(|e| e.to_string())?;
+        reader
+            .read_line(&mut header_line)
+            .map_err(|e| e.to_string())?;
 
         let trimmed = header_line.trim_end();
         if trimmed.is_empty() {
@@ -168,12 +178,15 @@ pub fn parse_request(stream: &mut TcpStream) -> Result<Request, String> {
         }
     }
 
-    let mut body = None;
-    if content_length > 0 {
+    let body = if content_length > 0 {
         let mut body_buf = vec![0; content_length];
-        reader.read_exact(&mut body_buf).map_err(|e| e.to_string())?;
-        body = String::from_utf8(body_buf).ok();
-    }
+        reader
+            .read_exact(&mut body_buf)
+            .map_err(|e| e.to_string())?;
+        String::from_utf8(body_buf).ok()
+    } else {
+        None
+    };
 
     // Explicitly drop the reader to satisfy the borrow checker and return full mutable access
     // to the stream to the caller (who will write the response).
@@ -200,32 +213,32 @@ pub fn parse_request(stream: &mut TcpStream) -> Result<Request, String> {
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
 struct Worker {
-    _id: usize,
     thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-    fn new(_id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Self {
+    fn new(receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Self {
         // RUST INSIGHT: We use Arc<Mutex<Receiver>> because multiple threads need to safely
         // share the receiving end of the channel. The Mutex ensures only one thread is locking
         // and retrieving a job at a time.
-        let thread = thread::spawn(move || loop {
-            let message = receiver.lock().unwrap().recv();
+        let thread = thread::spawn(move || {
+            loop {
+                let message = receiver.lock().unwrap().recv();
 
-            match message {
-                Ok(job) => {
-                    // Execute the job
-                    job();
-                }
-                Err(_) => {
-                    // Sender disconnected; shut down worker
-                    break;
+                match message {
+                    Ok(job) => {
+                        // Execute the job
+                        job();
+                    }
+                    Err(_) => {
+                        // Sender disconnected; shut down worker
+                        break;
+                    }
                 }
             }
         });
 
         Self {
-            _id,
             thread: Some(thread),
         }
     }
@@ -237,13 +250,14 @@ pub struct ThreadPool {
 }
 
 impl ThreadPool {
-    /// Create a new ThreadPool.
+    /// Create a new `ThreadPool`.
     ///
     /// The size is the number of threads in the pool.
     ///
     /// # Panics
     ///
     /// The `new` function will panic if the size is zero.
+    #[must_use]
     pub fn new(size: usize) -> Self {
         assert!(size > 0);
 
@@ -251,8 +265,8 @@ impl ThreadPool {
         let receiver = Arc::new(Mutex::new(receiver));
 
         let mut workers = Vec::with_capacity(size);
-        for id in 0..size {
-            workers.push(Worker::new(id, Arc::clone(&receiver)));
+        for _ in 0..size {
+            workers.push(Worker::new(Arc::clone(&receiver)));
         }
 
         Self {
@@ -261,6 +275,10 @@ impl ThreadPool {
         }
     }
 
+    /// Executes a job on the thread pool.
+    ///
+    /// # Panics
+    /// Panics if the internal channel has been closed or the lock is poisoned.
     pub fn execute<F>(&self, f: F)
     where
         F: FnOnce() + Send + 'static,
@@ -310,6 +328,7 @@ pub struct HttpServer {
 }
 
 impl HttpServer {
+    #[must_use]
     pub fn new(workers: usize) -> Self {
         Self {
             pool: ThreadPool::new(workers),
@@ -317,25 +336,25 @@ impl HttpServer {
     }
 
     /// Handles a single client connection.
-    fn handle_connection<H>(mut stream: TcpStream, handler: Arc<H>)
+    fn handle_connection<H>(mut stream: TcpStream, handler: &Arc<H>)
     where
         H: Handler + ?Sized,
     {
-        match parse_request(&mut stream) {
-            Ok(request) => {
-                let response = handler.handle(request);
-                let _ = stream.write_all(&response.to_bytes());
-            }
-            Err(_) => {
-                let error_response = Response::new(400, "Bad Request", None);
-                let _ = stream.write_all(&error_response.to_bytes());
-            }
+        if let Ok(request) = parse_request(&mut stream) {
+            let response = handler.handle(request);
+            let _ = stream.write_all(&response.to_bytes());
+        } else {
+            let error_response = Response::new(400, "Bad Request", None);
+            let _ = stream.write_all(&error_response.to_bytes());
         }
         // stream is dropped here, closing the TCP connection.
     }
 
     /// Starts the server and listens for incoming connections.
     /// This method runs indefinitely until the listener is dropped.
+    ///
+    /// # Errors
+    /// Returns an error if it fails to bind to the provided address.
     pub fn run<H, A>(&self, addr: A, handler: H) -> std::io::Result<()>
     where
         A: std::net::ToSocketAddrs,
@@ -349,11 +368,11 @@ impl HttpServer {
                 Ok(stream) => {
                     let handler_clone = Arc::clone(&handler_arc);
                     self.pool.execute(move || {
-                        Self::handle_connection(stream, handler_clone);
+                        Self::handle_connection(stream, &handler_clone);
                     });
                 }
                 Err(e) => {
-                    eprintln!("Failed to accept connection: {}", e);
+                    eprintln!("Failed to accept connection: {e}");
                 }
             }
         }
@@ -449,7 +468,7 @@ mod tests {
                 let stream = stream.unwrap();
                 let handler_clone = Arc::clone(&handler);
                 pool.execute(move || {
-                    HttpServer::handle_connection(stream, handler_clone);
+                    HttpServer::handle_connection(stream, &handler_clone);
                 });
             }
         });
@@ -459,7 +478,9 @@ mod tests {
 
         // Make a successful request
         let mut client = TcpStream::connect(addr).unwrap();
-        client.write_all(b"GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+        client
+            .write_all(b"GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .unwrap();
 
         let mut response = String::new();
         client.read_to_string(&mut response).unwrap();
@@ -469,7 +490,9 @@ mod tests {
 
         // Make a not-found request
         let mut client2 = TcpStream::connect(addr).unwrap();
-        client2.write_all(b"GET /nowhere HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+        client2
+            .write_all(b"GET /nowhere HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .unwrap();
 
         let mut response2 = String::new();
         client2.read_to_string(&mut response2).unwrap();
