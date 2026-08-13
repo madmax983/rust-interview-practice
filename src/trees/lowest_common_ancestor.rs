@@ -202,18 +202,18 @@ pub fn lowest_common_ancestor_optimized(
 ) -> Option<Rc<RefCell<TreeNode>>> {
     // Internal helper function to avoid repeated cloning
     fn dfs(
-        node: &Option<Rc<RefCell<TreeNode>>>,
+        node: Option<&Rc<RefCell<TreeNode>>>,
         p: &Rc<RefCell<TreeNode>>,
         q: &Rc<RefCell<TreeNode>>,
     ) -> Option<Rc<RefCell<TreeNode>>> {
-        let n = node.as_ref()?;
+        let n = node?;
 
         if Rc::ptr_eq(n, p) || Rc::ptr_eq(n, q) {
             return Some(Rc::clone(n));
         }
 
-        let left = dfs(&n.borrow().left, p, q);
-        let right = dfs(&n.borrow().right, p, q);
+        let left = dfs(n.borrow().left.as_ref(), p, q);
+        let right = dfs(n.borrow().right.as_ref(), p, q);
 
         if left.is_some() && right.is_some() {
             return Some(Rc::clone(n));
@@ -225,7 +225,7 @@ pub fn lowest_common_ancestor_optimized(
     let p_unwrapped = p.as_ref().unwrap();
     let q_unwrapped = q.as_ref().unwrap();
 
-    dfs(&root, p_unwrapped, q_unwrapped)
+    dfs(root.as_ref(), p_unwrapped, q_unwrapped)
 }
 
 // =========================================================================================
