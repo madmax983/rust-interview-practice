@@ -200,26 +200,32 @@ pub fn lowest_common_ancestor_optimized(
     p: Option<Rc<RefCell<TreeNode>>>,
     q: Option<Rc<RefCell<TreeNode>>>,
 ) -> Option<Rc<RefCell<TreeNode>>> {
-    // Base case: root is None, or root is p, or root is q
-    let node = root?;
+    // Internal helper function to avoid repeated cloning
+    fn dfs(
+        node: Option<&Rc<RefCell<TreeNode>>>,
+        p: &Rc<RefCell<TreeNode>>,
+        q: &Rc<RefCell<TreeNode>>,
+    ) -> Option<Rc<RefCell<TreeNode>>> {
+        let n = node?;
 
-    // We can't easily move p and q into recursive calls if we need them for comparison.
-    // So we pass references or clones. Since they are Rc, cloning is cheap.
+        if Rc::ptr_eq(n, p) || Rc::ptr_eq(n, q) {
+            return Some(Rc::clone(n));
+        }
+
+        let left = dfs(n.borrow().left.as_ref(), p, q);
+        let right = dfs(n.borrow().right.as_ref(), p, q);
+
+        if left.is_some() && right.is_some() {
+            return Some(Rc::clone(n));
+        }
+
+        left.or(right)
+    }
+
     let p_unwrapped = p.as_ref().unwrap();
     let q_unwrapped = q.as_ref().unwrap();
 
-    if Rc::ptr_eq(&node, p_unwrapped) || Rc::ptr_eq(&node, q_unwrapped) {
-        return Some(node);
-    }
-
-    let left = lowest_common_ancestor_optimized(node.borrow().left.clone(), p.clone(), q.clone());
-    let right = lowest_common_ancestor_optimized(node.borrow().right.clone(), p.clone(), q.clone());
-
-    if left.is_some() && right.is_some() {
-        return Some(node);
-    }
-
-    left.or(right)
+    dfs(root.as_ref(), p_unwrapped, q_unwrapped)
 }
 
 // =========================================================================================
