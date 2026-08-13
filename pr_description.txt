@@ -1,0 +1,7 @@
+💡 What: Optimized `lowest_common_ancestor_optimized` in `src/trees/lowest_common_ancestor.rs` by introducing an internal `dfs` helper function that accepts borrowed references (`&Option<Rc<RefCell<TreeNode>>>` and `&Rc<RefCell<TreeNode>>`) instead of owned values. Fixed `clippy::manual_assert_eq` warnings in tests.
+
+🎯 Why: The previous recursive DFS implementation cloned the `left` and `right` child `Option<Rc<RefCell<TreeNode>>>` (as well as the target nodes `p` and `q`) on every single recursive call, causing unnecessary overhead from reference counting increments/decrements and `Option` heap allocations.
+
+📊 Impact: Reduces O(N) `Rc::clone()` calls down to O(1) clones (only executed when the target node is found), significantly improving traversal efficiency without sacrificing safety or readability.
+
+🔬 Measurement: Run `cargo test trees::lowest_common_ancestor` to verify correctness and `cargo clippy --all-targets --all-features -- -D warnings` to ensure no lints are triggered.
