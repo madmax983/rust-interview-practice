@@ -85,7 +85,10 @@ pub fn flatten_brute_force(root: &mut Option<Rc<RefCell<TreeNode>>>) {
 /// we visit the nodes in the exact reverse order of the flattened list. We keep a `prev`
 /// pointer to link the current node's right child to the previously visited node.
 pub fn flatten_optimized(root: &mut Option<Rc<RefCell<TreeNode>>>) {
-    fn rev_preorder(node: &Option<Rc<RefCell<TreeNode>>>, prev: &mut Option<Rc<RefCell<TreeNode>>>) {
+    fn rev_preorder(
+        node: &Option<Rc<RefCell<TreeNode>>>,
+        prev: &mut Option<Rc<RefCell<TreeNode>>>,
+    ) {
         if let Some(n) = node {
             // GOTCHA: We must extract the child pointers and drop our borrow of `n` before recursing.
             // If we kept `n.borrow()` alive during the recursive calls, we would hit a RefCell
@@ -208,21 +211,30 @@ mod tests {
     fn test_happy_path_brute_force() {
         let mut root = setup_tree();
         flatten_brute_force(&mut root);
-        assert_eq!(to_vec(&root), vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]);
+        assert_eq!(
+            to_vec(&root),
+            vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
+        );
     }
 
     #[test]
     fn test_happy_path_optimized() {
         let mut root = setup_tree();
         flatten_optimized(&mut root);
-        assert_eq!(to_vec(&root), vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]);
+        assert_eq!(
+            to_vec(&root),
+            vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
+        );
     }
 
     #[test]
     fn test_happy_path_optimal() {
         let mut root = setup_tree();
         flatten_optimal(&mut root);
-        assert_eq!(to_vec(&root), vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]);
+        assert_eq!(
+            to_vec(&root),
+            vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
+        );
     }
 
     #[test]
