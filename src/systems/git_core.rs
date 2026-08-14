@@ -76,6 +76,10 @@ pub struct TreeEntry {
 impl GitObject {
     /// Serializes the object into the format Git uses for hashing and storage.
     /// Format: `<type> <content-length>\0<content>`
+    ///
+    /// # Panics
+    /// Panics if the type is not valid UTF-8.
+    #[must_use]
     pub fn serialize(&self) -> Vec<u8> {
         let mut content = Vec::new();
 
@@ -101,21 +105,28 @@ impl GitObject {
                     content.extend_from_slice(entry.hash.0.as_bytes());
                 }
             }
-            Self::Commit { tree_hash, parent_hashes, author, message } => {
+            Self::Commit {
+                tree_hash,
+                parent_hashes,
+                author,
+                message,
+            } => {
+                use std::fmt::Write;
                 let mut commit_str = String::new();
-                commit_str.push_str(&format!("tree {}\n", tree_hash.0));
+                let _ = writeln!(commit_str, "tree {}", tree_hash.0);
                 for p in parent_hashes {
-                    commit_str.push_str(&format!("parent {}\n", p.0));
+                    let _ = writeln!(commit_str, "parent {}", p.0);
                 }
-                commit_str.push_str(&format!("author {}\n", author));
-                commit_str.push_str(&format!("committer {}\n", author)); // simplified
+                let _ = writeln!(commit_str, "author {author}");
+                let _ = writeln!(commit_str, "committer {author}"); // simplified
                 commit_str.push('\n');
                 commit_str.push_str(message);
                 content.extend_from_slice(commit_str.as_bytes());
             }
         }
 
-        let mut header = format!("{} {}\0", std::str::from_utf8(ty).unwrap(), content.len()).into_bytes();
+        let mut header =
+            format!("{} {}\0", std::str::from_utf8(ty).unwrap(), content.len()).into_bytes();
         header.extend(content);
         header
     }
@@ -124,14 +135,15 @@ impl GitObject {
     ///
     /// // UNSAFE JUSTIFICATION: No unsafe used.
     /// // PRODUCTION NOTE: A real implementation would use a robust SHA-1 (or SHA-256) implementation here.
+    #[must_use]
     pub fn calculate_hash(&self) -> GitHash {
         let serialized = self.serialize();
         // Very fake hash for demonstration! Just sums bytes.
         let mut sum: u32 = 0;
         for &b in &serialized {
-            sum = sum.wrapping_add(b as u32);
+            sum = sum.wrapping_add(u32::from(b));
         }
-        GitHash(format!("{:040x}", sum))
+        GitHash(format!("{sum:040x}"))
     }
 }
 

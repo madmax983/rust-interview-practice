@@ -75,6 +75,7 @@ impl Response {
     }
 
     /// Creates a new Not Found response.
+    #[must_use]
     #[allow(clippy::missing_const_for_fn)]
     pub fn not_found() -> Self {
         Self {
@@ -86,14 +87,16 @@ impl Response {
     }
 
     /// Serializes the response to bytes for writing to a TCP stream.
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut res = format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_text).into_bytes();
+        let mut res =
+            format!("HTTP/1.1 {} {}\r\n", self.status_code, self.status_text).into_bytes();
 
         let mut headers = self.headers.clone();
         headers.insert("Content-Length".to_string(), self.body.len().to_string());
 
         for (k, v) in headers {
-            res.extend_from_slice(format!("{}: {}\r\n", k, v).as_bytes());
+            res.extend_from_slice(format!("{k}: {v}\r\n").as_bytes());
         }
 
         res.extend_from_slice(b"\r\n");
@@ -128,19 +131,23 @@ pub struct HttpServer<H: Handler + ?Sized> {
 }
 
 impl<H: Handler + ?Sized + 'static> HttpServer<H> {
-    pub fn new(handler: Arc<H>) -> Self {
+    pub const fn new(handler: Arc<H>) -> Self {
         Self {
             handler,
             thread_pool_size: 4,
         }
     }
 
-    pub fn with_pool_size(mut self, size: usize) -> Self {
+    #[must_use]
+    pub const fn with_pool_size(mut self, size: usize) -> Self {
         self.thread_pool_size = size;
         self
     }
 
     /// Starts listening on the given address.
+    ///
+    /// # Errors
+    /// Returns an `io::Result` error if binding to the address fails.
     pub fn listen(&self, addr: &str) -> std::io::Result<()> {
         let listener = TcpListener::bind(addr)?;
         // PRODUCTION NOTE: A production server would use an async runtime like Tokio instead of manual OS threads, avoiding the overhead of one thread per connection or pool worker locking.
@@ -153,13 +160,13 @@ impl<H: Handler + ?Sized + 'static> HttpServer<H> {
             let handler = Arc::clone(&self.handler);
 
             pool.execute(move || {
-                Self::handle_connection(stream, handler);
+                Self::handle_connection(stream, &handler);
             });
         }
         Ok(())
     }
 
-    fn handle_connection(mut stream: TcpStream, handler: Arc<H>) {
+    fn handle_connection(mut stream: TcpStream, handler: &Arc<H>) {
         // GOTCHA: Using BufReader to read lines line-by-line is convenient for HTTP headers,
         // but we must be careful not to read past the headers into the body if we are waiting for EOF.
         // We initialize the BufReader with a mutable reference so we can reclaim the stream later.
@@ -196,7 +203,11 @@ impl<H: Handler + ?Sized + 'static> HttpServer<H> {
         }
 
         let mut body = Vec::new();
-        if let Some(content_length) = headers.get("Content-Length").and_then(|s| s.parse::<usize>().ok()) {
+        if let Some(content_length) = headers
+            .get("Content-Length")
+            .and_then(|s| s.parse::<usize>().ok())
+            .filter(|&len| len > 0)
+        {
             body.resize(content_length, 0);
             // Read exactly content_length bytes
             let _ = reader.read_exact(&mut body);
@@ -260,17 +271,19 @@ struct Worker {
 
 impl Worker {
     fn new(id: usize, receiver: Arc<Mutex<std::sync::mpsc::Receiver<Job>>>) -> Self {
-        let thread = thread::spawn(move || loop {
-            // GOTCHA: We must lock, receive, and unlock in one swift motion.
-            // If we held the lock while executing the job, we'd defeat the purpose of a thread pool!
-            let job = {
-                let lock = receiver.lock().unwrap();
-                match lock.recv() {
-                    Ok(job) => job,
-                    Err(_) => break, // Channel closed
-                }
-            };
-            job();
+        let thread = thread::spawn(move || {
+            loop {
+                // GOTCHA: We must lock, receive, and unlock in one swift motion.
+                // If we held the lock while executing the job, we'd defeat the purpose of a thread pool!
+                let job = {
+                    let lock = receiver.lock().unwrap();
+                    match lock.recv() {
+                        Ok(job) => job,
+                        Err(_) => break, // Channel closed
+                    }
+                };
+                job();
+            }
         });
 
         Self {
@@ -308,7 +321,9 @@ mod tests {
     #[test]
     fn test_response_to_bytes() {
         let mut response = Response::ok("Hello World");
-        response.headers.insert("Content-Type".to_string(), "text/plain".to_string());
+        response
+            .headers
+            .insert("Content-Type".to_string(), "text/plain".to_string());
 
         let bytes = response.to_bytes();
         let s = String::from_utf8(bytes).unwrap();

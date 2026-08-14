@@ -43,10 +43,16 @@ pub struct TarWriter<W: Write> {
     written_bytes: u64,
 }
 impl<W: Write> TarWriter<W> {
-    pub fn new(inner: W) -> Self {
-        Self { inner, written_bytes: 0 }
+    pub const fn new(inner: W) -> Self {
+        Self {
+            inner,
+            written_bytes: 0,
+        }
     }
     /// Appends a file to the archive.
+    ///
+    /// # Errors
+    /// Returns an `io::Result` error if writing to the underlying writer fails.
     pub fn append_file(&mut self, name: &str, content: &[u8]) -> io::Result<()> {
         let mut header = [0u8; BLOCK_SIZE];
         // 0-99: File name
@@ -74,8 +80,8 @@ impl<W: Write> TarWriter<W> {
         for byte in &mut header[148..156] {
             *byte = b' ';
         }
-        let checksum: u32 = header.iter().map(|&b| b as u32).sum();
-        Self::write_octal(&mut header[148..155], checksum as u64);
+        let checksum: u32 = header.iter().map(|&b| u32::from(b)).sum();
+        Self::write_octal(&mut header[148..155], u64::from(checksum));
         header[155] = b' '; // often space or null terminated
         // Write header
         self.inner.write_all(&header)?;
@@ -93,6 +99,9 @@ impl<W: Write> TarWriter<W> {
         Ok(())
     }
     /// Finishes the archive by writing the required EOF markers.
+    ///
+    /// # Errors
+    /// Returns an `io::Result` error if writing to the underlying writer fails.
     pub fn finish(mut self) -> io::Result<W> {
         let eof = [0u8; BLOCK_SIZE * 2];
         self.inner.write_all(&eof)?;
@@ -100,7 +109,7 @@ impl<W: Write> TarWriter<W> {
     }
     /// Helper to write octal strings into a buffer.
     fn write_octal(buf: &mut [u8], value: u64) {
-        let s = format!("{:o}", value);
+        let s = format!("{value:o}");
         let len = s.len();
         let buf_len = buf.len();
         // Typically padded with zeros, ended with null or space
@@ -150,7 +159,7 @@ mod tests {
         // Check USTAR magic
         assert_eq!(&buf[257..262], b"ustar");
         // Check data block
-        assert_eq!(&buf[BLOCK_SIZE..BLOCK_SIZE+11], b"hello world");
+        assert_eq!(&buf[BLOCK_SIZE..BLOCK_SIZE + 11], b"hello world");
     }
     #[test]
     fn test_octal_formatting() {
