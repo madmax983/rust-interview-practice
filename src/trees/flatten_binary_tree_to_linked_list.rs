@@ -18,15 +18,15 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq, Eq)]
 pub struct TreeNode {
     pub val: i32,
-    pub left: Option<Rc<RefCell<TreeNode>>>,
-    pub right: Option<Rc<RefCell<TreeNode>>>,
+    pub left: Option<Rc<RefCell<Self>>>,
+    pub right: Option<Rc<RefCell<Self>>>,
 }
 
 impl TreeNode {
     #[inline]
     #[must_use]
     pub const fn new(val: i32) -> Self {
-        TreeNode {
+        Self {
             val,
             left: None,
             right: None,
@@ -47,19 +47,18 @@ pub fn flatten_brute_force(root: &mut Option<Rc<RefCell<TreeNode>>>) {
         return;
     }
 
-    let mut nodes = Vec::new();
-
     // Helper for pre-order traversal
-    fn preorder(node: &Option<Rc<RefCell<TreeNode>>>, nodes: &mut Vec<Rc<RefCell<TreeNode>>>) {
+    fn preorder(node: Option<&Rc<RefCell<TreeNode>>>, nodes: &mut Vec<Rc<RefCell<TreeNode>>>) {
         if let Some(n) = node {
             nodes.push(Rc::clone(n));
             let borrowed = n.borrow();
-            preorder(&borrowed.left, nodes);
-            preorder(&borrowed.right, nodes);
+            preorder(borrowed.left.as_ref(), nodes);
+            preorder(borrowed.right.as_ref(), nodes);
         }
     }
 
-    preorder(root, &mut nodes);
+    let mut nodes = Vec::new();
+    preorder(root.as_ref(), &mut nodes);
 
     // Rewire the tree into a linked list
     for i in 0..nodes.len().saturating_sub(1) {
@@ -85,10 +84,7 @@ pub fn flatten_brute_force(root: &mut Option<Rc<RefCell<TreeNode>>>) {
 /// we visit the nodes in the exact reverse order of the flattened list. We keep a `prev`
 /// pointer to link the current node's right child to the previously visited node.
 pub fn flatten_optimized(root: &mut Option<Rc<RefCell<TreeNode>>>) {
-    fn rev_preorder(
-        node: &Option<Rc<RefCell<TreeNode>>>,
-        prev: &mut Option<Rc<RefCell<TreeNode>>>,
-    ) {
+    fn rev_preorder(node: Option<&Rc<RefCell<TreeNode>>>, prev: &mut Option<Rc<RefCell<TreeNode>>>) {
         if let Some(n) = node {
             // GOTCHA: We must extract the child pointers and drop our borrow of `n` before recursing.
             // If we kept `n.borrow()` alive during the recursive calls, we would hit a RefCell
@@ -96,11 +92,11 @@ pub fn flatten_optimized(root: &mut Option<Rc<RefCell<TreeNode>>>) {
             let right_child = n.borrow().right.clone();
             let left_child = n.borrow().left.clone();
 
-            rev_preorder(&right_child, prev);
-            rev_preorder(&left_child, prev);
+            rev_preorder(right_child.as_ref(), prev);
+            rev_preorder(left_child.as_ref(), prev);
 
             let mut curr = n.borrow_mut();
-            curr.right = prev.clone();
+            curr.right.clone_from(prev);
             curr.left = None;
 
             *prev = Some(Rc::clone(n));
@@ -108,7 +104,7 @@ pub fn flatten_optimized(root: &mut Option<Rc<RefCell<TreeNode>>>) {
     }
 
     let mut prev = None;
-    rev_preorder(root, &mut prev);
+    rev_preorder(root.as_ref(), &mut prev);
 }
 
 /// Approach 3: Optimal (Morris Traversal-like approach)
@@ -138,7 +134,7 @@ pub fn flatten_optimal(root: &mut Option<Rc<RefCell<TreeNode>>>) {
             }
 
             // Connect the original right subtree to the rightmost node of the left subtree
-            rightmost.borrow_mut().right = node.borrow().right.clone();
+            rightmost.borrow_mut().right.clone_from(&node.borrow().right);
 
             // Move the left subtree to the right, and clear the left child
             let mut curr_mut = node.borrow_mut();
@@ -169,9 +165,9 @@ mod tests {
         Rc::new(RefCell::new(TreeNode::new(val)))
     }
 
-    fn to_vec(root: &Option<Rc<RefCell<TreeNode>>>) -> Vec<Option<i32>> {
+    fn to_vec(root: Option<&Rc<RefCell<TreeNode>>>) -> Vec<Option<i32>> {
         let mut result = Vec::new();
-        let mut curr = root.clone();
+        let mut curr = root.cloned();
         while let Some(node) = curr {
             let b = node.borrow();
             if b.left.is_some() {
@@ -184,7 +180,7 @@ mod tests {
         result
     }
 
-    fn setup_tree() -> Option<Rc<RefCell<TreeNode>>> {
+    fn setup_tree() -> std::rc::Rc<std::cell::RefCell<TreeNode>> {
         //       1
         //      / \
         //     2   5
@@ -204,37 +200,28 @@ mod tests {
         root.borrow_mut().left = Some(Rc::clone(&n2));
         root.borrow_mut().right = Some(Rc::clone(&n5));
 
-        Some(root)
+        root
     }
 
     #[test]
     fn test_happy_path_brute_force() {
-        let mut root = setup_tree();
+        let mut root = Some(setup_tree());
         flatten_brute_force(&mut root);
-        assert_eq!(
-            to_vec(&root),
-            vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
-        );
+        assert_eq!(to_vec(root.as_ref()), vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]);
     }
 
     #[test]
     fn test_happy_path_optimized() {
-        let mut root = setup_tree();
+        let mut root = Some(setup_tree());
         flatten_optimized(&mut root);
-        assert_eq!(
-            to_vec(&root),
-            vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
-        );
+        assert_eq!(to_vec(root.as_ref()), vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]);
     }
 
     #[test]
     fn test_happy_path_optimal() {
-        let mut root = setup_tree();
+        let mut root = Some(setup_tree());
         flatten_optimal(&mut root);
-        assert_eq!(
-            to_vec(&root),
-            vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
-        );
+        assert_eq!(to_vec(root.as_ref()), vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]);
     }
 
     #[test]
@@ -245,7 +232,7 @@ mod tests {
 
         let mut single = Some(create_node(1));
         flatten(&mut single);
-        assert_eq!(to_vec(&single), vec![Some(1)]);
+        assert_eq!(to_vec(single.as_ref()), vec![Some(1)]);
     }
 
     #[test]
@@ -264,7 +251,7 @@ mod tests {
 
         let mut tree = Some(root);
         flatten(&mut tree);
-        assert_eq!(to_vec(&tree), vec![Some(1), Some(2), Some(3)]);
+        assert_eq!(to_vec(tree.as_ref()), vec![Some(1), Some(2), Some(3)]);
 
         // Tree completely unbalanced to the right
         // 1
@@ -280,6 +267,6 @@ mod tests {
 
         let mut tree2 = Some(root2);
         flatten(&mut tree2);
-        assert_eq!(to_vec(&tree2), vec![Some(1), Some(2), Some(3)]);
+        assert_eq!(to_vec(tree2.as_ref()), vec![Some(1), Some(2), Some(3)]);
     }
 }
