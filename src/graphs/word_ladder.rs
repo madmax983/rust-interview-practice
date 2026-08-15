@@ -161,17 +161,17 @@ pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<
         return 1;
     }
 
-    // Bidirectional BFS uses HashSets for levels instead of queues to allow fast intersection checks.
-    let mut begin_set = HashSet::new();
-    let mut end_set = HashSet::new();
-
-    begin_set.insert(begin_word_bytes.clone());
-    end_set.insert(end_word_bytes.clone());
-
     // Remove the starting and ending boundaries so we don't self-loop or trivially match
     // already visited perimeters in redundant ways.
     word_set.remove(&begin_word_bytes);
     word_set.remove(&end_word_bytes);
+
+    // Bidirectional BFS uses HashSets for levels instead of queues to allow fast intersection checks.
+    let mut begin_set = HashSet::new();
+    let mut end_set = HashSet::new();
+
+    begin_set.insert(begin_word_bytes);
+    end_set.insert(end_word_bytes);
 
     let mut level = 1;
 
@@ -186,9 +186,7 @@ pub fn word_ladder_optimal(begin_word: String, end_word: String, word_list: Vec<
         let mut next_set = HashSet::new();
 
         // Process all words in the current level boundary
-        for word in begin_set {
-            let mut current_word_bytes = word.clone();
-
+        for mut current_word_bytes in begin_set {
             for i in 0..current_word_bytes.len() {
                 let original_byte = current_word_bytes[i];
 
