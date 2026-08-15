@@ -83,6 +83,7 @@ impl ListNode {
 /// into a `VecDeque`, and then popping alternately from the front and back to
 /// rebuild the connections.
 #[must_use]
+#[allow(clippy::missing_panics_doc)]
 pub fn reorder_list_brute_force(mut head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     if head.is_none() || head.as_ref().unwrap().next.is_none() {
         return head;
@@ -126,6 +127,7 @@ pub fn reorder_list_brute_force(mut head: Option<Box<ListNode>>) -> Option<Box<L
 /// The functional and idiomatic Rust approach involves taking ownership, counting
 /// the length, advancing to the midpoint, and physically splitting the list into two owned halves.
 #[must_use]
+#[allow(clippy::missing_panics_doc)]
 pub fn reorder_list_optimal(mut head: Option<Box<ListNode>>) -> Option<Box<ListNode>> {
     if head.is_none() || head.as_ref().unwrap().next.is_none() {
         return head;
