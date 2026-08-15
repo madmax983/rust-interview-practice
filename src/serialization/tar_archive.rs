@@ -73,7 +73,7 @@ impl TarArchive {
     /// Retrieves a file from the archive.
     #[must_use]
     pub fn get_file(&self, path: &str) -> Option<&[u8]> {
-        self.entries.get(path).map(|v| v.as_slice())
+        self.entries.get(path).map(std::vec::Vec::as_slice)
     }
 
     /// Writes the archive out to a writer.
@@ -181,7 +181,7 @@ impl TarArchive {
         let checksum: usize = header.iter().map(|&b| b as usize).sum();
 
         // Write the calculated checksum back into the header
-        let checksum_str = format!("{:06o}\0 ", checksum);
+        let checksum_str = format!("{checksum:06o}\0 ");
         header[148..156].copy_from_slice(checksum_str.as_bytes());
 
         header
@@ -189,7 +189,7 @@ impl TarArchive {
 
     /// Helper to write an octal string into a fixed buffer.
     fn write_octal(buf: &mut [u8], value: usize) {
-        let octal_str = format!("{:o}", value);
+        let octal_str = format!("{value:o}");
         let len = octal_str.len();
         let max_len = buf.len() - 1; // Leave room for NUL/Space
 
@@ -264,8 +264,14 @@ mod tests {
 
         let parsed_archive = TarArchive::read_from(Cursor::new(buf)).unwrap();
 
-        assert_eq!(parsed_archive.get_file("hello.txt"), Some(b"Hello, World!".as_slice()));
-        assert_eq!(parsed_archive.get_file("test/dir/file.bin"), Some(vec![0, 1, 2, 3, 4, 5].as_slice()));
+        assert_eq!(
+            parsed_archive.get_file("hello.txt"),
+            Some(b"Hello, World!".as_slice())
+        );
+        assert_eq!(
+            parsed_archive.get_file("test/dir/file.bin"),
+            Some(vec![0, 1, 2, 3, 4, 5].as_slice())
+        );
     }
 
     #[test]

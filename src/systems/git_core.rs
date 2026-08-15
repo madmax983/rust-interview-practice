@@ -8,7 +8,7 @@
 //!
 //! **Real-world Usage:**
 //! - Version control systems (Git, Mercurial)
-//! - Decentralized storage systems (IPFS, BitTorrent)
+//! - Decentralized storage systems (IPFS, `BitTorrent`)
 //! - Blockchain architectures
 //! - Docker image layer storage
 //!
@@ -79,6 +79,7 @@ pub enum GitObject {
 impl GitObject {
     /// Serializes the object into a byte stream for hashing and storage.
     /// This mimics Git's `<type> <size>\0<content>` format.
+    #[must_use]
     pub fn serialize(&self) -> Vec<u8> {
         let mut content = Vec::new();
 
@@ -103,7 +104,13 @@ impl GitObject {
                 }
                 b"tree"
             }
-            Self::Commit { tree, parents, author, message, timestamp } => {
+            Self::Commit {
+                tree,
+                parents,
+                author,
+                message,
+                timestamp,
+            } => {
                 let tree_str = format!("tree {tree}\n");
                 content.extend_from_slice(tree_str.as_bytes());
 
@@ -133,6 +140,7 @@ impl GitObject {
 
     /// Computes the Object ID (OID) based on the serialized content.
     /// Uses CRC32 + hex encoding as a stand-in for SHA-1.
+    #[must_use]
     pub fn hash(&self) -> String {
         let payload = self.serialize();
         // Use crc32fast since it's already in the dependency tree
@@ -157,6 +165,8 @@ impl GitRepository {
     }
 
     /// Writes an object to the repository and returns its OID.
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn write_object(&self, object: GitObject) -> String {
         let oid = object.hash();
         // RUST INSIGHT: RwLock allows concurrent reads. Write is only locked briefly
@@ -168,24 +178,31 @@ impl GitRepository {
     }
 
     /// Reads an object by its OID.
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn read_object(&self, oid: &str) -> Option<GitObject> {
         let db = self.objects.read().unwrap();
         db.get(oid).cloned()
     }
 
     /// Updates a reference (like a branch pointer).
+    #[allow(clippy::missing_panics_doc)]
     pub fn update_ref(&self, ref_name: &str, oid: &str) {
         let mut refs = self.refs.write().unwrap();
         refs.insert(ref_name.to_string(), oid.to_string());
     }
 
     /// Gets the OID for a given reference.
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn resolve_ref(&self, ref_name: &str) -> Option<String> {
         let refs = self.refs.read().unwrap();
         refs.get(ref_name).cloned()
     }
 
     /// Helper to create and write a commit.
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn commit(
         &self,
         tree_oid: String,
@@ -210,6 +227,7 @@ impl GitRepository {
     }
 
     /// Traverses the commit history starting from a given OID, returning a sequence of commit OIDs.
+    #[must_use]
     pub fn log(&self, start_oid: &str) -> Vec<String> {
         let mut result = Vec::new();
         let mut queue = vec![start_oid.to_string()];
