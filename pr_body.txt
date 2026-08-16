@@ -1,0 +1,14 @@
+💡 What
+Added a new file `src/linked_lists/reorder_list.rs` to implement the LeetCode 143 "Reorder List" problem. Included it in `src/linked_lists/mod.rs`.
+
+🎯 Why
+To expand the repository's coverage of foundational linked list patterns. This problem specifically teaches how to combine three core operations (finding the middle, reversing a list, and merging two lists) while carefully managing ownership (`Option<Box<ListNode>>`) and mutable references in safe Rust.
+
+📊 Impact
+- Increases the number of LeetCode problems covered.
+- Provides a high-quality teaching artifact demonstrating `Option::take()` for safe in-place recursive data structure mutation.
+
+🔬 Measurement
+- Ran `cargo test` successfully.
+- Implemented brute force and optimal (O(1) space) approaches.
+- Added comprehensive unit tests, including property-based tests verifying both implementations behave identically.
