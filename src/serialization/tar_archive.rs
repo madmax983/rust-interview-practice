@@ -135,8 +135,7 @@ impl<W: Write> TarWriter<W> {
 impl<W: Write> ArchiveWriter for TarWriter<W> {
     fn append_data(&mut self, header: &Header, data: &[u8]) -> io::Result<()> {
         if self.finished {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
+            return Err(io::Error::other(
                 "Cannot write to finished archive",
             ));
         }
@@ -435,10 +434,11 @@ mod tests {
         {
             let mut writer = TarWriter::new(&mut buf);
             for _ in 0..10_000 {
+                let _: () = writer
+                .append_data(black_box(&header), black_box(data))
+                .unwrap();
                 black_box(
-                    writer
-                        .append_data(black_box(&header), black_box(data))
-                        .unwrap(),
+                    (),
                 );
             }
             writer.finish().unwrap();
