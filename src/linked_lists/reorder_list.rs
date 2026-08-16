@@ -134,6 +134,11 @@ pub fn reorder_list_brute_force(head: &mut Option<Box<ListNode>>) {
 /// # Gotcha
 /// When finding the middle, ensure the first half terminates properly (i.e., its tail points to None).
 /// Otherwise, you might create a cycle or infinitely loop during the merge step.
+///
+/// # Panics
+///
+/// Does not panic in practice: `unwrap` calls are safe because they are only executed when
+/// the presence of a node is guaranteed by prior checks or loop invariants.
 #[allow(clippy::ptr_arg)] // Standard LeetCode signature uses &mut
 pub fn reorder_list_optimal(head: &mut Option<Box<ListNode>>) {
     if head.is_none() || head.as_ref().unwrap().next.is_none() {
