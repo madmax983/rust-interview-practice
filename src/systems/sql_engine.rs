@@ -860,7 +860,11 @@ impl<S: StorageEngine> SqlEngine<S> {
         }
     }
 
-    fn evaluate_boolean_expr(expr: &Expr, row: &Row, schema: &TableSchema) -> Result<bool> {
+    fn evaluate_boolean_expr<'a>(
+        expr: &'a Expr,
+        row: &'a Row,
+        schema: &TableSchema,
+    ) -> Result<bool> {
         match expr {
             Expr::BinaryOp { left, op, right } => {
                 if *op != Token::Equals {
@@ -880,9 +884,11 @@ impl<S: StorageEngine> SqlEngine<S> {
         }
     }
 
-    fn evaluate_expr(expr: &Expr, row: &Row, schema: &TableSchema) -> Result<Value> {
+    // ⚡ BOLT OPTIMIZATION: Returns `&'a Value` instead of cloning `Value` variants,
+    // eliminating one heap allocation per evaluated row for string values.
+    fn evaluate_expr<'a>(expr: &'a Expr, row: &'a Row, schema: &TableSchema) -> Result<&'a Value> {
         match expr {
-            Expr::Literal(val) => Ok(val.clone()),
+            Expr::Literal(val) => Ok(val),
             Expr::Ident(col_name) => {
                 let idx = schema
                     .columns
@@ -893,7 +899,7 @@ impl<S: StorageEngine> SqlEngine<S> {
                             "Column '{col_name}' not found in WHERE clause"
                         ))
                     })?;
-                Ok(row.values[idx].clone())
+                Ok(&row.values[idx])
             }
             Expr::BinaryOp { .. } => Err(SqlError::ExecutionError(
                 "Nested binary operations not supported".into(),
