@@ -1,0 +1,85 @@
+<<<<<<< SEARCH
+    fn evaluate_boolean_expr(expr: &Expr, row: &Row, schema: &TableSchema) -> Result<bool> {
+        match expr {
+            Expr::BinaryOp { left, op, right } => {
+                if *op != Token::Equals {
+                    return Err(SqlError::ExecutionError(
+                        "Only '=' operator supported in WHERE".into(),
+                    ));
+                }
+
+                let left_val = Self::evaluate_expr(left, row, schema)?;
+                let right_val = Self::evaluate_expr(right, row, schema)?;
+
+                Ok(left_val == right_val)
+            }
+            _ => Err(SqlError::ExecutionError(
+                "WHERE clause must be a boolean expression".into(),
+            )),
+        }
+    }
+
+    fn evaluate_expr(expr: &Expr, row: &Row, schema: &TableSchema) -> Result<Value> {
+        match expr {
+            Expr::Literal(val) => Ok(val.clone()),
+            Expr::Ident(col_name) => {
+                let idx = schema
+                    .columns
+                    .iter()
+                    .position(|c| c.name == *col_name)
+                    .ok_or_else(|| {
+                        SqlError::ExecutionError(format!(
+                            "Column '{col_name}' not found in WHERE clause"
+                        ))
+                    })?;
+                Ok(row.values[idx].clone())
+            }
+            Expr::BinaryOp { .. } => Err(SqlError::ExecutionError(
+                "Nested binary operations not supported".into(),
+            )),
+        }
+    }
+=======
+    fn evaluate_boolean_expr<'a>(expr: &'a Expr, row: &'a Row, schema: &TableSchema) -> Result<bool> {
+        match expr {
+            Expr::BinaryOp { left, op, right } => {
+                if *op != Token::Equals {
+                    return Err(SqlError::ExecutionError(
+                        "Only '=' operator supported in WHERE".into(),
+                    ));
+                }
+
+                let left_val = Self::evaluate_expr(left, row, schema)?;
+                let right_val = Self::evaluate_expr(right, row, schema)?;
+
+                Ok(left_val == right_val)
+            }
+            _ => Err(SqlError::ExecutionError(
+                "WHERE clause must be a boolean expression".into(),
+            )),
+        }
+    }
+
+    // ⚡ BOLT OPTIMIZATION: Returns `&'a Value` instead of cloning `Value` variants,
+    // eliminating one heap allocation per evaluated row for string values.
+    fn evaluate_expr<'a>(expr: &'a Expr, row: &'a Row, schema: &TableSchema) -> Result<&'a Value> {
+        match expr {
+            Expr::Literal(val) => Ok(val),
+            Expr::Ident(col_name) => {
+                let idx = schema
+                    .columns
+                    .iter()
+                    .position(|c| c.name == *col_name)
+                    .ok_or_else(|| {
+                        SqlError::ExecutionError(format!(
+                            "Column '{col_name}' not found in WHERE clause"
+                        ))
+                    })?;
+                Ok(&row.values[idx])
+            }
+            Expr::BinaryOp { .. } => Err(SqlError::ExecutionError(
+                "Nested binary operations not supported".into(),
+            )),
+        }
+    }
+>>>>>>> REPLACE
