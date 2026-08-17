@@ -95,17 +95,23 @@ pub struct Server<H: ?Sized> {
 // RUST INSIGHT: By using `H: Handler + ?Sized`, we explicitly relax the implicit `Sized` bound on the generic parameter.
 // This resolves E0277 when passing a dynamically dispatched trait object (e.g., `Arc<dyn Handler>`) to the Server.
 impl<H: Handler + ?Sized + 'static> Server<H> {
-    pub fn new(handler: Arc<H>) -> Self {
+    pub const fn new(handler: Arc<H>) -> Self {
         Self { handler }
     }
 
     /// Runs the server on the given address. Blocks the current thread.
+    /// # Errors
+    /// Returns an error if the listener fails to bind.
+    #[allow(clippy::missing_errors_doc)]
     pub fn run(&self, addr: &str) -> std::io::Result<()> {
         let listener = TcpListener::bind(addr)?;
         self.serve(listener)
     }
 
     /// Serves requests using the provided listener.
+    /// # Errors
+    /// Returns an error if an internal thread panics.
+    #[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
     pub fn serve(&self, listener: TcpListener) -> std::io::Result<()> {
         // PRODUCTION NOTE: A real server would use a thread pool or async tasks to avoid the overhead of spawning a thread per connection.
         for stream_result in listener.incoming() {
@@ -115,18 +121,19 @@ impl<H: Handler + ?Sized + 'static> Server<H> {
                     // GOTCHA: Thread per connection is vulnerable to DoS attacks if too many connections are opened concurrently.
                     thread::spawn(move || {
                         if let Err(e) = Self::handle_connection(stream, handler) {
-                            eprintln!("Error handling connection: {}", e);
+                            eprintln!("Error handling connection: {e}");
                         }
                     });
                 }
                 Err(e) => {
-                    eprintln!("Failed to accept connection: {}", e);
+                    eprintln!("Failed to accept connection: {e}");
                 }
             }
         }
         Ok(())
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn handle_connection(mut stream: TcpStream, handler: Arc<H>) -> std::io::Result<()> {
         // RUST INSIGHT: We borrow `stream` mutably to read from it without taking ownership.
         // This avoids cloning the stream, which is an OS-level operation.
@@ -165,7 +172,10 @@ impl<H: Handler + ?Sized + 'static> Server<H> {
 
         let mut body = Vec::new();
         // Memory rule: avoid unstable let_chains. We use `.and_then()` for Option chaining.
-        if let Some(content_length) = headers.get("content-length").and_then(|len| len.parse::<usize>().ok()) {
+        if let Some(content_length) = headers
+            .get("content-length")
+            .and_then(|len| len.parse::<usize>().ok())
+        {
             body.resize(content_length, 0);
             reader.read_exact(&mut body)?;
         }
@@ -184,15 +194,24 @@ impl<H: Handler + ?Sized + 'static> Server<H> {
 
         let mut response = handler.handle(&request);
 
-        response.headers.entry("Content-Length".to_string()).or_insert_with(|| response.body.len().to_string());
-        response.headers.entry("Connection".to_string()).or_insert_with(|| "close".to_string());
+        response
+            .headers
+            .entry("Content-Length".to_string())
+            .or_insert_with(|| response.body.len().to_string());
+        response
+            .headers
+            .entry("Connection".to_string())
+            .or_insert_with(|| "close".to_string());
 
         // Format and send the response
-        let status_line = format!("HTTP/1.1 {} {}\r\n", response.status_code, response.status_text);
+        let status_line = format!(
+            "HTTP/1.1 {} {}\r\n",
+            response.status_code, response.status_text
+        );
         stream.write_all(status_line.as_bytes())?;
 
         for (key, value) in &response.headers {
-            let header_line = format!("{}: {}\r\n", key, value);
+            let header_line = format!("{key}: {value}\r\n");
             stream.write_all(header_line.as_bytes())?;
         }
 
@@ -260,8 +279,10 @@ mod tests {
         thread::sleep(std::time::Duration::from_millis(10));
 
         // Test 200 OK route
-        let mut client = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-        client.write_all(b"GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+        let mut client = TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
+        client
+            .write_all(b"GET /hello HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .unwrap();
 
         let mut response = String::new();
         client.read_to_string(&mut response).unwrap();
@@ -270,8 +291,10 @@ mod tests {
         assert!(response.contains("Hello, World!"));
 
         // Test 404 Not Found route
-        let mut client2 = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
-        client2.write_all(b"GET /unknown HTTP/1.1\r\nHost: localhost\r\n\r\n").unwrap();
+        let mut client2 = TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
+        client2
+            .write_all(b"GET /unknown HTTP/1.1\r\nHost: localhost\r\n\r\n")
+            .unwrap();
 
         let mut response2 = String::new();
         client2.read_to_string(&mut response2).unwrap();
@@ -301,7 +324,7 @@ mod tests {
 
         thread::sleep(std::time::Duration::from_millis(10));
 
-        let mut client = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+        let mut client = TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
         let request_payload = b"POST /echo HTTP/1.1\r\nContent-Length: 12\r\n\r\nHello Server";
         client.write_all(request_payload).unwrap();
 
@@ -314,9 +337,7 @@ mod tests {
 
     #[test]
     fn test_malformed_request() {
-        let handler = Arc::new(|_req: &Request| {
-            Response::new(200, "OK", "Should not reach here")
-        });
+        let handler = Arc::new(|_req: &Request| Response::new(200, "OK", "Should not reach here"));
 
         let server = Server::new(handler);
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -328,7 +349,7 @@ mod tests {
 
         thread::sleep(std::time::Duration::from_millis(10));
 
-        let mut client = TcpStream::connect(format!("127.0.0.1:{}", port)).unwrap();
+        let mut client = TcpStream::connect(format!("127.0.0.1:{port}")).unwrap();
         client.write_all(b"JUST_A_BAD_REQUEST\r\n\r\n").unwrap();
 
         let mut response = String::new();
