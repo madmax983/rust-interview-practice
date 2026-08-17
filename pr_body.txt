@@ -1,0 +1,11 @@
+💡 What
+Implemented a multithreaded HTTP/1.1 server from scratch (`src/systems/http_server.rs`) without external dependencies like `hyper` or `axum`.
+
+🎯 Why
+To demonstrate the foundational mechanics of web servers, including TCP connection management, HTTP parsing, threading models, and Rust's safety guarantees for shared state across threads.
+
+📊 Impact
+Adds a new, highly educational foundational system implementation to the repository that demystifies how real-world web frameworks operate under the hood.
+
+🔬 Measurement
+Added comprehensive unit tests covering happy paths (GET, POST requests) and edge cases (malformed requests). All tests pass successfully and code compiles cleanly with pedantic clippy warnings addressed.
