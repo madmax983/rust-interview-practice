@@ -1,0 +1,67 @@
+--- src/trees/flatten_binary_tree_to_linked_list.rs
++++ src/trees/flatten_binary_tree_to_linked_list.rs
+@@ -71,20 +71,20 @@
+-    let mut nodes = Vec::new();
+-
+-    // Helper closure to perform pre-order traversal and collect `Rc` pointers.
+-    fn pre_order(node: Option<&Rc<RefCell<TreeNode>>>, nodes: &mut Vec<Rc<RefCell<TreeNode>>>) {
+-        if let Some(n) = node {
+-            nodes.push(Rc::clone(n));
+-
+-            // GOTCHA: We must clone the `Rc` pointers to the children *before* recursively
+-            // passing them. If we passed `&n.borrow().left`, we would hold the `Ref` borrow
+-            // across the recursive call, which could lead to multiple active borrows.
+-            let left = n.borrow().left.clone();
+-            let right = n.borrow().right.clone();
+-
+-            pre_order(left.as_ref(), nodes);
+-            pre_order(right.as_ref(), nodes);
+-        }
+-    }
+-
+-    let mut nodes = Vec::new();
+-    pre_order(root.as_ref(), &mut nodes);
++    #[allow(clippy::items_after_statements)]
++    {
++        let mut nodes = Vec::new();
++
++        // Helper closure to perform pre-order traversal and collect `Rc` pointers.
++        fn pre_order(node: Option<&Rc<RefCell<TreeNode>>>, nodes: &mut Vec<Rc<RefCell<TreeNode>>>) {
++            if let Some(n) = node {
++                nodes.push(Rc::clone(n));
++
++                // GOTCHA: We must clone the `Rc` pointers to the children *before* recursively
++                // passing them. If we passed `&n.borrow().left`, we would hold the `Ref` borrow
++                // across the recursive call, which could lead to multiple active borrows.
++                let left = n.borrow().left.clone();
++                let right = n.borrow().right.clone();
++
++                pre_order(left.as_ref(), nodes);
++                pre_order(right.as_ref(), nodes);
++            }
++        }
++        pre_order(root.as_ref(), &mut nodes);
+
+@@ -156,9 +156,9 @@
+
+     // Helper to extract values into a Vec for easy assertion
+-    fn to_vec(root: &Option<Rc<RefCell<TreeNode>>>) -> Vec<Option<i32>> {
++    fn to_vec(root: Option<&Rc<RefCell<TreeNode>>>) -> Vec<Option<i32>> {
+         let mut res = Vec::new();
+-        let mut curr = root.clone();
++        let mut curr = root.cloned();
+         while let Some(n) = curr {
+             res.push(Some(n.borrow().val));
+             assert!(
+@@ -187,10 +187,10 @@
+         root.borrow_mut().right.as_ref().unwrap().borrow_mut().right = Some(TreeNode::new(6));
+
+         // Test Brute Force
+-        let mut root_bf = Some(root.clone());
++        let mut root_bf = Some(root);
+         flatten_brute_force(&mut root_bf);
+         assert_eq!(
+-            to_vec(&root_bf),
++            to_vec(root_bf.as_ref()),
+             vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
+         );
