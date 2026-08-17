@@ -1,0 +1,27 @@
+--- src/trees/flatten_binary_tree_to_linked_list.rs
++++ src/trees/flatten_binary_tree_to_linked_list.rs
+@@ -107,20 +107,20 @@
+             let left = n.borrow().left.clone();
+
+             // Reverse post-order: explore right, then left.
+-            dfs(&right, prev);
+-            dfs(&left, prev);
++            dfs(right.as_ref(), prev);
++            dfs(left.as_ref(), prev);
+
+             // Now it's safe to take a `RefMut` because no other borrows of `n` are active
+             // in the current call stack frame.
+             let mut n_mut = n.borrow_mut();
+-            n_mut.right = prev.clone();
++            n_mut.right.clone_from(prev);
+             n_mut.left = None;
+
+             // Update `prev` to point to the current node.
+             *prev = Some(Rc::clone(n));
+         }
+     }
+
+     let mut prev = None;
+-    dfs(root, &mut prev);
++    dfs(root.as_ref(), &mut prev);
+ }

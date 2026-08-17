@@ -71,7 +71,6 @@ pub fn flatten_brute_force(root: &mut Option<Rc<RefCell<TreeNode>>>) {
     }
 
     // Helper closure to perform pre-order traversal and collect `Rc` pointers.
-    #[allow(clippy::items_after_statements)]
     fn pre_order(node: Option<&Rc<RefCell<TreeNode>>>, nodes: &mut Vec<Rc<RefCell<TreeNode>>>) {
         if let Some(n) = node {
             nodes.push(Rc::clone(n));
@@ -155,9 +154,9 @@ mod tests {
     use super::*;
 
     // Helper to extract values into a Vec for easy assertion
-    fn to_vec(root: Option<&Rc<RefCell<TreeNode>>>) -> Vec<Option<i32>> {
+    fn to_vec(root: &Option<Rc<RefCell<TreeNode>>>) -> Vec<Option<i32>> {
         let mut res = Vec::new();
-        let mut curr = root.cloned();
+        let mut curr = root.clone();
         while let Some(n) = curr {
             res.push(Some(n.borrow().val));
             assert!(
@@ -186,10 +185,10 @@ mod tests {
         root.borrow_mut().right.as_ref().unwrap().borrow_mut().right = Some(TreeNode::new(6));
 
         // Test Brute Force
-        let mut root_bf = Some(root);
+        let mut root_bf = Some(root.clone());
         flatten_brute_force(&mut root_bf);
         assert_eq!(
-            to_vec(root_bf.as_ref()),
+            to_vec(&root_bf),
             vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
         );
 
@@ -211,7 +210,7 @@ mod tests {
         let mut root_opt = Some(root2);
         flatten_optimal(&mut root_opt);
         assert_eq!(
-            to_vec(root_opt.as_ref()),
+            to_vec(&root_opt),
             vec![Some(1), Some(2), Some(3), Some(4), Some(5), Some(6)]
         );
     }
@@ -231,11 +230,11 @@ mod tests {
     fn test_single_node() {
         let mut root1 = Some(TreeNode::new(0));
         flatten_brute_force(&mut root1);
-        assert_eq!(to_vec(root1.as_ref()), vec![Some(0)]);
+        assert_eq!(to_vec(&root1), vec![Some(0)]);
 
         let mut root2 = Some(TreeNode::new(0));
         flatten_optimal(&mut root2);
-        assert_eq!(to_vec(root2.as_ref()), vec![Some(0)]);
+        assert_eq!(to_vec(&root2), vec![Some(0)]);
     }
 
     #[test]
@@ -252,6 +251,6 @@ mod tests {
 
         let mut root_opt = Some(root);
         flatten_optimal(&mut root_opt);
-        assert_eq!(to_vec(root_opt.as_ref()), vec![Some(1), Some(2), Some(3)]);
+        assert_eq!(to_vec(&root_opt), vec![Some(1), Some(2), Some(3)]);
     }
 }
