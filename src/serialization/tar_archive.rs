@@ -223,7 +223,10 @@ impl<R: Read> TarReader<R> {
                 break; // EOF
             }
             if read_bytes < BLOCK_SIZE {
-                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Incomplete tar block"));
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "Incomplete tar block",
+                ));
             }
 
             // Check for end of archive (empty block)
@@ -244,7 +247,10 @@ impl<R: Read> TarReader<R> {
             let expected_checksum = parse_octal(&header[148..156]).unwrap_or(0);
             let actual_checksum = compute_checksum(&header);
             if expected_checksum != actual_checksum && expected_checksum != 0 {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid tar checksum"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Invalid tar checksum",
+                ));
             }
 
             // Read data
@@ -317,8 +323,12 @@ mod tests {
         // Write
         {
             let mut builder = TarBuilder::new(&mut archive_bytes);
-            builder.append("test.txt", 0o644, 1234567890, b"Hello Tar").unwrap();
-            builder.append("large.bin", 0o755, 1234567891, &[42u8; 1000]).unwrap();
+            builder
+                .append("test.txt", 0o644, 1234567890, b"Hello Tar")
+                .unwrap();
+            builder
+                .append("large.bin", 0o755, 1234567891, &[42u8; 1000])
+                .unwrap();
             builder.finish().unwrap();
         }
 
