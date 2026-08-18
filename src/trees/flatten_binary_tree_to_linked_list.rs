@@ -1,7 +1,7 @@
 //! # 114. Flatten Binary Tree to Linked List
 //!
 //! Difficulty: Medium
-//! Link: https://leetcode.com/problems/flatten-binary-tree-to-linked-list/
+//! Link: <https://leetcode.com/problems/flatten-binary-tree-to-linked-list/>
 //!
 //! This problem is a natural fit for Rust's `Rc<RefCell<TreeNode>>` and demonstrates why
 //! handling mutable aliasing and pointer manipulations is strict in Rust. In-place mutation
@@ -31,8 +31,8 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq, Eq)]
 pub struct TreeNode {
     pub val: i32,
-    pub left: Option<Rc<RefCell<TreeNode>>>,
-    pub right: Option<Rc<RefCell<TreeNode>>>,
+    pub left: Option<Rc<RefCell<Self>>>,
+    pub right: Option<Rc<RefCell<Self>>>,
 }
 
 impl TreeNode {
@@ -56,13 +56,10 @@ impl TreeNode {
 /// * `root` - The root of the binary tree.
 pub fn flatten_recursive(root: &Option<Rc<RefCell<TreeNode>>>) {
     let mut prev = None;
-    flatten_helper(root, &mut prev);
+    flatten_helper(root.as_ref(), &mut prev);
 }
 
-fn flatten_helper(
-    node: &Option<Rc<RefCell<TreeNode>>>,
-    prev: &mut Option<Rc<RefCell<TreeNode>>>,
-) {
+fn flatten_helper(node: Option<&Rc<RefCell<TreeNode>>>, prev: &mut Option<Rc<RefCell<TreeNode>>>) {
     if let Some(n) = node {
         // RUST INSIGHT: We borrow the inner `TreeNode` mutably.
         // We must drop the borrow before recursive calls if we need to borrow it again,
@@ -71,12 +68,12 @@ fn flatten_helper(
         let right = n.borrow().right.clone();
 
         // Reverse post-order: Right, Left, Root
-        flatten_helper(&right, prev);
-        flatten_helper(&left, prev);
+        flatten_helper(right.as_ref(), prev);
+        flatten_helper(left.as_ref(), prev);
 
         // Modify current node
         let mut n_mut = n.borrow_mut();
-        n_mut.right = prev.clone();
+        n_mut.right.clone_from(prev);
         n_mut.left = None;
 
         // Update prev
@@ -91,11 +88,13 @@ fn flatten_helper(
 ///
 /// # Arguments
 /// * `root` - The root of the binary tree.
+/// # Panics
+/// Panics if a node inexplicably loses its left child during traversal (which should not happen structurally here).
 pub fn flatten_iterative(root: &mut Option<Rc<RefCell<TreeNode>>>) {
     // We start with the root
     let mut curr = root.clone();
 
-    while let Some(node_rc) = curr {
+    while let Some(node_rc) = curr.clone() {
         // RUST INSIGHT: We borrow the node mutably to inspect and modify it.
         // We must carefully manage the scope of this borrow.
         let mut node = node_rc.borrow_mut();
@@ -127,7 +126,7 @@ pub fn flatten_iterative(root: &mut Option<Rc<RefCell<TreeNode>>>) {
         }
 
         // Move to the next right node (which is now the flattened left subtree)
-        curr = node.right.clone();
+        curr = node.right.as_ref().map(Rc::clone);
     }
 }
 
@@ -137,12 +136,12 @@ pub fn flatten_iterative(root: &mut Option<Rc<RefCell<TreeNode>>>) {
 ///    in O(N) time and store all nodes in a `Vec`. Then iterate through the `Vec`
 ///    to rewire the `left` and `right` pointers. This requires O(N) extra space
 ///    but avoids complex pointer tracking.
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     // Helper to build a tree: 1 -> left: 2, right: 5
+    #[allow(clippy::unnecessary_wraps)]
     fn build_test_tree() -> Option<Rc<RefCell<TreeNode>>> {
         let n1 = Rc::new(RefCell::new(TreeNode::new(1)));
         let n2 = Rc::new(RefCell::new(TreeNode::new(2)));
@@ -151,13 +150,13 @@ mod tests {
         let n5 = Rc::new(RefCell::new(TreeNode::new(5)));
         let n6 = Rc::new(RefCell::new(TreeNode::new(6)));
 
-        n2.borrow_mut().left = Some(n3.clone());
-        n2.borrow_mut().right = Some(n4.clone());
+        n2.borrow_mut().left = Some(n3);
+        n2.borrow_mut().right = Some(n4);
 
-        n5.borrow_mut().right = Some(n6.clone());
+        n5.borrow_mut().right = Some(n6);
 
-        n1.borrow_mut().left = Some(n2.clone());
-        n1.borrow_mut().right = Some(n5.clone());
+        n1.borrow_mut().left = Some(n2);
+        n1.borrow_mut().right = Some(n5);
 
         Some(n1)
     }
@@ -172,7 +171,11 @@ mod tests {
             idx += 1;
             root = node.right.clone();
         }
-        assert_eq!(idx, expected_vals.len(), "Not all expected nodes were found");
+        assert_eq!(
+            idx,
+            expected_vals.len(),
+            "Not all expected nodes were found"
+        );
     }
 
     #[test]
@@ -204,7 +207,7 @@ mod tests {
     fn test_flatten_single_node() {
         let root = Some(Rc::new(RefCell::new(TreeNode::new(1))));
         flatten_recursive(&root);
-        verify_flattened(root.clone(), &[1]);
+        verify_flattened(root, &[1]);
 
         let mut root2 = Some(Rc::new(RefCell::new(TreeNode::new(1))));
         flatten_iterative(&mut root2);
