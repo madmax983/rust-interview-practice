@@ -72,7 +72,7 @@ fn parse_octal(bytes: &[u8]) -> Option<u64> {
         if b == 0 || b == b' ' {
             break;
         }
-        if b < b'0' || b > b'7' {
+        if !(b'0'..=b'7').contains(&b) {
             return None; // Invalid octal char
         }
         val = val * 8 + u64::from(b - b'0');
@@ -88,8 +88,8 @@ fn format_octal(val: u64, buf: &mut [u8]) {
     let len = buf.len();
 
     // Fill with leading zeros (or we could use spaces, but 0 is common)
-    for i in 0..len - 1 {
-        buf[i] = b'0';
+    for byte in buf.iter_mut().take(len - 1) {
+        *byte = b'0';
     }
     buf[len - 1] = 0; // Null terminator
 
@@ -112,7 +112,7 @@ fn format_octal(val: u64, buf: &mut [u8]) {
 fn compute_checksum(header: &[u8; BLOCK_SIZE]) -> u64 {
     let mut sum: u64 = 0;
     for (i, &b) in header.iter().enumerate() {
-        if i >= 148 && i < 156 {
+        if (148..156).contains(&i) {
             // Checksum field itself is treated as spaces (0x20)
             sum += 0x20;
         } else {

@@ -214,7 +214,7 @@ impl GitObjectExt for Commit {
 
         body.push_str(&format!("author {}\n", self.author));
         body.push_str(&format!("committer {}\n", self.committer));
-        body.push_str("\n");
+        body.push('\n');
         body.push_str(&self.message);
 
         body.into_bytes()
