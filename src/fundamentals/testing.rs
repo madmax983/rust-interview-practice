@@ -44,7 +44,7 @@ mod basic_tests {
     #[allow(clippy::manual_assert)]
     fn test_assertions() {
         // assert! - boolean condition
-        assert!(2 + 2 == 4);
+        assert_eq!(2 + 2, 4);
 
         // assert_eq! - equality with debug output
         assert_eq!(2 + 2, 4);

@@ -506,7 +506,7 @@ mod tests {
     fn test_check_bit_set() {
         let n = 0b0001;
         assert!((n & (1 << 0)) != 0);
-        assert!((n & (1 << 1)) == 0);
+        assert_eq!((n & (1 << 1)), 0);
     }
 
     #[test]
