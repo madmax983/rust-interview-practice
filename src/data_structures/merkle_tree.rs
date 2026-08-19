@@ -53,6 +53,10 @@ pub struct MerkleTree<T: Hash> {
 
 impl<T: Hash + Clone> MerkleTree<T> {
     /// Constructs a Merkle Tree from a list of items.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal `layers` vector becomes unexpectedly empty during construction.
     // GOTCHA: If the number of items is odd, the last item is duplicated to balance the tree level.
     #[must_use]
     pub fn new(data: Vec<T>) -> Self {
@@ -63,18 +67,18 @@ impl<T: Hash + Clone> MerkleTree<T> {
             };
         }
 
-        let mut current_layer: Vec<u64> = data.iter().map(|item| Self::hash_item(item)).collect();
-        let mut layers = vec![current_layer.clone()];
+        let initial_layer: Vec<u64> = data.iter().map(|item| Self::hash_item(item)).collect();
+        let mut layers = vec![initial_layer];
 
-        while current_layer.len() > 1 {
-            let mut next_layer = Vec::new();
+        while layers.last().unwrap().len() > 1 {
+            let current_layer = layers.last().unwrap();
+            let mut next_layer = Vec::with_capacity(current_layer.len().div_ceil(2));
             for chunk in current_layer.chunks(2) {
                 let left = chunk[0];
                 let right = if chunk.len() > 1 { chunk[1] } else { chunk[0] }; // Duplicate if odd
                 next_layer.push(Self::hash_pair(left, right));
             }
-            layers.push(next_layer.clone());
-            current_layer = next_layer;
+            layers.push(next_layer);
         }
 
         Self { layers, data }
