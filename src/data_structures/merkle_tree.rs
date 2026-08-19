@@ -53,6 +53,10 @@ pub struct MerkleTree<T: Hash> {
 
 impl<T: Hash + Clone> MerkleTree<T> {
     /// Constructs a Merkle Tree from a list of items.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the internal `layers` vector becomes unexpectedly empty during construction.
     // GOTCHA: If the number of items is odd, the last item is duplicated to balance the tree level.
     #[must_use]
     pub fn new(data: Vec<T>) -> Self {
