@@ -8,5 +8,6 @@ pub mod msgpack;
 pub mod protobuf;
 pub mod resp;
 pub mod serde_framework;
+pub mod tar_archive;
 pub mod toml;
 pub mod varint;
