@@ -4,6 +4,7 @@ pub mod bst_iterator;
 pub mod construct_binary_tree_from_preorder_and_inorder_traversal;
 pub mod design_add_and_search_words_data_structure;
 pub mod diameter_of_binary_tree;
+pub mod flatten_binary_tree_to_linked_list;
 pub mod implement_trie;
 pub mod invert_binary_tree;
 pub mod kth_smallest_element_in_a_bst;
