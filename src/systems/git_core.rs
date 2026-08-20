@@ -201,13 +201,17 @@ impl ObjectStore {
 
     /// Reads and parses an object from the store by its OID.
     pub fn read_object(&self, oid: &Oid) -> io::Result<GitObject> {
-        let serialized = self.objects.get(oid).ok_or_else(|| {
-            io::Error::new(io::ErrorKind::NotFound, "Object not found in store")
-        })?;
+        let serialized = self
+            .objects
+            .get(oid)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Object not found in store"))?;
 
         // Parse Header: `<type> <size>\0`
         let null_pos = serialized.iter().position(|&b| b == 0).ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidData, "Missing null terminator in object header")
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Missing null terminator in object header",
+            )
         })?;
 
         let header = &serialized[0..null_pos];
@@ -223,7 +227,10 @@ impl ObjectStore {
             "blob" => Ok(GitObject::Blob(content.to_vec())),
             "tree" => Ok(GitObject::Tree(Self::parse_tree(content)?)),
             "commit" => Ok(GitObject::Commit(Self::parse_commit(content)?)),
-            _ => Err(io::Error::new(io::ErrorKind::InvalidData, "Unknown object type")),
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Unknown object type",
+            )),
         }
     }
 
@@ -238,7 +245,10 @@ impl ObjectStore {
             })?;
 
             let prefix = std::str::from_utf8(&content[0..null_pos]).map_err(|_| {
-                io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF-8 in tree entry prefix")
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Invalid UTF-8 in tree entry prefix",
+                )
             })?;
 
             let mut parts = prefix.splitn(2, ' ');
@@ -246,7 +256,10 @@ impl ObjectStore {
             let name = parts.next().unwrap().to_string();
 
             if content.len() < null_pos + 1 + 20 {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "Tree entry OID truncated"));
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "Tree entry OID truncated",
+                ));
             }
 
             let mut oid_bytes = [0u8; 20];
@@ -296,7 +309,8 @@ impl ObjectStore {
         let message = text[msg_start..].to_string();
 
         Ok(CommitData {
-            tree: tree_oid.ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Commit missing tree"))?,
+            tree: tree_oid
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "Commit missing tree"))?,
             parents,
             author,
             committer,
@@ -307,7 +321,10 @@ impl ObjectStore {
     /// Helper to convert a hex string back to an Oid.
     fn hex_to_oid(hex: &str) -> io::Result<Oid> {
         if hex.len() != 40 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid OID hex length"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Invalid OID hex length",
+            ));
         }
         let mut bytes = [0u8; 20];
         for i in 0..20 {
@@ -368,8 +385,16 @@ mod tests {
         let oid2 = store.write_blob(b"File 2 content");
 
         let entries = vec![
-            TreeEntry { mode: "100644".into(), name: "file1.txt".into(), oid: oid1.clone() },
-            TreeEntry { mode: "100644".into(), name: "file2.txt".into(), oid: oid2.clone() },
+            TreeEntry {
+                mode: "100644".into(),
+                name: "file1.txt".into(),
+                oid: oid1.clone(),
+            },
+            TreeEntry {
+                mode: "100644".into(),
+                name: "file2.txt".into(),
+                oid: oid2.clone(),
+            },
         ];
 
         let tree_oid = store.write_tree(&entries);
@@ -410,7 +435,10 @@ mod tests {
         if let GitObject::Commit(parsed_commit) = obj {
             assert_eq!(parsed_commit.tree, tree_oid);
             assert_eq!(parsed_commit.parents, vec![parent_oid]);
-            assert_eq!(parsed_commit.author, "Alice <alice@example.com> 1600000000 +0000");
+            assert_eq!(
+                parsed_commit.author,
+                "Alice <alice@example.com> 1600000000 +0000"
+            );
             assert_eq!(parsed_commit.message, "Initial commit\n\nFixes #1");
         } else {
             panic!("Expected Commit");

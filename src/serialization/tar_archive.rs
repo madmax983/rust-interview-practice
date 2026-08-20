@@ -175,9 +175,7 @@ impl<W: Write> TarWriter<W> {
     /// Appends a new file entry (header + content) to the archive.
     pub fn append(&mut self, header: &TarHeader, content: &[u8]) -> io::Result<()> {
         if self.finished {
-            return Err(io::Error::other(
-                "Archive is already finished",
-            ));
+            return Err(io::Error::other("Archive is already finished"));
         }
         if content.len() as u64 != header.size {
             return Err(io::Error::new(
@@ -282,11 +280,7 @@ fn parse_octal(bytes: &[u8]) -> Result<u64, ()> {
         }
     }
 
-    if parsed_any {
-        Ok(val)
-    } else {
-        Err(())
-    }
+    if parsed_any { Ok(val) } else { Err(()) }
 }
 
 /// Calculates the tar header checksum.
