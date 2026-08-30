@@ -43,3 +43,4 @@ pub mod virtual_machine;
 pub mod w_tiny_lfu_cache;
 pub mod wal;
 pub mod write_strategies;
+pub mod graphql;
