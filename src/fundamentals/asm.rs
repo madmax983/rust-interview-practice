@@ -571,6 +571,7 @@ pub unsafe fn atomic_cas_aarch64(ptr: *mut u64, old: u64, new: u64) -> u64 {
 // ============================================================================
 
 /// Benchmark assembly vs Rust for simple addition.
+#[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 fn benchmark_asm_vs_rust() {
     const ITERATIONS: usize = 1_000_000;
