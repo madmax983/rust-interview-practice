@@ -454,7 +454,7 @@ mod tests {
         assert_eq!(req.path, "/");
         assert_eq!(req.version, "HTTP/1.1");
         assert_eq!(req.headers.get("host"), Some(&"localhost".to_string()));
-        assert!(req.body.is_empty());
+        assert_eq!(req.body, [0u8; 0]);
     }
 
     #[test]
@@ -585,6 +585,6 @@ mod tests {
 
         // Should return empty body, not loop infinitely
         let req = HttpRequest::parse(&mut reader).unwrap().unwrap();
-        assert!(req.body.is_empty());
+        assert_eq!(req.body, [0u8; 0]);
     }
 }

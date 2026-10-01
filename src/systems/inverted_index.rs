@@ -372,10 +372,10 @@ mod tests {
         engine.add_document(1, "D1".to_string(), "hello world");
 
         let results = engine.search("missing");
-        assert!(results.is_empty());
+        assert_eq!(results, []);
 
         let results2 = engine.search("the a is"); // Only stop words
-        assert!(results2.is_empty());
+        assert_eq!(results2, []);
     }
 
     #[test]
@@ -403,7 +403,7 @@ mod tests {
         assert_eq!(c_postings[0].term_frequency, 1);
 
         // Searching the old term returns nothing; the new term returns doc 1 once.
-        assert!(engine.search("a").is_empty());
+        assert_eq!(engine.search("a"), []);
         let results = engine.search("c");
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].doc_id, 1);

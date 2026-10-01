@@ -115,7 +115,7 @@ pub struct SpiralIterator<'a, T> {
 impl<'a, T> SpiralIterator<'a, T> {
     #[must_use]
     #[allow(clippy::cast_possible_wrap)]
-    pub fn new(matrix: &'a [Vec<T>]) -> Self {
+    pub const fn new(matrix: &'a [Vec<T>]) -> Self {
         if matrix.is_empty() || matrix[0].is_empty() {
             return Self {
                 matrix,

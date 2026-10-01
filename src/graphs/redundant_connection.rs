@@ -99,7 +99,7 @@ fn dfs(adj: &[Vec<usize>], source: usize, target: usize, visited: &mut [bool]) -
 // =========================================================================================
 
 /// Walks parent pointers up to the set root of `i` (no path compression).
-fn find_root(parent: &[usize], mut i: usize) -> usize {
+const fn find_root(parent: &[usize], mut i: usize) -> usize {
     while parent[i] != i {
         i = parent[i];
     }

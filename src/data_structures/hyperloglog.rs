@@ -230,9 +230,7 @@ impl HyperLogLog {
 
     /// Clears the `HyperLogLog`.
     pub fn clear(&mut self) {
-        for x in &mut self.registers {
-            *x = 0;
-        }
+        self.registers.fill(0);
     }
 
     /// Returns the precision parameter `p`.

@@ -79,7 +79,7 @@ const fn is_power_of_two(n: i32) -> bool {
 /// Example: 12 = 1100, 12 & -12 = 0100 (bit at position 2)
 #[allow(dead_code)]
 const fn rightmost_set_bit(n: i32) -> i32 {
-    n & -n
+    n.isolate_lowest_one()
 }
 
 /// Clear the rightmost set bit.

@@ -294,7 +294,7 @@ mod tests {
         assert_eq!(i64::deserialize(&mut bytes).unwrap(), -15);
         assert!(bool::deserialize(&mut bytes).unwrap());
         assert_eq!(f64::deserialize(&mut bytes).unwrap(), std::f64::consts::PI);
-        assert!(bytes.is_empty());
+        assert_eq!(bytes, [0u8; 0]);
     }
 
     #[test]

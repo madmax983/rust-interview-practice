@@ -340,7 +340,7 @@ impl Collector {
 
         // SAFETY: `Box::into_raw` never returns null; the collector now owns the
         // allocation and only frees it during `sweep`.
-        let ptr = unsafe { NonNull::new_unchecked(Box::into_raw(gc_box)) };
+        let ptr = Box::into_non_null(gc_box);
         let dyn_ptr: NonNull<GcBox<dyn Trace>> = ptr;
         self.head.set(Some(dyn_ptr));
         self.allocated_bytes.set(self.allocated_bytes.get() + size);

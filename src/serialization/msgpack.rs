@@ -470,7 +470,7 @@ mod tests {
         encode(&mut buf, &value).unwrap();
         let (decoded, rest) = decode(&buf).unwrap();
         assert_eq!(value, decoded);
-        assert!(rest.is_empty());
+        assert_eq!(rest, [0u8; 0]);
     }
 
     #[test]

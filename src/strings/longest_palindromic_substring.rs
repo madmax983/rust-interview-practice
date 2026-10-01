@@ -65,7 +65,7 @@ pub fn longest_palindrome_brute_force(s: String) -> String {
     s[max_start..max_start + max_len].to_string()
 }
 
-fn is_palindrome(bytes: &[u8], mut left: usize, mut right: usize) -> bool {
+const fn is_palindrome(bytes: &[u8], mut left: usize, mut right: usize) -> bool {
     while left < right {
         if bytes[left] != bytes[right] {
             return false;
@@ -122,7 +122,7 @@ pub fn longest_palindrome_optimized(s: String) -> String {
 /// Using `isize` here safely handles going out of bounds to the left (`-1`).
 #[allow(clippy::cast_possible_wrap)]
 #[allow(clippy::cast_sign_loss)]
-fn expand_around_center(bytes: &[u8], mut left: isize, mut right: isize) -> (usize, usize) {
+const fn expand_around_center(bytes: &[u8], mut left: isize, mut right: isize) -> (usize, usize) {
     while left >= 0
         && (right as usize) < bytes.len()
         && bytes[left as usize] == bytes[right as usize]

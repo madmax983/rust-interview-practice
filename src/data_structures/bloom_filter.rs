@@ -322,7 +322,10 @@ mod tests {
         println!("Expected FPR: {p}, Actual FPR: {actual_rate}");
 
         // Allow some variance, but it shouldn't be way off (e.g. > 2*p)
-        assert!(actual_rate < p * 2.0 + 0.01, "FPR too high: {actual_rate}");
+        assert!(
+            actual_rate < p.mul_add(2.0, 0.01),
+            "FPR too high: {actual_rate}"
+        );
     }
 
     #[test]
