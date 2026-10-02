@@ -72,6 +72,33 @@ jobs:
       - name: frame_structured (30s)
         run: cargo fuzz run frame_structured --target x86_64-unknown-linux-gnu -- -max_total_time=30
 
+  verified:
+    name: verus proofs (verified/)
+    runs-on: ubuntu-24.04
+    env:
+      # Must match the vstd pin in verified/Cargo.toml (Verus toolchain manifest).
+      VERUS_VERSION: 0.2026.09.27.3cf1832
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: verified
+      - name: Executable tests (ghost code erased, stable Rust)
+        run: cargo test --manifest-path verified/Cargo.toml
+      - name: Install Verus ${{ env.VERUS_VERSION }}
+        run: |
+          curl -fsSL -o verus.zip \
+            "https://github.com/verus-lang/verus/releases/download/release/${VERUS_VERSION}/verus-${VERUS_VERSION}-x86-linux.zip"
+          unzip -q verus.zip -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/verus-x86-linux" >> "$GITHUB_PATH"
+          rustup toolchain install 1.98.1 --profile minimal
+      - name: Verify proofs
+        working-directory: verified
+        run: |
+          verus --version
+          cargo verus verify
+
   clippy:
     name: clippy (pedantic)
     runs-on: ubuntu-latest

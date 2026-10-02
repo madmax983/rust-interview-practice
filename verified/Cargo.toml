@@ -1,0 +1,24 @@
+[package]
+name = "rust-interview-practice-verified"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Verus-verified slice of rust-interview-practice: a sorted set with machine-checked proofs."
+
+[dependencies]
+# Pinned to the vstd that ships with Verus release 0.2026.09.27.3cf1832
+# (see cargo-verus/toolchain-manifests in the Verus repo). Bump both together.
+vstd = "=0.0.0-2026-09-20-0158"
+
+[dev-dependencies]
+proptest = "1.5"
+
+[package.metadata.verus]
+verify = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(verus_only)', 'cfg(verus_keep_ghost)'] }
+
+# Keep this crate out of any parent workspace (like fuzz/).
+[workspace]
+members = ["."]
