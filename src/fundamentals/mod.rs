@@ -13,6 +13,7 @@ pub mod concurrency;
 pub mod design_patterns;
 pub mod error_handling;
 pub mod error_types;
+pub mod ffi;
 pub mod iterators;
 pub mod macros;
 pub mod numeric_ops;

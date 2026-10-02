@@ -86,6 +86,12 @@ that are essential for fluent coding — patterns you'll type repeatedly in any 
 - `design_patterns.rs` — builder, newtype, type-state, RAII, visitor, strategy
 - `error_handling.rs` — Option/Result combinators, `?` operator
 - `error_types.rs` — thiserror/anyhow-style custom errors, recovery strategies
+- `ffi.rs` — both sides of the C boundary: consuming libc (`strlen`, `qsort` with a generic
+  monomorphised comparator) and exporting a `rip_*` C API with `#[unsafe(no_mangle)]`.
+  `repr(C)`/packed/transparent layouts pinned by `offset_of!` const asserts, a C tagged
+  union, snprintf-style buffers, opaque handles via `Box::into_raw`, `void *user_data`
+  trampolines, destroy notifiers, `catch_unwind` at the boundary, and `"C"` vs `"C-unwind"`
+  (the abort is verified in a child process). See `docs/adr/0003-ffi-exported-symbols.md`.
 - `iterators.rs` — map, filter, fold, zip, windows, and other iterator patterns
 - `macros.rs` — declarative macros, repetition, DSLs, debugging
 - `numeric_ops.rs` — bit manipulation, safe arithmetic, number algorithms
@@ -350,7 +356,7 @@ Run these locally before pushing to keep CI green.
 - **Include the canonical examples** as test cases.
 - **Add edge cases:** empty inputs, single elements, max constraints.
 - **Cross-implementation tests:** verify all approaches return the same result.
-- The library currently has a large passing unit-test suite (~1990 tests at last count).
+- The library currently has a large passing unit-test suite (~2040 tests at last count).
 
 ## Unsafe Semantics & Miri
 
@@ -426,7 +432,7 @@ The lists below reflect the modules actually declared in each category's `mod.rs
 
 ### Fundamentals
 asm, borrowing, closures, collections, concurrency, design_patterns, error_handling,
-error_types, iterators, macros, numeric_ops, pattern_matching, performance, pin, simd,
+error_types, ffi, iterators, macros, numeric_ops, pattern_matching, performance, pin, simd,
 smart_pointers, strings, testing, trait_dark_corners, types_and_traits, unsafe_rust.
 Feature-gated: async_and_parallel (`async-parallel`), serde_patterns (`serde-patterns`),
 cli_patterns (`cli-patterns`).
