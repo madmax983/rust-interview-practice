@@ -206,7 +206,7 @@ impl Quadtree {
 
         if self.divided {
             let children = self.children.as_ref().unwrap();
-            for child in children {
+            for child in &**children {
                 child.query_recursive(range, results);
             }
         }

@@ -99,7 +99,7 @@ impl<T: Ord> SkipList<T> {
     pub fn new() -> Self {
         // Create head node with max level
         let head = Box::new(Node::new(None, MAX_LEVEL));
-        let head_ptr = Box::into_non_null(head);
+        let head_ptr = std::ptr::NonNull::from(Box::leak(head));
 
         Self {
             head: head_ptr,
@@ -156,7 +156,7 @@ impl<T: Ord> SkipList<T> {
 
         // 3. Create new node
         let new_node = Box::new(Node::new(Some(val), new_level));
-        let new_node_ptr = Box::into_non_null(new_node);
+        let new_node_ptr = std::ptr::NonNull::from(Box::leak(new_node));
 
         // 4. Update pointers
         unsafe {
