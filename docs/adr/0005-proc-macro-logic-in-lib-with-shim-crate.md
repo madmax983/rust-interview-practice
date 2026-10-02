@@ -1,4 +1,4 @@
-# ADR 0002: Proc-macro logic in the library, real macros in a thin shim crate
+# ADR 0005: Proc-macro logic in the library, real macros in a thin shim crate
 
 **Date:** 2026-10-02
 **Status:** Accepted

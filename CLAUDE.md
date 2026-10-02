@@ -28,7 +28,7 @@ autocomplete isn't available.
   `exclude = ["fuzz", "verified"]`). `macros/` is `rust-interview-practice-macros`, a `proc-macro = true`
   shim crate exposing the `fundamentals::proc_macros` drills as real macros. Plain `cargo test`
   at the root still tests only the root package; use `cargo test -p rust-interview-practice-macros`
-  for the shim. See `docs/adr/0002-proc-macro-logic-in-lib-with-shim-crate.md`.
+  for the shim. See `docs/adr/0005-proc-macro-logic-in-lib-with-shim-crate.md`.
 - **Verified crate:** `verified/` is a separate crate (its own `[workspace]`) holding a
   Verus-verified `SortedSet`. Plain `cargo test` there runs proptests on stable (ghost code is
   erased); `cargo verus verify` checks the proofs. See [Verus](#verus-the-verified-crate).
