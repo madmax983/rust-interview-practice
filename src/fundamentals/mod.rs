@@ -23,6 +23,7 @@ pub mod simd;
 pub mod smart_pointers;
 pub mod strings;
 pub mod testing;
+pub mod trait_dark_corners;
 pub mod types_and_traits;
 pub mod unsafe_rust;
 
