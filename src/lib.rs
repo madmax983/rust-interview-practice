@@ -3,6 +3,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub mod arrays;
+pub mod async_internals;
 pub mod backtracking;
 pub mod binary_search;
 pub mod concurrency;
@@ -19,5 +20,6 @@ pub mod serialization;
 pub mod stacks;
 pub mod strings;
 pub mod systems;
+pub mod testing_craft;
 pub mod trees;
 pub mod unsafe_semantics;

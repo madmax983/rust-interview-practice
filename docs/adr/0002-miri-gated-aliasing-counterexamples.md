@@ -1,4 +1,4 @@
-# ADR 0001: Miri-gated aliasing counterexamples
+# ADR 0002: Miri-gated aliasing counterexamples
 
 - **Status:** Accepted
 - **Date:** 2026-10-02

@@ -18,10 +18,12 @@ pub mod macros;
 pub mod numeric_ops;
 pub mod pattern_matching;
 pub mod performance;
+pub mod pin;
 pub mod simd;
 pub mod smart_pointers;
 pub mod strings;
 pub mod testing;
+pub mod trait_dark_corners;
 pub mod types_and_traits;
 pub mod unsafe_rust;
 
