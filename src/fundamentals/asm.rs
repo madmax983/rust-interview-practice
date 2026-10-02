@@ -532,7 +532,7 @@ pub fn breakpoint() {
 // AArch64 Examples
 // ============================================================================
 
-/// Add two numbers on AArch64.
+/// Add two numbers on `AArch64`.
 #[cfg(target_arch = "aarch64")]
 #[must_use]
 pub fn add_asm_aarch64(a: u64, b: u64) -> u64 {
@@ -549,7 +549,11 @@ pub fn add_asm_aarch64(a: u64, b: u64) -> u64 {
     result
 }
 
-/// Atomic compare-and-swap on AArch64.
+/// Atomic compare-and-swap on `AArch64`.
+///
+/// # Safety
+///
+/// `ptr` must be non-null, aligned, and valid for reads and writes.
 #[cfg(target_arch = "aarch64")]
 pub unsafe fn atomic_cas_aarch64(ptr: *mut u64, old: u64, new: u64) -> u64 {
     let result: u64;

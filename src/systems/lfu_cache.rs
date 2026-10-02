@@ -224,7 +224,7 @@ impl<K: Hash + Eq + Clone, V> LFUCache<K, V> {
             // Create new node
             let node = Box::new(Node::new(key.clone(), val));
             // SAFETY: `Box::into_raw` never returns a null pointer, so this cannot be null.
-            let node_ptr = Box::into_non_null(node);
+            let node_ptr = std::ptr::NonNull::from(Box::leak(node));
 
             self.key_map.insert(key, node_ptr);
 
