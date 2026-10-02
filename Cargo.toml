@@ -6,10 +6,10 @@ edition = "2024"
 # The root package is also a workspace so the `macros/` proc-macro shim crate builds
 # and tests alongside it. `cargo test` at the root still only tests this package;
 # use `-p rust-interview-practice-macros` (or `--workspace`) for the shim's tests.
-# `fuzz/` declares its own workspace (cargo-fuzz, nightly) and stays out of this one.
+# `fuzz/` (cargo-fuzz, nightly) and `verified/` (Verus) declare their own workspaces.
 [workspace]
 members = [".", "macros"]
-exclude = ["fuzz"]
+exclude = ["fuzz", "verified"]
 
 [dependencies]
 # Optional: Enable with --features async-parallel

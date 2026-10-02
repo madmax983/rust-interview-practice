@@ -24,7 +24,7 @@ the real parsing and codegen, not a stub that forwards elsewhere.
   error messages), and a wrapper turns `Err` into `compile_error!` tokens.
 - The module and its `syn`/`quote`/`proc-macro2` dependencies are behind the
   `proc-macro-patterns` Cargo feature, like the other dependency-heavy fundamentals.
-- The root `Cargo.toml` becomes a workspace (`members = [".", "macros"]`, `exclude = ["fuzz"]`)
+- The root `Cargo.toml` becomes a workspace (`members = [".", "macros"]`, `exclude = ["fuzz", "verified"]`)
   with a new member `macros/` (`rust-interview-practice-macros`, `proc-macro = true`). Each
   of its macros converts with `.into()` and calls the library wrapper.
 - End-to-end tests (`macros/tests/expand.rs`) apply the real macros and run the generated
