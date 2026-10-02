@@ -1785,7 +1785,7 @@ mod tests {
     fn test_slice_from_c_accepts_null_when_empty() {
         // SAFETY: `len == 0`, so the pointer is never read.
         let empty: &[i64] = unsafe { slice_from_c(ptr::null(), 0, "p") }.unwrap();
-        assert!(empty.is_empty());
+        assert_eq!(empty, &[] as &[i64]);
         // SAFETY: null with `len > 0` is rejected before any read.
         let err = unsafe { slice_from_c::<i64>(ptr::null(), 3, "p") }.unwrap_err();
         assert_eq!(err, FfiError::NullPointer("p"));
@@ -1960,7 +1960,7 @@ mod tests {
     fn test_fibonacci_buffer_transfer() {
         assert_eq!(fibonacci(8), vec![0, 1, 1, 2, 3, 5, 8, 13]);
         assert_eq!(fibonacci(1), vec![0]);
-        assert!(fibonacci(0).is_empty());
+        assert_eq!(fibonacci(0), Vec::<u64>::new());
         assert_eq!(*fibonacci(100).last().unwrap(), u64::MAX, "saturates");
         // SAFETY: null out-parameter is checked.
         assert!(unsafe { rip_fibonacci(3, ptr::null_mut()) }.is_null());
