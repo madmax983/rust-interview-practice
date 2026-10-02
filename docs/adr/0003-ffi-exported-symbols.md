@@ -1,4 +1,4 @@
-# ADR 0002: Export real `rip_*` C symbols from the library for the FFI drills
+# ADR 0003: Export real `rip_*` C symbols from the library for the FFI drills
 
 **Date:** 2026-10-02
 **Status:** Accepted
