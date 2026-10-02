@@ -38,3 +38,7 @@ pub mod serde_patterns;
 // Optional: requires 'cli-patterns' feature
 #[cfg(feature = "cli-patterns")]
 pub mod cli_patterns;
+
+// Optional: requires 'proc-macro-patterns' feature
+#[cfg(feature = "proc-macro-patterns")]
+pub mod proc_macros;

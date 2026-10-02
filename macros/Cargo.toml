@@ -1,0 +1,12 @@
+[package]
+name = "rust-interview-practice-macros"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Thin proc-macro shims over rust_interview_practice::fundamentals::proc_macros"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+rust-interview-practice = { path = "..", features = ["proc-macro-patterns"] }

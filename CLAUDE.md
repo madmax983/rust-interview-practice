@@ -23,6 +23,11 @@ autocomplete isn't available.
   (a benchmark helper for the cryptography module).
 - **Fuzz crate:** `fuzz/` is a separate `cargo-fuzz` crate (its own `[workspace]`, not built by
   `cargo test` at the root) holding the libFuzzer targets for `testing_craft::fuzz_target`.
+- **Workspace:** the root `Cargo.toml` is also a workspace (`members = [".", "macros"]`,
+  `exclude = ["fuzz"]`). `macros/` is `rust-interview-practice-macros`, a `proc-macro = true`
+  shim crate exposing the `fundamentals::proc_macros` drills as real macros. Plain `cargo test`
+  at the root still tests only the root package; use `cargo test -p rust-interview-practice-macros`
+  for the shim. See `docs/adr/0002-proc-macro-logic-in-lib-with-shim-crate.md`.
 
 ## Directory Structure
 
@@ -31,6 +36,7 @@ autocomplete isn't available.
 ├── Cargo.toml
 ├── CLAUDE.md
 ├── fuzz/                       # cargo-fuzz crate (nightly): frame_parse, frame_structured
+├── macros/                     # proc-macro shim crate (workspace member) + e2e tests
 └── src/
     ├── lib.rs                  # Module exports (pub mod for every category)
     ├── main.rs                 # Placeholder binary
@@ -111,6 +117,14 @@ that are essential for fluent coding — patterns you'll type repeatedly in any 
   `--features serde-patterns`.
 - `cli_patterns.rs` — ratatui 0.29 TUI development (components, layouts, events). Requires
   `--features cli-patterns`.
+- `proc_macros.rs` — procedural macros with `proc_macro2`/`syn`/`quote`: token trees by hand,
+  `quote!` repetition, `#[derive(Describe)]` and `#[derive(Builder)]` with helper attributes,
+  attribute macros `#[retry(times = N)]` / `#[memoize]` (argument parsing, `mixed_site`
+  hygiene, `quote_spanned!` error placement), a `VisitMut` rewrite (`#[checked]`), and a
+  function-like `seq!` with a custom `Parse`. Requires `--features proc-macro-patterns`. The
+  logic is written against `proc_macro2` so it is unit tested here; the real macros live in
+  the `macros/` shim crate, whose tests run the expanded code and whose `compile_fail`
+  doctests cover the error paths.
 
 ## Feature Flags
 
@@ -121,6 +135,7 @@ All feature flags are declared in `Cargo.toml`. Everything except `crc32fast` is
 | `async-parallel` | tokio, tokio-stream, futures, rayon | `fundamentals::async_and_parallel` |
 | `serde-patterns` | serde, serde_json, serde_yaml, toml, bincode | `fundamentals::serde_patterns` |
 | `cli-patterns` | ratatui 0.29, crossterm, clap | `fundamentals::cli_patterns` |
+| `proc-macro-patterns` | syn (full, visit-mut, extra-traits), quote, proc-macro2 | `fundamentals::proc_macros` (and the `macros/` shim crate) |
 | `testing-extras` | proptest | proptest suites in `fundamentals::testing` and `testing_craft::property_testing` |
 | `simd-patterns` | *(nothing)* | **no-op**, retained for backward compatibility only |
 
@@ -328,11 +343,14 @@ It has three jobs:
 
 - **fmt** — `cargo fmt --all -- --check` (blocking).
 - **test & build** — `cargo test` on default features, `cargo test --features serde-patterns`,
-  `cargo test --features testing-extras --lib` (proptest suites), and builds for `cli-patterns`,
-  `async-parallel`, and `--all-features` on stable (blocking).
+  `cargo test --features testing-extras --lib` (proptest suites),
+  `cargo test --features proc-macro-patterns fundamentals::proc_macros`,
+  `cargo test -p rust-interview-practice-macros` (proc-macro shim: e2e + `compile_fail`
+  doctests), and builds for `cli-patterns`, `async-parallel`, and `--all-features` on stable
+  (blocking).
 - **loom** — `RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model`.
 - **fuzz** — nightly smoke run of each `cargo-fuzz` target for 30 seconds.
-- **clippy** — `cargo clippy --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
+- **clippy** — `cargo clippy --workspace --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
   -D warnings`, currently **non-blocking** (`continue-on-error: true`) while the repo-wide lint
   sweep finishes; flip it to blocking once the sweep lands.
 
@@ -398,7 +416,7 @@ asm, borrowing, closures, collections, concurrency, design_patterns, error_handl
 error_types, iterators, macros, numeric_ops, pattern_matching, performance, pin, simd,
 smart_pointers, strings, testing, trait_dark_corners, types_and_traits, unsafe_rust.
 Feature-gated: async_and_parallel (`async-parallel`), serde_patterns (`serde-patterns`),
-cli_patterns (`cli-patterns`).
+cli_patterns (`cli-patterns`), proc_macros (`proc-macro-patterns`).
 
 ### Arrays
 best_time_to_buy_and_sell_stock, container_with_most_water, contains_duplicate,
