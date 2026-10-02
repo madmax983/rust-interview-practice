@@ -3,6 +3,14 @@ name = "rust-interview-practice"
 version = "0.1.0"
 edition = "2024"
 
+# The root package is also a workspace so the `macros/` proc-macro shim crate builds
+# and tests alongside it. `cargo test` at the root still only tests this package;
+# use `-p rust-interview-practice-macros` (or `--workspace`) for the shim's tests.
+# `fuzz/` (cargo-fuzz, nightly) and `verified/` (Verus) declare their own workspaces.
+[workspace]
+members = [".", "macros"]
+exclude = ["fuzz", "verified"]
+
 [dependencies]
 # Optional: Enable with --features async-parallel
 tokio = { version = "1.42", features = ["full"], optional = true }
@@ -30,6 +38,11 @@ crossterm = { version = "0.28", optional = true }
 clap = { version = "4.5", features = ["derive"], optional = true }
 crc32fast = "1.5.0"
 
+# Optional: Enable with --features proc-macro-patterns
+proc-macro2 = { version = "1.0", optional = true }
+quote = { version = "1.0", optional = true }
+syn = { version = "2.0", features = ["full", "visit-mut", "extra-traits"], optional = true }
+
 # Loom model checker for `testing_craft::loom_model`. Gated on the `loom` cfg
 # (NOT a Cargo feature) so `--all-features` never swaps std sync primitives for
 # loom's. Run: RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model
@@ -51,6 +64,10 @@ serde-patterns = ["serde", "serde_json", "serde_yaml", "toml", "bincode"]
 
 # Feature flag for CLI/TUI patterns with ratatui
 cli-patterns = ["ratatui", "crossterm", "clap"]
+
+# Feature flag for procedural-macro patterns (syn/quote/proc-macro2).
+# The real `#[derive]`/`#[attr]`/`fn!()` shims live in the `macros/` workspace crate.
+proc-macro-patterns = ["proc-macro2", "quote", "syn"]
 
 # Retained for backwards compatibility. The portable-SIMD (`std::simd`) code is
 # NOT gated on this Cargo feature, because `cargo build --all-features` would then
