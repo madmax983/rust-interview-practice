@@ -1,4 +1,4 @@
-# ADR 0002: Verus proofs live in a separate `verified/` crate
+# ADR 0004: Verus proofs live in a separate `verified/` crate
 
 **Date:** 2026-10-02
 **Status:** Accepted

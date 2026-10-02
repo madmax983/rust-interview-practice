@@ -109,3 +109,21 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery -D warnings
+
+  miri:
+    name: miri (unsafe_semantics)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Installs the latest nightly that ships Miri and makes it the default.
+      - uses: dtolnay/rust-toolchain@miri
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo miri setup
+      - name: Miri tests (Stacked Borrows)
+        run: cargo miri test --lib unsafe_semantics
+      - name: Miri tests (Tree Borrows)
+        run: cargo miri test --lib unsafe_semantics
+        env:
+          MIRIFLAGS: -Zmiri-tree-borrows
+      - name: Counterexample verdicts match the catalog
+        run: scripts/miri-counterexamples.sh
