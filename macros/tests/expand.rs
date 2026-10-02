@@ -110,7 +110,7 @@ fn builder_optional_each_and_default_fields_may_be_omitted() {
         .executable("ls")
         .build()
         .expect("only executable is required");
-    assert!(command.args.is_empty());
+    assert_eq!(command.args, Vec::<String>::new());
     assert_eq!(command.current_dir, None);
     assert_eq!(command.retries, 0);
 }
