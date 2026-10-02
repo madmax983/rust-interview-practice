@@ -254,7 +254,7 @@ mod tests {
 
         // No change
         let same = text("Hello");
-        assert!(diff(&old, &same).is_empty());
+        assert_eq!(diff(&old, &same), []);
     }
 
     #[test]

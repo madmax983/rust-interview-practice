@@ -364,7 +364,7 @@ mod tests {
         assert!(cloned.is_some());
         let c = cloned.unwrap();
         assert_eq!(c.borrow().val, 1);
-        assert!(c.borrow().neighbors.is_empty());
+        assert_eq!(c.borrow().neighbors, []);
 
         // Ensure deep copy (different addresses)
         assert!(!Rc::ptr_eq(&node, &c));

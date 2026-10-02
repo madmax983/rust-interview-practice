@@ -215,7 +215,7 @@ fn backtrack_bitmask(
         // Extract the lowest set bit
         // RUST INSIGHT: `x & -x` is a classic bit hack to get the lowest set bit.
         // It works because -x is Two's Complement (~x + 1).
-        let p = remaining & -remaining;
+        let p = remaining.isolate_lowest_one();
 
         // Remove the bit from remaining
         remaining ^= p; // or remaining -= p

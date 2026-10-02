@@ -366,8 +366,8 @@ mod tests {
         assert_eq!(v.major, 1);
         assert_eq!(v.minor, 2);
         assert_eq!(v.patch, 3);
-        assert!(v.pre.is_empty());
-        assert!(v.build.is_empty());
+        assert_eq!(v.pre, []);
+        assert_eq!(v.build, Vec::<String>::new());
 
         let v: Version = "10.20.30-rc.1+build.123".parse().unwrap();
         assert_eq!(v.major, 10);

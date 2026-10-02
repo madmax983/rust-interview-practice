@@ -41,7 +41,7 @@
 #[must_use]
 #[allow(clippy::needless_pass_by_value)] // Required by LeetCode signature
 pub fn partition_brute_force(s: String) -> Vec<Vec<String>> {
-    fn is_palindrome(s: &str) -> bool {
+    const fn is_palindrome(s: &str) -> bool {
         // GOTCHA: `s.chars().rev().eq(s.chars())` is O(N) but can be slow due to Unicode
         // decoding on every check. Since we only have lowercase ASCII per constraints,
         // comparing bytes is much faster.
@@ -96,7 +96,7 @@ pub fn partition_brute_force(s: String) -> Vec<Vec<String>> {
 #[must_use]
 #[allow(clippy::needless_pass_by_value)]
 pub fn partition_optimized(s: String) -> Vec<Vec<String>> {
-    fn is_palindrome(bytes: &[u8]) -> bool {
+    const fn is_palindrome(bytes: &[u8]) -> bool {
         let mut left = 0;
         let mut right = bytes.len().saturating_sub(1);
         while left < right {

@@ -170,7 +170,7 @@ mod tests {
     fn test_group_anagrams_empty() {
         let input: Vec<String> = vec![];
         let result = group_anagrams(input);
-        assert!(result.is_empty());
+        assert_eq!(result, Vec::<Vec<String>>::new());
     }
 
     #[test]

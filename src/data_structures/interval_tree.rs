@@ -378,7 +378,7 @@ mod tests {
 
         let query = Interval::new(6, 9);
         assert!(tree.find_overlapping(&query).is_none());
-        assert!(tree.find_all_overlapping(&query).is_empty());
+        assert_eq!(tree.find_all_overlapping(&query), []);
     }
 
     #[test]

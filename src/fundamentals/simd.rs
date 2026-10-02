@@ -784,6 +784,7 @@ mod portable_simd {
 // ============================================================================
 
 /// Compare scalar vs SIMD performance for array addition.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[allow(dead_code)]
 fn benchmark_scalar_vs_simd() {
     const SIZE: usize = 1024;
@@ -808,6 +809,7 @@ fn benchmark_scalar_vs_simd() {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

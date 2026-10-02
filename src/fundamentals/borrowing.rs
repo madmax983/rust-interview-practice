@@ -34,7 +34,7 @@ pub fn borrow_scope_example(nums: &mut Vec<i32>) -> i32 {
 }
 
 /// Pattern: Splitting borrows - borrow different parts simultaneously
-pub fn split_borrow_example(nums: &mut [i32]) {
+pub const fn split_borrow_example(nums: &mut [i32]) {
     // Can't have two mutable borrows to same array...
     // But CAN split it into non-overlapping parts!
     let (left, right) = nums.split_at_mut(nums.len() / 2);
@@ -56,7 +56,7 @@ const fn helper_function(_nums: &mut Vec<i32>) {
 /// Pattern: Lifetime basics - return reference tied to input lifetime
 /// The 'a says: returned reference lives as long as input reference
 #[must_use]
-pub fn return_reference(nums: &[i32]) -> &i32 {
+pub const fn return_reference(nums: &[i32]) -> &i32 {
     &nums[0] // Returned reference borrows from nums
 }
 

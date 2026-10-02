@@ -539,7 +539,7 @@ mod tests {
         let resp = Response::parse(&mut reader).unwrap();
 
         assert_eq!(resp.status_code, 404);
-        assert!(resp.body.is_empty());
+        assert_eq!(resp.body, [0u8; 0]);
     }
 
     #[test]
