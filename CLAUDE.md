@@ -82,6 +82,8 @@ that are essential for fluent coding — patterns you'll type repeatedly in any 
 - `numeric_ops.rs` — bit manipulation, safe arithmetic, number algorithms
 - `pattern_matching.rs` — match, if let, destructuring, guards, slice patterns
 - `performance.rs` — inlining, allocation, cache-friendly patterns, hot paths
+- `pin.rs` — `Pin`/`Unpin`, `PhantomPinned`, `Box::pin`/`pin!`, self-referential structs,
+  hand-written pin projection (structs and enums, `Map`/`join`), and the drop guarantee
 - `simd.rs` — SSE/AVX intrinsics with `is_x86_feature_detected!`. **The portable-SIMD
   (`std::simd`) parts require nightly** and are gated on the `nightly_portable_simd` cfg
   (see [Feature Flags](#feature-flags)); the x86 intrinsic parts build on stable.
@@ -302,7 +304,7 @@ Run these locally before pushing to keep CI green.
 - **Include the canonical examples** as test cases.
 - **Add edge cases:** empty inputs, single elements, max constraints.
 - **Cross-implementation tests:** verify all approaches return the same result.
-- The library currently has a large passing unit-test suite (~1731 tests at last count).
+- The library currently has a large passing unit-test suite (~1803 tests at last count).
 
 ## Clippy Allowances
 
@@ -353,7 +355,7 @@ The lists below reflect the modules actually declared in each category's `mod.rs
 
 ### Fundamentals
 asm, borrowing, closures, collections, concurrency, design_patterns, error_handling,
-error_types, iterators, macros, numeric_ops, pattern_matching, performance, simd,
+error_types, iterators, macros, numeric_ops, pattern_matching, performance, pin, simd,
 smart_pointers, strings, testing, types_and_traits, unsafe_rust.
 Feature-gated: async_and_parallel (`async-parallel`), serde_patterns (`serde-patterns`),
 cli_patterns (`cli-patterns`).
