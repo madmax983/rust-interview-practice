@@ -35,6 +35,7 @@ autocomplete isn't available.
     │   └── bench_sha256.rs     # sha256 benchmark helper
     ├── fundamentals/           # Core Rust patterns (not interview problems)
     ├── arrays/                 # Array problems
+    ├── async_internals/        # Hand-built async machinery (wakers, executor, timers, cancellation)
     ├── strings/                # String manipulation problems
     ├── linked_lists/           # Linked list problems
     ├── trees/                  # Binary tree / BST / trie problems
@@ -60,7 +61,7 @@ When a problem fits multiple categories, its **primary data structure** wins (so
 therefore appear under more than one category, e.g. rotated-array search under both `arrays`
 and `binary_search`). Beyond the classic interview categories, this repo also contains larger
 implementation exercises (`data_structures`, `systems`, `networking`, `serialization`,
-`cryptography`, `concurrency`, `design_patterns`) that are practiced the same way with gittype.
+`cryptography`, `concurrency`, `async_internals`, `design_patterns`) that are practiced the same way with gittype.
 
 ## Fundamentals Category
 
@@ -168,7 +169,8 @@ Each problem also exports a main function (e.g. `length_of_longest_substring`) t
 optimal solution.
 
 > Note: the larger implementation exercises under `systems/`, `data_structures/`,
-> `networking/`, `serialization/`, `cryptography/`, `concurrency/`, and `design_patterns/`
+> `networking/`, `serialization/`, `cryptography/`, `concurrency/`, `async_internals/`, and
+> `design_patterns/`
 > are single cohesive implementations rather than three-tier brute/optimized/optimal problems.
 
 ## File Template (interview problems)
@@ -421,6 +423,15 @@ valid_parentheses.
 actor_system, arc, async_executor, async_mutex, barrier, channel, dining_philosophers,
 event_loop, lock_free_queue, mutex, once_cell, parking_lot, promise, read_write_lock,
 semaphore, thread_local, thread_pool, work_stealing_pool.
+
+### Async Internals
+Ordered drills (each builds on the previous), all deterministic and runtime-free on stable:
+raw_waker (`RawWakerVTable` by hand, `Wake` trait, `block_on`), future_polling (hand-written
+futures, unsafe pin projection, `join`, `async fn` desugaring), ready_queue (single-threaded
+executor: wake de-duplication, generational task ids, `JoinHandle`, abort), timer (virtual-clock
+`sleep`, deadline heap, cancel-on-drop, driver loop), cancellation (`CancellationToken`,
+`with_cancellation`, `timeout`, cancel safety). The `unsafe` code here is checked with
+`cargo +nightly miri test --lib async_internals`.
 
 ### Cryptography
 jwt, rand, sha256.
