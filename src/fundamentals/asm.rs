@@ -17,6 +17,7 @@ use std::arch::asm;
 /// # Safety
 ///
 /// Safe because we're only using basic arithmetic with no memory access.
+#[cfg(target_arch = "x86_64")]
 #[must_use]
 pub fn add_asm(a: u64, b: u64) -> u64 {
     let result: u64;
@@ -32,7 +33,24 @@ pub fn add_asm(a: u64, b: u64) -> u64 {
     result
 }
 
+/// Basic assembly - adding two numbers (`AArch64`: three-operand form).
+#[cfg(target_arch = "aarch64")]
+#[must_use]
+pub fn add_asm(a: u64, b: u64) -> u64 {
+    let result: u64;
+    unsafe {
+        asm!(
+            "add {0}, {0}, {1}",  // add dest, src1, src2
+            inout(reg) a => result,
+            in(reg) b,
+            options(pure, nomem, nostack),
+        );
+    }
+    result
+}
+
 /// Multiply two numbers using assembly.
+#[cfg(target_arch = "x86_64")]
 #[must_use]
 pub fn mul_asm(a: u64, b: u64) -> u64 {
     let result: u64;
@@ -46,13 +64,45 @@ pub fn mul_asm(a: u64, b: u64) -> u64 {
     result
 }
 
+/// Multiply two numbers using assembly (`AArch64`).
+#[cfg(target_arch = "aarch64")]
+#[must_use]
+pub fn mul_asm(a: u64, b: u64) -> u64 {
+    let result: u64;
+    unsafe {
+        asm!(
+            "mul {0}, {0}, {1}",  // mul dest, src1, src2
+            inout(reg) a => result,
+            in(reg) b,
+            options(pure, nomem, nostack),
+        );
+    }
+    result
+}
+
 /// Increment a value in place.
+#[cfg(target_arch = "x86_64")]
 pub fn increment_asm(value: &mut u64) {
     unsafe {
         asm!(
             "inc qword ptr [{0}]",  // Increment memory location
             in(reg) value,  // Pass pointer to value
             options(nostack),  // No stack operations
+        );
+    }
+}
+
+/// Increment a value in place (`AArch64` is load/store: no memory-operand arithmetic).
+#[cfg(target_arch = "aarch64")]
+pub fn increment_asm(value: &mut u64) {
+    unsafe {
+        asm!(
+            "ldr {tmp}, [{ptr}]",      // Load from memory
+            "add {tmp}, {tmp}, #1",    // Increment in register
+            "str {tmp}, [{ptr}]",      // Store back
+            ptr = in(reg) value,
+            tmp = out(reg) _,          // Scratch register
+            options(nostack),
         );
     }
 }
@@ -69,6 +119,7 @@ pub fn increment_asm(value: &mut u64) {
 /// - `out`: Output operand (uninitialized)
 /// - `inout`: Input that becomes output
 /// - `lateout`: Output written after all inputs are read
+#[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 fn register_constraints_example() {
     let input = 42u64;
