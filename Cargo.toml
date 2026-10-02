@@ -13,6 +13,10 @@ rayon = { version = "1.10", optional = true }
 # Optional: Enable with --features testing-extras
 proptest = { version = "1.5", optional = true }
 
+# Optional: Enable with --features dhat-heap (in-process DHAT heap profiling,
+# used only by the `dhat_heap` integration test; see `performance::profilers`)
+dhat = { version = "0.3", optional = true }
+
 # Optional: Enable with --features serde-patterns
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
@@ -39,6 +43,9 @@ async-parallel = ["tokio", "tokio-stream", "futures", "rayon"]
 # Feature flag for advanced testing patterns
 testing-extras = ["proptest"]
 
+# Feature flag for dhat-rs heap profiling (tests/dhat_heap.rs)
+dhat-heap = ["dhat"]
+
 # Feature flag for serde serialization patterns
 serde-patterns = ["serde", "serde_json", "serde_yaml", "toml", "bincode"]
 
@@ -61,3 +68,9 @@ simd-patterns = []
 #   2. Compile on nightly: `RUSTFLAGS="--cfg nightly_portable_simd" cargo +nightly build`.
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly_portable_simd)', 'cfg(loom)'] }
+
+# dhat-rs installs its own #[global_allocator], so it lives in a separate test
+# binary (the lib's unit tests already use performance::alloc_accounting's).
+[[test]]
+name = "dhat_heap"
+required-features = ["dhat-heap"]

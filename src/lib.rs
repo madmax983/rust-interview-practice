@@ -16,6 +16,7 @@ pub mod graphs;
 pub mod heaps;
 pub mod linked_lists;
 pub mod networking;
+pub mod performance;
 pub mod serialization;
 pub mod stacks;
 pub mod strings;
