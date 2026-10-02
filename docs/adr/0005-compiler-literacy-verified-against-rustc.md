@@ -29,7 +29,11 @@ modelling a borrow checker, and a model that only agrees with itself proves noth
    requires the mini checker (`nll::borrowck`) to produce exactly those error codes.
 4. **Error codes are checked on nightly.** rustdoc ignores the `E0xxx` of a `compile_fail`
    doctest on stable, so CI gains a `doc-error-codes` job running
-   `cargo +nightly test --doc -- compiler_literacy trait_dark_corners`.
+   `cargo +nightly test --doc -- compiler_literacy trait_dark_corners` with
+   `RUSTDOCFLAGS=-Zpolonius=no`. Nightly defaults to the Polonius borrow checker
+   (`-Zpolonius=next`), which accepts NLL problem case #3; the notes describe NLL because that
+   is what stable ships, so the job pins it. The stable `test` job still runs every
+   `compile_fail` doctest, so Polonius reaching stable fails CI there and prompts an update.
 5. **The toy MIR is deliberately small.** References, positional structs and opaque blobs only;
    calls declare which arguments their result borrows from instead of carrying generic
    signatures. Everything rustc does that the cases need (location-insensitive outlives,
@@ -37,6 +41,9 @@ modelling a borrow checker, and a model that only agrees with itself proves noth
    drop-liveness, shallow vs deep accesses, universal-region checks) is modelled by name.
 
 ## Consequences
+
+- This job caught its first toolchain change on its first run: nightly 1.101 started accepting
+  `get_default` (problem case #3). The note now records both verdicts.
 
 - A toolchain upgrade that changes MIR printing or borrowck verdicts fails tests or the nightly
   doctest job instead of silently invalidating the notes. Refreshing a dump is: re-run the

@@ -65,7 +65,13 @@ jobs:
       # rustdoc only verifies the `E0xxx` in `compile_fail,E0xxx` doctests on
       # nightly; on stable any compile error passes. Run the modules whose notes
       # depend on exact error codes.
+      # The notes describe the NLL borrow checker that stable ships. Nightly
+      # defaults to Polonius (`-Zpolonius=next`), which accepts NLL problem
+      # case #3, so pin NLL here. The stable `test` job is the tripwire for
+      # Polonius reaching stable.
       - run: cargo test --doc -- compiler_literacy trait_dark_corners
+        env:
+          RUSTDOCFLAGS: -Zpolonius=no
 
   fuzz:
     name: fuzz smoke test (nightly)

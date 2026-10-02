@@ -69,7 +69,7 @@
 //!
 //! // Declaring `'b: 'a` in the signature fixes it.
 //! cs.assume_outlives(b, a);
-//! assert!(cs.check_universal_regions(&cs.solve()).is_empty());
+//! assert_eq!(cs.check_universal_regions(&cs.solve()), vec![]);
 //! ```
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
@@ -1065,7 +1065,7 @@ mod tests {
                 expected
             );
         }
-        assert!(cs.check_universal_regions(&values).is_empty());
+        assert_eq!(cs.check_universal_regions(&values), Vec::new());
     }
 
     #[test]

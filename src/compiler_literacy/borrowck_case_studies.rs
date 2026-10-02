@@ -90,9 +90,17 @@
 //!
 //! ## 5. NLL problem case #3: conditional return (E0499)
 //!
-//! Still rejected by NLL (accepted by Polonius). Returning `value` forces the
-//! `get_mut` borrow to outlive `'r` — and NLL's location-insensitive regions
-//! then contain *every* point of the body, including the `None` arm.
+//! Rejected by NLL, the borrow checker stable rustc ships (verified on 1.97 and 1.98.1).
+//! Returning `value` forces the `get_mut` borrow to outlive `'r` — and NLL's
+//! location-insensitive regions then contain *every* point of the body,
+//! including the `None` arm.
+//!
+//! Polonius tracks which borrows flow where *per point*, so it sees that on the
+//! `None` arm nothing flows into `'r` and accepts this function. Nightly rustc
+//! uses Polonius by default (`-Zpolonius=next`, verified on 1.101.0-nightly
+//! 2026-10-01); `-Zpolonius=no` restores NLL. When Polonius reaches stable,
+//! this `compile_fail` doctest fails in the stable test job, and this case
+//! should move to the "accepted" column.
 //!
 //! ```compile_fail,E0499
 //! use std::collections::HashMap;
@@ -1005,6 +1013,7 @@ mod tests {
     use super::*;
     use crate::compiler_literacy::mir_reading::Location;
     use crate::compiler_literacy::nll::borrowck;
+    use std::collections::BTreeSet;
 
     #[test]
     fn mini_borrowck_agrees_with_rustc_on_every_case() {
@@ -1087,7 +1096,11 @@ mod tests {
             recv.activations.iter().copied().collect::<Vec<_>>(),
             vec![Location::new(1, 0)]
         );
-        assert!(recv.activated.is_empty(), "nothing after the call uses it");
+        assert_eq!(
+            recv.activated,
+            BTreeSet::new(),
+            "nothing after the call uses it"
+        );
         // The `len` borrow ends before activation.
         let len_borrow = result.borrow_at(Location::new(0, 1)).expect("len borrow");
         assert!(!len_borrow.in_scope.contains(&Location::new(1, 0)));
@@ -1178,7 +1191,7 @@ mod tests {
         assert_eq!(v, [3, 4, 3]);
         let mut empty = Vec::new();
         assert_eq!(first_then_push(&mut empty), None);
-        assert!(empty.is_empty());
+        assert_eq!(empty, Vec::<i32>::new());
     }
 
     #[test]

@@ -35,7 +35,9 @@
 //!
 //! ```bash
 //! cargo test compiler_literacy                       # unit tests + doctests (stable)
-//! cargo +nightly test --doc compiler_literacy        # also verifies E0xxx codes
+//! # Also verifies E0xxx codes. Nightly defaults to Polonius; pin NLL, which
+//! # is what stable ships and what these notes describe:
+//! RUSTDOCFLAGS=-Zpolonius=no cargo +nightly test --doc -- compiler_literacy
 //! ```
 
 pub mod borrowck_case_studies;

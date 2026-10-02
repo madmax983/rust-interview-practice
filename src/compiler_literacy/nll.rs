@@ -1669,7 +1669,7 @@ mod tests {
         b.terminate(bb0, Terminator::Return);
         let body = b.build();
         let du = def_use_at(&body, Location::new(0, 0));
-        assert!(du.defs.is_empty() && du.uses.is_empty());
+        assert_eq!((du.defs, du.uses), (Vec::new(), Vec::new()));
         assert_eq!(body.describe(&Place::from(s).field(1)), "s.1");
         assert_eq!(Place::from(s).field(1).to_string(), "(_1.1)");
         assert_eq!(body.place_ty(&Place::from(s).field(2)), None);

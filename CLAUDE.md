@@ -197,10 +197,11 @@ stable test suite also drives them through `MiniFuzzer`, a small feedback-guided
 
 rustdoc only checks the `E0xxx` of a `compile_fail,E0xxx` doctest on **nightly**; on stable any
 compile error passes. The CI job `doc-error-codes` runs the modules whose notes depend on exact
-codes:
+codes. Nightly defaults to the Polonius borrow checker (`-Zpolonius=next`), which accepts
+programs NLL rejects (NLL problem case #3), so the job pins NLL — what stable ships:
 
 ```bash
-cargo +nightly test --doc -- compiler_literacy trait_dark_corners
+RUSTDOCFLAGS=-Zpolonius=no cargo +nightly test --doc -- compiler_literacy trait_dark_corners
 ```
 
 ### Verus (the verified crate)
@@ -374,8 +375,9 @@ Every job is blocking:
   `cargo test --features testing-extras --lib` (proptest suites), and builds for `cli-patterns`,
   `async-parallel`, and `--all-features` on stable (blocking).
 - **loom** — `RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model`.
-- **doc-error-codes** — nightly `cargo test --doc -- compiler_literacy trait_dark_corners`, so the
-  `E0xxx` codes on `compile_fail` doctests are actually verified.
+- **doc-error-codes** — nightly `cargo test --doc -- compiler_literacy trait_dark_corners` with
+  `RUSTDOCFLAGS=-Zpolonius=no` (NLL, as on stable), so the `E0xxx` codes on `compile_fail`
+  doctests are actually verified.
 - **fuzz** — nightly smoke run of each `cargo-fuzz` target for 30 seconds.
 - **verified** — `cargo test` in `verified/`, then downloads the pinned Verus release and runs
   `cargo verus verify`.
