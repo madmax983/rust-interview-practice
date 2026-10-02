@@ -58,6 +58,7 @@ autocomplete isn't available.
     ├── graphs/                 # Graph traversal & shortest paths
     ├── dynamic_programming/    # DP problems
     ├── backtracking/           # Backtracking problems
+    ├── compiler_literacy/      # MIR reading, region constraints, a mini NLL borrowck, case studies
     ├── binary_search/          # Binary search problems
     ├── heaps/                  # Heap / priority-queue problems
     ├── stacks/                 # Stack / monotonic-stack problems
@@ -80,8 +81,8 @@ When a problem fits multiple categories, its **primary data structure** wins (so
 therefore appear under more than one category, e.g. rotated-array search under both `arrays`
 and `binary_search`). Beyond the classic interview categories, this repo also contains larger
 implementation exercises (`data_structures`, `systems`, `networking`, `serialization`,
-`cryptography`, `concurrency`, `async_internals`, `design_patterns`, `testing_craft`,
-`unsafe_semantics`, `performance`) that are practiced the same way with gittype.
+`cryptography`, `concurrency`, `async_internals`, `compiler_literacy`, `design_patterns`,
+`testing_craft`, `unsafe_semantics`, `performance`) that are practiced the same way with gittype.
 
 ## Fundamentals Category
 
@@ -195,7 +196,7 @@ RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model
 **only in the lib's unit-test binary** (`#[cfg(test)]`), with thread-local counters so parallel
 tests don't mix. `dhat-rs` needs the global-allocator slot too, so it lives in its own integration
 test behind `dhat-heap`. Valgrind is driven from `perf_drills`, not from `cargo test`. See
-`docs/adr/0005-performance-allocation-accounting.md`.
+`docs/adr/0006-performance-allocation-accounting.md`.
 
 ```bash
 cargo test --features dhat-heap --test dhat_heap
@@ -216,6 +217,17 @@ cargo +nightly fuzz run frame_structured       # structure-aware (bytes as decis
 
 The fuzz entry points are ordinary library functions (`fuzz_parse`, `fuzz_structured`), so the
 stable test suite also drives them through `MiniFuzzer`, a small feedback-guided mutation fuzzer.
+
+### `compile_fail` error codes (nightly)
+
+rustdoc only checks the `E0xxx` of a `compile_fail,E0xxx` doctest on **nightly**; on stable any
+compile error passes. The CI job `doc-error-codes` runs the modules whose notes depend on exact
+codes. Nightly defaults to the Polonius borrow checker (`-Zpolonius=next`), which accepts
+programs NLL rejects (NLL problem case #3), so the job pins NLL — what stable ships:
+
+```bash
+RUSTDOCFLAGS=-Zpolonius=no cargo +nightly test --doc -- compiler_literacy trait_dark_corners
+```
 
 ### Verus (the verified crate)
 
@@ -257,6 +269,9 @@ optimal solution.
 > `networking/`, `serialization/`, `cryptography/`, `concurrency/`, `async_internals/`,
 > `design_patterns/`, and `unsafe_semantics/`
 > are single cohesive implementations rather than three-tier brute/optimized/optimal problems.
+> `compiler_literacy/` case studies come in threes instead: a real-Rust doctest (`compile_fail`
+> when rejected), a fixed function, and a toy-MIR encoding the mini borrow checker must judge the
+> same way rustc does (see `docs/adr/0005-compiler-literacy-verified-against-rustc.md`).
 > `testing_craft/` follows a related shape: a correct implementation, a deliberately buggy
 > variant (suffix `_buggy`), and tests showing the technique catches the bug and passes the fix.
 > `performance/` does the same with measurement mistakes (`bench_single_shot_buggy`,
@@ -389,6 +404,9 @@ Every job is blocking:
   `cargo test --features dhat-heap --test dhat_heap`, and builds for `cli-patterns`,
   `async-parallel`, and `--all-features` on stable (blocking).
 - **loom** — `RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model`.
+- **doc-error-codes** — nightly `cargo test --doc -- compiler_literacy trait_dark_corners` with
+  `RUSTDOCFLAGS=-Zpolonius=no` (NLL, as on stable), so the `E0xxx` codes on `compile_fail`
+  doctests are actually verified.
 - **fuzz** — nightly smoke run of each `cargo-fuzz` target for 30 seconds.
 - **verified** — `cargo test` in `verified/`, then downloads the pinned Verus release and runs
   `cargo verus verify`.
@@ -410,7 +428,7 @@ Run these locally before pushing to keep CI green.
 - **Include the canonical examples** as test cases.
 - **Add edge cases:** empty inputs, single elements, max constraints.
 - **Cross-implementation tests:** verify all approaches return the same result.
-- The library currently has a large passing unit-test suite (~2054 tests at last count).
+- The library currently has a large passing unit-test suite (~2103 tests at last count).
 
 ## Unsafe Semantics & Miri
 
@@ -559,6 +577,16 @@ executor: wake de-duplication, generational task ids, `JoinHandle`, abort), time
 `sleep`, deadline heap, cancel-on-drop, driver loop), cancellation (`CancellationToken`,
 `with_cancellation`, `timeout`, cancel safety). The `unsafe` code here is checked with
 `cargo +nightly miri test --lib async_internals`.
+
+### Compiler Literacy
+Ordered drills: mir_reading (real rustc 1.97 `-Zunpretty=mir` dumps, a parser for the text format,
+CFG/borrow/debug-name queries), region_constraints (regions as point sets, liveness + outlives
+constraints, least-fixpoint solver that reproduces rustc's *Inferred Region Values* from a captured
+`-Zdump-mir=nll` file, universal-region checks and blame paths), nll (a miniature `rustc_borrowck`
+over a toy MIR: liveness, constraint generation, reborrow constraints, kills, two-phase borrows,
+drop-liveness, access checks producing E0499/E0502/E0503/E0505/E0506/E0515/E0597),
+borrowck_case_studies (NLL problem cases #1–#4 and the common error codes, each as a rustc
+doctest, a fix, and a toy-MIR encoding checked against rustc's verdict via `CASES`).
 
 ### Cryptography
 jwt, rand, sha256.

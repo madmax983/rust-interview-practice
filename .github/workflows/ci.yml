@@ -73,6 +73,26 @@ jobs:
       # Profiles each good/bad workload pair and fails if a gate doesn't fire.
       - run: target/release/perf_drills valgrind-check
 
+  doc-error-codes:
+    name: compile_fail error codes (nightly)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: nightly-doc
+      # rustdoc only verifies the `E0xxx` in `compile_fail,E0xxx` doctests on
+      # nightly; on stable any compile error passes. Run the modules whose notes
+      # depend on exact error codes.
+      # The notes describe the NLL borrow checker that stable ships. Nightly
+      # defaults to Polonius (`-Zpolonius=next`), which accepts NLL problem
+      # case #3, so pin NLL here. The stable `test` job is the tripwire for
+      # Polonius reaching stable.
+      - run: cargo test --doc -- compiler_literacy trait_dark_corners
+        env:
+          RUSTDOCFLAGS: -Zpolonius=no
+
   fuzz:
     name: fuzz smoke test (nightly)
     runs-on: ubuntu-latest

@@ -45,6 +45,7 @@ rust-interview-practice/
 │   │   ├── two_sum.rs              # #1 - Hash map lookup optimization
 │   │   ├── three_sum.rs            # #15 - Two pointers, deduplication
 │   │   └── trapping_rain_water.rs  # #42 - Two pointers, DP alternatives
+│   ├── compiler_literacy/      # MIR reading, NLL region constraints, mini borrowck, case studies
 │   ├── strings/                # String manipulation algorithms
 │   │   └── longest_substring_without_repeating.rs # #3 - Sliding window
 │   └── ...                     # More categories coming

@@ -6,6 +6,7 @@ pub mod arrays;
 pub mod async_internals;
 pub mod backtracking;
 pub mod binary_search;
+pub mod compiler_literacy;
 pub mod concurrency;
 pub mod cryptography;
 pub mod data_structures;

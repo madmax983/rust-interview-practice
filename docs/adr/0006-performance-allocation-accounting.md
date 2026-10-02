@@ -1,4 +1,4 @@
-# ADR 0005: Where allocation accounting and profilers live
+# ADR 0006: Where allocation accounting and profilers live
 
 **Date:** 2026-10-02
 **Status:** Accepted
