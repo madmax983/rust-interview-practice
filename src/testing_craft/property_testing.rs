@@ -562,10 +562,10 @@ mod tests {
 
     #[test]
     fn test_shrink_candidates() {
-        assert!(0u8.shrink().is_empty());
+        assert_eq!(0u8.shrink(), Vec::<u8>::new());
         assert_eq!(9u8.shrink(), vec![0, 4, 8]);
-        assert!(Vec::<u8>::new().shrink().is_empty());
-        assert!(SetOp::Insert(0).shrink().is_empty());
+        assert_eq!(Vec::<u8>::new().shrink(), Vec::<Vec<u8>>::new());
+        assert_eq!(SetOp::Insert(0).shrink(), Vec::<SetOp>::new());
         assert_eq!(
             SetOp::Remove(2).shrink(),
             vec![SetOp::Remove(0), SetOp::Remove(1), SetOp::Remove(1)]

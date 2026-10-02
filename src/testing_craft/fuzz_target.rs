@@ -834,7 +834,7 @@ mod tests {
         let crash = report.crash.expect("the fragile parser must crash");
         // Regression pattern: replay the crasher against the hardened parser.
         fuzz_parse(&crash.input);
-        assert!(!crash.message.is_empty());
+        assert_ne!(crash.message, "");
     }
 
     #[test]

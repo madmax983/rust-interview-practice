@@ -828,7 +828,10 @@ mod tests {
             LogStore::recover(&mut disk, "wal").unwrap(),
             vec![b"a".to_vec(), vec![], b"ccc".to_vec()]
         );
-        assert!(LogStore::recover(&mut disk, "missing").unwrap().is_empty());
+        assert_eq!(
+            LogStore::recover(&mut disk, "missing").unwrap(),
+            Vec::<Vec<u8>>::new()
+        );
     }
 
     #[test]

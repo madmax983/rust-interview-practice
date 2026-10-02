@@ -69,7 +69,7 @@ impl SimRng {
     }
 
     /// Picks a random element of `items`, or `None` when it is empty.
-    pub fn pick<'a, T>(&mut self, items: &'a [T]) -> Option<&'a T> {
+    pub const fn pick<'a, T>(&mut self, items: &'a [T]) -> Option<&'a T> {
         if items.is_empty() {
             None
         } else {
