@@ -270,7 +270,11 @@ impl<T: Clone> RaftNode<T> {
     fn become_follower(&mut self) {
         self.role = Role::Follower;
         self.votes_received.clear();
-        self.election_elapsed = 0;
+        // GOTCHA: do NOT reset `election_elapsed` here. Raft resets the timer
+        // only on a valid AppendEntries or a *granted* vote. Resetting on every
+        // higher term lets a candidate with a stale log, which can never win,
+        // silence everyone else's timer forever (a livelock found by
+        // deterministic simulation in `testing_craft::simulation`).
     }
 
     fn become_candidate(&mut self) {
@@ -694,5 +698,75 @@ mod tests {
 
         assert_eq!(node.role, Role::Follower);
         assert_eq!(node.current_term, 5);
+    }
+
+    /// Regression (found by `testing_craft::simulation`): a rejected
+    /// higher-term `RequestVote` must not reset the election timer. Otherwise
+    /// a node with a stale log and a short timeout can keep starting
+    /// elections it cannot win, and each one silences every other node's
+    /// timer, so the cluster never elects a leader again (livelock).
+    #[test]
+    fn test_rejected_higher_term_vote_does_not_reset_election_timer() {
+        use super::Consensus;
+        let mut node: RaftNode<String> = RaftNode::new(1, vec![2, 3], 10, 5);
+        node.log.push(LogEntry {
+            term: 1,
+            data: Some("committed".to_string()),
+        });
+        node.current_term = 1;
+        for _ in 0..6 {
+            node.tick();
+        }
+        assert_eq!(node.election_elapsed, 6);
+
+        // Candidate 2 has a higher term but a stale (empty) log: vote rejected.
+        node.step(Envelope {
+            to: 1,
+            from: 2,
+            msg: Message::RequestVote {
+                term: 7,
+                candidate_id: 2,
+                last_log_index: 0,
+                last_log_term: 0,
+            },
+        });
+        assert_eq!(node.current_term, 7);
+        assert_eq!(node.role, Role::Follower);
+        assert!(matches!(
+            node.messages[0].msg,
+            Message::RequestVoteResponse {
+                vote_granted: false,
+                ..
+            }
+        ));
+        assert_eq!(node.election_elapsed, 6, "timer must keep running");
+
+        // So this node, which has the up-to-date log, can still stand.
+        for _ in 0..4 {
+            node.tick();
+        }
+        assert_eq!(node.role, Role::Candidate);
+        assert_eq!(node.current_term, 8);
+    }
+
+    #[test]
+    fn test_granted_vote_resets_election_timer() {
+        use super::Consensus;
+        let mut node: RaftNode<String> = RaftNode::new(1, vec![2, 3], 10, 5);
+        for _ in 0..6 {
+            node.tick();
+        }
+        node.step(Envelope {
+            to: 1,
+            from: 2,
+            msg: Message::RequestVote {
+                term: 1,
+                candidate_id: 2,
+                last_log_index: 0,
+                last_log_term: 0,
+            },
+        });
+        assert_eq!(node.voted_for, Some(2));
+        assert_eq!(node.election_elapsed, 0);
     }
 }

@@ -29,7 +29,7 @@
 //! - `tests/dhat_heap.rs` uses `dhat-rs` in-process heap assertions
 //!   (`cargo test --features dhat-heap --test dhat_heap`).
 //!
-//! See `docs/adr/0002-performance-allocation-accounting.md` for why the
+//! See `docs/adr/0005-performance-allocation-accounting.md` for why the
 //! counting allocator, `dhat-rs` and Valgrind each live where they do.
 
 pub mod alloc_accounting;
