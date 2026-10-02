@@ -3,6 +3,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub mod arrays;
+pub mod async_internals;
 pub mod backtracking;
 pub mod binary_search;
 pub mod concurrency;
