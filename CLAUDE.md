@@ -20,8 +20,13 @@ autocomplete isn't available.
 - **Always-on dependency:** `crc32fast` (the only non-optional dependency). Everything else is
   behind an optional feature flag.
 - **Binaries:** `src/main.rs` (a placeholder `Hello, world!`), `src/bin/bench_sha256.rs`
-  (a benchmark helper for the cryptography module), and `src/bin/miri_counterexample.rs`
-  (runs one `unsafe_semantics` counterexample; refuses to run UB outside Miri).
+  (a benchmark helper for the cryptography module), `src/bin/miri_counterexample.rs`
+  (runs one `unsafe_semantics` counterexample; refuses to run UB outside Miri), and
+  `src/bin/perf_drills.rs` (the `performance` workloads: wall-clock `bench`,
+  `run <workload>` as a Valgrind target, reports over callgrind/cachegrind/DHAT output, and the
+  `valgrind-check` CI gate).
+- **Integration tests:** `tests/bench_sha256.rs`, and `tests/dhat_heap.rs` (`dhat-rs` heap
+  assertions; requires `--features dhat-heap`).
 - **Fuzz crate:** `fuzz/` is a separate `cargo-fuzz` crate (its own `[workspace]`, not built by
   `cargo test` at the root) holding the libFuzzer targets for `testing_craft::fuzz_target`.
 - **Workspace:** the root `Cargo.toml` is also a workspace (`members = [".", "macros"]`,
@@ -48,7 +53,8 @@ autocomplete isn't available.
     ├── main.rs                 # Placeholder binary
     ├── bin/
     │   ├── bench_sha256.rs     # sha256 benchmark helper
-    │   └── miri_counterexample.rs # runs one unsafe_semantics counterexample under Miri
+    │   ├── miri_counterexample.rs # runs one unsafe_semantics counterexample under Miri
+    │   └── perf_drills.rs      # performance workloads: bench, valgrind target, valgrind gates
     ├── fundamentals/           # Core Rust patterns (not interview problems)
     ├── arrays/                 # Array problems
     ├── async_internals/        # Hand-built async machinery (wakers, executor, timers, cancellation)
@@ -68,6 +74,7 @@ autocomplete isn't available.
     ├── serialization/          # Encoders/decoders (json, protobuf, msgpack, ...)
     ├── data_structures/        # Advanced data structures (tries, filters, caches, ...)
     ├── design_patterns/        # Rust-flavored design patterns
+    ├── performance/            # Benchmark design, allocation accounting, cache locality, regressions, valgrind
     ├── systems/                # Larger systems-design exercises (LSM, raft, VM, ...)
     ├── testing_craft/          # Proptest, fuzz, Loom, crash injection, deterministic simulation
     └── unsafe_semantics/       # Stacked/Tree Borrows models + Miri-checked UB counterexamples
@@ -81,7 +88,7 @@ therefore appear under more than one category, e.g. rotated-array search under b
 and `binary_search`). Beyond the classic interview categories, this repo also contains larger
 implementation exercises (`data_structures`, `systems`, `networking`, `serialization`,
 `cryptography`, `concurrency`, `async_internals`, `compiler_literacy`, `design_patterns`,
-`testing_craft`, `unsafe_semantics`) that are practiced the same way with gittype.
+`testing_craft`, `unsafe_semantics`, `performance`) that are practiced the same way with gittype.
 
 ## Fundamentals Category
 
@@ -151,7 +158,8 @@ All feature flags are declared in `Cargo.toml`. Everything except `crc32fast` is
 | `serde-patterns` | serde, serde_json, serde_yaml, toml, bincode | `fundamentals::serde_patterns` |
 | `cli-patterns` | ratatui 0.29, crossterm, clap | `fundamentals::cli_patterns` |
 | `proc-macro-patterns` | syn (full, visit-mut, extra-traits), quote, proc-macro2 | `fundamentals::proc_macros` (and the `macros/` shim crate) |
-| `testing-extras` | proptest | proptest suites in `fundamentals::testing` and `testing_craft::property_testing` |
+| `testing-extras` | proptest | proptest suites in `fundamentals::testing`, `testing_craft::property_testing` and `performance` |
+| `dhat-heap` | dhat | `tests/dhat_heap.rs` (`dhat-rs` in-process heap profiling); no library code changes |
 | `simd-patterns` | *(nothing)* | **no-op**, retained for backward compatibility only |
 
 Enable features on stable, e.g.:
@@ -195,6 +203,23 @@ SIMD cfg: `--all-features` must never swap std's primitives for loom's (loom typ
 
 ```bash
 RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model
+```
+
+### Allocation accounting and Valgrind (`performance`)
+
+`performance::alloc_accounting::CountingAlloc<System>` is installed as the global allocator
+**only in the lib's unit-test binary** (`#[cfg(test)]`), with thread-local counters so parallel
+tests don't mix. `dhat-rs` needs the global-allocator slot too, so it lives in its own integration
+test behind `dhat-heap`. Valgrind is driven from `perf_drills`, not from `cargo test`. See
+`docs/adr/0006-performance-allocation-accounting.md`.
+
+```bash
+cargo test --features dhat-heap --test dhat_heap
+cargo run --release --bin perf_drills -- bench             # real clock, allocation counts
+CARGO_PROFILE_RELEASE_DEBUG=true cargo build --release --bin perf_drills
+target/release/perf_drills valgrind-check                  # needs valgrind on PATH
+valgrind --tool=callgrind --callgrind-out-file=cg.out target/release/perf_drills run transpose_naive
+target/release/perf_drills callgrind cg.out                # top functions by Ir
 ```
 
 ### Fuzzing (nightly)
@@ -264,6 +289,9 @@ optimal solution.
 > same way rustc does (see `docs/adr/0005-compiler-literacy-verified-against-rustc.md`).
 > `testing_craft/` follows a related shape: a correct implementation, a deliberately buggy
 > variant (suffix `_buggy`), and tests showing the technique catches the bug and passes the fix.
+> `performance/` does the same with measurement mistakes (`bench_single_shot_buggy`,
+> `compare_means_buggy`, ...) and pairs careless/deliberate implementations
+> (`join_naive`/`join_presized`) whose difference the tests pin with exact counts.
 
 ## File Template (interview problems)
 
@@ -388,6 +416,7 @@ Every job is blocking:
 - **fmt** — `cargo fmt --all -- --check` (blocking).
 - **test & build** — `cargo test` on default features, `cargo test --features serde-patterns`,
   `cargo test --features testing-extras --lib` (proptest suites),
+  `cargo test --features dhat-heap --test dhat_heap`,
   `cargo test --features proc-macro-patterns fundamentals::proc_macros`,
   `cargo test -p rust-interview-practice-macros` (proc-macro shim: e2e + `compile_fail`
   doctests), and builds for `cli-patterns`, `async-parallel`, and `--all-features` on stable
@@ -399,6 +428,9 @@ Every job is blocking:
 - **fuzz** — nightly smoke run of each `cargo-fuzz` target for 30 seconds.
 - **verified** — `cargo test` in `verified/`, then downloads the pinned Verus release and runs
   `cargo verus verify`.
+- **valgrind** — builds `perf_drills` in release and runs `perf_drills valgrind-check`: each
+  good/bad workload pair under callgrind (`Ir`), cachegrind (D1 misses, pinned cache geometry)
+  and DHAT (heap blocks, peak bytes); fails if a gate doesn't flag the bad variant.
 - **clippy** — `cargo clippy --workspace --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
   -D warnings`. CI uses the latest stable clippy, which can add lints before your local
   toolchain does; run `cargo +stable clippy` if CI flags something local didn't.
@@ -609,6 +641,19 @@ job_queue, lfu_cache, log_structured_storage, lru_cache, lsm_tree, metrics_regis
 pub_sub, raft, rate_limiter, reactive_signals, slab_allocator, snowflake, sql_engine,
 task_scheduler, template_engine, tracing, ttl_cache, uuid, vdom, vector_clock, virtual_machine,
 w_tiny_lfu_cache, wal, write_strategies.
+
+### Performance
+bench_harness (injectable `Clock`, `ManualClock` with timer resolution, batch calibration,
+`bench`/`bench_batched`, robust `Stats` with MAD and Tukey outliers, `_buggy` single-shot and
+setup-in-timing harnesses), alloc_accounting (`CountingAlloc` global allocator with per-thread
+counters, `measure`, `AllocBudget`, careless-vs-deliberate allocation drills, reusable
+`LineEncoder`), cache_locality (set-associative LRU `CacheSim`, `Traversal` trait with
+`RowMajor`/`ColumnMajor`/`Tiled`, transpose, `AoS` vs `SoA`, pointer chasing, field-order padding,
+`CachePadded` and false sharing), regression (median+MAD thresholds, Mann-Whitney U, seeded
+bootstrap CI, `Baseline` text file, `SuiteReport`, exact `compare_counts` gates,
+`compare_means_buggy`), profilers (callgrind/cachegrind `CostProfile` parser with name
+compression and call costs, DHAT/`dhat-rs` `DhatProfile` parser, Valgrind command lines,
+`PINNED_CACHE_GEOMETRY`).
 
 ### Testing Craft
 sim_rng (seeded `SplitMix64` for reproducible tests), property_testing (round-trip / invariant /

@@ -33,6 +33,8 @@ jobs:
         run: cargo test --features serde-patterns --verbose
       - name: Test (testing-extras / proptest)
         run: cargo test --features testing-extras --lib --verbose
+      - name: Test (dhat-heap / dhat-rs heap assertions)
+        run: cargo test --features dhat-heap --test dhat_heap --verbose
       - name: Test (proc-macro-patterns)
         run: cargo test --features proc-macro-patterns fundamentals::proc_macros --verbose
       - name: Test (proc-macro shim crate, end to end + compile_fail doctests)
@@ -56,6 +58,24 @@ jobs:
         with:
           key: loom
       - run: cargo test --release --lib testing_craft::loom_model
+
+  valgrind:
+    name: valgrind gates (callgrind, cachegrind, dhat)
+    runs-on: ubuntu-latest
+    env:
+      # Symbols and line numbers for the profiles, optimizations kept.
+      CARGO_PROFILE_RELEASE_DEBUG: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: valgrind
+      - name: Install valgrind
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+      - run: cargo build --release --bin perf_drills
+      # Profiles each good/bad workload pair and fails if a gate doesn't fire.
+      - run: target/release/perf_drills valgrind-check
 
   doc-error-codes:
     name: compile_fail error codes (nightly)
