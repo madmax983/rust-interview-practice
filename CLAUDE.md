@@ -19,8 +19,9 @@ autocomplete isn't available.
   a cfg flag — see [Feature Flags](#feature-flags).
 - **Always-on dependency:** `crc32fast` (the only non-optional dependency). Everything else is
   behind an optional feature flag.
-- **Binaries:** `src/main.rs` (a placeholder `Hello, world!`) and `src/bin/bench_sha256.rs`
-  (a benchmark helper for the cryptography module).
+- **Binaries:** `src/main.rs` (a placeholder `Hello, world!`), `src/bin/bench_sha256.rs`
+  (a benchmark helper for the cryptography module), and `src/bin/miri_counterexample.rs`
+  (runs one `unsafe_semantics` counterexample; refuses to run UB outside Miri).
 
 ## Directory Structure
 
@@ -32,7 +33,8 @@ autocomplete isn't available.
     ├── lib.rs                  # Module exports (pub mod for every category)
     ├── main.rs                 # Placeholder binary
     ├── bin/
-    │   └── bench_sha256.rs     # sha256 benchmark helper
+    │   ├── bench_sha256.rs     # sha256 benchmark helper
+    │   └── miri_counterexample.rs # runs one unsafe_semantics counterexample under Miri
     ├── fundamentals/           # Core Rust patterns (not interview problems)
     ├── arrays/                 # Array problems
     ├── strings/                # String manipulation problems
@@ -50,7 +52,8 @@ autocomplete isn't available.
     ├── serialization/          # Encoders/decoders (json, protobuf, msgpack, ...)
     ├── data_structures/        # Advanced data structures (tries, filters, caches, ...)
     ├── design_patterns/        # Rust-flavored design patterns
-    └── systems/                # Larger systems-design exercises (LSM, raft, VM, ...)
+    ├── systems/                # Larger systems-design exercises (LSM, raft, VM, ...)
+    └── unsafe_semantics/       # Stacked/Tree Borrows models + Miri-checked UB counterexamples
 ```
 
 ## Category Organization
@@ -60,7 +63,8 @@ When a problem fits multiple categories, its **primary data structure** wins (so
 therefore appear under more than one category, e.g. rotated-array search under both `arrays`
 and `binary_search`). Beyond the classic interview categories, this repo also contains larger
 implementation exercises (`data_structures`, `systems`, `networking`, `serialization`,
-`cryptography`, `concurrency`, `design_patterns`) that are practiced the same way with gittype.
+`cryptography`, `concurrency`, `design_patterns`, `unsafe_semantics`) that are practiced the same
+way with gittype.
 
 ## Fundamentals Category
 
@@ -164,8 +168,8 @@ Each problem also exports a main function (e.g. `length_of_longest_substring`) t
 optimal solution.
 
 > Note: the larger implementation exercises under `systems/`, `data_structures/`,
-> `networking/`, `serialization/`, `cryptography/`, `concurrency/`, and `design_patterns/`
-> are single cohesive implementations rather than three-tier brute/optimized/optimal problems.
+> `networking/`, `serialization/`, `cryptography/`, `concurrency/`, `design_patterns/`, and
+> `unsafe_semantics/` are single cohesive implementations rather than three-tier brute/optimized/optimal problems.
 
 ## File Template (interview problems)
 
@@ -285,7 +289,7 @@ cargo test
 ## Continuous Integration
 
 CI runs on every push and pull request to `trunk` via `.github/workflows/ci.yml`.
-It has three jobs:
+It has four jobs:
 
 - **fmt** — `cargo fmt --all -- --check` (blocking).
 - **test & build** — `cargo test` on default features, `cargo test --features serde-patterns`,
@@ -293,6 +297,9 @@ It has three jobs:
 - **clippy** — `cargo clippy --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
   -D warnings`, currently **non-blocking** (`continue-on-error: true`) while the repo-wide lint
   sweep finishes; flip it to blocking once the sweep lands.
+- **miri** — on the latest nightly that ships Miri: `cargo miri test --lib unsafe_semantics` under
+  Stacked Borrows and again with `MIRIFLAGS=-Zmiri-tree-borrows`, then
+  `scripts/miri-counterexamples.sh` (blocking). See [Unsafe Semantics & Miri](#unsafe-semantics--miri).
 
 Run these locally before pushing to keep CI green.
 
@@ -302,7 +309,32 @@ Run these locally before pushing to keep CI green.
 - **Include the canonical examples** as test cases.
 - **Add edge cases:** empty inputs, single elements, max constraints.
 - **Cross-implementation tests:** verify all approaches return the same result.
-- The library currently has a large passing unit-test suite (~1731 tests at last count).
+- The library currently has a large passing unit-test suite (~1820 tests at last count).
+
+## Unsafe Semantics & Miri
+
+`src/unsafe_semantics/` teaches Rust's aliasing models (decision record:
+`docs/adr/0001-miri-gated-aliasing-counterexamples.md`):
+
+- `trace.rs` — `Op` traces (`mut_ref`, `shared_ref`, `raw`, `read`, `write`, `mut_arg`, ...)
+  shared by both models.
+- `stacked_borrows.rs` / `tree_borrows.rs` — executable toy models of each rule set.
+- `counterexamples.rs` — real `unsafe` Rust: each `*_unsound` (UB) has a `*_sound` fix, and
+  `CATALOG` records Miri's verdict for the UB half under SB and TB plus a trace of both halves.
+
+**Hard rule: never call a `*_unsound` function outside Miri** — not from tests, doctests, or
+benches. It is UB natively. Run them only via the binary:
+
+```bash
+cargo +nightly miri run --bin miri_counterexample -- <name>                     # Stacked Borrows
+MIRIFLAGS=-Zmiri-tree-borrows cargo +nightly miri run --bin miri_counterexample -- <name>
+scripts/miri-counterexamples.sh [name...]   # checks every CATALOG verdict against real Miri
+cargo +nightly miri test --lib unsafe_semantics   # sound halves + models, under Miri
+```
+
+To add a counterexample: write the `*_unsound`/`*_sound` pair, add both traces and a `CATALOG`
+entry, record the verdicts that `scripts/miri-counterexamples.sh <name>` reports, and make the
+unit tests pass — they require the toy models to reproduce those verdicts on the traces.
 
 ## Clippy Allowances
 
@@ -453,6 +485,11 @@ job_queue, lfu_cache, log_structured_storage, lru_cache, lsm_tree, metrics_regis
 pub_sub, raft, rate_limiter, reactive_signals, slab_allocator, snowflake, sql_engine,
 task_scheduler, template_engine, tracing, ttl_cache, uuid, vdom, vector_clock, virtual_machine,
 w_tiny_lfu_cache, wal, write_strategies.
+
+### Unsafe Semantics
+trace, stacked_borrows, tree_borrows, counterexamples (write_through_shared,
+stale_mut_after_parent_write, raw_invalidated_by_new_mut, shared_ref_outlives_raw_write,
+protector_violation, out_of_range_raw, read_parent_then_write_child, unused_mut_reborrow).
 
 ## Future Enhancements
 

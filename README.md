@@ -153,6 +153,19 @@ gittype --file src/fundamentals/closures.rs
 
 **Pro tip:** Start with fundamentals (smaller, focused patterns) before tackling full algorithm implementations.
 
+#### Unsafe Semantics with Miri
+
+`src/unsafe_semantics/` contains toy Stacked Borrows and Tree Borrows models plus real `unsafe`
+counterexamples that are undefined behaviour under one or both models, each with a sound fix.
+The UB halves only ever run under [Miri](https://github.com/rust-lang/miri):
+
+```bash
+rustup toolchain install nightly --component miri
+scripts/miri-counterexamples.sh                                   # every verdict, SB and TB
+cargo +nightly miri run --bin miri_counterexample -- protector_violation
+MIRIFLAGS=-Zmiri-tree-borrows cargo +nightly miri run --bin miri_counterexample -- out_of_range_raw
+```
+
 ## Algorithms Implemented
 
 ### Arrays
