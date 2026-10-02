@@ -38,6 +38,7 @@ rust-interview-practice/
 │   │   ├── pattern_matching.rs     # match, if let, destructuring, guards
 │   │   ├── smart_pointers.rs       # Box, Rc, RefCell, Cow, ownership patterns
 │   │   ├── strings.rs              # String/&str operations, parsing
+│   │   ├── trait_dark_corners.rs   # GATs, HRTBs, coherence, dyn compatibility
 │   │   ├── types_and_traits.rs     # Generics, trait bounds, From/Into, type state
 │   │   └── async_and_parallel.rs   # tokio async/await, rayon (coming soon)
 │   ├── arrays/                 # Array-based algorithms
@@ -70,6 +71,7 @@ The `fundamentals/` directory contains **11 comprehensive modules** covering ess
 | **pattern_matching.rs** | Match expressions | Destructuring, guards, @ bindings, or patterns, slice patterns |
 | **smart_pointers.rs** | Ownership patterns | Box, Rc, RefCell, Cow, Rc<RefCell<T>> for graphs |
 | **strings.rs** | String operations | String vs &str, char iteration, parsing, splitting, building |
+| **trait_dark_corners.rs** | Advanced traits | GATs, HRTBs (`for<'a>`), orphan rule & overlap, dyn compatibility (`compile_fail` drills) |
 | **types_and_traits.rs** | Generics & traits | Type parameters, bounds, From/Into, impl Trait, type state |
 
 **Coming soon:** `async_and_parallel.rs` - tokio async/await patterns and rayon data parallelism
