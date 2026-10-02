@@ -869,15 +869,25 @@ dependencies = [
  "crossterm",
  "futures",
  "loom",
+ "proc-macro2",
  "proptest",
+ "quote",
  "ratatui",
  "rayon",
  "serde",
  "serde_json",
  "serde_yaml",
+ "syn",
  "tokio",
  "tokio-stream",
  "toml",
+]
+
+[[package]]
+name = "rust-interview-practice-macros"
+version = "0.1.0"
+dependencies = [
+ "rust-interview-practice",
 ]
 
 [[package]]
