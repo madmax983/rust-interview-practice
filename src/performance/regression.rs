@@ -284,7 +284,8 @@ pub fn mann_whitney_u(a: &[f64], b: &[f64]) -> Option<RankTest> {
         let avg_rank = (i + j) as f64 / 2.0 + 1.0; // ranks are 1-based
         let ties = (j - i + 1) as f64;
         tie_term += ties.powi(3) - ties;
-        rank_sum_a += avg_rank * all[i..=j].iter().filter(|e| e.1).count() as f64;
+        let from_a = all[i..=j].iter().filter(|e| e.1).count() as f64;
+        rank_sum_a = avg_rank.mul_add(from_a, rank_sum_a);
         i = j + 1;
     }
 

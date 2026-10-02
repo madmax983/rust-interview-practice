@@ -696,7 +696,7 @@ summary: 2024 2 2 808 358 20 0 0 0
             p.top_self("Ir", 3),
             [("t::col", 500), ("t::row", 300), ("leaf", 190)]
         );
-        assert!(p.top_self("nope", 3).is_empty());
+        assert_eq!(p.top_self("nope", 3), Vec::<(&str, u64)>::new());
         assert_eq!(p.self_cost_matching("t::", "Ir"), Some(810));
     }
 

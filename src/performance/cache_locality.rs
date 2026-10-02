@@ -547,7 +547,7 @@ pub fn build_chain(order: &[usize]) -> (Vec<ChainNode>, Option<u32>) {
 /// Walks the list from `head`, summing values. Each step is a dependent load:
 /// the CPU cannot fetch node k+1 until node k has arrived.
 #[must_use]
-pub fn sum_chain(nodes: &[ChainNode], head: Option<u32>) -> u64 {
+pub const fn sum_chain(nodes: &[ChainNode], head: Option<u32>) -> u64 {
     let mut sum = 0_u64;
     let mut cur = head;
     while let Some(i) = cur {
@@ -919,7 +919,7 @@ mod tests {
         assert_eq!(sum_chain(&nodes, head), (0..100).sum::<u64>());
         assert_eq!(chain_trace(&nodes, head).len(), 100);
         let (empty, none) = build_chain(&[]);
-        assert!(empty.is_empty());
+        assert_eq!(empty, Vec::<ChainNode>::new());
         assert_eq!(sum_chain(&empty, none), 0);
     }
 
@@ -1000,7 +1000,7 @@ mod tests {
     fn test_parallel_counts_are_exact() {
         assert_eq!(parallel_count_adjacent(4, 1_000), vec![1_000; 4]);
         assert_eq!(parallel_count_padded(4, 1_000), vec![1_000; 4]);
-        assert!(parallel_count_padded(0, 10).is_empty());
+        assert_eq!(parallel_count_padded(0, 10), Vec::<u64>::new());
     }
 }
 

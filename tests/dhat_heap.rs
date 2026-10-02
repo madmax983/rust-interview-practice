@@ -69,7 +69,13 @@ fn dhat_heap_drills() {
     // and `DhatProfile` reads it back.
     let path = std::env::temp_dir().join(format!("dhat-heap-{}.json", std::process::id()));
     {
-        let _profiler = dhat::Profiler::builder().file_name(&path).build();
+        // Keep whole stacks: by default dhat-rs trims backtraces, and std's
+        // `format!` -> `fmt::write` -> `RawVec::grow` chain alone can fill the
+        // trimmed stack before reaching the caller (it does on Rust 1.99).
+        let _profiler = dhat::Profiler::builder()
+            .file_name(&path)
+            .trim_backtraces(None)
+            .build();
         let items: Vec<(u32, &str)> = (0..500).map(|i| (i, "item")).collect();
         std::hint::black_box(render_lines_naive(&items));
     }
@@ -78,8 +84,13 @@ fn dhat_heap_drills() {
     let profile = DhatProfile::parse(&text).expect("dhat-rs JSON parses");
     assert_eq!(profile.mode, "rust-heap");
     assert!(profile.total_blocks() >= 500, "{}", profile.total_blocks());
+    let top_frames = profile
+        .top_sites_by_blocks(1)
+        .first()
+        .map(|site| site.frames.clone())
+        .unwrap_or_default();
     assert!(
         profile.sites_matching("render_lines_naive").count() >= 1,
-        "no site attributed to render_lines_naive"
+        "no site attributed to render_lines_naive; heaviest site's frames: {top_frames:#?}"
     );
 }
