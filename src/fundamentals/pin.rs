@@ -558,7 +558,6 @@ impl Drop for Waiter {
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
 /// Boxes any future (even a `!Unpin` one) into an `Unpin` [`BoxFuture`].
-#[must_use]
 pub fn boxed<'a, F: Future + 'a>(fut: F) -> BoxFuture<'a, F::Output> {
     Box::pin(fut)
 }
