@@ -88,6 +88,10 @@ that are essential for fluent coding — patterns you'll type repeatedly in any 
 - `smart_pointers.rs` — Box, Rc, RefCell, Cow, ownership patterns
 - `strings.rs` — String/&str operations, parsing, manipulation
 - `testing.rs` — unit tests, fixtures, TDD workflow, doc tests
+- `trait_dark_corners.rs` — GATs (lending iterator, pointer families), HRTBs (`for<'a>`,
+  `DeserializeOwned`-style bounds), coherence/orphan rule, dyn compatibility (E0038, dyn
+  clone/eq, upcasting, object lifetimes). Every "won't compile" claim is a `compile_fail`
+  doctest, so a toolchain that starts accepting one fails `cargo test` and flags the note.
 - `types_and_traits.rs` — generics, trait bounds, From/Into, trait objects, type state
 - `unsafe_rust.rs` — raw pointers, FFI, unsafe traits, safety invariants
 
@@ -302,7 +306,7 @@ Run these locally before pushing to keep CI green.
 - **Include the canonical examples** as test cases.
 - **Add edge cases:** empty inputs, single elements, max constraints.
 - **Cross-implementation tests:** verify all approaches return the same result.
-- The library currently has a large passing unit-test suite (~1731 tests at last count).
+- The library currently has a large passing unit-test suite (~1797 unit tests at last count).
 
 ## Clippy Allowances
 
@@ -354,7 +358,7 @@ The lists below reflect the modules actually declared in each category's `mod.rs
 ### Fundamentals
 asm, borrowing, closures, collections, concurrency, design_patterns, error_handling,
 error_types, iterators, macros, numeric_ops, pattern_matching, performance, simd,
-smart_pointers, strings, testing, types_and_traits, unsafe_rust.
+smart_pointers, strings, testing, trait_dark_corners, types_and_traits, unsafe_rust.
 Feature-gated: async_and_parallel (`async-parallel`), serde_patterns (`serde-patterns`),
 cli_patterns (`cli-patterns`).
 
