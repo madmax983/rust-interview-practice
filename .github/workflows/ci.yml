@@ -31,12 +31,42 @@ jobs:
         run: cargo test --verbose
       - name: Test (serde-patterns)
         run: cargo test --features serde-patterns --verbose
+      - name: Test (testing-extras / proptest)
+        run: cargo test --features testing-extras --lib --verbose
       - name: Build (cli-patterns)
         run: cargo build --features cli-patterns --verbose
       - name: Build (async-parallel)
         run: cargo build --features async-parallel --verbose
       - name: Build (all-features, stable)
         run: cargo build --all-features --verbose
+
+  loom:
+    name: loom model checking
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: --cfg loom
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: loom
+      - run: cargo test --release --lib testing_craft::loom_model
+
+  fuzz:
+    name: fuzz smoke test (nightly)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@cargo-fuzz
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - name: frame_parse (30s)
+        run: cargo fuzz run frame_parse -- -max_total_time=30
+      - name: frame_structured (30s)
+        run: cargo fuzz run frame_structured -- -max_total_time=30
 
   clippy:
     name: clippy (pedantic)

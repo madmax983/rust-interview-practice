@@ -26,6 +26,12 @@ crossterm = { version = "0.28", optional = true }
 clap = { version = "4.5", features = ["derive"], optional = true }
 crc32fast = "1.5.0"
 
+# Loom model checker for `testing_craft::loom_model`. Gated on the `loom` cfg
+# (NOT a Cargo feature) so `--all-features` never swaps std sync primitives for
+# loom's. Run: RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model
+[target.'cfg(loom)'.dependencies]
+loom = "0.7"
+
 [features]
 # Feature flag for async/parallel fundamentals
 async-parallel = ["tokio", "tokio-stream", "futures", "rayon"]
@@ -54,4 +60,4 @@ simd-patterns = []
 #   1. Add `#![cfg_attr(nightly_portable_simd, feature(portable_simd))]` to the crate root.
 #   2. Compile on nightly: `RUSTFLAGS="--cfg nightly_portable_simd" cargo +nightly build`.
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly_portable_simd)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly_portable_simd)', 'cfg(loom)'] }
