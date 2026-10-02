@@ -1,4 +1,4 @@
-# ADR 0002: Keep `compiler_literacy` honest against real rustc output
+# ADR 0005: Keep `compiler_literacy` honest against real rustc output
 
 **Date:** 2026-10-02
 **Status:** Accepted

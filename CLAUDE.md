@@ -19,10 +19,14 @@ autocomplete isn't available.
   a cfg flag — see [Feature Flags](#feature-flags).
 - **Always-on dependency:** `crc32fast` (the only non-optional dependency). Everything else is
   behind an optional feature flag.
-- **Binaries:** `src/main.rs` (a placeholder `Hello, world!`) and `src/bin/bench_sha256.rs`
-  (a benchmark helper for the cryptography module).
+- **Binaries:** `src/main.rs` (a placeholder `Hello, world!`), `src/bin/bench_sha256.rs`
+  (a benchmark helper for the cryptography module), and `src/bin/miri_counterexample.rs`
+  (runs one `unsafe_semantics` counterexample; refuses to run UB outside Miri).
 - **Fuzz crate:** `fuzz/` is a separate `cargo-fuzz` crate (its own `[workspace]`, not built by
   `cargo test` at the root) holding the libFuzzer targets for `testing_craft::fuzz_target`.
+- **Verified crate:** `verified/` is a separate crate (its own `[workspace]`) holding a
+  Verus-verified `SortedSet`. Plain `cargo test` there runs proptests on stable (ghost code is
+  erased); `cargo verus verify` checks the proofs. See [Verus](#verus-the-verified-crate).
 
 ## Directory Structure
 
@@ -31,11 +35,14 @@ autocomplete isn't available.
 ├── Cargo.toml
 ├── CLAUDE.md
 ├── fuzz/                       # cargo-fuzz crate (nightly): frame_parse, frame_structured
+├── verified/                   # Verus-verified SortedSet + proptests (separate crate)
+├── docs/adr/                   # Architecture Decision Records
 └── src/
     ├── lib.rs                  # Module exports (pub mod for every category)
     ├── main.rs                 # Placeholder binary
     ├── bin/
-    │   └── bench_sha256.rs     # sha256 benchmark helper
+    │   ├── bench_sha256.rs     # sha256 benchmark helper
+    │   └── miri_counterexample.rs # runs one unsafe_semantics counterexample under Miri
     ├── fundamentals/           # Core Rust patterns (not interview problems)
     ├── arrays/                 # Array problems
     ├── async_internals/        # Hand-built async machinery (wakers, executor, timers, cancellation)
@@ -56,7 +63,8 @@ autocomplete isn't available.
     ├── data_structures/        # Advanced data structures (tries, filters, caches, ...)
     ├── design_patterns/        # Rust-flavored design patterns
     ├── systems/                # Larger systems-design exercises (LSM, raft, VM, ...)
-    └── testing_craft/          # Proptest, fuzz targets, Loom models, crash injection
+    ├── testing_craft/          # Proptest, fuzz, Loom, crash injection, deterministic simulation
+    └── unsafe_semantics/       # Stacked/Tree Borrows models + Miri-checked UB counterexamples
 ```
 
 ## Category Organization
@@ -67,7 +75,7 @@ therefore appear under more than one category, e.g. rotated-array search under b
 and `binary_search`). Beyond the classic interview categories, this repo also contains larger
 implementation exercises (`data_structures`, `systems`, `networking`, `serialization`,
 `cryptography`, `concurrency`, `async_internals`, `compiler_literacy`, `design_patterns`,
-`testing_craft`) that are practiced the same way with gittype.
+`testing_craft`, `unsafe_semantics`) that are practiced the same way with gittype.
 
 ## Fundamentals Category
 
@@ -84,6 +92,12 @@ that are essential for fluent coding — patterns you'll type repeatedly in any 
 - `design_patterns.rs` — builder, newtype, type-state, RAII, visitor, strategy
 - `error_handling.rs` — Option/Result combinators, `?` operator
 - `error_types.rs` — thiserror/anyhow-style custom errors, recovery strategies
+- `ffi.rs` — both sides of the C boundary: consuming libc (`strlen`, `qsort` with a generic
+  monomorphised comparator) and exporting a `rip_*` C API with `#[unsafe(no_mangle)]`.
+  `repr(C)`/packed/transparent layouts pinned by `offset_of!` const asserts, a C tagged
+  union, snprintf-style buffers, opaque handles via `Box::into_raw`, `void *user_data`
+  trampolines, destroy notifiers, `catch_unwind` at the boundary, and `"C"` vs `"C-unwind"`
+  (the abort is verified in a child process). See `docs/adr/0003-ffi-exported-symbols.md`.
 - `iterators.rs` — map, filter, fold, zip, windows, and other iterator patterns
 - `macros.rs` — declarative macros, repetition, DSLs, debugging
 - `numeric_ops.rs` — bit manipulation, safe arithmetic, number algorithms
@@ -189,6 +203,21 @@ codes:
 cargo +nightly test --doc -- compiler_literacy trait_dark_corners
 ```
 
+### Verus (the verified crate)
+
+`verified/src/lib.rs` follows SPEC → PROOF → RED → GREEN in one file: the spec states every
+operation against the abstract `Set<u64>`, Verus/Z3 prove the bodies, and proptests check the same
+compiled code against a `BTreeSet` model. Verus and `vstd` versions are pinned together: the
+`vstd` crate version in `verified/Cargo.toml` must match the Verus release named in CI
+(`VERUS_VERSION`), per Verus's `cargo-verus/toolchain-manifests`. Bump both together. See
+`docs/adr/0004-verus-verified-crate.md`.
+
+```bash
+cd verified
+cargo test            # stable Rust, specs erased
+cargo verus verify    # needs Verus 0.2026.09.27.3cf1832 + rustup toolchain 1.98.1
+```
+
 ## Three-Implementation Pattern (Interview Problems)
 
 Classic interview problems (arrays, strings, trees, DP, etc.) typically include **three
@@ -211,12 +240,12 @@ Each problem also exports a main function (e.g. `length_of_longest_substring`) t
 optimal solution.
 
 > Note: the larger implementation exercises under `systems/`, `data_structures/`,
-> `networking/`, `serialization/`, `cryptography/`, `concurrency/`, `async_internals/`, and
-> `design_patterns/`
+> `networking/`, `serialization/`, `cryptography/`, `concurrency/`, `async_internals/`,
+> `design_patterns/`, and `unsafe_semantics/`
 > are single cohesive implementations rather than three-tier brute/optimized/optimal problems.
 > `compiler_literacy/` case studies come in threes instead: a real-Rust doctest (`compile_fail`
 > when rejected), a fixed function, and a toy-MIR encoding the mini borrow checker must judge the
-> same way rustc does (see `docs/adr/0002-compiler-literacy-verified-against-rustc.md`).
+> same way rustc does (see `docs/adr/0005-compiler-literacy-verified-against-rustc.md`).
 > `testing_craft/` follows a related shape: a correct implementation, a deliberately buggy
 > variant (suffix `_buggy`), and tests showing the technique catches the bug and passes the fix.
 
@@ -338,7 +367,7 @@ cargo test
 ## Continuous Integration
 
 CI runs on every push and pull request to `trunk` via `.github/workflows/ci.yml`.
-It has three jobs:
+Every job is blocking:
 
 - **fmt** — `cargo fmt --all -- --check` (blocking).
 - **test & build** — `cargo test` on default features, `cargo test --features serde-patterns`,
@@ -348,9 +377,14 @@ It has three jobs:
 - **doc-error-codes** — nightly `cargo test --doc -- compiler_literacy trait_dark_corners`, so the
   `E0xxx` codes on `compile_fail` doctests are actually verified.
 - **fuzz** — nightly smoke run of each `cargo-fuzz` target for 30 seconds.
+- **verified** — `cargo test` in `verified/`, then downloads the pinned Verus release and runs
+  `cargo verus verify`.
 - **clippy** — `cargo clippy --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
-  -D warnings`, currently **non-blocking** (`continue-on-error: true`) while the repo-wide lint
-  sweep finishes; flip it to blocking once the sweep lands.
+  -D warnings`. CI uses the latest stable clippy, which can add lints before your local
+  toolchain does; run `cargo +stable clippy` if CI flags something local didn't.
+- **miri** — on the latest nightly that ships Miri: `cargo miri test --lib unsafe_semantics` under
+  Stacked Borrows and again with `MIRIFLAGS=-Zmiri-tree-borrows`, then
+  `scripts/miri-counterexamples.sh`. See [Unsafe Semantics & Miri](#unsafe-semantics--miri).
 
 Run these locally before pushing to keep CI green.
 
@@ -360,7 +394,32 @@ Run these locally before pushing to keep CI green.
 - **Include the canonical examples** as test cases.
 - **Add edge cases:** empty inputs, single elements, max constraints.
 - **Cross-implementation tests:** verify all approaches return the same result.
-- The library currently has a large passing unit-test suite (~1997 tests at last count).
+- The library currently has a large passing unit-test suite (~2103 tests at last count).
+
+## Unsafe Semantics & Miri
+
+`src/unsafe_semantics/` teaches Rust's aliasing models (decision record:
+`docs/adr/0002-miri-gated-aliasing-counterexamples.md`):
+
+- `trace.rs` — `Op` traces (`mut_ref`, `shared_ref`, `raw`, `read`, `write`, `mut_arg`, ...)
+  shared by both models.
+- `stacked_borrows.rs` / `tree_borrows.rs` — executable toy models of each rule set.
+- `counterexamples.rs` — real `unsafe` Rust: each `*_unsound` (UB) has a `*_sound` fix, and
+  `CATALOG` records Miri's verdict for the UB half under SB and TB plus a trace of both halves.
+
+**Hard rule: never call a `*_unsound` function outside Miri** — not from tests, doctests, or
+benches. It is UB natively. Run them only via the binary:
+
+```bash
+cargo +nightly miri run --bin miri_counterexample -- <name>                     # Stacked Borrows
+MIRIFLAGS=-Zmiri-tree-borrows cargo +nightly miri run --bin miri_counterexample -- <name>
+scripts/miri-counterexamples.sh [name...]   # checks every CATALOG verdict against real Miri
+cargo +nightly miri test --lib unsafe_semantics   # sound halves + models, under Miri
+```
+
+To add a counterexample: write the `*_unsound`/`*_sound` pair, add both traces and a `CATALOG`
+entry, record the verdicts that `scripts/miri-counterexamples.sh <name>` reports, and make the
+unit tests pass — they require the toy models to reproduce those verdicts on the traces.
 
 ## Clippy Allowances
 
@@ -411,7 +470,7 @@ The lists below reflect the modules actually declared in each category's `mod.rs
 
 ### Fundamentals
 asm, borrowing, closures, collections, concurrency, design_patterns, error_handling,
-error_types, iterators, macros, numeric_ops, pattern_matching, performance, pin, simd,
+error_types, ffi, iterators, macros, numeric_ops, pattern_matching, performance, pin, simd,
 smart_pointers, strings, testing, trait_dark_corners, types_and_traits, unsafe_rust.
 Feature-gated: async_and_parallel (`async-parallel`), serde_patterns (`serde-patterns`),
 cli_patterns (`cli-patterns`).
@@ -537,7 +596,15 @@ oracle / model-based properties, a shrinking runner, and proptest suites under `
 fuzz_target (hardened frame parser, fragile parser, fuzz entry points, `MiniFuzzer`), loom_model
 (`Counter`, `SpinLock`, `OneShot` with loom + std scenarios), crash_injection (`SimDisk` with
 torn writes and independent data/directory durability, fault plans, named failpoints,
-crash-point explorer, `replace_file` strategies, CRC-framed `LogStore`).
+crash-point explorer, `replace_file` strategies, CRC-framed `LogStore`), simulation
+(deterministic simulation testing of `systems::raft`: seeded network/crash/partition faults,
+swarm testing, a safety + liveness oracle, and seed replay; it found and now guards a real
+election-timer livelock in `systems::raft`).
+
+### Unsafe Semantics
+trace, stacked_borrows, tree_borrows, counterexamples (write_through_shared,
+stale_mut_after_parent_write, raw_invalidated_by_new_mut, shared_ref_outlives_raw_write,
+protector_violation, out_of_range_raw, read_parent_then_write_child, unused_mut_reborrow).
 
 ## Future Enhancements
 
