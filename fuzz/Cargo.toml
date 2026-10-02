@@ -1,0 +1,32 @@
+[package]
+name = "rust-interview-practice-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.rust-interview-practice]
+path = ".."
+
+# Keep this crate out of any parent workspace.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "frame_parse"
+path = "fuzz_targets/frame_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "frame_structured"
+path = "fuzz_targets/frame_structured.rs"
+test = false
+doc = false
+bench = false

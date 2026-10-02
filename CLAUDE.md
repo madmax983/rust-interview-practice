@@ -21,6 +21,8 @@ autocomplete isn't available.
   behind an optional feature flag.
 - **Binaries:** `src/main.rs` (a placeholder `Hello, world!`) and `src/bin/bench_sha256.rs`
   (a benchmark helper for the cryptography module).
+- **Fuzz crate:** `fuzz/` is a separate `cargo-fuzz` crate (its own `[workspace]`, not built by
+  `cargo test` at the root) holding the libFuzzer targets for `testing_craft::fuzz_target`.
 
 ## Directory Structure
 
@@ -28,6 +30,7 @@ autocomplete isn't available.
 .
 ├── Cargo.toml
 ├── CLAUDE.md
+├── fuzz/                       # cargo-fuzz crate (nightly): frame_parse, frame_structured
 └── src/
     ├── lib.rs                  # Module exports (pub mod for every category)
     ├── main.rs                 # Placeholder binary
@@ -51,7 +54,8 @@ autocomplete isn't available.
     ├── serialization/          # Encoders/decoders (json, protobuf, msgpack, ...)
     ├── data_structures/        # Advanced data structures (tries, filters, caches, ...)
     ├── design_patterns/        # Rust-flavored design patterns
-    └── systems/                # Larger systems-design exercises (LSM, raft, VM, ...)
+    ├── systems/                # Larger systems-design exercises (LSM, raft, VM, ...)
+    └── testing_craft/          # Proptest, fuzz targets, Loom models, crash injection
 ```
 
 ## Category Organization
@@ -61,7 +65,8 @@ When a problem fits multiple categories, its **primary data structure** wins (so
 therefore appear under more than one category, e.g. rotated-array search under both `arrays`
 and `binary_search`). Beyond the classic interview categories, this repo also contains larger
 implementation exercises (`data_structures`, `systems`, `networking`, `serialization`,
-`cryptography`, `concurrency`, `async_internals`, `design_patterns`) that are practiced the same way with gittype.
+`cryptography`, `concurrency`, `async_internals`,  `design_patterns`, `testing_craft`) that are practiced the same way
+with gittype.
 
 ## Fundamentals Category
 
@@ -116,7 +121,7 @@ All feature flags are declared in `Cargo.toml`. Everything except `crc32fast` is
 | `async-parallel` | tokio, tokio-stream, futures, rayon | `fundamentals::async_and_parallel` |
 | `serde-patterns` | serde, serde_json, serde_yaml, toml, bincode | `fundamentals::serde_patterns` |
 | `cli-patterns` | ratatui 0.29, crossterm, clap | `fundamentals::cli_patterns` |
-| `testing-extras` | proptest | property-based testing helpers |
+| `testing-extras` | proptest | proptest suites in `fundamentals::testing` and `testing_craft::property_testing` |
 | `simd-patterns` | *(nothing)* | **no-op**, retained for backward compatibility only |
 
 Enable features on stable, e.g.:
@@ -149,6 +154,30 @@ To build the nightly portable-SIMD path:
 RUSTFLAGS="--cfg nightly_portable_simd" cargo +nightly build
 ```
 
+### Loom model checking — the `loom` cfg
+
+`testing_craft::loom_model` imports its atomics, `UnsafeCell`, `Arc` and `thread` from a `sync`
+shim that re-exports `loom::*` under `cfg(loom)` and `std::*` otherwise. `loom` is declared as a
+`[target.'cfg(loom)'.dependencies]` entry — **not** a Cargo feature — for the same reason as the
+SIMD cfg: `--all-features` must never swap std's primitives for loom's (loom types panic outside
+`loom::model`). `cfg(loom)` is also declared in `[lints.rust]` `check-cfg`. See
+`docs/adr/0001-testing-craft-loom-cfg.md`.
+
+```bash
+RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model
+```
+
+### Fuzzing (nightly)
+
+```bash
+cargo install cargo-fuzz                      # once
+cargo +nightly fuzz run frame_parse            # raw bytes -> parser + round-trip oracle
+cargo +nightly fuzz run frame_structured       # structure-aware (bytes as decisions)
+```
+
+The fuzz entry points are ordinary library functions (`fuzz_parse`, `fuzz_structured`), so the
+stable test suite also drives them through `MiniFuzzer`, a small feedback-guided mutation fuzzer.
+
 ## Three-Implementation Pattern (Interview Problems)
 
 Classic interview problems (arrays, strings, trees, DP, etc.) typically include **three
@@ -174,6 +203,8 @@ optimal solution.
 > `networking/`, `serialization/`, `cryptography/`, `concurrency/`, `async_internals/`, and
 > `design_patterns/`
 > are single cohesive implementations rather than three-tier brute/optimized/optimal problems.
+> `testing_craft/` follows a related shape: a correct implementation, a deliberately buggy
+> variant (suffix `_buggy`), and tests showing the technique catches the bug and passes the fix.
 
 ## File Template (interview problems)
 
@@ -297,7 +328,10 @@ It has three jobs:
 
 - **fmt** — `cargo fmt --all -- --check` (blocking).
 - **test & build** — `cargo test` on default features, `cargo test --features serde-patterns`,
-  and builds for `cli-patterns`, `async-parallel`, and `--all-features` on stable (blocking).
+  `cargo test --features testing-extras --lib` (proptest suites), and builds for `cli-patterns`,
+  `async-parallel`, and `--all-features` on stable (blocking).
+- **loom** — `RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model`.
+- **fuzz** — nightly smoke run of each `cargo-fuzz` target for 30 seconds.
 - **clippy** — `cargo clippy --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
   -D warnings`, currently **non-blocking** (`continue-on-error: true`) while the repo-wide lint
   sweep finishes; flip it to blocking once the sweep lands.
@@ -310,7 +344,7 @@ Run these locally before pushing to keep CI green.
 - **Include the canonical examples** as test cases.
 - **Add edge cases:** empty inputs, single elements, max constraints.
 - **Cross-implementation tests:** verify all approaches return the same result.
-- The library currently has a large passing unit-test suite (~1803 tests at last count).
+- The library currently has a large passing unit-test suite (~1828 tests at last count).
 
 ## Clippy Allowances
 
@@ -470,6 +504,14 @@ job_queue, lfu_cache, log_structured_storage, lru_cache, lsm_tree, metrics_regis
 pub_sub, raft, rate_limiter, reactive_signals, slab_allocator, snowflake, sql_engine,
 task_scheduler, template_engine, tracing, ttl_cache, uuid, vdom, vector_clock, virtual_machine,
 w_tiny_lfu_cache, wal, write_strategies.
+
+### Testing Craft
+sim_rng (seeded `SplitMix64` for reproducible tests), property_testing (round-trip / invariant /
+oracle / model-based properties, a shrinking runner, and proptest suites under `testing-extras`),
+fuzz_target (hardened frame parser, fragile parser, fuzz entry points, `MiniFuzzer`), loom_model
+(`Counter`, `SpinLock`, `OneShot` with loom + std scenarios), crash_injection (`SimDisk` with
+torn writes and independent data/directory durability, fault plans, named failpoints,
+crash-point explorer, `replace_file` strategies, CRC-framed `LogStore`).
 
 ## Future Enhancements
 
