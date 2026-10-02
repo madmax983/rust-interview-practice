@@ -23,6 +23,9 @@ autocomplete isn't available.
   (a benchmark helper for the cryptography module).
 - **Fuzz crate:** `fuzz/` is a separate `cargo-fuzz` crate (its own `[workspace]`, not built by
   `cargo test` at the root) holding the libFuzzer targets for `testing_craft::fuzz_target`.
+- **Verified crate:** `verified/` is a separate crate (its own `[workspace]`) holding a
+  Verus-verified `SortedSet`. Plain `cargo test` there runs proptests on stable (ghost code is
+  erased); `cargo verus verify` checks the proofs. See [Verus](#verus-the-verified-crate).
 
 ## Directory Structure
 
@@ -31,6 +34,8 @@ autocomplete isn't available.
 ├── Cargo.toml
 ├── CLAUDE.md
 ├── fuzz/                       # cargo-fuzz crate (nightly): frame_parse, frame_structured
+├── verified/                   # Verus-verified SortedSet + proptests (separate crate)
+├── docs/adr/                   # Architecture Decision Records
 └── src/
     ├── lib.rs                  # Module exports (pub mod for every category)
     ├── main.rs                 # Placeholder binary
@@ -55,7 +60,7 @@ autocomplete isn't available.
     ├── data_structures/        # Advanced data structures (tries, filters, caches, ...)
     ├── design_patterns/        # Rust-flavored design patterns
     ├── systems/                # Larger systems-design exercises (LSM, raft, VM, ...)
-    └── testing_craft/          # Proptest, fuzz targets, Loom models, crash injection
+    └── testing_craft/          # Proptest, fuzz, Loom, crash injection, deterministic simulation
 ```
 
 ## Category Organization
@@ -177,6 +182,21 @@ cargo +nightly fuzz run frame_structured       # structure-aware (bytes as decis
 
 The fuzz entry points are ordinary library functions (`fuzz_parse`, `fuzz_structured`), so the
 stable test suite also drives them through `MiniFuzzer`, a small feedback-guided mutation fuzzer.
+
+### Verus (the verified crate)
+
+`verified/src/lib.rs` follows SPEC → PROOF → RED → GREEN in one file: the spec states every
+operation against the abstract `Set<u64>`, Verus/Z3 prove the bodies, and proptests check the same
+compiled code against a `BTreeSet` model. Verus and `vstd` versions are pinned together: the
+`vstd` crate version in `verified/Cargo.toml` must match the Verus release named in CI
+(`VERUS_VERSION`), per Verus's `cargo-verus/toolchain-manifests`. Bump both together. See
+`docs/adr/0002-verus-verified-crate.md`.
+
+```bash
+cd verified
+cargo test            # stable Rust, specs erased
+cargo verus verify    # needs Verus 0.2026.09.27.3cf1832 + rustup toolchain 1.98.1
+```
 
 ## Three-Implementation Pattern (Interview Problems)
 
@@ -324,7 +344,7 @@ cargo test
 ## Continuous Integration
 
 CI runs on every push and pull request to `trunk` via `.github/workflows/ci.yml`.
-It has three jobs:
+Every job is blocking:
 
 - **fmt** — `cargo fmt --all -- --check` (blocking).
 - **test & build** — `cargo test` on default features, `cargo test --features serde-patterns`,
@@ -332,9 +352,11 @@ It has three jobs:
   `async-parallel`, and `--all-features` on stable (blocking).
 - **loom** — `RUSTFLAGS="--cfg loom" cargo test --release --lib testing_craft::loom_model`.
 - **fuzz** — nightly smoke run of each `cargo-fuzz` target for 30 seconds.
+- **verified** — `cargo test` in `verified/`, then downloads the pinned Verus release and runs
+  `cargo verus verify`.
 - **clippy** — `cargo clippy --all-features --all-targets -- -W clippy::pedantic -W clippy::nursery
-  -D warnings`, currently **non-blocking** (`continue-on-error: true`) while the repo-wide lint
-  sweep finishes; flip it to blocking once the sweep lands.
+  -D warnings`. CI uses the latest stable clippy, which can add lints before your local
+  toolchain does; run `cargo +stable clippy` if CI flags something local didn't.
 
 Run these locally before pushing to keep CI green.
 
@@ -344,7 +366,7 @@ Run these locally before pushing to keep CI green.
 - **Include the canonical examples** as test cases.
 - **Add edge cases:** empty inputs, single elements, max constraints.
 - **Cross-implementation tests:** verify all approaches return the same result.
-- The library currently has a large passing unit-test suite (~1828 tests at last count).
+- The library currently has a large passing unit-test suite (~1962 tests at last count).
 
 ## Clippy Allowances
 
@@ -511,7 +533,10 @@ oracle / model-based properties, a shrinking runner, and proptest suites under `
 fuzz_target (hardened frame parser, fragile parser, fuzz entry points, `MiniFuzzer`), loom_model
 (`Counter`, `SpinLock`, `OneShot` with loom + std scenarios), crash_injection (`SimDisk` with
 torn writes and independent data/directory durability, fault plans, named failpoints,
-crash-point explorer, `replace_file` strategies, CRC-framed `LogStore`).
+crash-point explorer, `replace_file` strategies, CRC-framed `LogStore`), simulation
+(deterministic simulation testing of `systems::raft`: seeded network/crash/partition faults,
+swarm testing, a safety + liveness oracle, and seed replay; it found and now guards a real
+election-timer livelock in `systems::raft`).
 
 ## Future Enhancements
 
